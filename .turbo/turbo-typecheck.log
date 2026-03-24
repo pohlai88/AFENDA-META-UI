@@ -1,0 +1,4 @@
+
+> @afenda/web@0.1.0 typecheck D:\AFENDA-META-UI\apps\web
+> tsc --noEmit
+

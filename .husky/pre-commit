@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Run lint-staged to automatically fix and format staged files
+pnpm exec lint-staged
