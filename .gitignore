@@ -1,1 +1,33 @@
-node_modules
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Environment (locals contain secrets)
+.env.local
+.env.*.local
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
