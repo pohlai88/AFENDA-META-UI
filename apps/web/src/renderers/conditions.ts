@@ -7,7 +7,7 @@
  */
 
 import React from "react";
-import { useWatch, type Control } from "react-hook-form";
+import { useWatch, type Control, type FieldValues } from "react-hook-form";
 import type {
   MetaField,
   ConditionExpression,
@@ -135,8 +135,7 @@ function collectDeps(expr: ConditionExpression | undefined, deps: Set<string>): 
  */
 export function useFieldConditions(
   fields: MetaField[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  control: Control<any>
+  control: Control<FieldValues>
 ): Map<string, ComputedFieldState> {
   const depFields = React.useMemo(() => {
     const deps = new Set<string>();

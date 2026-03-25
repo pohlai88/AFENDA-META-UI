@@ -22,19 +22,19 @@ The `pnpm-workspace.yaml` file at the repository root defines which directories 
 
 ```yaml
 packages:
-  - 'apps/*'
-  - 'packages/*'
-  - 'tools/*'
+  - "apps/*"
+  - "packages/*"
+  - "tools/*"
 ```
 
 Nested globs and exclusion patterns are supported:
 
 ```yaml
 packages:
-  - 'packages/**'
-  - 'apps/**'
-  - '!**/test/**'
-  - '!**/__fixtures__/**'
+  - "packages/**"
+  - "apps/**"
+  - "!**/test/**"
+  - "!**/__fixtures__/**"
 ```
 
 A typical monorepo directory structure:
@@ -157,8 +157,8 @@ The `catalog:` key defines a default set of versions:
 
 ```yaml
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
 
 catalog:
   react: ^18.3.1
@@ -192,15 +192,15 @@ catalogs:
   react18:
     react: ^18.3.1
     react-dom: ^18.3.1
-    '@types/react': ^18.3.0
+    "@types/react": ^18.3.0
   react17:
     react: ^17.0.2
     react-dom: ^17.0.2
-    '@types/react': ^17.0.0
+    "@types/react": ^17.0.0
   testing:
     vitest: ^2.0.0
-    '@testing-library/react': ^16.0.0
-    '@testing-library/jest-dom': ^6.0.0
+    "@testing-library/react": ^16.0.0
+    "@testing-library/jest-dom": ^6.0.0
 ```
 
 Reference named catalogs by name:
@@ -247,8 +247,8 @@ Both `catalog` (singular, default) and `catalogs` (plural, named) can coexist:
 
 ```yaml
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
 
 catalog:
   typescript: ^5.6.0

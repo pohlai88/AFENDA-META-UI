@@ -21,7 +21,7 @@ export type DeprecationStage = "active" | "deprecated" | "legacy" | "sunset";
 export interface BaseMetadata {
   schemaVersion: SchemaVersion;
   model: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -83,12 +83,12 @@ export const SchemaRegistry: Record<SchemaVersion, SchemaMetadata> = {
 /**
  * Migration function type
  */
-export type MigrationFunction<From = any, To = any> = (meta: From) => To;
+export type MigrationFunction<From = unknown, To = unknown> = (meta: From) => To;
 
 /**
  * Migration registry
  */
-const migrations = new Map<string, MigrationFunction>();
+const migrations = new Map<string, MigrationFunction<BaseMetadata, BaseMetadata>>();
 
 /**
  * Register a migration
@@ -96,7 +96,7 @@ const migrations = new Map<string, MigrationFunction>();
 export function registerMigration(
   from: SchemaVersion,
   to: SchemaVersion,
-  migrator: MigrationFunction
+  migrator: MigrationFunction<BaseMetadata, BaseMetadata>
 ): void {
   const key = `${from}→${to}`;
   migrations.set(key, migrator);

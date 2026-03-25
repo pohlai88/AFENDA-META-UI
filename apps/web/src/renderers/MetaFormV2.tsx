@@ -291,10 +291,12 @@ export function MetaFormV2({
     defaultValues: (record as Record<string, unknown>) ?? {},
   });
 
+  const isSaving = isMutating || form.formState.isSubmitting;
+
   // Warn on unsaved changes
   useUnsavedChangesWarning({
     isDirty: form.formState.isDirty,
-    enabled: !embedded && !isReadonly, // Only warn for non-embedded, editable forms
+    enabled: !embedded && !isReadonly && !isSaving, // Skip prompts during active save
     message: "You have unsaved changes. Are you sure you want to leave?",
   });
 
@@ -374,6 +376,9 @@ export function MetaFormV2({
           toast.success("Record created successfully");
         }
 
+        // Reset dirty tracking to avoid post-save unsaved prompts.
+        form.reset(saved);
+
         // Lifecycle: afterSave
         lifecycle?.afterSave?.(saved);
         onSaved?.(saved);
@@ -417,7 +422,6 @@ export function MetaFormV2({
 
   // Dirty tracking for save button
   const dirtyCount = Object.keys(form.formState.dirtyFields).length;
-  const isSaving = isMutating || form.formState.isSubmitting;
   const saveDisabled = isSaving || (!!recordId && dirtyCount === 0);
   const saveLabel = isSaving
     ? "Saving..."

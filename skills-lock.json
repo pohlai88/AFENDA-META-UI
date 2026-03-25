@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "skills": {
+    "changesets": {
+      "source": "oakoss/agent-skills",
+      "sourceType": "github",
+      "computedHash": "277a6b337157539ad0ef8fcba1569a4981b6d9d369392b80f041eab74d2e6c1a"
+    },
+    "data-modeling": {
+      "source": "melodic-software/claude-code-plugins",
+      "sourceType": "github",
+      "computedHash": "751f18c4ff40620771ec5e757a4edc8f96a1fef0ce93e78273e2423610196fb0"
+    },
+    "database-schema-designer": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "computedHash": "6a26ca15216bb4bfee66ebf813edcb1e31a8002f3f641f16f550df814b522217"
+    },
+    "designing-zod-schemas": {
+      "source": "saleor/configurator",
+      "sourceType": "github",
+      "computedHash": "bb59d8f45a05822b62fe88e3a08a9e36f6adb94294a42ee812dab6bf76ee713e"
+    },
+    "domain-driven-design": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "computedHash": "01ae2a9d33c87237a174a36e2b9d2f34f796398a2b6ff6ea9d08076417c83545"
+    },
+    "drizzle-orm": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "9aea7469d696c9b5fa54a84b7a92ea692872fb624fb028f866ab0f3deac84867"
+    },
+    "enterprise-architecture-patterns": {
+      "source": "manutej/luxor-claude-marketplace",
+      "sourceType": "github",
+      "computedHash": "9071bcf66a2264475be2460edac7fdcb5e1909a054fdc2ce11944f5bff16114e"
+    },
+    "event-sourcing": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "computedHash": "dd4ac05e96704e9f4ea76968f38c7d29291888618c456f9484542a0d544dd0f5"
+    },
+    "monorepo-management": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "082be44c6320ce348b19c33f08f527ad604eed2da48f92e8c7010e206d5450cd"
+    },
+    "monorepo-workflows": {
+      "source": "thebushidocollective/han",
+      "sourceType": "github",
+      "computedHash": "c379663d6ae189d9390c6a06f1deaf50c77ea506a50545fd2606aebbbe251b68"
+    },
+    "multi-tenant-architecture": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "computedHash": "806c99e05fad22396bbe9ce9558bcad3dced2dbd9bc856297cd1929faf9fcc00"
+    },
+    "postgresql-database-engineering": {
+      "source": "manutej/luxor-claude-marketplace",
+      "sourceType": "github",
+      "computedHash": "e65de56cd6e2fdf8114f982dd71b3e7092c384a5ceaca3af7cecac8fcb6fef04"
+    },
+    "postgresql-table-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "0728424e6f56972333bd60e4f45da0322ac6db273744d863aa2b94f1e95d61ec"
+    },
+    "zod": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "684e38d3b947e6a36cab88e8b0aef3ab1585ae81b3be663d14629b385f3f9395"
+    },
+    "zod-validation-utilities": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "computedHash": "9785b925118b719c6f2c34b3d1fb2052a272d2efee4853ced86b8d6be5a7b061"
+    },
+    "zod4": {
+      "source": "kastalien-research/thoughtbox-dot-claude",
+      "sourceType": "github",
+      "computedHash": "ad9d6573213063b7e3ac71d569fb9acb7dcad376fa406cf7109d188099c2a0ff"
+    }
+  }
+}

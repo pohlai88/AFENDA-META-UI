@@ -410,6 +410,28 @@ describe("FormFieldRenderer", () => {
       });
     });
 
+    it("matches many2one selected labels when field value and option ids use different scalar types", async () => {
+      setupRelationFetch();
+
+      const field: MetaField = {
+        name: "customer_id",
+        label: "Customer",
+        type: "many2one",
+        required: false,
+        relation: {
+          model: "customers",
+          value_field: "id",
+          display_field: "name",
+        },
+      };
+
+      renderWithProviders(<TestFormWrapper field={field} defaultValue={"2"} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("combobox")).toHaveTextContent("Beta Ltd");
+      });
+    });
+
     it("updates many2many selections and supports removing selected badges", async () => {
       setupRelationFetch();
 

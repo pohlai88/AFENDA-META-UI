@@ -18,6 +18,26 @@ import { getAppConfig } from "./lib/app-config";
 import App from "./App.js";
 import "./index.css";
 
+// ───────────────────────────────────────────────────────────────────────
+// Dynamic Import Error Handler
+// Catches chunk load failures in production (stale builds, network issues)
+// Recommended by Vite industry best practices: https://vite.dev/guide/build
+// ───────────────────────────────────────────────────────────────────────
+window.addEventListener("vite:preloadError", (event) => {
+  // Allow custom handling (e.g., show user-friendly error, auto-refresh)
+  console.error("Failed to load application chunk:", event.payload);
+
+  // Strategy: Prompt user to refresh (prevents infinite loops)
+  if (!sessionStorage.getItem("vite-chunk-error-handled")) {
+    sessionStorage.setItem("vite-chunk-error-handled", "1");
+    if (
+      confirm("A new version of the application is available. Reload to get the latest version?")
+    ) {
+      window.location.reload();
+    }
+  }
+});
+
 registerAppQueryErrorOverrides();
 bootstrapAnalytics();
 

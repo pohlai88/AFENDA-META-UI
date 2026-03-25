@@ -1,0 +1,228 @@
+{
+  "totalJS": "1199.21",
+  "totalCSS": "0.00",
+  "totalAssets": "0.00",
+  "chunks": [
+    {
+      "name": "assets/layout-BCbWJYWv.js",
+      "size": 5076,
+      "sizeKB": 4.96,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/permissions-context-A-h_ks9e.js",
+      "size": 15635,
+      "sizeKB": 15.27,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/rolldown-runtime-Dw2cE7zH.js",
+      "size": 685,
+      "sizeKB": 0.67,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/schemas-CUutsjCN.js",
+      "size": 68314,
+      "sizeKB": 66.71,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/useMeta-DY0czg-0.js",
+      "size": 2824,
+      "sizeKB": 2.76,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/useSearch-9HZTkKA2.js",
+      "size": 514,
+      "sizeKB": 0.5,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/vendor-query-Y9yBMe7G.js",
+      "size": 42277,
+      "sizeKB": 41.29,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/vendor-react-BKRXNyRs.js",
+      "size": 508783,
+      "sizeKB": 496.86,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/vendor-state-BzEwRCy7.js",
+      "size": 24714,
+      "sizeKB": 24.13,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/vendor-ui-GWKxtVgS.js",
+      "size": 153223,
+      "sizeKB": 149.63,
+      "isEntry": false,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/index-DiGv-KaS.js",
+      "size": 187583,
+      "sizeKB": 183.19,
+      "isEntry": true,
+      "isDynamic": false
+    },
+    {
+      "name": "assets/401-DcKoYpEu.js",
+      "size": 1406,
+      "sizeKB": 1.37,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/403-cW9Xb2lS.js",
+      "size": 1853,
+      "sizeKB": 1.81,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/404-jrnmTIge.js",
+      "size": 1317,
+      "sizeKB": 1.29,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/408-R3AqEe3g.js",
+      "size": 1391,
+      "sizeKB": 1.36,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/409-CPFOVWW1.js",
+      "size": 1416,
+      "sizeKB": 1.38,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/422-D7a2VtH5.js",
+      "size": 1412,
+      "sizeKB": 1.38,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/429-P0dwEyZi.js",
+      "size": 1376,
+      "sizeKB": 1.34,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/500-C04lRluT.js",
+      "size": 1357,
+      "sizeKB": 1.33,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/503-V3x1o4BK.js",
+      "size": 1416,
+      "sizeKB": 1.38,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/errors-7ZGae18R.js",
+      "size": 3739,
+      "sizeKB": 3.65,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/home-CCKY1U_B.js",
+      "size": 10990,
+      "sizeKB": 10.73,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/model-form-Cbt8tLAj.js",
+      "size": 1152,
+      "sizeKB": 1.13,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/model-list-CLfPh8o4.js",
+      "size": 1095,
+      "sizeKB": 1.07,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/model-view-0_Q7mE5X.js",
+      "size": 203,
+      "sizeKB": 0.2,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/module-landing-ChSOI296.js",
+      "size": 1696,
+      "sizeKB": 1.66,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/payment-hub-DSQv14_A.js",
+      "size": 11277,
+      "sizeKB": 11.01,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/purchase-orders-example-CD88vrcR.js",
+      "size": 7132,
+      "sizeKB": 6.96,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/suggestions-demo-e3XJ_bs6.js",
+      "size": 7879,
+      "sizeKB": 7.69,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/MetaFormV2-BP0irFkJ.js",
+      "size": 140241,
+      "sizeKB": 136.95,
+      "isEntry": false,
+      "isDynamic": true
+    },
+    {
+      "name": "assets/MetaListV2-BSIW5gM2.js",
+      "size": 20020,
+      "sizeKB": 19.55,
+      "isEntry": false,
+      "isDynamic": true
+    }
+  ],
+  "cssFiles": [],
+  "assets": [],
+  "chunkCount": 31,
+  "timestamp": "2026-03-25T09:20:26.612Z"
+}

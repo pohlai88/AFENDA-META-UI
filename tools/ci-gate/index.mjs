@@ -16,7 +16,7 @@
 
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readdirSync, existsSync, statSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,6 +41,8 @@ const options = {
   fix: false,
   verbose: false,
   help: false,
+  concurrency: 1,
+  mode: 'full',
 };
 
 for (const arg of args) {
@@ -52,6 +54,16 @@ for (const arg of args) {
     options.verbose = true;
   } else if (arg.startsWith('--gate=')) {
     options.gate = arg.split('=')[1];
+  } else if (arg.startsWith('--concurrency=')) {
+    const raw = Number.parseInt(arg.split('=')[1] || '', 10);
+    if (!Number.isNaN(raw) && raw > 0) {
+      options.concurrency = raw;
+    }
+  } else if (arg.startsWith('--mode=')) {
+    const mode = arg.split('=')[1];
+    if (mode === 'fast' || mode === 'full') {
+      options.mode = mode;
+    }
   }
 }
 
@@ -66,6 +78,8 @@ ${colors.cyan}USAGE:${colors.reset}
 ${colors.cyan}OPTIONS:${colors.reset}
   --gate=<name>    Run a specific gate (e.g., --gate=logger)
   --fix            Enable auto-fix mode for all gates
+  --concurrency=n  Number of gates to run in parallel (default: 1)
+  --mode=<type>    Gate mode: full (default) or fast
   --verbose, -v    Show verbose output from all gates
   --help, -h       Show this help message
 
@@ -73,6 +87,8 @@ ${colors.cyan}EXAMPLES:${colors.reset}
   node tools/ci-gate/index.mjs                    Run all gates
   node tools/ci-gate/index.mjs --gate=logger      Run logger gate only
   node tools/ci-gate/index.mjs --fix              Run all gates with auto-fix
+  node tools/ci-gate/index.mjs --concurrency=2    Run up to 2 gates in parallel
+  node tools/ci-gate/index.mjs --mode=fast        Skip slower network checks where supported
   node tools/ci-gate/index.mjs --verbose          Run with verbose output
 
 ${colors.cyan}AVAILABLE GATES:${colors.reset}
@@ -164,6 +180,69 @@ function runGate(gate, args = []) {
   });
 }
 
+function getModeArgsForGate(gate) {
+  if (options.mode !== 'fast') {
+    return [];
+  }
+
+  if (gate.name === 'dependencies') {
+    return ['--skip-audit', '--skip-outdated'];
+  }
+
+  return [];
+}
+
+/**
+ * Run gates with bounded concurrency while preserving result order.
+ */
+async function runGates(gates, gateArgs) {
+  const results = new Array(gates.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(options.concurrency, 1), gates.length);
+
+  async function worker() {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+
+      if (index >= gates.length) {
+        return;
+      }
+
+      const gate = gates[index];
+      const modeArgs = getModeArgsForGate(gate);
+      const effectiveArgs = [...gateArgs, ...modeArgs];
+      console.log(`${colors.bright}Running: ${gate.name}${colors.reset}`);
+      console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}`);
+      if (modeArgs.length > 0) {
+        console.log(`${colors.dim}Mode flags: ${modeArgs.join(' ')}${colors.reset}`);
+      }
+
+      const result = await runGate(gate, effectiveArgs);
+      results[index] = result;
+
+      if (!options.verbose) {
+        if (result.code === 0) {
+          console.log(`${colors.green}✓ ${gate.name} PASSED${colors.reset} ${colors.dim}(${formatDuration(result.duration)})${colors.reset}`);
+        } else {
+          console.log(`${colors.red}✗ ${gate.name} FAILED${colors.reset} ${colors.dim}(${formatDuration(result.duration)})${colors.reset}`);
+          if (result.stdout) {
+            console.log(result.stdout);
+          }
+          if (result.stderr) {
+            console.error(result.stderr);
+          }
+        }
+      }
+
+      console.log();
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 /**
  * Format duration in human-readable format
  */
@@ -202,39 +281,13 @@ async function main() {
     }
   }
   
-  console.log(`${colors.cyan}Running ${gatesToRun.length} gate(s)...${colors.reset}\n`);
+  console.log(`${colors.cyan}Running ${gatesToRun.length} gate(s) with concurrency=${options.concurrency}, mode=${options.mode}...${colors.reset}\n`);
   
   // Prepare arguments for child processes
   const gateArgs = [];
   if (options.fix) gateArgs.push('--fix');
   
-  // Run all gates sequentially
-  const results = [];
-  for (const gate of gatesToRun) {
-    console.log(`${colors.bright}Running: ${gate.name}${colors.reset}`);
-    console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}`);
-    
-    const result = await runGate(gate, gateArgs);
-    results.push(result);
-    
-    if (!options.verbose) {
-      // Show summary for this gate
-      if (result.code === 0) {
-        console.log(`${colors.green}✓ ${gate.name} PASSED${colors.reset} ${colors.dim}(${formatDuration(result.duration)})${colors.reset}`);
-      } else {
-        console.log(`${colors.red}✗ ${gate.name} FAILED${colors.reset} ${colors.dim}(${formatDuration(result.duration)})${colors.reset}`);
-        // Show output on failure
-        if (result.stdout) {
-          console.log(result.stdout);
-        }
-        if (result.stderr) {
-          console.error(result.stderr);
-        }
-      }
-    }
-    
-    console.log(); // Empty line between gates
-  }
+  const results = await runGates(gatesToRun, gateArgs);
   
   // Print summary
   console.log(`${colors.bright}${colors.blue}${'═'.repeat(60)}${colors.reset}`);

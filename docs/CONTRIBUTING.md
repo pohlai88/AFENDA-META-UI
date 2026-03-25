@@ -208,7 +208,86 @@ This runs:
 
 1. **Logger Gate** — Validates logging patterns (no `console.log`)
 2. **Export Contracts Gate** — Validates lazy-loaded module exports
-3. _(More gates added as needed)_
+3. **Boundaries Gate** — Enforces architectural package boundaries
+4. **Dependencies Gate** — Validates dependency governance rules
+5. **TypeScript Gate** — Validates TypeScript configuration
+6. **Bundle Gate** — Validates bundle size budgets
+7. **Vite Gate** — Validates Vite configuration quality
+
+### Boundary Enforcement
+
+The monorepo enforces strict architectural boundaries to prevent cross-layer imports:
+
+**Package Tiers:**
+- `foundation` (meta-types) → no internal deps
+- `data` (db) → foundation only
+- `presentation` (ui) → foundation only
+- `app-server` (api) → data + foundation
+- `app-client` (web) → presentation + foundation
+- `tooling` (ci-gate) → no internal deps
+
+**Run boundary checks:**
+
+```bash
+# Full boundary validation (Turbo + ESLint)
+pnpm ci:gate:boundaries
+
+# With auto-fix (where possible)
+pnpm ci:gate:boundaries:fix
+
+# Circular dependency detection
+pnpm ci:gate:circular
+
+# Verbose output
+pnpm ci:gate:boundaries:verbose
+```
+
+**Example violation:**
+
+```typescript
+// ❌ BAD: web importing db (violates app-client tier rules)
+import { db } from '@afenda/db';
+
+// ✅ GOOD: web importing ui (allowed for app-client tier)
+import { Button } from '@afenda/ui';
+```
+
+ESLint will flag violations in your IDE before you even commit!
+
+### Code Quality Gates
+
+**Dead code detection:**
+
+```bash
+# Find unused files, dependencies, and exports
+pnpm knip
+
+# Production dependencies only
+pnpm knip:production
+
+# Auto-remove unused files (use with caution)
+pnpm knip:fix
+```
+
+**Version alignment:**
+
+```bash
+# Check for version mismatches
+pnpm syncpack:list
+
+# Auto-fix version mismatches
+pnpm syncpack:fix
+
+# Format package.json files
+pnpm syncpack:format
+```
+
+**Package hygiene:**
+
+```bash
+# Validate package.json structure and naming
+pnpm sherif
+```
 
 ### Individual Gates
 
@@ -216,10 +295,19 @@ Run specific gates for faster feedback:
 
 ```bash
 # Logger patterns only
-pnpm --filter @afenda/api run ci:logger
+pnpm ci:gate:logger
 
 # Export contracts only
 pnpm ci:contracts
+
+# Boundaries only
+pnpm ci:gate:boundaries
+
+# Dependencies only
+pnpm ci:gate:dependencies
+
+# Circular dependencies only
+pnpm ci:gate:circular
 ```
 
 ### Auto-Fix Mode
@@ -227,13 +315,18 @@ pnpm ci:contracts
 Some gates support automatic fixes:
 
 ```bash
-pnpm ci:gate --fix
+# Auto-fix logger violations
+pnpm ci:gate:logger --fix
+
+# Auto-fix boundary violations (limited)
+pnpm ci:gate:boundaries:fix
+
+# Auto-fix version mismatches
+pnpm syncpack:fix
+
+# Auto-remove unused code
+pnpm knip:fix
 ```
-
-This will:
-
-- Replace `console.log` with proper logger calls (where safe)
-- Fix other auto-fixable violations
 
 **Always review auto-fixes before committing!**
 

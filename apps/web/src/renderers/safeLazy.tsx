@@ -6,7 +6,10 @@
  */
 
 import React from "react";
-import type { RendererModule, RendererError } from "./types/contracts";
+import type { RendererModule, RendererType, RendererVersion } from "./types/contracts";
+
+/** Props shape for inline fallback renderer components (renderer props are unknown at this boundary). */
+type RendererFallbackProps = Record<string, unknown>;
 
 /**
  * Fallback renderer for when loading fails
@@ -98,7 +101,7 @@ interface SafeLazyOptions {
   rendererId?: string;
 
   /** Custom fallback component */
-  fallback?: React.ComponentType<any>;
+  fallback?: React.ComponentType<RendererFallbackProps>;
 
   /** Enable debug logging */
   debug?: boolean;
@@ -141,18 +144,18 @@ export function safeLazy<T extends React.ComponentType<any>>(
         return {
           default:
             fallback ||
-            ((props: any) => (
+            ((_props: RendererFallbackProps) => (
               <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
             )),
         };
       }
 
       // Try to find the export
-      let component: any;
+      let component: React.ComponentType<Record<string, unknown>> | undefined;
 
       if (exportName) {
-        // Look for named export
-        component = mod[exportName];
+        // Look for named export — cast through unknown since RendererModule uses unknown index sig
+        component = mod[exportName] as React.ComponentType<Record<string, unknown>> | undefined;
 
         if (!component) {
           const error = `Named export '${exportName}' not found`;
@@ -163,7 +166,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
           return {
             default:
               fallback ||
-              ((props: any) => (
+              ((_props: RendererFallbackProps) => (
                 <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
               )),
           };
@@ -181,7 +184,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
           return {
             default:
               fallback ||
-              ((props: any) => (
+              ((_props: RendererFallbackProps) => (
                 <FallbackRenderer error={error} rendererId={rendererId} exportName="default" />
               )),
           };
@@ -195,7 +198,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
         return {
           default:
             fallback ||
-            ((props: any) => (
+            ((_props: RendererFallbackProps) => (
               <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
             )),
         };
@@ -220,7 +223,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
       return {
         default:
           fallback ||
-          ((props: any) => (
+          ((_props: RendererFallbackProps) => (
             <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
           )),
       };
@@ -238,25 +241,25 @@ export function safeLazy<T extends React.ComponentType<any>>(
  * ```
  */
 export function safeRendererLazy<T extends React.ComponentType<any>>(
-  type: string,
-  version: string,
+  type: RendererType,
+  version: RendererVersion = "v1",
   options: Omit<SafeLazyOptions, "exportName" | "rendererId"> = {}
 ): React.LazyExoticComponent<T> {
   // Import synchronously - registry should already be loaded
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getRenderer } = require("./registry");
-  const registration = getRenderer(type as any, version as any);
+  const registration = getRenderer(type, version);
 
   if (!registration) {
     console.error(`[safeRendererLazy] Renderer not found:`, { type, version });
     return safeLazy<T>(() =>
       Promise.resolve({
-        default: ((props: any) => (
+        default: ((_props: RendererFallbackProps) => (
           <FallbackRenderer
             error={`Renderer ${type}@${version} not registered`}
             rendererId={`${type}-${version}`}
           />
-        )) as T,
+        )) as unknown as T,
       })
     );
   }

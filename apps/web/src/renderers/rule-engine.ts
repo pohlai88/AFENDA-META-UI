@@ -5,20 +5,22 @@
  * The brain of enterprise systems.
  */
 
+import type { JsonValue, JsonObject } from "@afenda/meta-types";
+
 /**
  * Rule context - unified business graph
  */
 export interface RuleContext {
   /** Event that triggered the rule */
   event: string;
-  /** Business entities */
+  /** Business entities — each entity is a JSON-safe object */
   data: {
-    customer?: any;
-    inventory?: any;
-    employee?: any;
-    ledger?: any;
-    order?: any;
-    [key: string]: any;
+    customer?: JsonObject;
+    inventory?: JsonObject;
+    employee?: JsonObject;
+    ledger?: JsonObject;
+    order?: JsonObject;
+    [key: string]: JsonObject | undefined;
   };
   /** Authenticated user */
   user: {
@@ -89,7 +91,7 @@ export interface RuleExecutionResult {
  * Rule audit log entry
  */
 export interface RuleAuditLog extends RuleExecutionResult {
-  inputs: Record<string, any>;
+  inputs: Record<string, JsonValue>;
 }
 
 /**

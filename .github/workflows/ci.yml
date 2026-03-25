@@ -57,6 +57,53 @@ jobs:
       - name: Run dependency governance gate
         run: pnpm ci:gate:dependencies
 
+  governance:
+    name: System Integrity Gates
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref }}-
+            turbo-${{ runner.os }}-
+
+      - name: Run comprehensive CI gates (8/8)
+        run: pnpm ci:gate
+        continue-on-error: false
+
   lint:
     name: Lint & Type Check
     needs: setup
@@ -206,10 +253,36 @@ jobs:
             turbo-${{ runner.os }}-${{ github.ref }}-
             turbo-${{ runner.os }}-
 
+      - name: Vite configuration gate
+        run: pnpm ci:gate:vite
+        continue-on-error: false
+
       - name: Build all packages
         run: pnpm turbo run build ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         env:
           CI: true
+
+      - name: Bundle size monitoring
+        run: pnpm ci:gate:bundle
+        continue-on-error: false
+
+      - name: Generate bundle report
+        if: github.event_name == 'pull_request'
+        run: pnpm ci:gate:bundle --report > bundle-report.txt
+
+      - name: Comment bundle report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('bundle-report.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📦 Bundle Analysis\n\n\`\`\`\n${report}\n\`\`\``
+            });
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -223,7 +296,7 @@ jobs:
 
   quality:
     name: Quality Gate
-    needs: [lint, test, build]
+    needs: [governance, lint, test, build]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -231,6 +304,10 @@ jobs:
 
       - name: Check job statuses
         run: |
+          if [ "${{ needs.governance.result }}" = "failure" ]; then
+            echo "❌ System Integrity Gates failed (boundaries, circular, contracts, dependencies, logger, typescript, bundle, vite)"
+            exit 1
+          fi
           if [ "${{ needs.lint.result }}" = "failure" ]; then
             echo "❌ Lint jobs failed"
             exit 1
@@ -243,7 +320,7 @@ jobs:
             echo "❌ Build jobs failed"
             exit 1
           fi
-          echo "✅ All quality gates passed"
+          echo "✅ All quality and integrity gates passed"
 
       - name: Comment PR
         if: github.event_name == 'pull_request'
@@ -251,6 +328,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const governance = "${{ needs.governance.result }}" === "success" ? "✅" : "❌";
             const lint = "${{ needs.lint.result }}" === "success" ? "✅" : "❌";
             const test = "${{ needs.test.result }}" === "success" ? "✅" : "❌";
             const build = "${{ needs.build.result }}" === "success" ? "✅" : "❌";
@@ -259,5 +337,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## CI Pipeline Results\n\n| Check | Status |\n|-------|--------|\n| Lint | ${lint} |\n| Tests | ${test} |\n| Build | ${build} |`
+              body: `## CI Pipeline Results\n\n| Check | Status |\n|-------|--------|\n| System Integrity | ${governance} |\n| Lint | ${lint} |\n| Tests | ${test} |\n| Build | ${build} |`
             });

@@ -5,6 +5,9 @@
  * Treat renderers like APIs — they must declare compatibility and capabilities.
  */
 
+import type React from "react";
+import type { JsonObject } from "@afenda/meta-types";
+
 /**
  * Renderer version identifier
  * Follow semantic versioning: v1, v2, v3
@@ -94,14 +97,15 @@ export interface RendererContract {
 
 /**
  * Renderer component props interface
- * All renderers should accept these base props
+ * All renderers should accept these base props.
+ * @template TRecord — shape of a single data record (defaults to `JsonObject`)
  */
-export interface RendererBaseProps {
+export interface RendererBaseProps<TRecord extends JsonObject = JsonObject> {
   /** Model name (e.g., "contacts", "opportunities") */
   model: string;
 
   /** Metadata definition for this model */
-  meta?: any;
+  meta?: JsonObject;
 
   /** Embedded mode (no chrome/borders) */
   embedded?: boolean;
@@ -112,27 +116,33 @@ export interface RendererBaseProps {
 
 /**
  * List renderer specific props
+ * @template TRecord — shape of a single data record
  */
-export interface ListRendererProps extends RendererBaseProps {
+export interface ListRendererProps<
+  TRecord extends JsonObject = JsonObject,
+> extends RendererBaseProps<TRecord> {
   /** Callback when a row is clicked */
-  onRowClick?: (id: string, record: any) => void;
+  onRowClick?: (id: string, record: TRecord) => void;
 
   /** Callback when "New" button is clicked */
   onNew?: () => void;
 
   /** Callback when selection state changes */
-  onSelectionChange?: (selection: any) => void;
+  onSelectionChange?: (selection: TRecord[]) => void;
 }
 
 /**
  * Form renderer specific props
+ * @template TRecord — shape of the saved record
  */
-export interface FormRendererProps extends RendererBaseProps {
+export interface FormRendererProps<
+  TRecord extends JsonObject = JsonObject,
+> extends RendererBaseProps<TRecord> {
   /** Record ID for editing (undefined for create) */
   id?: string;
 
   /** Callback when form is successfully saved */
-  onSaved?: (record: any) => void;
+  onSaved?: (record: TRecord) => void;
 
   /** Callback when cancel is clicked */
   onCancel?: () => void;
@@ -143,7 +153,7 @@ export interface FormRendererProps extends RendererBaseProps {
  */
 export interface DashboardRendererProps extends RendererBaseProps {
   /** Dashboard configuration */
-  config?: any;
+  config?: JsonObject;
 
   /** Refresh interval in seconds */
   refreshInterval?: number;
@@ -155,11 +165,11 @@ export interface DashboardRendererProps extends RendererBaseProps {
  */
 export type RendererModule = {
   /** Default export (optional) */
-  default?: React.ComponentType<any>;
+  default?: React.ComponentType<Record<string, unknown>>;
   /** The contract declaration (optional) */
   contract?: RendererContract;
-  /** Named exports */
-  [key: string]: any;
+  /** Named exports (unknown to avoid leaking unsafe `any` through barrel re-exports) */
+  [key: string]: unknown;
 };
 
 /**
@@ -178,9 +188,10 @@ export interface RendererRegistration {
 
 /**
  * Metadata adapter function signature
- * Transforms raw metadata into renderer-safe format
+ * Transforms raw metadata into renderer-safe format.
+ * Defaults to `unknown` so callers must supply explicit type params.
  */
-export type MetadataAdapter<TRaw = any, TSafe = any> = (meta: TRaw) => TSafe;
+export type MetadataAdapter<TRaw = unknown, TSafe = unknown> = (meta: TRaw) => TSafe;
 
 /**
  * Error types for renderer loading

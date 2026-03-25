@@ -5,6 +5,7 @@
     "outDir": "dist",
     "types": ["node"],
     "composite": true,
+    "incremental": true,
     "paths": {
       "@afenda/meta-types": ["packages/meta-types/dist/index.d.ts"],
       "@afenda/meta-types/*": ["packages/meta-types/dist/*"]

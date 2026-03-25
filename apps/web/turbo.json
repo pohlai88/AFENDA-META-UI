@@ -1,5 +1,6 @@
 {
   "extends": ["//"],
+  "tags": ["app-client"],
   "tasks": {
     "build": {
       "env": ["VITE_API_URL", "VITE_APP_TITLE", "VITE_APP_ENV"],

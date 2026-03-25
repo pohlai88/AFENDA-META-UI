@@ -3,11 +3,26 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 
-// ---------------------------------------------------------------------------
+// ───────────────────────────────────────────────────────────────────────────
 // Enterprise Vite Configuration — AFENDA Web
-// Uses conditional defineConfig for dev vs. build optimization.
-// Docs: https://vite.dev/config/
-// ---------------------------------------------------------------------------
+// Industry-quality standards based on official Vite docs (vite.dev)
+// Uses conditional defineConfig for dev vs. build optimization
+//
+// Performance Profiling:
+//   vite --profile                       # Generate .cpuprofile
+//   vite --debug plugin-transform        # Identify expensive transforms
+//
+// Security:
+//   ⚠️  All VITE_* env vars are public (inlined at build time)
+//   ⚠️  Never use VITE_* prefix for secrets/tokens/credentials
+//   ✓  Use mode-specific .env.[mode] files
+//   ✓  Keep .env.*.local out of git (already in .gitignore)
+//
+// Plugin Audit:
+//   Run `pnpm analyze` to inspect bundle composition
+//   Profile plugin hooks cost with --debug plugin-transform
+//   Add include/exclude patterns to limit transform scope
+// ───────────────────────────────────────────────────────────────────────────
 
 export default defineConfig(({ command, mode }) => {
   const isDev = command === "serve";
@@ -18,6 +33,11 @@ export default defineConfig(({ command, mode }) => {
 
   // ── Shared configuration ────────────────────────────────────────────
   const config: UserConfig = {
+    // Base public path for deployment
+    // For non-root deployments, set explicitly: base: '/my-app/'
+    // Affects asset paths, router basename, and manifest URLs
+    base: "/",
+
     plugins: [
       react(),
       // Bundle analyzer for production builds
@@ -68,6 +88,7 @@ export default defineConfig(({ command, mode }) => {
       },
 
       // Pre-transform frequently used files to avoid request waterfalls
+      // Only add files that are consistently imported early in the app
       warmup: {
         clientFiles: [
           "./src/main.tsx",
@@ -84,6 +105,10 @@ export default defineConfig(({ command, mode }) => {
       },
       headers: {
         "X-Content-Type-Options": "nosniff",
+        // CSP for dev (relaxed for HMR):
+        // In production, configure CSP via server/CDN headers
+        // For strict CSP, set build.assetsInlineLimit: 0
+        // and add nonce support to index.html + plugin
       },
     };
 
@@ -94,8 +119,12 @@ export default defineConfig(({ command, mode }) => {
   }
 
   // ── Production build ────────────────────────────────────────────────
+  // Industry best practice: Keep TypeScript checking outside Vite
+  // Current setup ✓: pnpm build runs `tsc && vite build`
   if (isProd || command === "build") {
     config.build = {
+      // Modern baseline (Chrome 111+, Edge 111+, Firefox 114+, Safari 16.4+)
+      // For older browser support, add @vitejs/plugin-legacy
       target: "es2022",
       outDir: "dist",
       sourcemap: "hidden", // Generate maps for error tracking (Sentry), hidden from browser
@@ -107,8 +136,16 @@ export default defineConfig(({ command, mode }) => {
       manifest: true, // Asset manifest for cache busting / backend integration
       license: true, // License compliance file
 
+      // Production deployment checklist:
+      // ✓ HTML is non-cacheable (prevents stale chunk references)
+      // ✓ vite:preloadError handler installed (see main.tsx)
+      // ✓ CI monitors bundle size and chunk count per release
+
       rolldownOptions: {
         output: {
+          // Stable hashed asset naming for predictable long-term caching
+          assetFileNames: "assets/[name]-[hash][extname]",
+
           // Strategic vendor chunk splitting for long-term caching
           manualChunks(id: string) {
             if (id.includes("node_modules")) {

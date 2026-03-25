@@ -5,6 +5,9 @@
  * Modules plug in like VS Code extensions.
  */
 
+import type { JsonValue, JsonObject } from "@afenda/meta-types";
+import type { RendererModule } from "./types/contracts";
+
 /**
  * Plugin types
  */
@@ -74,7 +77,7 @@ export interface RendererPlugin extends UIPlugin {
   /** Renderer type */
   rendererType: string;
   /** Loader function */
-  loader: () => Promise<any>;
+  loader: () => Promise<RendererModule>;
 }
 
 /**
@@ -82,8 +85,8 @@ export interface RendererPlugin extends UIPlugin {
  */
 export interface ValidatorPlugin extends UIPlugin {
   type: "validator";
-  /** Validation rules */
-  rules: Record<string, (value: any, context: any) => boolean | Promise<boolean>>;
+  /** Validation rules: value is the field value, context is the surrounding form data */
+  rules: Record<string, (value: JsonValue, context: JsonObject) => boolean | Promise<boolean>>;
 }
 
 /**
@@ -91,8 +94,8 @@ export interface ValidatorPlugin extends UIPlugin {
  */
 export interface ActionPlugin extends UIPlugin {
   type: "action";
-  /** Action handlers */
-  actions: Record<string, (context: any) => void | Promise<void>>;
+  /** Action handlers — context is the JSON-safe action payload */
+  actions: Record<string, (context: JsonObject) => void | Promise<void>>;
 }
 
 /**
@@ -100,8 +103,8 @@ export interface ActionPlugin extends UIPlugin {
  */
 export interface AnalyticsPlugin extends UIPlugin {
   type: "analytics";
-  /** Track event */
-  track(event: string, properties?: Record<string, any>): void;
+  /** Track event with optional JSON-safe properties */
+  track(event: string, properties?: JsonObject): void;
 }
 
 /**
@@ -283,7 +286,7 @@ export class UIEngine {
   /**
    * Execute action from action plugin
    */
-  async executeAction(actionId: string, context: any): Promise<void> {
+  async executeAction(actionId: string, context: JsonObject): Promise<void> {
     const [pluginId, action] = actionId.split(".");
     const plugin = this.getPlugin<ActionPlugin>(pluginId);
 
@@ -302,7 +305,7 @@ export class UIEngine {
   /**
    * Track analytics event
    */
-  track(event: string, properties?: Record<string, any>): void {
+  track(event: string, properties?: JsonObject): void {
     const analyticsPlugins = this.getPluginsByType<AnalyticsPlugin>("analytics");
     for (const plugin of analyticsPlugins) {
       plugin.track(event, properties);

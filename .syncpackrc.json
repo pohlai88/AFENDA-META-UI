@@ -1,0 +1,99 @@
+{
+  "$schema": "https://unpkg.com/syncpack@latest/schema.json",
+  "versionGroups": [
+    {
+      "label": "Use catalog versions for shared dependencies",
+      "dependencies": [
+        "drizzle-orm",
+        "drizzle-kit",
+        "eslint",
+        "@eslint/js",
+        "@typescript-eslint/eslint-plugin",
+        "@typescript-eslint/parser",
+        "eslint-config-prettier",
+        "prettier",
+        "class-variance-authority",
+        "clsx",
+        "tailwind-merge",
+        "zod",
+        "vitest",
+        "@vitest/coverage-v8",
+        "@vitest/ui",
+        "tsx",
+        "pg",
+        "@types/pg",
+        "@types/node",
+        "typescript"
+      ],
+      "packages": ["**"],
+      "isIgnored": false
+    },
+    {
+      "label": "Use workspace protocol for internal packages",
+      "dependencies": [
+        "@afenda/db",
+        "@afenda/meta-types",
+        "@afenda/ui"
+      ],
+      "packages": ["**"],
+      "dependencyTypes": ["prod", "dev"],
+      "specifierTypes": ["workspace"]
+    }
+  ],
+  "semverGroups": [
+    {
+      "label": "Ban exact versions (use ranges)",
+      "dependencies": ["**"],
+      "packages": ["**"],
+      "range": "^",
+      "isIgnored": false
+    }
+  ],
+  "customTypes": {
+    "catalogVersions": {
+      "path": "pnpm.catalog",
+      "strategy": "name~version"
+    }
+  },
+  "filters": {
+    "excludePackages": []
+  },
+  "sortFirst": [
+    "name",
+    "version",
+    "private",
+    "description",
+    "keywords",
+    "homepage",
+    "bugs",
+    "repository",
+    "license",
+    "author",
+    "type",
+    "main",
+    "module",
+    "types",
+    "exports",
+    "files",
+    "scripts",
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies"
+  ],
+  "dependencyTypes": [
+    "prod",
+    "dev",
+    "peer",
+    "optional",
+    "overrides",
+    "resolutions",
+    "pnpmOverrides"
+  ],
+  "source": [
+    "package.json",
+    "packages/*/package.json",
+    "apps/*/package.json",
+    "tools/*/package.json"
+  ]
+}

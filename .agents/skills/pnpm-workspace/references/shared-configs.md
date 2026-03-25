@@ -181,24 +181,21 @@ The config package `package.json`:
 The shared config exports an array of config objects:
 
 ```js
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.strict,
   {
     rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
-      '@typescript-eslint/consistent-type-imports': 'error',
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/consistent-type-imports": "error",
     },
   },
   {
-    ignores: ['**/dist/**', '**/node_modules/**'],
-  },
+    ignores: ["**/dist/**", "**/node_modules/**"],
+  }
 );
 ```
 
@@ -218,13 +215,13 @@ Add the dependency:
 Spread the shared config and add package-specific overrides:
 
 ```js
-import baseConfig from '@myapp/eslint-config';
+import baseConfig from "@myapp/eslint-config";
 
 export default [
   ...baseConfig,
   {
     rules: {
-      'no-console': 'warn',
+      "no-console": "warn",
     },
   },
 ];
@@ -269,9 +266,9 @@ export default {
   singleQuote: true,
   semi: true,
   tabWidth: 2,
-  trailingComma: 'all',
+  trailingComma: "all",
   printWidth: 80,
-  plugins: ['prettier-plugin-tailwindcss'],
+  plugins: ["prettier-plugin-tailwindcss"],
 };
 ```
 

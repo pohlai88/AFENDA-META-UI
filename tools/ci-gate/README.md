@@ -153,6 +153,29 @@ pnpm ci:gate:dependencies
 node tools/ci-gate/index.mjs --gate=dependencies
 ```
 
+### 4. TypeScript DX Gate (`typescript/`)
+
+Validates TypeScript configuration baseline, incremental build setup, declaration export contracts, and inline diagnostics scripts.
+
+**Checks:**
+
+- ✅ Root TypeScript scripts (`typecheck`, `typecheck:verbose`, `typecheck:debug`)
+- ✅ Baseline `tsconfig.base.json` strict + incremental defaults
+- ✅ Workspace incremental resolution across apps and packages
+- ✅ Library `exports` + `types` declaration contracts
+- ✅ TypeScript DX docs and package boundary artifacts
+- ✅ Live `pnpm typecheck` execution
+
+**Commands:**
+
+```bash
+# Run TypeScript gate only
+pnpm ci:gate:typescript
+
+# Or from master gate
+node tools/ci-gate/index.mjs --gate=typescript
+```
+
 \*\*Do🔧 Actionable Fix Suggestions
 
 Each error includes:

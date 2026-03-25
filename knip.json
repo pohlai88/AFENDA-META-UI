@@ -1,0 +1,122 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "ignoreDependencies": [
+    "@types/node",
+    "typescript",
+    "prettier"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tools/ci-gate/index.mjs",
+        "tools/ci-gate/*/index.mjs",
+        "eslint.config.boundaries.js"
+      ],
+      "project": [
+        "tools/**/*.{js,mjs,ts}",
+        "eslint.config.*.js"
+      ],
+      "ignore": [
+        "**/*.test.{js,ts}",
+        "**/*.spec.{js,ts}",
+        "**/__tests__/**",
+        "**/test/**",
+        "**/coverage/**",
+        "**/dist/**",
+        "**/.turbo/**"
+      ]
+    },
+    "packages/meta-types": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": [
+        "**/*.test.ts",
+        "**/__tests__/**",
+        "dist/**"
+      ]
+    },
+    "packages/db": {
+      "entry": [
+        "src/index.ts",
+        "src/_shared/index.ts",
+        "src/_session/index.ts",
+        "src/_rls/index.ts",
+        "src/schema/index.ts",
+        "src/schema-meta/index.ts",
+        "src/schema-domain/index.ts",
+        "drizzle.config.ts"
+      ],
+      "project": ["src/**/*.ts", "drizzle.config.ts"],
+      "ignore": [
+        "**/*.test.ts",
+        "**/__tests__/**",
+        "src/_seeds/**",
+        "dist/**"
+      ]
+    },
+    "packages/ui": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": [
+        "**/*.test.{ts,tsx}",
+        "**/__tests__/**",
+        "dist/**",
+        "src/_private/**"
+      ]
+    },
+    "apps/api": {
+      "entry": [
+        "src/index.ts",
+        "src/config/index.ts",
+        "src/routes/*.ts",
+        "src/middleware/*.ts",
+        "src/graphql/index.ts"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignore": [
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "**/__tests__/**",
+        "src/test/**",
+        "dist/**"
+      ]
+    },
+    "apps/web": {
+      "entry": [
+        "src/main.tsx",
+        "src/App.tsx",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "playwright.config.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
+      "ignore": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**",
+        "src/test/**",
+        "dist/**",
+        ".vite/**",
+        "coverage/**",
+        "playwright-report/**",
+        "test-results/**"
+      ],
+      "ignoreDependencies": [
+        "@playwright/test",
+        "@testing-library/react",
+        "@testing-library/user-event",
+        "@testing-library/jest-dom",
+        "jsdom",
+        "msw",
+        "@vitest/ui",
+        "@vitest/coverage-v8"
+      ]
+    },
+    "tools/ci-gate": {
+      "entry": ["index.mjs", "*/index.mjs"],
+      "project": ["**/*.mjs"],
+      "ignore": []
+    }
+  }
+}

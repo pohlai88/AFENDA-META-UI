@@ -1,19 +1,7 @@
 ---
 title: Filtering
 description: pnpm --filter flag patterns for targeting specific packages, dependencies, dependents, directories, and git changes
-tags:
-  [
-    filter,
-    --filter,
-    -F,
-    dependencies,
-    dependents,
-    directory,
-    git,
-    exclude,
-    recursive,
-    run,
-  ]
+tags: [filter, --filter, -F, dependencies, dependents, directory, git, exclude, recursive, run]
 ---
 
 # Filtering

@@ -1,3 +1,10 @@
+/**
+ * @afenda/ui public API
+ *
+ * Exports: Utilities (cn), Theme (ThemeProvider, useTheme), all shadcn/ui components
+ * Internal (_private/): Ambient types, framework internals
+ */
+
 // Utilities
 export { cn } from "./lib/utils";
 

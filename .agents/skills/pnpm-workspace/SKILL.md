@@ -1,10 +1,10 @@
 ---
 name: pnpm-workspace
-description: 'pnpm workspace monorepo management with filtering, catalogs, and shared configs. Use when setting up monorepos, managing workspace dependencies, filtering package commands, or sharing configuration across packages.'
+description: "pnpm workspace monorepo management with filtering, catalogs, and shared configs. Use when setting up monorepos, managing workspace dependencies, filtering package commands, or sharing configuration across packages."
 license: MIT
 metadata:
   author: oakoss
-  version: '1.2'
+  version: "1.2"
   source: https://pnpm.io/workspaces
 user-invocable: false
 ---

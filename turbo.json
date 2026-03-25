@@ -2,6 +2,40 @@
   "$schema": "https://turbo.build/schema.json",
   "globalEnv": ["NODE_ENV"],
   "globalDependencies": ["tsconfig.base.json"],
+  "boundaries": {
+    "tags": {
+      "foundation": {
+        "dependencies": {
+          "deny": ["foundation", "data", "presentation", "app-server", "app-client", "tooling"]
+        }
+      },
+      "data": {
+        "dependencies": {
+          "allow": ["foundation"]
+        }
+      },
+      "presentation": {
+        "dependencies": {
+          "allow": ["foundation"]
+        }
+      },
+      "app-server": {
+        "dependencies": {
+          "allow": ["data", "foundation"]
+        }
+      },
+      "app-client": {
+        "dependencies": {
+          "allow": ["presentation", "foundation"]
+        }
+      },
+      "tooling": {
+        "dependencies": {
+          "deny": ["foundation", "data", "presentation", "app-server", "app-client", "tooling"]
+        }
+      }
+    }
+  },
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -551,6 +551,33 @@ function FieldInput({
         />
       );
 
+    case "file":
+      return (
+        <FileUploadInput
+          id={controlId}
+          value={formField.value}
+          onChange={formField.onChange}
+          disabled={field.readonly}
+          required={field.required}
+          describedBy={describedBy}
+          hasError={hasError}
+        />
+      );
+
+    case "image":
+      return (
+        <ImageUploadInput
+          id={controlId}
+          label={field.label}
+          value={formField.value}
+          onChange={formField.onChange}
+          disabled={field.readonly}
+          required={field.required}
+          describedBy={describedBy}
+          hasError={hasError}
+        />
+      );
+
     case "one2many":
       return (
         <One2ManyField
@@ -1043,6 +1070,13 @@ function RatingInput({
 
 type RelationRecord = Record<string, unknown>;
 
+function relationValueEquals(a: unknown, b: unknown): boolean {
+  if (a == null || b == null) {
+    return a == null && b == null;
+  }
+  return String(a) === String(b);
+}
+
 function useRelationOptions(field: MetaField, search: string, rawValue?: unknown) {
   const relation = field.relation;
   const valueField = relation?.value_field ?? "id";
@@ -1164,7 +1198,7 @@ function ManyToOneInput({
   const [search, setSearch] = React.useState("");
   const { options, isLoading } = useRelationOptions(field, search, value);
   const selected = React.useMemo(
-    () => options.find((record) => record[valueField] === value),
+    () => options.find((record) => relationValueEquals(record[valueField], value)),
     [options, value, valueField]
   );
   const selectedLabel = getRelationRecordLabel(field, selected, value);
@@ -1237,7 +1271,7 @@ function ManyToOneInput({
               {options.map((record) => {
                 const optionValue = record[valueField];
                 const optionLabel = getRelationRecordLabel(field, record, optionValue);
-                const checked = optionValue === value;
+                const checked = relationValueEquals(optionValue, value);
                 return (
                   <CommandItem
                     key={String(optionValue)}
@@ -1295,7 +1329,11 @@ function ManyToManyInput({
   const { options, isLoading } = useRelationOptions(field, search, selectedValues);
   const selectedRecords = React.useMemo(
     () =>
-      options.filter((record) => selectedValues.includes(record[valueField] as string | number)),
+      options.filter((record) =>
+        selectedValues.some((selectedValue) =>
+          relationValueEquals(selectedValue, record[valueField])
+        )
+      ),
     [options, selectedValues, valueField]
   );
 
@@ -1307,9 +1345,13 @@ function ManyToManyInput({
     if (nextValue == null) {
       return;
     }
-    const exists = selectedValues.includes(nextValue);
+    const exists = selectedValues.some((selectedValue) =>
+      relationValueEquals(selectedValue, nextValue)
+    );
     onChange(
-      exists ? selectedValues.filter((item) => item !== nextValue) : [...selectedValues, nextValue]
+      exists
+        ? selectedValues.filter((item) => !relationValueEquals(item, nextValue))
+        : [...selectedValues, nextValue]
     );
   };
 
@@ -1395,6 +1437,216 @@ function ManyToManyInput({
               </Badge>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type UploadedAsset = {
+  url: string;
+};
+
+function isFile(value: unknown): value is File {
+  return typeof File !== "undefined" && value instanceof File;
+}
+
+function getFileName(value: unknown): string {
+  if (isFile(value)) {
+    return value.name;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+    const parts = trimmed.split("/");
+    return parts[parts.length - 1] ?? trimmed;
+  }
+  return "";
+}
+
+async function uploadAsset(file: File, kind: "file" | "image"): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`/api/uploads?kind=${kind}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload ${kind}`);
+  }
+
+  const payload = (await response.json()) as UploadedAsset;
+  return payload.url;
+}
+
+function FileUploadInput({
+  id,
+  value,
+  onChange,
+  disabled,
+  required,
+  describedBy,
+  hasError,
+}: {
+  id: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled?: boolean;
+  required?: boolean;
+  describedBy?: string;
+  hasError?: boolean;
+}) {
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const fileName = getFileName(value);
+
+  const handleFileSelect = async (file: File | null) => {
+    if (!file) {
+      onChange(null);
+      setUploadError(null);
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const uploadedUrl = await uploadAsset(file, "file");
+      onChange(uploadedUrl);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Input
+        id={id}
+        type="file"
+        disabled={disabled || isUploading}
+        required={required}
+        aria-required={required || undefined}
+        aria-readonly={disabled || undefined}
+        aria-describedby={describedBy}
+        aria-invalid={hasError || undefined}
+        onChange={(event) => {
+          const selectedFile = event.target.files?.[0] ?? null;
+          void handleFileSelect(selectedFile);
+        }}
+      />
+      {isUploading && <p className="text-xs text-muted-foreground">Uploading file...</p>}
+      {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+      {fileName && (
+        <div className="flex items-center gap-2 text-sm">
+          {typeof value === "string" ? (
+            <a href={value} target="_blank" rel="noreferrer" className="text-primary underline">
+              {fileName}
+            </a>
+          ) : (
+            <span className="text-muted-foreground truncate">{fileName}</span>
+          )}
+          {!disabled && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
+              Clear
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ImageUploadInput({
+  id,
+  label,
+  value,
+  onChange,
+  disabled,
+  required,
+  describedBy,
+  hasError,
+}: {
+  id: string;
+  label: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled?: boolean;
+  required?: boolean;
+  describedBy?: string;
+  hasError?: boolean;
+}) {
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (typeof value === "string" && value.trim()) {
+      setLocalPreviewUrl(value);
+      return;
+    }
+
+    if (isFile(value)) {
+      const objectUrl = URL.createObjectURL(value);
+      setLocalPreviewUrl(objectUrl);
+      return () => {
+        URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    setLocalPreviewUrl(null);
+  }, [value]);
+
+  const handleFileSelect = async (file: File | null) => {
+    if (!file) {
+      onChange(null);
+      setUploadError(null);
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const uploadedUrl = await uploadAsset(file, "image");
+      onChange(uploadedUrl);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Input
+        id={id}
+        type="file"
+        accept="image/*"
+        disabled={disabled || isUploading}
+        required={required}
+        aria-required={required || undefined}
+        aria-readonly={disabled || undefined}
+        aria-describedby={describedBy}
+        aria-invalid={hasError || undefined}
+        onChange={(event) => {
+          const selectedFile = event.target.files?.[0] ?? null;
+          void handleFileSelect(selectedFile);
+        }}
+      />
+      {isUploading && <p className="text-xs text-muted-foreground">Uploading image...</p>}
+      {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+      {localPreviewUrl && (
+        <div className="space-y-2">
+          <img src={localPreviewUrl} alt={label} className="h-24 w-24 rounded-md border object-cover" />
+          {!disabled && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
+              Clear
+            </Button>
+          )}
         </div>
       )}
     </div>

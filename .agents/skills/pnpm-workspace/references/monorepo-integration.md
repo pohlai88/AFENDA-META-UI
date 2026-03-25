@@ -1,18 +1,7 @@
 ---
 title: Monorepo Integration
 description: End-to-end pnpm + Turborepo + Changesets pipeline, Docker deployment with pnpm deploy, and release workflow coordination
-tags:
-  [
-    turborepo,
-    changesets,
-    integration,
-    pipeline,
-    docker,
-    deploy,
-    release,
-    prune,
-    ci,
-  ]
+tags: [turborepo, changesets, integration, pipeline, docker, deploy, release, prune, ci]
 ---
 
 # Monorepo Integration
@@ -105,7 +94,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
-          node-version-file: '.nvmrc'
+          node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: changesets/action@v1

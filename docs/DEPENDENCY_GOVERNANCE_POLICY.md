@@ -212,6 +212,85 @@ Changes affecting the following require architecture review:
 - Database contracts
 - Build pipeline
 
+### 9.4 Boundary Enforcement Tooling
+
+The monorepo enforces architectural boundaries using automated tooling at multiple levels:
+
+#### Package Tier Tags
+
+All packages are tagged with their architectural tier in `turbo.json`:
+
+- `foundation` — Pure types, no runtime dependencies (@afenda/meta-types)
+- `data` — Database layer (@afenda/db)
+- `presentation` — UI components (@afenda/ui)
+- `app-server` — Backend application (@afenda/api)
+- `app-client` — Frontend application (@afenda/web)
+- `tooling` — Build/CI tools (ci-gate)
+
+#### Dependency Rules
+
+| Tier | Can Import | Cannot Import |
+|------|-----------|---------------|
+| foundation | nothing | everything |
+| data | foundation | data, presentation, app-server, app-client, tooling |
+| presentation | foundation | data, presentation, app-server, app-client, tooling |
+| app-server | data, foundation | presentation, app-server, app-client, tooling |
+| app-client | presentation, foundation | data, app-server, app-client, tooling |
+| tooling | nothing | everything |
+
+#### Enforcement Tools
+
+**Turborepo Boundaries** (`turbo boundaries`)
+- Tag-based dependency validation in the build pipeline
+- Catches violations before task execution
+- Run: `pnpm ci:gate:boundaries`
+
+**ESLint Boundaries** (`eslint-plugin-boundaries`)
+- Import-level enforcement with IDE feedback
+- Flags cross-layer imports in real-time
+- Run: `pnpm lint` (automatic) or `pnpm ci:gate:boundaries`
+
+**Circular Dependency Detection** (`madge`)
+- Detects circular dependencies across packages
+- Indicates architectural coupling issues
+- Run: `pnpm ci:gate:circular`
+
+**Dead Code Detection** (`knip`)
+- Finds unused files, dependencies, and exports
+- Prevents package API bloat
+- Run: `pnpm knip` or `pnpm knip:production`
+
+**Version Drift Enforcement** (`syncpack`)
+- Enforces consistent dependency versions
+- Catches packages not using catalog versions
+- Run: `pnpm syncpack` or `pnpm syncpack:list`
+
+**Package Hygiene Validation** (`sherif`)
+- Validates package.json naming, fields, and structure
+- Ensures `@afenda/*` naming convention
+- Run: `pnpm sherif`
+
+#### CI Integration
+
+All boundary gates run in CI before merge:
+
+```bash
+pnpm ci:gate              # Runs all gates including boundaries
+pnpm ci:gate:boundaries   # Run boundary checks only
+pnpm ci:gate:circular     # Run circular dependency check
+```
+
+#### Manual Validation
+
+Before submitting PRs, developers should run:
+
+```bash
+pnpm lint                 # Includes ESLint boundaries
+pnpm typecheck           # TypeScript validation
+pnpm ci:gate:boundaries  # Full boundary check
+pnpm syncpack:list       # Check version alignment
+```
+
 ---
 
 ## 10. Operational Procedures

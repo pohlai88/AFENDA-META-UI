@@ -31,6 +31,7 @@ export interface CommandPaletteProps {
 export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(controlledOpen ?? false);
+  const [highlightedIndex, setHighlightedIndex] = React.useState(0);
   const { query, setQuery, results, recordViewed } = useGlobalSearch();
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -62,19 +63,48 @@ export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPa
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 0);
+      setHighlightedIndex(0);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [query]);
 
   if (!isOpen) return null;
 
   const allResults = [...results, ...COMMAND_PALETTE_COMMANDS];
   const displayResults = allResults.slice(0, 10);
 
+  const executeCommand = (id: string) => {
+    switch (id) {
+      case "cmd:create-order":
+        navigate("/sales/orders/new");
+        break;
+      case "cmd:create-invoice":
+        navigate("/sales/invoices/new");
+        break;
+      case "cmd:show-settings":
+        navigate("/settings");
+        break;
+      case "cmd:dark-mode": {
+        const root = document.documentElement;
+        root.classList.toggle("dark");
+        break;
+      }
+      case "cmd:help":
+        navigate("/help");
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleSelect = (result: SearchResult) => {
     if (result.type === "module") {
       navigate(`/${result.id}`);
     } else if (result.id.startsWith("cmd:")) {
-      // Command execution would go here
+      executeCommand(result.id);
     } else {
       recordViewed(result.id);
     }
@@ -103,6 +133,31 @@ export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPa
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (displayResults.length === 0) {
+                  return;
+                }
+
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlightedIndex((idx) => (idx + 1) % displayResults.length);
+                }
+
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlightedIndex((idx) =>
+                    idx === 0 ? displayResults.length - 1 : Math.max(0, idx - 1)
+                  );
+                }
+
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const result = displayResults[highlightedIndex];
+                  if (result) {
+                    handleSelect(result);
+                  }
+                }
+              }}
               placeholder="Search models, commands..."
               className="border-0 shadow-none focus-visible:ring-0"
             />
@@ -123,8 +178,9 @@ export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPa
                 className={cn(
                   "w-full px-4 py-2 text-left hover:bg-accent",
                   "flex items-center justify-between gap-2 transition-colors",
-                  index === 0 && "bg-accent"
+                  index === highlightedIndex && "bg-accent"
                 )}
+                onMouseEnter={() => setHighlightedIndex(index)}
               >
                 <div className="flex-1">
                   <div className="text-sm font-medium">{result.title}</div>

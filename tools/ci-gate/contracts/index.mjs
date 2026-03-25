@@ -47,6 +47,13 @@ const colors = {
 // Parse command line arguments
 const verbose = process.argv.includes('--verbose') || process.argv.includes('-v');
 
+const CONTRACT_TEST_FILES = [
+  'src/routes/lazy-pages.contract.test.ts',
+  'src/renderers/MetaListV2.contract.test.ts',
+  'src/renderers/registry.test.ts',
+  'src/renderers/safeLazy.test.tsx',
+];
+
 function main() {
   console.log(`${colors.bright}${colors.blue}Export Contracts CI Gate${colors.reset}\n`);
   console.log(`${colors.cyan}Validating lazy-page and renderer export contracts...${colors.reset}\n`);
@@ -54,47 +61,30 @@ function main() {
   try {
     // Run the contract tests using pnpm from the web workspace
     const webDir = join(__dirname, '../../../apps/web');
+    const combinedCommand = `pnpm exec vitest run ${CONTRACT_TEST_FILES.join(' ')}`;
     
     if (verbose) {
       console.log(`${colors.dim}Working directory: ${webDir}${colors.reset}`);
     }
-    console.log(`${colors.dim}Running: pnpm test:contracts${colors.reset}\n`);
+    console.log(`${colors.dim}Running: ${combinedCommand}${colors.reset}\n`);
     
-    // Execute the contract tests and capture output
-    const contractResult = execSync('pnpm test:contracts', {
+    // Execute all contract and registry tests in one Vitest process.
+    const testResult = execSync(combinedCommand, {
       cwd: webDir,
       encoding: 'utf-8',
       stdio: verbose ? 'inherit' : 'pipe',
     });
 
     if (verbose) {
-      console.log(contractResult);
+      console.log(testResult);
     }
 
-    console.log(`\n${colors.green}✓ All export contracts validated successfully${colors.reset}`);
-    
-    // Also run registry integrity tests
-    console.log(`\n${colors.dim}Running: pnpm test:registry${colors.reset}\n`);
-    
-    const registryResult = execSync('pnpm test:registry', {
-      cwd: webDir,
-      encoding: 'utf-8',
-      stdio: verbose ? 'inherit' : 'pipe',
-    });
-
-    if (verbose) {
-      console.log(registryResult);
-    }
-
-    console.log(`\n${colors.green}✓ All registry integrity tests passed${colors.reset}`);
+    console.log(`\n${colors.green}✓ Export and registry contracts validated successfully${colors.reset}`);
     console.log(`${colors.dim}All lazy-loaded modules export the expected shapes.${colors.reset}\n`);
     process.exit(0);
     
   } catch (error) {
-    const command = String(error.message || "");
-    const failedStage = command.includes("test:registry")
-      ? "registry integrity"
-      : "export contracts";
+    const failedStage = "export or registry contracts";
 
     // Capture the error output for detailed parsing
     const output = error.stdout || error.stderr || error.message || '';
