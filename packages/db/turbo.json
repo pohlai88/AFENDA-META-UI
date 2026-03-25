@@ -1,0 +1,17 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "db:push": {
+      "env": ["DATABASE_URL"],
+      "cache": false
+    },
+    "db:generate": {
+      "env": ["DATABASE_URL"],
+      "outputs": ["src/db/migrations/**"]
+    },
+    "test:db": {
+      "env": ["DATABASE_URL"],
+      "outputs": ["coverage/**"]
+    }
+  }
+}

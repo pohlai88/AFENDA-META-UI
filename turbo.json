@@ -1,8 +1,8 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL", "NODE_ENV", "PORT"],
-  "globalPassThroughEnv": ["VITE_API_URL", "VITE_APP_TITLE", "VITE_APP_ENV"],
-  "pipeline": {
+  "globalEnv": ["NODE_ENV"],
+  "globalDependencies": ["tsconfig.base.json"],
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".vite/**"]
@@ -11,9 +11,20 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {},
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "lint": {
+      "dependsOn": ["transit"],
+      "outputs": []
+    },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["transit"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
     },
     "meta:introspect": {
       "dependsOn": ["build"],
