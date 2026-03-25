@@ -1,0 +1,35 @@
+# Auto-detect text files and normalize line endings to LF in the repo
+* text=auto eol=lf
+
+# Explicitly set LF for config/script files
+*.sh text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+.npmrc text eol=lf
+.env* text eol=lf
+
+# Binary files — no conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.zip binary
+*.gz binary

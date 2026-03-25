@@ -1,10 +1,20 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "tools/*"
 
 catalog:
   drizzle-orm: "1.0.0-beta.19"
   drizzle-kit: "1.0.0-beta.19"
+  eslint: "^10.1.0"
+  "@eslint/js": "^10.0.1"
+  "@typescript-eslint/eslint-plugin": "^8.57.2"
+  "@typescript-eslint/parser": "^8.57.2"
+  eslint-config-prettier: "^10.1.8"
+  prettier: "^3.8.1"
+  class-variance-authority: "^0.7.1"
+  clsx: "^2.1.1"
+  tailwind-merge: "^3.5.0"
   zod: "^4.3.6"
   vitest: "^4.1.1"
   "@vitest/coverage-v8": "^4.1.1"

@@ -6,27 +6,54 @@ settings:
 
 catalogs:
   default:
+    '@eslint/js':
+      specifier: ^10.0.1
+      version: 10.0.1
     '@types/node':
       specifier: ^22.0.0
       version: 22.19.15
     '@types/pg':
       specifier: ^8.20.0
       version: 8.20.0
+    '@typescript-eslint/eslint-plugin':
+      specifier: ^8.57.2
+      version: 8.57.2
+    '@typescript-eslint/parser':
+      specifier: ^8.57.2
+      version: 8.57.2
     '@vitest/coverage-v8':
       specifier: ^4.1.1
       version: 4.1.1
     '@vitest/ui':
       specifier: ^4.1.1
       version: 4.1.1
+    class-variance-authority:
+      specifier: ^0.7.1
+      version: 0.7.1
+    clsx:
+      specifier: ^2.1.1
+      version: 2.1.1
     drizzle-kit:
       specifier: 1.0.0-beta.19
       version: 1.0.0-beta.19
     drizzle-orm:
       specifier: 1.0.0-beta.19
       version: 1.0.0-beta.19
+    eslint:
+      specifier: ^10.1.0
+      version: 10.1.0
+    eslint-config-prettier:
+      specifier: ^10.1.8
+      version: 10.1.8
     pg:
       specifier: ^8.20.0
       version: 8.20.0
+    prettier:
+      specifier: ^3.8.1
+      version: 3.8.1
+    tailwind-merge:
+      specifier: ^3.5.0
+      version: 3.5.0
     tsx:
       specifier: ^4.21.0
       version: 4.21.0
@@ -48,13 +75,13 @@ importers:
   .:
     devDependencies:
       eslint-config-prettier:
-        specifier: ^10.1.8
+        specifier: 'catalog:'
         version: 10.1.8(eslint@10.1.0(jiti@2.6.1))
       glob:
         specifier: ^13.0.6
         version: 13.0.6
       prettier:
-        specifier: ^3.8.1
+        specifier: 'catalog:'
         version: 3.8.1
       turbo:
         specifier: ^1.13.4
@@ -133,7 +160,7 @@ importers:
         version: 4.3.6
     devDependencies:
       '@eslint/js':
-        specifier: ^10.0.1
+        specifier: 'catalog:'
         version: 10.0.1(eslint@10.1.0(jiti@2.6.1))
       '@types/compression':
         specifier: ^1.8.1
@@ -157,10 +184,10 @@ importers:
         specifier: ^7.2.0
         version: 7.2.0
       '@typescript-eslint/eslint-plugin':
-        specifier: ^8.57.2
+        specifier: 'catalog:'
         version: 8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3))(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3)
       '@typescript-eslint/parser':
-        specifier: ^8.57.2
+        specifier: 'catalog:'
         version: 8.57.2(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3)
       commander:
         specifier: ^14.0.3
@@ -169,10 +196,10 @@ importers:
         specifier: 'catalog:'
         version: 1.0.0-beta.19
       eslint:
-        specifier: ^10.1.0
+        specifier: 'catalog:'
         version: 10.1.0(jiti@2.6.1)
       eslint-config-prettier:
-        specifier: ^10.1.8
+        specifier: 'catalog:'
         version: 10.1.8(eslint@10.1.0(jiti@2.6.1))
       pino-pretty:
         specifier: ^13.1.3
@@ -253,10 +280,10 @@ importers:
         specifier: ^3.20.5
         version: 3.20.5
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 'catalog:'
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 'catalog:'
         version: 2.1.1
       cmdk:
         specifier: ^1.1.1
@@ -298,7 +325,7 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       tailwind-merge:
-        specifier: ^3.5.0
+        specifier: 'catalog:'
         version: 3.5.0
       tw-animate-css:
         specifier: ^1.4.0
@@ -311,7 +338,7 @@ importers:
         version: 5.0.12(@types/react@18.3.28)(immer@11.1.4)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
     devDependencies:
       '@eslint/js':
-        specifier: ^10.0.1
+        specifier: 'catalog:'
         version: 10.0.1(eslint@10.1.0(jiti@2.6.1))
       '@playwright/test':
         specifier: ^1.58.2
@@ -335,10 +362,10 @@ importers:
         specifier: ^18.3.0
         version: 18.3.7(@types/react@18.3.28)
       '@typescript-eslint/eslint-plugin':
-        specifier: ^8.57.2
+        specifier: 'catalog:'
         version: 8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3))(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3)
       '@typescript-eslint/parser':
-        specifier: ^8.57.2
+        specifier: 'catalog:'
         version: 8.57.2(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3)
       '@vitejs/plugin-react':
         specifier: ^6.0.1
@@ -353,7 +380,7 @@ importers:
         specifier: ^10.4.27
         version: 10.4.27(postcss@8.5.8)
       eslint:
-        specifier: ^10.1.0
+        specifier: 'catalog:'
         version: 10.1.0(jiti@2.6.1)
       eslint-plugin-react:
         specifier: ^7.37.5
@@ -377,7 +404,7 @@ importers:
         specifier: ^8.5.8
         version: 8.5.8
       prettier:
-        specifier: ^3.8.1
+        specifier: 'catalog:'
         version: 3.8.1
       rollup-plugin-visualizer:
         specifier: ^7.0.1
@@ -444,10 +471,10 @@ importers:
   packages/ui:
     dependencies:
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 'catalog:'
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 'catalog:'
         version: 2.1.1
       cmdk:
         specifier: ^1.1.1
@@ -480,7 +507,7 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       tailwind-merge:
-        specifier: ^3.5.0
+        specifier: 'catalog:'
         version: 3.5.0
     devDependencies:
       '@types/react':
@@ -492,6 +519,8 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+
+  tools/ci-gate: {}
 
 packages:
 
@@ -6169,8 +6198,8 @@ packages:
     resolution: {integrity: sha512-bLVMLPtstlZ4iMQHpFHTR7GAGj2jxi8Dg0s2h2MafAE4uSWF98FC/3MomU51iQAMf8/qDUbKWf5GxuvvVcXEhw==}
     engines: {node: '>=20'}
 
-  ts-api-utils@2.5.0:
-    resolution: {integrity: sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA==}
+  ts-api-utils@2.4.0:
+    resolution: {integrity: sha512-3TaVTaAv2gTiMB35i3FiGJaRfwb3Pyn/j3m/bfAvGe8FB7CF6u+LMYqYlDh7reQf7UNvoTvdfAqHGmPGOSsPmA==}
     engines: {node: '>=18.12'}
     peerDependencies:
       typescript: '>=4.8.4'
@@ -9648,7 +9677,7 @@ snapshots:
       eslint: 10.1.0(jiti@2.6.1)
       ignore: 7.0.5
       natural-compare: 1.4.0
-      ts-api-utils: 2.5.0(typescript@5.9.3)
+      ts-api-utils: 2.4.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -9690,7 +9719,7 @@ snapshots:
       '@typescript-eslint/utils': 8.57.2(eslint@10.1.0(jiti@2.6.1))(typescript@5.9.3)
       debug: 4.4.3
       eslint: 10.1.0(jiti@2.6.1)
-      ts-api-utils: 2.5.0(typescript@5.9.3)
+      ts-api-utils: 2.4.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -9707,7 +9736,7 @@ snapshots:
       minimatch: 10.2.4
       semver: 7.7.4
       tinyglobby: 0.2.15
-      ts-api-utils: 2.5.0(typescript@5.9.3)
+      ts-api-utils: 2.4.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -13096,7 +13125,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  ts-api-utils@2.5.0(typescript@5.9.3):
+  ts-api-utils@2.4.0(typescript@5.9.3):
     dependencies:
       typescript: 5.9.3
 
