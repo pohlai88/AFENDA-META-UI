@@ -31,7 +31,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: 📦 Dependency Governance Gate
         run: pnpm ci:gate:dependencies
