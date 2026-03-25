@@ -1,0 +1,172 @@
+/**
+ * UI Engine Plugin Architecture Tests
+ */
+
+import { describe, it, expect } from "vitest";
+import { UIEngine } from "./plugin-engine";
+import type { UIPlugin } from "./plugin-engine";
+
+describe("UI Engine Plugin Architecture", () => {
+  describe("Plugin Registration", () => {
+    it("registers a plugin", async () => {
+      const engine = new UIEngine();
+
+      const plugin: UIPlugin = {
+        id: "test-plugin",
+        type: "renderer",
+        name: "Test Plugin",
+        description: "A test plugin",
+        version: "1.0.0",
+        install: () => {},
+      };
+
+      engine.use(plugin);
+      await engine.initialize();
+
+      const registered = engine.getPlugin("test-plugin");
+      expect(registered).toBeDefined();
+      expect(registered?.id).toBe("test-plugin");
+    });
+
+    it("retrieves plugins by type", async () => {
+      const engine = new UIEngine();
+
+      const plugin1: UIPlugin = {
+        id: "renderer-1",
+        type: "renderer",
+        name: "Renderer 1",
+        description: "Test",
+        version: "1.0.0",
+        install: () => {},
+      };
+
+      const plugin2: UIPlugin = {
+        id: "datasource-1",
+        type: "datasource",
+        name: "Datasource 1",
+        description: "Test",
+        version: "1.0.0",
+        install: () => {},
+      };
+
+      engine.use(plugin1);
+      engine.use(plugin2);
+      await engine.initialize();
+
+      const renderers = engine.getPluginsByType("renderer");
+      expect(renderers.length).toBe(1);
+      expect(renderers[0].id).toBe("renderer-1");
+    });
+  });
+
+  describe("Plugin Lifecycle", () => {
+    it("calls lifecycle hooks in correct order", async () => {
+      const engine = new UIEngine();
+      const callOrder: string[] = [];
+
+      const plugin: UIPlugin = {
+        id: "ordered",
+        type: "renderer",
+        name: "Ordered Plugin",
+        description: "Tests order",
+        version: "1.0.0",
+        install: () => callOrder.push("install"),
+        onLoad: () => callOrder.push("load"),
+        onActivate: () => callOrder.push("activate"),
+      };
+
+      engine.use(plugin);
+      await engine.initialize();
+
+      expect(callOrder).toEqual(["load", "install", "activate"]);
+    });
+  });
+
+  describe("Plugin Dependencies", () => {
+    it("resolves simple dependency chain", async () => {
+      const engine = new UIEngine();
+      const executionOrder: string[] = [];
+
+      const pluginA: UIPlugin = {
+        id: "plugin-a",
+        type: "datasource",
+        name: "Plugin A",
+        description: "Base plugin",
+        version: "1.0.0",
+        install: () => executionOrder.push("install-a"),
+      };
+
+      const pluginB: UIPlugin = {
+        id: "plugin-b",
+        type: "renderer",
+        name: "Plugin B",
+        description: "Depends on A",
+        version: "1.0.0",
+        dependencies: [{ id: "plugin-a" }],
+        install: () => executionOrder.push("install-b"),
+      };
+
+      engine.use(pluginA);
+      engine.use(pluginB);
+      await engine.initialize();
+
+      expect(executionOrder).toEqual(["install-a", "install-b"]);
+    });
+
+    it("detects circular dependencies", async () => {
+      const engine = new UIEngine();
+
+      const pluginA: UIPlugin = {
+        id: "plugin-a",
+        type: "renderer",
+        name: "Plugin A",
+        description: "Test",
+        version: "1.0.0",
+        dependencies: [{ id: "plugin-b" }],
+        install: () => {},
+      };
+
+      const pluginB: UIPlugin = {
+        id: "plugin-b",
+        type: "renderer",
+        name: "Plugin B",
+        description: "Test",
+        version: "1.0.0",
+        dependencies: [{ id: "plugin-a" }],
+        install: () => {},
+      };
+
+      engine.use(pluginA);
+      engine.use(pluginB);
+
+      await expect(engine.initialize()).rejects.toThrow(/circular|dependency/i);
+    });
+  });
+
+  describe("Plugin Types", () => {
+    it("supports all 8 plugin types", async () => {
+      const engine = new UIEngine();
+      const types = ["renderer", "validator", "layout", "action", "datasource", "theme", "policy", "analytics"] as const;
+
+      for (const type of types) {
+        const plugin: UIPlugin = {
+          id: `${type}-plugin`,
+          type,
+          name: `${type} Plugin`,
+          description: "Test",
+          version: "1.0.0",
+          install: () => {},
+        };
+
+        engine.use(plugin);
+      }
+
+      await engine.initialize();
+
+      for (const type of types) {
+        const plugins = engine.getPluginsByType(type);
+        expect(plugins.length).toBeGreaterThan(0);
+      }
+    });
+  });
+});

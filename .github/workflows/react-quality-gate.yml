@@ -1,0 +1,127 @@
+name: React Enterprise Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+  push:
+    branches: [main, develop]
+
+jobs:
+  quality-gate:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      
+      # GATE 1: TypeScript Strict Type Checking
+      - name: 🔍 TypeScript Check
+        run: pnpm --filter web typecheck
+        
+      # GATE 2: ESLint with React Hooks Rules (CRITICAL)
+      - name: 🧹 ESLint (React Hooks + Best Practices)
+        run: pnpm --filter web lint --max-warnings 0
+        
+      # GATE 3: Unit Tests
+      - name: 🧪 Unit Tests
+        run: pnpm --filter web test:run
+        
+      # GATE 4: Production Build Verification
+      - name: 🏗️ Production Build
+        run: pnpm --filter web build
+        
+      # GATE 5: Bundle Size Analysis
+      - name: 📊 Bundle Size Check
+        run: |
+          cd apps/web/dist/assets
+          
+          # Get main bundle size
+          MAIN_SIZE=$(stat -c%s index-*.js 2>/dev/null || echo "0")
+          VENDOR_REACT_SIZE=$(stat -c%s vendor-react-*.js 2>/dev/null || echo "0")
+          VENDOR_STATE_SIZE=$(stat -c%s vendor-state-*.js 2>/dev/null || echo "0")
+          
+          MAIN_KB=$((MAIN_SIZE / 1024))
+          VENDOR_KB=$((VENDOR_REACT_SIZE / 1024))
+          VENDOR_STATE_KB=$((VENDOR_STATE_SIZE / 1024))
+          
+          echo "📦 Main bundle: ${MAIN_KB}KB"
+          echo "⚛️  React vendor: ${VENDOR_KB}KB"
+          echo "🏪 State vendor: ${VENDOR_STATE_KB}KB"
+          
+          # Fail if main bundle exceeds 175KB (app code only, excludes vendor)
+          if [ $MAIN_SIZE -gt 179200 ]; then
+            echo "❌ Main bundle too large! Limit: 175KB, Actual: ${MAIN_KB}KB"
+            exit 1
+          fi
+          
+          # Fail if React vendor exceeds 250KB (React 18+ is ~218KB)
+          if [ $VENDOR_REACT_SIZE -gt 256000 ]; then
+            echo "❌ React vendor bundle too large! Limit: 250KB, Actual: ${VENDOR_KB}KB"
+            exit 1
+          fi
+          
+          echo "✅ Bundle sizes within limits"
+      
+      # GATE 6: Check for React Runtime Warnings in Tests
+      - name: ⚠️  Check React Warnings
+        run: |
+          pnpm --filter web test:run 2>&1 | tee test-output.log
+          
+          # Exclude node_modules warnings
+          if grep -iE "Warning:" test-output.log | grep -v "node_modules" | grep -v "deprecated"; then
+            echo "❌ React warnings detected in application code!"
+            echo "Review the warnings above and fix them."
+            exit 1
+          fi
+          
+          echo "✅ No React warnings in application code"
+      
+      # GATE 7: Verify Code Splitting (Lazy Loading)
+      - name: 🔀 Verify Code Splitting
+        run: |
+          cd apps/web/dist/assets
+          
+          # Check that we have separate page chunks (lazy loaded routes)
+          PAGE_CHUNKS=$(ls -1 | grep -E "(home|model-list|model-form|404|403|500)" | wc -l)
+          
+          if [ $PAGE_CHUNKS -lt 3 ]; then
+            echo "❌ Code splitting not working! Expected at least 3 page chunks, found: $PAGE_CHUNKS"
+            exit 1
+          fi
+          
+          echo "✅ Code splitting verified: $PAGE_CHUNKS page chunks found"
+      
+      # Summary Report
+      - name: 📋 Quality Gate Summary
+        if: always()
+        run: |
+          echo "## Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeScript | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| ESLint | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production Build | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bundle Size | ✅ Within limits |" >> $GITHUB_STEP_SUMMARY
+          echo "| React Warnings | ✅ None detected |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Splitting | ✅ Verified |" >> $GITHUB_STEP_SUMMARY

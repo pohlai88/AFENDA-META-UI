@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@afenda/meta-types": ["packages/meta-types/src/index.ts"],
+      "@afenda/db": ["packages/db/src/index.ts"],
+      "@afenda/db/*": ["packages/db/src/*"],
+      "@afenda/db/schema-meta": ["packages/db/src/schema-meta/index.ts"],
+      "@afenda/db/schema-domain": ["packages/db/src/schema-domain/index.ts"]
+    },
+    "strict": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "exclude": ["node_modules"]
+}

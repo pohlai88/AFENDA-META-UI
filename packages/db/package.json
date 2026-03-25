@@ -1,0 +1,62 @@
+{
+  "name": "@afenda/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./shared": {
+      "import": "./dist/_shared/index.js",
+      "types": "./dist/_shared/index.d.ts"
+    },
+    "./session": {
+      "import": "./dist/_session/index.js",
+      "types": "./dist/_session/index.d.ts"
+    },
+    "./rls": {
+      "import": "./dist/_rls/index.js",
+      "types": "./dist/_rls/index.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema/index.js",
+      "types": "./dist/schema/index.d.ts"
+    },
+    "./schema-meta": {
+      "import": "./dist/schema-meta/index.js",
+      "types": "./dist/schema-meta/index.d.ts"
+    },
+    "./schema-domain": {
+      "import": "./dist/schema-domain/index.js",
+      "types": "./dist/schema-domain/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "test:db": "vitest run --passWithNoTests",
+    "check:all": "pnpm run typecheck && pnpm run test:db",
+    "gate:early": "pnpm run check:all",
+    "seed": "tsx src/_seeds/index.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "1.0.0-beta.19",
+    "pg": "^8.11.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/pg": "^8.11.6",
+    "drizzle-kit": "1.0.0-beta.19",
+    "tsx": "^4.10.5",
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.0"
+  }
+}

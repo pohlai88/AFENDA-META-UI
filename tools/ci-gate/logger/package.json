@@ -1,0 +1,22 @@
+{
+  "name": "@afenda/ci-gate-logger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CI gate for validating Pino logger usage patterns",
+  "main": "index.mjs",
+  "scripts": {
+    "check": "node index.mjs",
+    "check:fix": "node index.mjs --fix"
+  },
+  "dependencies": {
+    "glob": "^11.0.0"
+  },
+  "keywords": [
+    "ci",
+    "logger",
+    "pino",
+    "validation",
+    "linting"
+  ]
+}

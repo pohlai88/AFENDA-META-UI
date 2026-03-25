@@ -1,0 +1,24 @@
+{
+  "name": "@afenda/ci-gate",
+  "version": "1.0.0",
+  "description": "Master CI gate runner for AFENDA Meta UI project",
+  "type": "module",
+  "private": true,
+  "main": "index.mjs",
+  "scripts": {
+    "gate": "node index.mjs",
+    "gate:logger": "node index.mjs --gate=logger",
+    "gate:fix": "node index.mjs --fix",
+    "gate:verbose": "node index.mjs --verbose",
+    "help": "node index.mjs --help"
+  },
+  "keywords": [
+    "ci",
+    "gate",
+    "validation",
+    "linting",
+    "quality"
+  ],
+  "author": "AFENDA Team",
+  "license": "UNLICENSED"
+}

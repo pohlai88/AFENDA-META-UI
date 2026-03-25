@@ -1,0 +1,41 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["DATABASE_URL", "NODE_ENV", "PORT"],
+  "globalPassThroughEnv": ["VITE_API_URL", "VITE_APP_TITLE", "VITE_APP_ENV"],
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".vite/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "meta:introspect": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:generate": {
+      "outputs": ["src/db/migrations/**"]
+    },
+    "test:db": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "check:all": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "gate:early": {
+      "dependsOn": ["check:all"],
+      "outputs": []
+    }
+  }
+}

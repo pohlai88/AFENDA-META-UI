@@ -1,0 +1,108 @@
+/**
+ * Metadata Schema Evolution Tests
+ */
+
+import { describe, it, expect } from "vitest";
+import {
+  SchemaRegistry,
+  getMigrationPath,
+  runMigrations,
+  upgradeToLatest,
+  checkDeprecation,
+} from "./schema-evolution";
+import type { BaseMetadata, SchemaVersion } from "./schema-evolution";
+
+describe("Metadata Schema Evolution", () => {
+  describe("Schema Registry", () => {
+    it("contains registered schema versions", () => {
+      expect(SchemaRegistry["1.0"]).toBeDefined();
+      expect(SchemaRegistry["2.2"]).toBeDefined();
+    });
+
+    it("each schema has required metadata", () => {
+      const schema = SchemaRegistry["2.1"];
+      expect(schema.version).toBe("2.1");
+      expect(schema.stage).toBeDefined();
+    });
+  });
+
+  describe("Migration Pipeline", () => {
+    it("runs migrations from old to new schema", () => {
+      const oldMetadata: BaseMetadata = {
+        schemaVersion: "1.0",
+        model: "customer",
+        columns: ["name", "email"],
+      };
+
+      const migrated = runMigrations(oldMetadata, "2.1");
+
+      expect(migrated.schemaVersion).toBe("2.1");
+      expect(migrated.model).toBe("customer");
+    });
+
+    it("upgrades to latest version", () => {
+      const oldMetadata: BaseMetadata = {
+        schemaVersion: "1.0",
+        model: "order",
+        columns: ["id", "total"],
+      };
+
+      const upgraded = upgradeToLatest(oldMetadata);
+
+      expect(upgraded.schemaVersion).toBe("2.2");
+    });
+  });
+
+  describe("Migration Path Resolution", () => {
+    it("determines multi-hop migration path", () => {
+      const path = getMigrationPath("1.0", "2.1");
+
+      expect(path).toEqual(["1.1", "2.0", "2.1"]);
+    });
+
+    it("returns empty path for same version", () => {
+      const path = getMigrationPath("2.1", "2.1");
+
+      expect(path).toEqual([]);
+    });
+  });
+
+  describe("Deprecation Management", () => {
+    it("identifies active schemas", () => {
+      const status = checkDeprecation("2.2");
+
+      expect(status.stage).toBe("active");
+      expect(status.warning).toBeUndefined();
+    });
+
+    it("warns about deprecated schemas", () => {
+      const status = checkDeprecation("1.1");
+
+      expect(status.stage).toBe("deprecated");
+      expect(status.warning).toBeDefined();
+    });
+
+    it("errors on legacy schemas", () => {
+      const status = checkDeprecation("1.0");
+
+      expect(status.stage).toBe("legacy");
+      expect(status.error).toBeDefined();
+    });
+  });
+
+  describe("Breaking Changes", () => {
+    it("handles columns to fields migration", () => {
+      const pre: BaseMetadata = {
+        schemaVersion: "1.1",
+        model: "test",
+        columns: ["id", "name"],
+      };
+
+      const post = runMigrations(pre, "2.0");
+
+      expect(post.schemaVersion).toBe("2.0");
+      expect(post.fields).toBeDefined();
+      expect((post as any).columns).toBeUndefined();
+    });
+  });
+});

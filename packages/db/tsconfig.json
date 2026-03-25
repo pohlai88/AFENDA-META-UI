@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    "composite": true,
+    "paths": {
+      "@afenda/meta-types": ["packages/meta-types/dist/index.d.ts"],
+      "@afenda/db": ["packages/db/src/index.ts"],
+      "@afenda/db/*": ["packages/db/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

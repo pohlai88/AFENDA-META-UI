@@ -1,0 +1,228 @@
+/**
+ * Renderer Capability Marketplace Tests
+ * ======================================
+ * Tests for the feature economy system where renderers compete on capabilities.
+ */
+
+import { describe, it, expect } from "vitest";
+import { 
+  marketplace, 
+  satisfiesRequirements,
+  calculatePreferredScore,
+  calculatePerformanceScore,
+} from "./marketplace";
+import type { CapabilityDeclaration, MetadataRequirements } from "./marketplace";
+
+describe("Renderer Capability Marketplace", () => {
+  describe("Marketplace Registration", () => {
+    it("registers a renderer capability declaration", () => {
+      const declaration: CapabilityDeclaration = {
+        type: "list",
+        supports: {
+          filtering: true,
+          sorting: true,
+          pagination: true,
+        },
+        performance: {
+          maxRows: 10_000,
+          complexity: "low",
+          memory: "small",
+          initSpeed: "fast",
+          realtimeCapable: false,
+        },
+        version: "1.0.0",
+        costScore: 10,
+      };
+
+      marketplace.register("test-list-v1", declaration);
+
+      const retrieved = marketplace.getDeclaration("test-list-v1");
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.type).toBe("list");
+      expect(retrieved?.supports.filtering).toBe(true);
+    });
+
+    it("lists all registered renderers", () => {
+      const allRenderers = marketplace.list();
+      expect(Array.isArray(allRenderers)).toBe(true);
+      expect(allRenderers.length).toBeGreaterThan(0);
+    });
+
+    it("filters renderers by type", () => {
+      const listRenderers = marketplace.getByType("list");
+      expect(Array.isArray(listRenderers)).toBe(true);
+      listRenderers.forEach(({ declaration }) => {
+        expect(declaration.type).toBe("list");
+      });
+    });
+  });
+
+  describe("Capability Matching", () => {
+    it("satisfies exact capability match", () => {
+      const capabilities = {
+        filtering: true,
+        sorting: true,
+        pagination: true,
+      };
+      
+      const requirements = {
+        filtering: true,
+        sorting: true,
+      };
+      
+      expect(satisfiesRequirements(capabilities, requirements)).toBe(true);
+    });
+
+    it("fails when missing required capability", () => {
+      const capabilities = {
+        filtering: true,
+        sorting: false,
+      };
+      
+      const requirements = {
+        sorting: true,
+      };
+      
+      expect(satisfiesRequirements(capabilities, requirements)).toBe(false);
+    });
+
+    it("calculates preferred capability score", () => {
+      const capabilities = {
+        filtering: true,
+        sorting: true,
+        bulkActions: true,
+        virtualization: false,
+      };
+      
+      const preferred = {
+        bulkActions: true,
+        virtualization: true,
+      };
+      
+      const score = calculatePreferredScore(capabilities, preferred);
+      expect(score).toBe(50); // 1 of 2 preferred capabilities met
+    });
+
+    it("returns 100% when all preferred capabilities met", () => {
+      const capabilities = {
+        filtering: true,
+        bulkActions: true,
+      };
+      
+      const preferred = {
+        filtering: true,
+      };
+      
+      const score = calculatePreferredScore(capabilities, preferred);
+      expect(score).toBe(100);
+    });
+  });
+
+  describe("Performance Scoring", () => {
+    it("scores performance based on row capacity", () => {
+      const performance = {
+        maxRows: 100_000,
+        complexity: "medium" as const,
+        memory: "medium" as const,
+        initSpeed: "medium" as const,
+        realtimeCapable: false,
+      };
+      
+      const requirements: MetadataRequirements = {
+        required: {},
+        performance: {
+          maxRows: 50_000,
+        },
+      };
+      
+      const score = calculatePerformanceScore(performance, requirements);
+      expect(score).toBeGreaterThan(50);
+    });
+
+    it("penalizes insufficient capacity", () => {
+      const performance = {
+        maxRows: 1_000,
+        complexity: "low" as const,
+        memory: "small" as const,
+        initSpeed: "fast" as const,
+        realtimeCapable: false,
+      };
+      
+      const requirements: MetadataRequirements = {
+        required: {},
+        performance: {
+          maxRows: 10_000,
+        },
+      };
+      
+      const score = calculatePerformanceScore(performance, requirements);
+      expect(score).toBeLessThan(60);
+    });
+
+    it("rewards fast init speed", () => {
+      const fastPerf = {
+        maxRows: 10_000,
+        complexity: "low" as const,
+        memory: "small" as const,
+        initSpeed: "fast" as const,
+        realtimeCapable: false,
+      };
+      
+      const slowPerf = {
+        ...fastPerf,
+        initSpeed: "slow" as const,
+      };
+      
+      const fastScore = calculatePerformanceScore(fastPerf, { required: {} });
+      const slowScore = calculatePerformanceScore(slowPerf, { required: {} });
+      
+      expect(fastScore).toBeGreaterThan(slowScore);
+    });
+  });
+
+  describe("Renderer Resolution", () => {
+    it("resolves best renderer for requirements", () => {
+      const requirements: MetadataRequirements = {
+        required: {
+          filtering: true,
+          sorting: true,
+        },
+      };
+
+      const match = marketplace.resolve("list", requirements);
+      expect(match).toBeTruthy();
+      if (match) {
+        expect(match.satisfiesRequired).toBe(true);
+        expect(match.score).toBeGreaterThan(0);
+        expect(match.reasons.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("returns null when no renderer matches", () => {
+      const requirements: MetadataRequirements = {
+        required: {
+          customCapability: true as any, // Non-existent capability
+        },
+      };
+
+      const match = marketplace.resolve("list", requirements);
+      // May return null or lowest scoring match depending on implementation
+      expect(match !== undefined).toBe(true);
+    });
+
+    it("considers cost in scoring", () => {
+      const requirements: MetadataRequirements = {
+        required: {
+          filtering: true,
+        },
+        maxCost: 50,
+      };
+
+      const match = marketplace.resolve("list", requirements);
+      if (match) {
+        const declaration = marketplace.getDeclaration(match.rendererId);
+        expect(declaration?.costScore).toBeLessThanOrEqual(50);
+      }
+    });
+  });
+});
