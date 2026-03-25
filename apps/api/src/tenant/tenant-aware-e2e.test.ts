@@ -27,7 +27,7 @@ vi.mock("../audit/decisionAuditLogger.js", () => ({
         errors: [],
       });
     }
-    const chain = auditState.chains.get(chainId);
+    const chain = auditState.chains.get(chainId)!;
     chain.entries.push(entry);
     chain.totalDurationMs += entry.durationMs ?? 0;
     if (entry.status === "error" && entry.error) chain.errors.push(entry.error);

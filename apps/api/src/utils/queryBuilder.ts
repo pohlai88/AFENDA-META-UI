@@ -120,10 +120,10 @@ function buildCondition(table: Record<string, Column>, filter: FilterCondition):
         return lte(column, value);
 
       case "like":
-        return like(column, value);
+        return like(column, value as string);
 
       case "ilike":
-        return ilike(column, value);
+        return ilike(column, value as string);
 
       case "in":
         if (!Array.isArray(value)) {

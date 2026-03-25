@@ -18,7 +18,7 @@ import {
   resolveConflict,
   getGraphStats,
 } from "../graph/index.js";
-import type { GraphQuery, GraphNodeType, GraphEdgeType } from "@afenda/meta-types";
+import type { GraphNode, GraphQuery, GraphNodeType, GraphEdgeType } from "@afenda/meta-types";
 
 const router = Router();
 
@@ -96,7 +96,7 @@ router.post("/resolve", async (req: Request, res: Response) => {
     if (!Array.isArray(nodes) || nodes.length === 0) {
       return res.status(400).json({ error: "Nodes array is required and must not be empty" });
     }
-    const conflict = resolveConflict(nodes);
+    const conflict = resolveConflict(nodes as GraphNode<Record<string, unknown>>[]);
     res.json({ conflict });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to resolve conflict";

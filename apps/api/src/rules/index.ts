@@ -175,7 +175,7 @@ export function evaluateRule(
       record: context.record,
       relatedRecords: (context.relatedRecords || {}) as Record<string, Record<string, unknown>[]>,
       actor: context.actor || { uid: "system", roles: [] },
-      operation: "check-rule",
+      operation: "validate",
       previousRecord: undefined,
     });
 

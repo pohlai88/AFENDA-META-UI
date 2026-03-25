@@ -58,7 +58,7 @@ type DbLike = {
     set: (values: RowRecord) => { where: (clause: unknown) => { returning: () => Promise<RowRecord[]> } };
   };
   delete: (table: unknown) => {
-    where: (clause: unknown) => { returning?: () => Promise<RowRecord[]> } | Promise<unknown>;
+    where: (clause: unknown) => { returning: () => Promise<RowRecord[]> };
   };
 };
 
@@ -189,7 +189,7 @@ router.get("/:model", async (req: Request, res: Response) => {
     query = (query as QueryLike).orderBy(...orderByClauses).limit(limit).offset(offset);
 
     // Execute query
-    const rows = await (query as PromiseLike<RowRecord[]>);
+    const rows = await (query as unknown as PromiseLike<RowRecord[]>);
 
     // Get total count (with filters applied)
     let countQuery = dbLike.select({ count: sql`count(*)` }).from(table) as
