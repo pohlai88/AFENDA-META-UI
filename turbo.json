@@ -23,7 +23,7 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": ["transit"],
       "outputs": ["coverage/**"]
     },
     "meta:introspect": {
@@ -37,7 +37,7 @@
       "outputs": ["src/db/migrations/**"]
     },
     "test:db": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^transit"],
       "outputs": ["coverage/**"]
     },
     "check:all": {
