@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
 
@@ -64,7 +64,7 @@ jobs:
 
       # GATE 1: TypeScript Strict Type Checking
       - name: 🔍 TypeScript Check
-        run: turbo run typecheck --filter=@afenda/web
+        run: pnpm turbo run typecheck --filter=@afenda/web
 
       # GATE 2: ESLint with React Hooks Rules (CRITICAL)
       - name: 🧹 ESLint (React Hooks + Best Practices)
@@ -76,7 +76,7 @@ jobs:
 
       # GATE 4: Production Build Verification
       - name: 🏗️ Production Build
-        run: turbo run build --filter=@afenda/web
+        run: pnpm turbo run build --filter=@afenda/web
 
       # GATE 5: Bundle Size Analysis
       - name: 📊 Bundle Size Check
