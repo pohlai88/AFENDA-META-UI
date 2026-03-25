@@ -131,6 +131,28 @@ pnpm ci:contracts
 node tools/ci-gate/index.mjs --gate=contracts
 ```
 
+### 3. Dependencies Gate (`dependencies/`)
+
+Validates workspace dependency governance rules.
+
+**Checks:**
+
+- ✅ Critical package version alignment across workspace
+- ✅ No server-only runtime packages in web app
+- ✅ Internal `@afenda/*` packages use `workspace:*`
+- ✅ `shadcn` CLI is not in runtime dependencies
+- ⚠️ TypeScript version drift warning (advisory)
+
+**Commands:**
+
+```bash
+# Run dependencies gate only
+pnpm ci:gate:dependencies
+
+# Or from master gate
+node tools/ci-gate/index.mjs --gate=dependencies
+```
+
 \*\*Do🔧 Actionable Fix Suggestions
 
 Each error includes:

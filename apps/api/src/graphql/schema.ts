@@ -1,7 +1,6 @@
 import { buildSchema } from "drizzle-graphql";
 import { execute as graphqlExecute, type ExecutionArgs, type ExecutionResult } from "graphql";
 import { db } from "../db/index.js";
-import * as schema from "../db/schema/index.js";
 
 // drizzle-graphql auto-generates queries, mutations and types from the
 // Drizzle schema. We expose this as the internal "data language" for:

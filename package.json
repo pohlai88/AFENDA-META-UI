@@ -19,7 +19,11 @@
     "ci:gate": "node tools/ci-gate/index.mjs",
     "ci:gate:fix": "node tools/ci-gate/index.mjs --fix",
     "ci:gate:verbose": "node tools/ci-gate/index.mjs --verbose",
+    "ci:deps": "pnpm ci:deps:audit && pnpm ci:deps:outdated && pnpm ci:gate:dependencies",
+    "ci:deps:audit": "pnpm audit --audit-level=high",
+    "ci:deps:outdated": "pnpm outdated --recursive || echo Outdated dependencies reported",
     "ci:gate:logger": "node tools/ci-gate/index.mjs --gate=logger",
+    "ci:gate:dependencies": "node tools/ci-gate/index.mjs --gate=dependencies",
     "ci:logger": "node tools/ci-gate/logger/index.mjs",
     "ci:logger:fix": "node tools/ci-gate/logger/index.mjs --fix",
     "validate:ci:state": "pnpm --filter web validate:ci:state",
@@ -37,11 +41,25 @@
     "db:check": "pnpm --filter @afenda/db check:all",
     "db:introspect": "pnpm --filter api meta:introspect"
   },
+  "pnpm": {
+    "overrides": {
+      "drizzle-orm": "1.0.0-beta.19",
+      "drizzle-kit": "1.0.0-beta.19",
+      "zod": "^4.3.6",
+      "vitest": "^4.1.1",
+      "tsx": "^4.21.0",
+      "pg": "^8.20.0",
+      "@types/pg": "^8.20.0",
+      "@types/node": "^22.0.0",
+      "typescript": "^5.9.0",
+      "flatted": "^3.4.2"
+    }
+  },
   "devDependencies": {
     "eslint-config-prettier": "^10.1.8",
     "glob": "^13.0.6",
     "prettier": "^3.8.1",
     "turbo": "^1.13.4",
-    "typescript": "^5.4.5"
+    "typescript": "^5.9.0"
   }
 }

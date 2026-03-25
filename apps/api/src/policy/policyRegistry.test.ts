@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import type { PolicyContext, PolicyDefinition } from "@afenda/meta-types";
+import type { PolicyDefinition } from "@afenda/meta-types";
 import {
   registerPolicy,
   registerPolicies,

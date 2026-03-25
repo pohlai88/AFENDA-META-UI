@@ -62,7 +62,7 @@ export async function executeAction(
       action,
       result,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error({ err }, "Execute action error");
     res.status(500).json({
       success: false,

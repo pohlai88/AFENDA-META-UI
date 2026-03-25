@@ -16,6 +16,15 @@
 import type { Request, Response, NextFunction } from "express";
 import { logger } from "../logging/index.js";
 
+type RequestLog = {
+  error: (obj: unknown, msg?: string) => void;
+  warn: (obj: unknown, msg?: string) => void;
+};
+
+type RequestWithLog = Request & {
+  log?: RequestLog;
+};
+
 // ---------------------------------------------------------------------------
 // Custom error classes
 // ---------------------------------------------------------------------------
@@ -82,7 +91,7 @@ export function errorHandler(
   const isDev = process.env.NODE_ENV !== "production";
 
   // Log error (use req.log from pino-http for automatic requestId context)
-  const log = (req as any).log ?? logger;
+  const log = (req as RequestWithLog).log ?? logger;
   log.error(
     {
       err,
@@ -126,7 +135,7 @@ export function errorHandler(
 // ---------------------------------------------------------------------------
 
 export function notFoundHandler(req: Request, res: Response) {
-  const log = (req as any).log ?? logger;
+  const log = (req as RequestWithLog).log ?? logger;
   log.warn({ url: req.url, method: req.method }, "404 Not Found");
 
   res.status(404).json({

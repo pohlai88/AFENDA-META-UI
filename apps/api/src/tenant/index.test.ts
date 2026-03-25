@@ -36,8 +36,13 @@ function makeTenant(id: string, industry = "manufacturing"): TenantDefinition {
       secondaryColor: "#fff",
       appName: `App ${id}`,
     },
-    features: [],
-    locale: "en-US",
+    features: {},
+    locale: {
+      timezone: "UTC",
+      language: "en",
+      currency: "USD",
+      dateFormat: "YYYY-MM-DD",
+    },
   };
 }
 

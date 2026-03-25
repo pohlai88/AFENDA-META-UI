@@ -81,6 +81,8 @@ export interface LayoutDefinition {
   viewType: LayoutViewType;
   /** Root of the layout tree */
   root: LayoutNode;
+  /** Optional tenant-aware scope (e.g. "global", "tenant:acme", "user:alice") */
+  scope?: string;
   /** Restrict layout to specific roles (empty = everyone) */
   roles?: string[];
   /** Whether this is the default layout for the model+viewType */

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   matchTopic,
   publish,
@@ -204,7 +204,9 @@ describe("mesh — stream processors", () => {
 
   it("removeProcessor prevents further processing", async () => {
     const received: MeshEvent<unknown>[] = [];
-    subscribe("downstream.topic", async (e) => received.push(e));
+    subscribe("downstream.topic", async (e) => {
+      received.push(e);
+    });
 
     registerProcessor({
       id: "proc-to-remove",

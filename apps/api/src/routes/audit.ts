@@ -120,10 +120,14 @@ router.get("/audit/decisions", (req: Request, res: Response) => {
       "layout_rendered",
     ];
 
+    const normalizedEventType =
+      eventType && validEventTypes.includes(eventType as string)
+        ? (eventType as DecisionAuditQuery["eventType"])
+        : undefined;
+
     const query: DecisionAuditQuery = {
       tenantId,
-      eventType:
-        eventType && validEventTypes.includes(eventType as string) ? (eventType as any) : undefined,
+      eventType: normalizedEventType,
       scope: scope ? (scope as string) : undefined,
       userId: userId ? (userId as string) : undefined,
       fromTimestamp: fromTimestamp ? (fromTimestamp as string) : undefined,

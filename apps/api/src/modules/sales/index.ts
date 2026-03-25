@@ -94,13 +94,13 @@ export default {
 
   hooks: {
     onLoad: async () => {
-      console.log("[Sales Module] Loaded");
+      console.warn("[Sales Module] Loaded");
     },
     onEnable: async () => {
-      console.log("[Sales Module] Enabled");
+      console.warn("[Sales Module] Enabled");
     },
     onDisable: async () => {
-      console.log("[Sales Module] Disabled");
+      console.warn("[Sales Module] Disabled");
     },
   },
 } as MetaModule;

@@ -22,11 +22,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type {
   LayoutNode,
-  LayoutViewType,
-  PolicySeverity,
   FieldChange,
-  AuditSource,
-  AuditOperation,
   BusinessType,
 } from "@afenda/meta-types";
 

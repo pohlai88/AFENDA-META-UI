@@ -91,13 +91,18 @@ function main() {
     process.exit(0);
     
   } catch (error) {
+    const command = String(error.message || "");
+    const failedStage = command.includes("test:registry")
+      ? "registry integrity"
+      : "export contracts";
+
     // Capture the error output for detailed parsing
     const output = error.stdout || error.stderr || error.message || '';
     
     // Parse errors from vitest output
     const errors = parseContractErrors(output);
     
-    console.error(`\n${colors.red}✗ Export contract validation failed${colors.reset}\n`);
+    console.error(`\n${colors.red}✗ ${failedStage} validation failed${colors.reset}\n`);
     
     if (errors.length > 0) {
       // Show detailed diagnostics with fix suggestions
@@ -111,7 +116,7 @@ function main() {
       
     } else {
       // Fallback to generic error message if parsing failed
-      console.error(`${colors.yellow}⚠ One or more modules do not export the expected shape.${colors.reset}`);
+      console.error(`${colors.yellow}⚠ One or more modules failed ${failedStage} checks.${colors.reset}`);
       if (verbose || output) {
         console.error(`\n${colors.dim}${output}${colors.reset}\n`);
       }

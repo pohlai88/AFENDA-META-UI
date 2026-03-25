@@ -14,8 +14,8 @@
  *   - Cached visibility rule evaluation
  */
 
-import React, { useState, useMemo, useCallback } from "react";
-import { List } from "react-window";
+import React, { useState, useMemo, useCallback, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type {
   LayoutNode,
   LayoutSection,
@@ -93,20 +93,8 @@ function isVisible(
 // Section Renderer with optional virtual scrolling
 // ---------------------------------------------------------------------------
 
+const USE_NEW_VIRTUALIZER = true;
 const VIRTUAL_SCROLL_THRESHOLD = 100;
-
-// Row component for virtual scrolling
-const VirtualRowComponent = ({
-  index,
-  style,
-  node,
-  ctx,
-}: {
-  index: number;
-  style: React.CSSProperties;
-  node: LayoutNode;
-  ctx: LayoutRenderContext;
-}) => React.createElement("div", { style }, React.createElement(LayoutNodeRenderer, { node, ctx }));
 
 const SectionRenderer = React.memo(function SectionRenderer({
   node,
@@ -116,24 +104,19 @@ const SectionRenderer = React.memo(function SectionRenderer({
   ctx: LayoutRenderContext;
 }) {
   const [collapsed, setCollapsed] = useState(node.defaultCollapsed ?? false);
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const useVirtualScrolling = USE_NEW_VIRTUALIZER && node.children.length >= VIRTUAL_SCROLL_THRESHOLD;
+  const rowVirtualizer = useVirtualizer({
+    count: node.children.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+    enabled: useVirtualScrolling && !collapsed,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
 
   if (!isVisible(node.visibleIf, ctx.values)) return null;
-
-  const useVirtualScrolling = node.children.length >= VIRTUAL_SCROLL_THRESHOLD;
-
-  // Create row component for virtual list
-  const RowComponent = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) =>
-      React.createElement(
-        "div",
-        { style },
-        React.createElement(LayoutNodeRenderer, {
-          node: node.children[index],
-          ctx,
-        })
-      ),
-    [node.children, ctx]
-  );
 
   return React.createElement(
     "fieldset",
@@ -158,14 +141,40 @@ const SectionRenderer = React.memo(function SectionRenderer({
         ? // Virtual scrolling for large sections
           React.createElement(
             "div",
-            { className: "layout-section-content", style: { height: 600 } },
-            React.createElement(List, {
-              rowComponent: RowComponent,
-              rowCount: node.children.length,
-              rowHeight: 80,
-              rowProps: {},
-              defaultHeight: 600,
-            })
+            {
+              ref: parentRef,
+              className: "layout-section-content",
+              style: { height: 600, overflowY: "auto" },
+            },
+            React.createElement(
+              "div",
+              {
+                style: {
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  position: "relative",
+                  width: "100%",
+                },
+              },
+              virtualItems.map((virtualItem) =>
+                React.createElement(
+                  "div",
+                  {
+                    key: virtualItem.key,
+                    style: {
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualItem.start}px)`,
+                    },
+                  },
+                  React.createElement(LayoutNodeRenderer, {
+                    node: node.children[virtualItem.index],
+                    ctx,
+                  })
+                )
+              )
+            )
           )
         : // Standard rendering for normal sections
           React.createElement(

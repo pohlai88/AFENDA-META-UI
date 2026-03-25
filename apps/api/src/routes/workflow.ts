@@ -29,7 +29,7 @@ import {
   listInstances,
   getWorkflowStats,
 } from "../workflow/index.js";
-import type { WorkflowDefinition } from "@afenda/meta-types";
+import type { WorkflowDefinition, WorkflowStatus } from "@afenda/meta-types";
 
 const router = Router();
 
@@ -46,7 +46,7 @@ router.get("/", async (req: Request, res: Response) => {
       tenantId,
     });
     res.json({ workflows, count: workflows.length });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list workflows" });
   }
 });
@@ -55,7 +55,7 @@ router.get("/stats", async (req: Request, res: Response) => {
   try {
     const stats = getWorkflowStats();
     res.json(stats);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get workflow stats" });
   }
 });
@@ -68,7 +68,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Workflow "${id}" not found` });
     }
     res.json(workflow);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get workflow" });
   }
 });
@@ -109,7 +109,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Workflow "${id}" not found` });
     }
     res.json({ message: "Workflow deleted" });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to delete workflow" });
   }
 });
@@ -146,13 +146,14 @@ router.post("/trigger", async (req: Request, res: Response) => {
 router.get("/instances", async (req: Request, res: Response) => {
   try {
     const workflowId = (req.query.workflowId as string) || undefined;
-    const status = (req.query.status as any) || undefined;
+    const rawStatus = req.query.status;
+    const status = typeof rawStatus === "string" ? (rawStatus as WorkflowStatus) : undefined;
     const instances = listInstances({
       workflowId,
       status,
     });
     res.json({ instances, count: instances.length });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list instances" });
   }
 });
@@ -165,7 +166,7 @@ router.get("/instances/:instanceId", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Instance "${instanceId}" not found` });
     }
     res.json(instance);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get instance" });
   }
 });

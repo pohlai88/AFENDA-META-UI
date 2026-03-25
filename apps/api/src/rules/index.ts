@@ -144,7 +144,8 @@ export function getRulesForCategory(
 export function getRulesByTag(tag: string): RuleDefinition[] {
   const result: RuleDefinition[] = [];
   ruleStore.forEach((rule) => {
-    if ((rule as any).tags?.includes(tag)) {
+    const tags = (rule as RuleDefinition & { tags?: string[] }).tags;
+    if (tags?.includes(tag)) {
       result.push(rule);
     }
   });
@@ -174,7 +175,7 @@ export function evaluateRule(
       record: context.record,
       relatedRecords: (context.relatedRecords || {}) as Record<string, Record<string, unknown>[]>,
       actor: context.actor || { uid: "system", roles: [] },
-      operation: "check-rule" as any,
+      operation: "check-rule",
       previousRecord: undefined,
     });
 

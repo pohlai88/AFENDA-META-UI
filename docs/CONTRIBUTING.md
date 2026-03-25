@@ -10,6 +10,7 @@ Thank you for contributing to AFENDA Meta UI! This guide will help you understan
 - [Testing Requirements](#testing-requirements)
 - [CI Gate System](#ci-gate-system)
 - [Export Contracts](#export-contracts)
+- [Dependency Governance](#dependency-governance)
 - [Pull Request Process](#pull-request-process)
 
 ---
@@ -235,6 +236,36 @@ This will:
 - Fix other auto-fixable violations
 
 **Always review auto-fixes before committing!**
+
+---
+
+## Dependency Governance
+
+All dependency changes must follow the workspace dependency governance policy:
+
+- [DEPENDENCY_GOVERNANCE_POLICY.md](DEPENDENCY_GOVERNANCE_POLICY.md)
+
+Before submitting a dependency-related PR:
+
+1. Classify the change as patch, minor, or major.
+2. Document the reason (security, bug fix, performance, required feature, compatibility).
+3. Run full checks locally:
+
+  ```bash
+  pnpm install --frozen-lockfile
+  pnpm ci:gate
+  pnpm lint
+  pnpm typecheck
+  ```
+
+4. For major upgrades, include migration notes and rollback plan in PR description.
+5. Ensure shared libraries stay version-aligned across workspace packages.
+
+Recommended monthly maintenance command:
+
+```bash
+pnpm outdated --recursive
+```
 
 ---
 

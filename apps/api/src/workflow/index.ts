@@ -194,7 +194,6 @@ export async function triggerWorkflows(
  */
 function evaluateConditionExpression(expr: string, context: Record<string, unknown>): boolean {
   try {
-    // eslint-disable-next-line no-new-func
     const fn = new Function(...Object.keys(context), `"use strict"; return !!(${expr});`);
     return Boolean(fn(...Object.values(context)));
   } catch {

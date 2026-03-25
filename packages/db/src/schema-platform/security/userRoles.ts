@@ -1,4 +1,4 @@
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-orm/zod";
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-zod";
 import {
   foreignKey,
   index,

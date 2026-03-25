@@ -21,9 +21,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { ResolutionContext, ModelMeta } from "@afenda/meta-types";
 import { resolveMetadata, reverseResolution } from "./index.js";
-import { resolveLayoutWithContext } from "../layout/index.js";
-import { evaluatePoliciesWithTenantContext } from "../policy/policyEvaluator.js";
-import { evaluateRule, registerRule } from "../rules/index.js";
+import { registerRule } from "../rules/index.js";
 import type { RuleExecutionContext } from "../rules/index.js";
 
 // ---------------------------------------------------------------------------
@@ -32,19 +30,29 @@ import type { RuleExecutionContext } from "../rules/index.js";
 
 const globalMeta: Record<string, ModelMeta> = {
   "finance.invoice": {
-    name: "Invoice",
-    fields: {
-      amount: { type: "currency", required: true },
-      status: { type: "enum", options: ["draft", "posted", "cancelled"] },
-      approval_required: { type: "boolean", defaultValue: false },
-    },
-    validationRules: [
+    model: "finance.invoice",
+    label: "Invoice",
+    fields: [
+      { name: "amount", label: "Amount", type: "currency", required: true },
       {
-        id: "min-amount",
-        expression: "amount > 0",
-        message: "Amount must be positive",
+        name: "status",
+        label: "Status",
+        type: "enum",
+        options: [
+          { value: "draft", label: "Draft" },
+          { value: "posted", label: "Posted" },
+          { value: "cancelled", label: "Cancelled" },
+        ],
+      },
+      {
+        name: "approval_required",
+        label: "Approval Required",
+        type: "boolean",
+        defaultValue: false,
       },
     ],
+    views: {},
+    actions: [],
   },
 };
 
@@ -103,12 +111,14 @@ describe("Tenant-Aware Metadata Resolution", () => {
 
       const resolved = resolveMetadata(
         "finance.invoice",
-        globalMeta["finance.invoice"] as Record<string, unknown>,
+        globalMeta["finance.invoice"] as unknown as Record<string, unknown>,
         ctx
       );
 
       expect(resolved).toBeDefined();
-      expect((resolved as any).fields?.amount?.type).toBe("currency");
+      expect((resolved as { fields?: { amount?: { type?: string } } }).fields?.amount?.type).toBe(
+        "currency"
+      );
     });
 
     it("should apply industry overrides", () => {
@@ -243,7 +253,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
     });
 
     it("should check field visibility based on tenant", () => {
-      const ctx: RuleExecutionContext = {
+      const _ctx: RuleExecutionContext = {
         record: {},
         tenantContext: {
           tenantId: "test-tenant",

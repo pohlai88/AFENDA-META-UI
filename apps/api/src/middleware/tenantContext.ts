@@ -14,13 +14,14 @@
 
 import type { Request, Response, NextFunction } from "express";
 import type { SessionContext, ResolutionContext } from "@afenda/meta-types";
-import { getTenant } from "../tenant/index.js";
 
 declare global {
   namespace Express {
     interface Request {
       /** Tenant resolution context — scope of the current request */
       tenantContext?: ResolutionContext;
+      /** Auth session attached by auth middleware */
+      session?: SessionContext;
     }
   }
 }
@@ -30,16 +31,16 @@ declare global {
  * Called after authMiddleware to ensure session exists.
  */
 export function tenantContextMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const session = (req as any).session as SessionContext | undefined;
+  const session = req.session;
 
   if (!session) {
     // No session — allow anonymous requests but with null context
-    (req as any).tenantContext = {
+    req.tenantContext = {
       tenantId: "default",
       userId: undefined,
       departmentId: undefined,
       industry: undefined,
-    } as ResolutionContext;
+    };
     next();
     return;
   }
@@ -49,12 +50,12 @@ export function tenantContextMiddleware(req: Request, res: Response, next: NextF
   const departmentId = session.departmentId ?? req.headers["x-department-id"];
   const industry = session.industry;
 
-  (req as any).tenantContext = {
+  req.tenantContext = {
     tenantId: String(tenantId),
-    userId: session.userId,
+    userId: session.userId ?? session.uid,
     departmentId: departmentId ? String(departmentId) : undefined,
     industry: industry ? String(industry) : undefined,
-  } as ResolutionContext;
+  };
 
   next();
 }

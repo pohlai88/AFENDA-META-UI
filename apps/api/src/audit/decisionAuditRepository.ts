@@ -28,7 +28,9 @@ let flushTimer: ReturnType<typeof setInterval> | null = null;
 
 function startFlusher(): void {
   if (flushTimer) return;
-  flushTimer = setInterval(flushBuffer, FLUSH_INTERVAL_MS);
+  flushTimer = setInterval(() => {
+    void flushBuffer();
+  }, FLUSH_INTERVAL_MS);
 }
 
 export async function flushBuffer(): Promise<number> {

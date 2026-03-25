@@ -4,19 +4,27 @@ vi.hoisted(() => {
   process.env.DATABASE_URL = "";
 });
 
+import type {
+  DecisionAuditEntry,
+  DecisionAuditQuery,
+  DecisionAuditChain,
+  PolicyContext,
+  PolicyDefinition,
+  ResolutionContext,
+} from "@afenda/meta-types";
 const auditState = vi.hoisted(() => ({
-  store: [] as Array<any>,
-  chains: new Map<string, any>(),
+  store: [] as Array<DecisionAuditEntry>,
+  chains: new Map<string, DecisionAuditChain>(),
 }));
 
 vi.mock("../audit/decisionAuditLogger.js", () => ({
-  logDecisionAudit(entry: any) {
+  logDecisionAudit(entry: DecisionAuditEntry) {
     auditState.store.push(entry);
   },
-  logDecisionAuditBatch(entries: any[]) {
+  logDecisionAuditBatch(entries: DecisionAuditEntry[]) {
     auditState.store.push(...entries);
   },
-  linkToChain(chainId: string, entry: any) {
+  linkToChain(chainId: string, entry: DecisionAuditEntry) {
     auditState.store.push(entry);
     if (!auditState.chains.has(chainId)) {
       auditState.chains.set(chainId, {
@@ -31,7 +39,7 @@ vi.mock("../audit/decisionAuditLogger.js", () => ({
     chain.totalDurationMs += entry.durationMs ?? 0;
     if (entry.status === "error" && entry.error) chain.errors.push(entry.error);
   },
-  queryDecisionAuditLog(query: any) {
+  queryDecisionAuditLog(query: DecisionAuditQuery) {
     const scopeRegex = query.scope
       ? new RegExp(`^${String(query.scope).replace(/\\*/g, ".*")}$`)
       : null;
@@ -77,7 +85,6 @@ vi.mock("../audit/decisionAuditLogger.js", () => ({
   },
 }));
 
-import type { PolicyContext, PolicyDefinition, ResolutionContext } from "@afenda/meta-types";
 import * as auditLogger from "../audit/decisionAuditLogger.js";
 import { clearDecisionAuditLog } from "../audit/decisionAuditLogger.js";
 import {
@@ -337,8 +344,8 @@ function runBenchmarkPair(operation: () => void): BenchmarkPair {
 }
 
 function printBenchmarkSummary(name: string, pair: BenchmarkPair): void {
-  console.log(`\n📊 ${name} Audit Overhead`);
-  console.table({
+  console.warn(`\n📊 ${name} Audit Overhead`);
+  console.warn({
     enabled: {
       medianMs: pair.enabled.medianMs.toFixed(4),
       meanMs: pair.enabled.meanMs.toFixed(4),
@@ -480,8 +487,8 @@ describe("Performance Benchmark - Real Audit Overhead", () => {
           policyResult.overheadPercent) /
         3;
 
-      console.log("\n✅ Combined median overhead target");
-      console.log({
+      console.warn("\n✅ Combined median overhead target");
+      console.warn({
         metadataPercent: metadataResult.overheadPercent.toFixed(2),
         rulePercent: ruleResult.overheadPercent.toFixed(2),
         policyPercent: policyResult.overheadPercent.toFixed(2),

@@ -20,7 +20,6 @@ import type {
   MetaAction,
   MetaFormView,
   MetaListView,
-  MetaKanbanView,
   MetaResponse,
   SessionContext,
   RbacResult,
@@ -150,9 +149,13 @@ function evalVisibility(expression: string | undefined, session: SessionContext)
     const compiledExpr = compileExpression(expression, {
       extraFunctions: {
         // Helper: check if any role in session matches
-        hasRole: (roleName: string) => session.roles.includes(roleName),
+        hasRole: (...args: unknown[]) => {
+          const roleName = typeof args[0] === "string" ? args[0] : "";
+          return session.roles.includes(roleName);
+        },
         // Helper: check if session has all specified roles
-        hasAllRoles: (...roleNames: string[]) => roleNames.every((r) => session.roles.includes(r)),
+        hasAllRoles: (...args: unknown[]) =>
+          args.every((arg) => typeof arg === "string" && session.roles.includes(arg)),
       },
     });
 

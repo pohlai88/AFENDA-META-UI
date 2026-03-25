@@ -143,6 +143,21 @@ Visit: **http://localhost:5173** (React) connects to **http://localhost:4000** (
 
 ---
 
+## Dependency Governance
+
+Dependency decision-making and upgrade strategy are defined in:
+
+- [DEPENDENCY_GOVERNANCE_POLICY.md](DEPENDENCY_GOVERNANCE_POLICY.md)
+
+Use this policy for:
+
+- Admitting new dependencies
+- Deciding patch/minor/major upgrade paths
+- Planning migration waves
+- Reviewing security and supply-chain posture
+
+---
+
 ## 📁 Project Structure
 
 ```

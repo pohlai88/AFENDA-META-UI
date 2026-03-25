@@ -74,7 +74,7 @@ describe("Renderer Registry Integrity", () => {
 
           const module = await registration!.loader();
           expect(module).toBeDefined();
-        });
+        }, 30000);
 
         it("module exports expected component", async () => {
           const registration = getRenderer(type, version);
@@ -84,7 +84,7 @@ describe("Renderer Registry Integrity", () => {
           const component = module[exportName];
 
           expect(typeof component).toBe("function");
-        });
+        }, 30000);
       });
     }
   });

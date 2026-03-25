@@ -28,7 +28,6 @@ import {
   getOverridesForModel,
   resolveMetadata,
   validateOverride,
-  safeRegisterOverride,
   registerIndustryTemplate,
   getTenantStats,
 } from "../tenant/index.js";
@@ -45,7 +44,7 @@ router.get("/", async (req: Request, res: Response) => {
     const enabledOnly = req.query.enabled === "true";
     const tenants = listTenants(enabledOnly);
     res.json({ tenants, count: tenants.length });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list tenants" });
   }
 });
@@ -72,7 +71,7 @@ router.get("/:tenantId", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Tenant "${tenantId}" not found` });
     }
     res.json(tenant);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get tenant" });
   }
 });
@@ -99,7 +98,7 @@ router.delete("/:tenantId", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Tenant "${tenantId}" not found` });
     }
     res.json({ message: "Tenant deleted" });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to delete tenant" });
   }
 });
@@ -113,7 +112,7 @@ router.get("/:tenantId/overrides", async (req: Request, res: Response) => {
     const model = (req.query.model as string) || undefined;
     const fields = model ? getOverridesForModel(model) : [];
     res.json({ overrides: fields, count: fields.length, model });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list overrides" });
   }
 });
@@ -155,7 +154,7 @@ router.delete("/:tenantId/overrides/:overrideId", async (req: Request, res: Resp
       return res.status(404).json({ error: `Override "${overrideId}" not found` });
     }
     res.json({ message: "Override deleted" });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to delete override" });
   }
 });
@@ -216,7 +215,7 @@ router.get("/:tenantId/stats", async (req: Request, res: Response) => {
   try {
     const stats = getTenantStats();
     res.json(stats);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get tenant stats" });
   }
 });

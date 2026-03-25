@@ -14,7 +14,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useModules } from "./useModules";
-import { useMeta } from "./useMeta";
 
 export interface SearchResult {
   id: string;
@@ -52,13 +51,13 @@ export function useGlobalSearch() {
     if (!filter.type || filter.type === "all" || filter.type === "module") {
       modulesData?.forEach((module) => {
         if (
-          module.name.toLowerCase().includes(query.toLowerCase()) ||
+          module.module.toLowerCase().includes(query.toLowerCase()) ||
           module.label?.toLowerCase().includes(query.toLowerCase())
         ) {
           results.push({
-            id: module.name,
-            model: module.name,
-            title: module.label || module.name,
+            id: module.module,
+            model: module.module,
+            title: module.label || module.module,
             type: "module",
             icon: module.icon || "grid",
           });

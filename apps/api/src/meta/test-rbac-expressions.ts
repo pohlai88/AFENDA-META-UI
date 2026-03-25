@@ -84,47 +84,47 @@ const scenarios = [
   },
 ];
 
-console.log("🧪 Testing RBAC Expression Evaluator\n");
-console.log("=".repeat(60));
+console.warn("🧪 Testing RBAC Expression Evaluator\n");
+console.warn("=".repeat(60));
 
 let passed = 0;
 let failed = 0;
 
 for (const scenario of scenarios) {
-  console.log(`\n📋 Scenario: ${scenario.name}`);
-  console.log(`   Roles: ${scenario.session.roles.join(", ")}`);
+  console.warn(`\n📋 Scenario: ${scenario.name}`);
+  console.warn(`   Roles: ${scenario.session.roles.join(", ")}`);
 
   try {
     const result = applyRbac(testModel, scenario.session);
     const actualActions = result.meta.actions?.map((a) => a.id) ?? [];
 
-    console.log(`   Expected actions: ${scenario.expectedActions.join(", ")}`);
-    console.log(`   Actual actions:   ${actualActions.join(", ")}`);
+    console.warn(`   Expected actions: ${scenario.expectedActions.join(", ")}`);
+    console.warn(`   Actual actions:   ${actualActions.join(", ")}`);
 
     const match =
       actualActions.length === scenario.expectedActions.length &&
       scenario.expectedActions.every((name) => actualActions.includes(name));
 
     if (match) {
-      console.log("   ✅ PASS");
+      console.warn("   ✅ PASS");
       passed++;
     } else {
-      console.log("   ❌ FAIL");
+      console.warn("   ❌ FAIL");
       failed++;
     }
   } catch (error) {
-    console.log(`   ❌ ERROR: ${error}`);
+    console.warn(`   ❌ ERROR: ${error}`);
     failed++;
   }
 }
 
-console.log("\n" + "=".repeat(60));
-console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);
+console.warn("\n" + "=".repeat(60));
+console.warn(`\n📊 Results: ${passed} passed, ${failed} failed`);
 
 if (failed === 0) {
-  console.log("✅ All tests passed!");
+  console.warn("✅ All tests passed!");
   process.exit(0);
 } else {
-  console.log("❌ Some tests failed");
+  console.warn("❌ Some tests failed");
   process.exit(1);
 }

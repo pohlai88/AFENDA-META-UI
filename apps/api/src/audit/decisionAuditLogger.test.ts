@@ -21,7 +21,6 @@ import {
   queryDecisionAuditLog,
   getDecisionChain,
   getDecisionsForScope,
-  getLatestDecision,
   getDecisionStats,
   getSlowDecisions,
   getAuditFailures,
@@ -196,7 +195,7 @@ describe("Decision Audit Logger", () => {
 
     it("returns newest first", () => {
       const old = new Date(Date.now() - 1000).toISOString();
-      const newer = new Date().toISOString();
+      const _newer = new Date().toISOString();
 
       logDecisionAudit({
         id: "old-audit",

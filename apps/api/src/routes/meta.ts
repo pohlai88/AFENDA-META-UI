@@ -18,6 +18,15 @@ import type { SessionContext } from "@afenda/meta-types";
 
 const router = Router();
 
+type RequestLog = {
+  error: (obj: unknown, msg?: string) => void;
+  warn: (obj: unknown, msg?: string) => void;
+};
+
+type RequestWithLog = Request & {
+  log?: RequestLog;
+};
+
 // Typed helper — auth middleware guarantees session exists
 function session(req: Request): SessionContext {
   return (req as Request & { session: SessionContext }).session;
@@ -28,7 +37,7 @@ router.get("/", async (_req: Request, res: Response) => {
   try {
     const models = await listModels();
     res.json({ models });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list models" });
   }
 });
@@ -39,7 +48,7 @@ router.get("/modules", async (req: Request, res: Response) => {
     const modules = moduleRegistry.getAll();
     res.json({ modules });
   } catch (err) {
-    (req as any).log?.error({ err }, "GET /modules failed");
+    (req as RequestWithLog).log?.error({ err }, "GET /modules failed");
     res.status(500).json({ error: "Failed to retrieve modules" });
   }
 });
@@ -58,7 +67,7 @@ router.get("/modules/:name", async (req: Request, res: Response) => {
 
     res.json(module);
   } catch (err) {
-    (req as any).log?.error({ err, name }, `GET /modules/${name} failed`);
+    (req as RequestWithLog).log?.error({ err, name }, `GET /modules/${name} failed`);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -69,7 +78,7 @@ router.get("/menus", async (req: Request, res: Response) => {
     const menus = moduleRegistry.getMenus();
     res.json({ menus });
   } catch (err) {
-    (req as any).log?.error({ err }, "GET /menus failed");
+    (req as RequestWithLog).log?.error({ err }, "GET /menus failed");
     res.status(500).json({ error: "Failed to retrieve menus" });
   }
 });
@@ -104,7 +113,7 @@ router.get("/bootstrap", async (req: Request, res: Response) => {
             actions: ["read"],
           });
         } catch (err) {
-          (req as any).log?.warn(
+          (req as RequestWithLog).log?.warn(
             { err, module: module.module, model: model.name },
             "Skipping model during /meta/bootstrap due to metadata resolution error"
           );
@@ -121,7 +130,7 @@ router.get("/bootstrap", async (req: Request, res: Response) => {
       permissions,
     });
   } catch (err) {
-    (req as any).log?.error({ err }, "GET /bootstrap failed");
+    (req as RequestWithLog).log?.error({ err }, "GET /bootstrap failed");
     res.status(500).json({ error: "Failed to bootstrap permissions" });
   }
 });
@@ -149,7 +158,7 @@ router.get("/:model", async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (err) {
-    (req as any).log?.error({ err, model }, `GET /${model} failed`);
+    (req as RequestWithLog).log?.error({ err, model }, `GET /${model} failed`);
     res.status(500).json({ error: "Internal server error" });
   }
 });

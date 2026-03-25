@@ -31,7 +31,7 @@ router.get("/nodes", async (req: Request, res: Response) => {
     const type = (req.query.type as GraphNodeType) || undefined;
     const nodes = listNodes(type);
     res.json({ nodes, count: nodes.length });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list nodes" });
   }
 });
@@ -44,7 +44,7 @@ router.get("/nodes/:nodeId", async (req: Request, res: Response) => {
       return res.status(404).json({ error: `Node "${nodeId}" not found` });
     }
     res.json(node);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get node" });
   }
 });
@@ -62,7 +62,7 @@ router.get("/:nodeId/related", async (req: Request, res: Response) => {
     }
     const related = getRelated(nodeId, edgeType);
     res.json({ nodeId, edgeType, related, count: related.length });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get related nodes" });
   }
 });
@@ -92,7 +92,7 @@ router.post("/query", async (req: Request, res: Response) => {
  */
 router.post("/resolve", async (req: Request, res: Response) => {
   try {
-    const { nodes } = req.body as { nodes: any[] };
+    const { nodes } = req.body as { nodes: unknown[] };
     if (!Array.isArray(nodes) || nodes.length === 0) {
       return res.status(400).json({ error: "Nodes array is required and must not be empty" });
     }
@@ -112,7 +112,7 @@ router.get("/stats", async (req: Request, res: Response) => {
   try {
     const stats = getGraphStats();
     res.json(stats);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get graph stats" });
   }
 });

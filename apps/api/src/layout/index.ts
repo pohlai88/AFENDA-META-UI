@@ -25,9 +25,7 @@ import type {
   LayoutViewType,
   ResolvedLayout,
   ResolutionContext,
-  ModelMeta,
 } from "@afenda/meta-types";
-import { resolveMetadata } from "../tenant/index.js";
 
 // ---------------------------------------------------------------------------
 // Layout Registry (in-memory, swap for DB in production)

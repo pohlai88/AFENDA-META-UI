@@ -213,7 +213,7 @@ function parseIntrospection(result: {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("▶  Running GraphQL introspection…");
+  console.warn("▶  Running GraphQL introspection…");
 
   const document = parse(INTROSPECT_QUERY);
   const result = (await execute({ document })) as {
@@ -227,7 +227,7 @@ async function main() {
   }
 
   const models = parseIntrospection(result);
-  console.log(`   Found ${models.length} model(s): ${models.map((m) => m.name).join(", ")}`);
+  console.warn(`   Found ${models.length} model(s): ${models.map((m) => m.name).join(", ")}`);
 
   let inserted = 0;
   let skipped = 0;
@@ -238,19 +238,19 @@ async function main() {
     const existing = await getRegistryEntry(snakeName);
 
     // Respect developer overrides — don't clobber manual customisations
-    if ((existing as any)?.manual_override) {
-      console.log(`   ⏩  Skipping ${snakeName} (manual_override = true)`);
+    if ((existing as { manual_override?: boolean } | null)?.manual_override) {
+      console.warn(`   ⏩  Skipping ${snakeName} (manual_override = true)`);
       skipped++;
       continue;
     }
 
     const compiled = compileModel(model);
     await upsertSchema(snakeName, compiled);
-    console.log(`   ✔  Upserted ${snakeName}`);
+    console.warn(`   ✔  Upserted ${snakeName}`);
     inserted++;
   }
 
-  console.log(`\n✅  Done — ${inserted} upserted, ${skipped} skipped.\n`);
+  console.warn(`\n✅  Done — ${inserted} upserted, ${skipped} skipped.\n`);
   process.exit(0);
 }
 

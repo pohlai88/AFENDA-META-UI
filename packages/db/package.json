@@ -37,7 +37,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm --filter @afenda/meta-types build && tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
@@ -47,16 +47,18 @@
     "seed": "tsx src/_seeds/index.ts"
   },
   "dependencies": {
+    "@afenda/meta-types": "workspace:*",
+    "drizzle-zod": "^0.8.3",
     "drizzle-orm": "1.0.0-beta.19",
-    "pg": "^8.11.5",
+    "pg": "^8.20.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^20.12.12",
-    "@types/pg": "^8.11.6",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
     "drizzle-kit": "1.0.0-beta.19",
-    "tsx": "^4.10.5",
-    "typescript": "^5.4.5",
-    "vitest": "^4.1.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.1"
   }
 }

@@ -44,7 +44,7 @@ router.get("/dead-letters", async (req: Request, res: Response) => {
   try {
     const dlq = getDeadLetters();
     res.json({ entries: dlq, count: dlq.length });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to list dead-letter entries" });
   }
 });
@@ -74,7 +74,7 @@ router.get("/stats", async (req: Request, res: Response) => {
   try {
     const stats = getMeshStats();
     res.json(stats);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: "Failed to get mesh stats" });
   }
 });

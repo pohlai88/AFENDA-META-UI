@@ -51,10 +51,10 @@ const testContext: ResolutionContext = {
 // ============================================================================
 
 describe("Resolution Cache Service", () => {
-  let cache: ResolutionCache<any>;
+  let cache: ResolutionCache<unknown>;
 
   beforeEach(() => {
-    cache = new ResolutionCache<any>({
+    cache = new ResolutionCache<unknown>({
       defaultTtlMs: 5000, // 5 seconds for testing
       maxEntries: 100,
       trackStats: true,
@@ -172,7 +172,7 @@ describe("Resolution Cache Service", () => {
   });
 
   it("evicts least-used entries when at capacity", () => {
-    const smallCache = new ResolutionCache<any>({
+    const smallCache = new ResolutionCache<unknown>({
       defaultTtlMs: 5000,
       maxEntries: 3, // Small capacity
       trackStats: true,
@@ -284,7 +284,7 @@ describe("Cached Metadata Resolution", () => {
 
     const metrics = CachedResolution.getMetrics();
 
-    console.log("📊 Cache Performance Metrics:", {
+    console.warn("📊 Cache Performance Metrics:", {
       hitRate: (metrics.cacheHitRate * 100).toFixed(2) + "%",
       costReduction: metrics.costReductionPercent.toFixed(2) + "%",
       totalHits: metrics.totalCacheHits,
@@ -419,7 +419,7 @@ describe("Cached Metadata Resolution", () => {
     expect(metrics.totalCacheHits).toBeGreaterThanOrEqual(0);
     expect(metrics.totalCacheMisses).toBeGreaterThanOrEqual(0);
 
-    console.log("✅ Cache Metrics Available:", metrics);
+    console.warn("✅ Cache Metrics Available:", metrics);
   });
 });
 
@@ -502,7 +502,7 @@ describe("Caching Integration - 90% Cost Reduction", () => {
 ╚════════════════════════════════════════════════════════════════════════════╝
     `;
 
-    console.log(report);
+    console.warn(report);
 
     // Verify targets
     expect(metrics.cacheHitRate).toBeGreaterThan(0.9); // >90% hit rate

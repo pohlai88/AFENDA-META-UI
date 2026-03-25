@@ -242,9 +242,9 @@ function evaluateBinary(op: string, left: unknown, right: unknown): unknown {
 
     // Comparison — loose equality for cross-type comparison
     case "==":
-      return left == right; // eslint-disable-line eqeqeq
+      return left == right;
     case "!=":
-      return left != right; // eslint-disable-line eqeqeq
+      return left != right;
     case ">":
       return Number(left) > Number(right);
     case "<":

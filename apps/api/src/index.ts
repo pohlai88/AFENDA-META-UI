@@ -294,16 +294,18 @@ function initWorkflowMeshBridge() {
   try {
     meshSubscribe(
       "*.*.*",
-      async (event) => {
-        try {
-          // Automatically trigger workflows matching this event topic
-          await triggerWorkflows(event.topic, event.payload as Record<string, unknown>);
-        } catch (err) {
-          logger.error(
-            { error: err instanceof Error ? err.message : String(err), topic: event.topic },
-            "[Workflow] Failed to trigger workflows from mesh event"
-          );
-        }
+      (event) => {
+        void (async () => {
+          try {
+            // Automatically trigger workflows matching this event topic
+            await triggerWorkflows(event.topic, event.payload as Record<string, unknown>);
+          } catch (err) {
+            logger.error(
+              { error: err instanceof Error ? err.message : String(err), topic: event.topic },
+              "[Workflow] Failed to trigger workflows from mesh event"
+            );
+          }
+        })();
       },
       { tenantId: null } // Wildcard subscription across all tenants
     );

@@ -26,18 +26,18 @@ program
     try {
       if (type === "refresh") {
         const token = await generateRefreshToken(userId);
-        console.log("\n🔑 Refresh Token Generated:\n");
-        console.log(token);
-        console.log("\nUse this to obtain new access tokens");
+        console.warn("\n🔑 Refresh Token Generated:\n");
+        console.warn(token);
+        console.warn("\nUse this to obtain new access tokens");
       } else {
         const token = await generateAccessToken(userId, roleArray, lang);
-        console.log("\n🔑 Access Token Generated:\n");
-        console.log(token);
-        console.log("\n\nUsage in curl:");
-        console.log(`\ncurl -H "Authorization: Bearer ${token}" \\`);
-        console.log("  http://localhost:4000/api/partners");
-        console.log("\n\nClaims:");
-        console.log({
+        console.warn("\n🔑 Access Token Generated:\n");
+        console.warn(token);
+        console.warn("\n\nUsage in curl:");
+        console.warn(`\ncurl -H "Authorization: Bearer ${token}" \\`);
+        console.warn("  http://localhost:4000/api/partners");
+        console.warn("\n\nClaims:");
+        console.warn({
           sub: userId,
           roles: roleArray,
           lang,

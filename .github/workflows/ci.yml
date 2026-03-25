@@ -37,6 +37,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit high severity vulnerabilities
+        run: pnpm ci:deps:audit
+
+      - name: Run dependency governance gate
+        run: pnpm ci:gate:dependencies
+
   lint:
     name: Lint & Type Check
     needs: setup

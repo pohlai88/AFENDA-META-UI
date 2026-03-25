@@ -3,7 +3,7 @@
 // This IS the metadata platform's backbone.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { pgTable, text, integer, jsonb, timestamp, primaryKey, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, jsonb, timestamp, primaryKey } from "drizzle-orm/pg-core";
 import type { ModelMeta, MetaPermissions, MetaFieldPermission } from "@afenda/meta-types";
 
 export const schemaRegistry = pgTable(

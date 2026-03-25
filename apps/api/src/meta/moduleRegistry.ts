@@ -49,7 +49,7 @@ class ModuleRegistry {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log("[ModuleRegistry] Initializing...");
+    console.warn("[ModuleRegistry] Initializing...");
 
     const modulesDir = join(__dirname, "../modules");
 
@@ -58,7 +58,7 @@ class ModuleRegistry {
       const entries = await readdir(modulesDir, { withFileTypes: true });
       const moduleNames = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
-      console.log(
+      console.warn(
         `[ModuleRegistry] Found ${moduleNames.length} module(s): ${moduleNames.join(", ")}`
       );
 
@@ -71,7 +71,7 @@ class ModuleRegistry {
       this.resolveDependencies();
 
       this.initialized = true;
-      console.log(`[ModuleRegistry] Initialized with ${this.modules.size} module(s)`);
+      console.warn(`[ModuleRegistry] Initialized with ${this.modules.size} module(s)`);
     } catch (error) {
       console.error("[ModuleRegistry] Failed to initialize:", error);
       // Continue with empty registry rather than crashing
@@ -98,7 +98,7 @@ class ModuleRegistry {
       const enabled = moduleDefinition.config?.enabled !== false;
 
       if (!enabled) {
-        console.log(`[ModuleRegistry] Module "${moduleName}" is disabled`);
+        console.warn(`[ModuleRegistry] Module "${moduleName}" is disabled`);
         return;
       }
 
@@ -112,7 +112,7 @@ class ModuleRegistry {
         }
       }
 
-      console.log(`[ModuleRegistry] Loaded module: ${moduleName}`);
+      console.warn(`[ModuleRegistry] Loaded module: ${moduleName}`);
 
       // Call onLoad hook if present
       if (moduleDefinition.hooks?.onLoad) {
@@ -161,7 +161,7 @@ class ModuleRegistry {
       visit(moduleName);
     }
 
-    console.log(`[ModuleRegistry] Load order: ${loadOrder.join(" → ")}`);
+    console.warn(`[ModuleRegistry] Load order: ${loadOrder.join(" → ")}`);
   }
 
   /**

@@ -54,7 +54,7 @@ async function verifyAccessToken(token: string): Promise<SessionContext> {
       roles: payload.roles ?? ["viewer"],
       lang: payload.lang ?? "en",
     };
-  } catch (err) {
+  } catch (_err) {
     throw new UnauthorizedError("Invalid or expired token");
   }
 }

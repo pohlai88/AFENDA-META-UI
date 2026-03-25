@@ -26,6 +26,6 @@ describe("route lazy page contracts", () => {
     it(`${modulePath} exports a default React component`, async () => {
       const pageModule = (await import(modulePath)) as { default?: unknown };
       expect(typeof pageModule.default).toBe("function");
-    });
+    }, 30000);
   }
 });

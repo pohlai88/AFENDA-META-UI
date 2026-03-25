@@ -33,6 +33,7 @@ const CHECKS = [
 
 async function main() {
   const fix = process.argv.includes("--fix");
+  const verbose = process.argv.includes("--verbose") || process.argv.includes("-v");
   const results = [];
 
   console.log("🔍 Running logger CI gate checks...\n");
@@ -40,6 +41,9 @@ async function main() {
   for (const check of CHECKS) {
     console.log(`Running: ${check.name}`);
     const result = await check.fn({ fix });
+    if (verbose) {
+      console.log(`  ↳ ${check.name} completed: ${result.errors?.length || 0} error(s), ${result.warnings?.length || 0} warning(s)`);
+    }
     results.push({ name: check.name, ...result });
   }
 
@@ -49,6 +53,10 @@ async function main() {
 
   if (totalErrors > 0) {
     console.log(`\n❌ CI gate failed with ${totalErrors} error(s)`);
+    console.log("\nNext steps:");
+    console.log("  1. Fix the locations listed above");
+    console.log("  2. Re-run: pnpm ci:logger");
+    console.log("  3. Re-run full gate: pnpm ci:gate");
     process.exit(1);
   } else {
     console.log("\n✅ All logger CI gate checks passed!");

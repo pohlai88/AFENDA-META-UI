@@ -8,6 +8,7 @@
   "scripts": {
     "gate": "node index.mjs",
     "gate:logger": "node index.mjs --gate=logger",
+    "gate:dependencies": "node index.mjs --gate=dependencies",
     "gate:fix": "node index.mjs --fix",
     "gate:verbose": "node index.mjs --verbose",
     "help": "node index.mjs --help"

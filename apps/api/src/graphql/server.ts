@@ -3,6 +3,11 @@ import { graphqlSchema } from "./schema.js";
 import type { Request, Response } from "express";
 import type { SessionContext, ResolutionContext } from "@afenda/meta-types";
 
+type RequestWithContext = Request & {
+  session?: SessionContext;
+  tenantContext?: ResolutionContext;
+};
+
 // GraphQL endpoint — used for:
 //   • Complex dashboard / report queries
 //   • Nested relation fetching
@@ -18,9 +23,14 @@ export const yoga = createYoga<{
   graphqlEndpoint: "/graphql",
   context: ({ req }) => ({
     // session is attached by auth middleware before this runs
-    session: (req as any).session as SessionContext,
-    // tenantContext is attached by tenantContextMiddleware
-    tenantContext: (req as any).tenantContext as ResolutionContext,
+    ...(() => {
+      const request = req as RequestWithContext;
+      return {
+        session: request.session as SessionContext,
+        // tenantContext is attached by tenantContextMiddleware
+        tenantContext: request.tenantContext as ResolutionContext,
+      };
+    })(),
   }),
   // Disable introspection in production to avoid schema leakage
   graphiql: process.env.NODE_ENV !== "production",

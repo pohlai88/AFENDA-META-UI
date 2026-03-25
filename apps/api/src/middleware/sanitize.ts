@@ -89,7 +89,7 @@ export function xssSanitizer(req: Request, _res: Response, next: NextFunction) {
 // Path traversal sanitizer - prevents ../../../etc/passwd attacks
 // ---------------------------------------------------------------------------
 
-const PATH_TRAVERSAL_PATTERN = /\.\.[\/\\]/g;
+const PATH_TRAVERSAL_PATTERN = /\.\.[/\\]/g;
 
 export function pathTraversalSanitizer(req: Request, res: Response, next: NextFunction) {
   // Check params for path traversal attempts

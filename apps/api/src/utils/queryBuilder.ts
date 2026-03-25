@@ -66,7 +66,7 @@ export type FilterOperator = z.infer<typeof FilterOperatorSchema>;
 export const FilterConditionSchema = z.object({
   field: z.string().min(1, "Field name is required"),
   op: FilterOperatorSchema,
-  value: z.any().optional(), // Value depends on operator
+  value: z.unknown().optional(), // Value depends on operator
 });
 
 export type FilterCondition = z.infer<typeof FilterConditionSchema>;

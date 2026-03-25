@@ -7,12 +7,12 @@ declare module "filtrex" {
     /**
      * Additional functions to make available in expressions
      */
-    extraFunctions?: Record<string, (...args: any[]) => any>;
+    extraFunctions?: Record<string, (...args: unknown[]) => unknown>;
 
     /**
      * Custom property accessor for objects
      */
-    customProp?: (name: string, get: (name: string) => any, obj: any) => any;
+    customProp?: (name: string, get: (name: string) => unknown, obj: unknown) => unknown;
   }
 
   /**
@@ -25,5 +25,5 @@ declare module "filtrex" {
   export function compileExpression(
     expression: string,
     options?: CompileOptions
-  ): (context: Record<string, any>) => any;
+  ): (context: Record<string, unknown>) => unknown;
 }

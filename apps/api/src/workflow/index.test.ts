@@ -6,7 +6,6 @@ import {
   getWorkflow,
   listWorkflows,
   triggerWorkflows,
-  advanceInstance,
   submitApproval,
   getInstance,
   listInstances,

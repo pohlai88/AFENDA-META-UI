@@ -22,7 +22,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { sql, eq, asc, desc } from "drizzle-orm";
+import { sql, eq, asc, desc, type SQL, type Column } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { getSchema } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
@@ -30,6 +30,39 @@ import { parseFilters, parseSortParams, buildWhereClause } from "../utils/queryB
 import type { SessionContext } from "@afenda/meta-types";
 
 const router = Router();
+
+type RequestLog = {
+  error: (obj: unknown, msg?: string) => void;
+};
+
+type RequestWithLog = Request & {
+  log?: RequestLog;
+};
+
+type RowRecord = Record<string, unknown>;
+type DynamicTableColumns = Record<string, Column>;
+
+type QueryLike = {
+  where: (clause: SQL) => QueryLike;
+  orderBy: (...clauses: unknown[]) => QueryLike;
+  limit: (value: number) => QueryLike;
+  offset: (value: number) => QueryLike;
+};
+
+type DbLike = {
+  select: (...args: unknown[]) => { from: (table: unknown) => QueryLike | PromiseLike<RowRecord[]> };
+  insert: (table: unknown) => {
+    values: (values: RowRecord) => { returning: () => Promise<RowRecord[]> };
+  };
+  update: (table: unknown) => {
+    set: (values: RowRecord) => { where: (clause: unknown) => { returning: () => Promise<RowRecord[]> } };
+  };
+  delete: (table: unknown) => {
+    where: (clause: unknown) => { returning?: () => Promise<RowRecord[]> } | Promise<unknown>;
+  };
+};
+
+const dbLike = db as unknown as DbLike;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -132,48 +165,48 @@ router.get("/:model", async (req: Request, res: Response) => {
     }
 
     // Build where clause from filters
-    const whereClause = buildWhereClause(table as any, filtersResult.data);
+    const tableColumns = table as DynamicTableColumns;
+    const whereClause = buildWhereClause(tableColumns, filtersResult.data);
 
     // Build order by clause from sort params
     const orderByClauses = sortResult.data.map((sort) => {
-      const column = (table as any)[sort.field];
+      const column = tableColumns[sort.field];
       return sort.order === "asc" ? asc(column) : desc(column);
     });
 
     // Default sort by id desc if no sort specified
     if (orderByClauses.length === 0) {
-      orderByClauses.push(desc((table as any).id));
+      orderByClauses.push(desc(tableColumns.id));
     }
 
     // Build query with Drizzle
-    let query = (db as any).select().from(table);
+    let query = dbLike.select().from(table) as QueryLike | PromiseLike<RowRecord[]>;
 
     if (whereClause) {
-      query = query.where(whereClause);
+      query = (query as QueryLike).where(whereClause);
     }
 
-    query = query
-      .orderBy(...orderByClauses)
-      .limit(limit)
-      .offset(offset);
+    query = (query as QueryLike).orderBy(...orderByClauses).limit(limit).offset(offset);
 
     // Execute query
-    const rows = await query;
+    const rows = await (query as PromiseLike<RowRecord[]>);
 
     // Get total count (with filters applied)
-    let countQuery = (db as any).select({ count: sql`count(*)` }).from(table);
+    let countQuery = dbLike.select({ count: sql`count(*)` }).from(table) as
+      | { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }
+      | PromiseLike<Array<{ count: number | string }>>;
 
     if (whereClause) {
-      countQuery = countQuery.where(whereClause);
+      countQuery = (countQuery as { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }).where(whereClause);
     }
 
-    const [{ count }] = await countQuery;
+    const [{ count }] = await (countQuery as PromiseLike<Array<{ count: number | string }>>);
     const total = Number(count);
 
     // Filter visible fields based on RBAC
     const visibleSet = new Set(rbac.visibleFields);
-    const filteredRows = rows.map((row: any) => {
-      const filtered: Record<string, any> = {};
+    const filteredRows = rows.map((row: RowRecord) => {
+      const filtered: RowRecord = {};
       for (const [key, value] of Object.entries(row)) {
         if (visibleSet.has(key)) {
           filtered[key] = value;
@@ -193,7 +226,7 @@ router.get("/:model", async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    (req as any).log?.error({ err, model }, `GET /${model} failed`);
+    (req as RequestWithLog).log?.error({ err, model }, `GET /${model} failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -235,7 +268,7 @@ router.get("/:model/:id", async (req: Request, res: Response) => {
 
     res.json({ data: rows.rows[0] });
   } catch (err) {
-    (req as any).log?.error({ err, model, id }, `GET /${model}/${id} failed`);
+    (req as RequestWithLog).log?.error({ err, model, id }, `GET /${model}/${id} failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -279,10 +312,10 @@ router.post("/:model", async (req: Request, res: Response) => {
       return;
     }
 
-    const [created] = await (db as any).insert(table).values(safe).returning();
+    const [created] = await dbLike.insert(table).values(safe).returning();
     res.status(201).json({ data: created });
   } catch (err) {
-    (req as any).log?.error({ err, model }, `POST /${model} failed`);
+    (req as RequestWithLog).log?.error({ err, model }, `POST /${model} failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -330,10 +363,12 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const [updated] = await (db as any)
+    const tableColumns = table as DynamicTableColumns;
+
+    const [updated] = await dbLike
       .update(table)
       .set(safe)
-      .where(eq((table as any).id, id))
+      .where(eq(tableColumns.id, id))
       .returning();
 
     if (!updated) {
@@ -343,7 +378,7 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
 
     res.json({ data: updated });
   } catch (err) {
-    (req as any).log?.error({ err, model, id }, `PATCH /${model}/${id} failed`);
+    (req as RequestWithLog).log?.error({ err, model, id }, `PATCH /${model}/${id} failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -379,10 +414,11 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    await (db as any).delete(table).where(eq((table as any).id, id));
+    const tableColumns = table as DynamicTableColumns;
+    await dbLike.delete(table).where(eq(tableColumns.id, id));
     res.status(204).send();
   } catch (err) {
-    (req as any).log?.error({ err, model, id }, `DELETE /${model}/${id} failed`);
+    (req as RequestWithLog).log?.error({ err, model, id }, `DELETE /${model}/${id} failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -443,10 +479,12 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
     }
 
     // Update all matching IDs
-    const result = await (db as any)
+    const tableColumns = table as DynamicTableColumns;
+
+    const result = await dbLike
       .update(table)
       .set(safe)
-      .where(sql`${(table as any).id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
+      .where(sql`${tableColumns.id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
       .returning();
 
     res.json({
@@ -457,7 +495,7 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    (req as any).log?.error({ err, model }, `POST /${model}/bulk-update failed`);
+    (req as RequestWithLog).log?.error({ err, model }, `POST /${model}/bulk-update failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -501,9 +539,11 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
     }
 
     // Delete all matching IDs
-    const result = await (db as any)
+    const tableColumns = table as DynamicTableColumns;
+
+    const result = await dbLike
       .delete(table)
-      .where(sql`${(table as any).id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
+      .where(sql`${tableColumns.id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
       .returning();
 
     res.json({
@@ -513,7 +553,7 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    (req as any).log?.error({ err, model }, `POST /${model}/bulk-delete failed`);
+    (req as RequestWithLog).log?.error({ err, model }, `POST /${model}/bulk-delete failed`);
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;

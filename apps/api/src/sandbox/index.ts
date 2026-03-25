@@ -14,7 +14,6 @@ import type {
   PolicyDefinition,
   PolicyContext,
   PolicyViolation,
-  PolicyEvaluationResult,
   SimulationScenario,
   PolicySimulationResult,
   SimulationReport,

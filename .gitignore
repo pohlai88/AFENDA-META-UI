@@ -1,8 +1,13 @@
 # Dependencies
 node_modules/
+.pnpm-store/
+.npm/
 
 # Build outputs
 dist/
+build/
+tmp/
+temp/
 *.tsbuildinfo
 .next/
 out/
@@ -10,6 +15,12 @@ out/
 # Turbo
 .turbo/
 **/.turbo/
+
+# Cache artifacts
+.cache/
+**/.cache/
+**/.eslintcache
+**/.stylelintcache
 
 # Vite
 .vite/
@@ -22,8 +33,11 @@ out/
 
 # Test outputs
 coverage/
+**/coverage/
 test-results/
+**/test-results/
 playwright-report/
+**/playwright-report/
 test-output.txt
 
 # IDE

@@ -86,7 +86,7 @@ export const config = {
 // ---------------------------------------------------------------------------
 
 export function validateConfig(): void {
-  console.log("🔐 Validating security configuration...");
+  console.warn("🔐 Validating security configuration...");
 
   // Validate JWT secret
   validateJwtSecret(config.jwtSecret);
@@ -107,12 +107,12 @@ export function validateConfig(): void {
     );
   }
 
-  console.log("✓ Configuration validated successfully");
-  console.log(`  • Environment: ${config.nodeEnv}`);
-  console.log(`  • Port: ${config.port}`);
-  console.log(`  • CORS Origins: ${config.allowedOrigins.join(", ")}`);
-  console.log(`  • Rate Limiting: ${config.rateLimitEnabled ? "enabled" : "disabled"}`);
-  console.log(`  • Compression: ${config.compressionEnabled ? "enabled" : "disabled"}`);
+  console.warn("✓ Configuration validated successfully");
+  console.warn(`  • Environment: ${config.nodeEnv}`);
+  console.warn(`  • Port: ${config.port}`);
+  console.warn(`  • CORS Origins: ${config.allowedOrigins.join(", ")}`);
+  console.warn(`  • Rate Limiting: ${config.rateLimitEnabled ? "enabled" : "disabled"}`);
+  console.warn(`  • Compression: ${config.compressionEnabled ? "enabled" : "disabled"}`);
 }
 
 export default config;

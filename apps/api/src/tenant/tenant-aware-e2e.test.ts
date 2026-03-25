@@ -6,18 +6,18 @@ vi.hoisted(() => {
 });
 
 const auditState = vi.hoisted(() => ({
-  store: [] as Array<any>,
-  chains: new Map<string, any>(),
+  store: [] as Array<DecisionAuditEntry>,
+  chains: new Map<string, DecisionAuditChain>(),
 }));
 
 vi.mock("../audit/decisionAuditLogger.js", () => ({
-  logDecisionAudit(entry: any) {
+  logDecisionAudit(entry: DecisionAuditEntry) {
     auditState.store.push(entry);
   },
-  logDecisionAuditBatch(entries: any[]) {
+  logDecisionAuditBatch(entries: DecisionAuditEntry[]) {
     auditState.store.push(...entries);
   },
-  linkToChain(chainId: string, entry: any) {
+  linkToChain(chainId: string, entry: DecisionAuditEntry) {
     auditState.store.push(entry);
     if (!auditState.chains.has(chainId)) {
       auditState.chains.set(chainId, {
@@ -32,7 +32,7 @@ vi.mock("../audit/decisionAuditLogger.js", () => ({
     chain.totalDurationMs += entry.durationMs ?? 0;
     if (entry.status === "error" && entry.error) chain.errors.push(entry.error);
   },
-  queryDecisionAuditLog(query: any) {
+  queryDecisionAuditLog(query: DecisionAuditQuery) {
     const scopeRegex = query.scope
       ? new RegExp(`^${String(query.scope).replace(/\\*/g, ".*")}$`)
       : null;
@@ -80,6 +80,8 @@ vi.mock("../audit/decisionAuditLogger.js", () => ({
 
 import type {
   DecisionAuditEntry,
+  DecisionAuditChain,
+  DecisionAuditQuery,
   PolicyContext,
   PolicyDefinition,
   ResolutionContext,
