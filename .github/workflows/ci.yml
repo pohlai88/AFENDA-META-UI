@@ -27,12 +27,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -54,12 +64,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -83,12 +103,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -116,12 +146,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -161,12 +201,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
