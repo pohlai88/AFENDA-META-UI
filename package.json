@@ -46,7 +46,7 @@
     "eslint-config-prettier": "catalog:",
     "glob": "^13.0.6",
     "prettier": "catalog:",
-    "turbo": "^1.13.4",
+    "turbo": "^2.8.20",
     "typescript": "catalog:"
   }
 }
