@@ -282,24 +282,29 @@ Following this policy ensures:
 
 ---
 
-## Appendix A — Workspace Override Catalog
+## Appendix A — Workspace Catalog
 
-The root `package.json` `pnpm.overrides` field is the single source of truth for critical package versions. These versions are enforced across all workspace members.
+The `catalog:` section in `pnpm-workspace.yaml` is the **single source of truth** for governed package versions across all workspace members. All workspace `package.json` files reference these as `"catalog:"` — resolving to the catalog version at install time.
 
-| Package | Pinned Version | Reason |
+| Package | Catalog Version | Reason |
 |---------|----------------|--------|
 | `drizzle-orm` | `1.0.0-beta.19` | Exact pin — beta API surface |
 | `drizzle-kit` | `1.0.0-beta.19` | Must match drizzle-orm exactly |
 | `zod` | `^4.3.6` | Shared validation layer |
 | `vitest` | `^4.1.1` | Test framework alignment |
+| `@vitest/coverage-v8` | `^4.1.1` | Must align with vitest |
+| `@vitest/ui` | `^4.1.1` | Must align with vitest |
 | `tsx` | `^4.21.0` | Script runner alignment |
 | `pg` | `^8.20.0` | DB driver alignment |
 | `@types/pg` | `^8.20.0` | Driver types alignment |
 | `@types/node` | `^22.0.0` | Node 22 LTS target |
 | `typescript` | `^5.9.0` | Cross-workspace type system alignment |
-| `flatted` | `^3.4.2` | Circular serialisation alignment |
 
-> When updating a pinned version, change it here first. All dependent `package.json` files must align to the override. Run `pnpm install` to validate.
+> **Governance mechanism**: pnpm catalog (`pnpm-workspace.yaml` > `catalog:`) requires pnpm ≥ 9.5. This workspace uses pnpm 10.33.0.
+
+> **Transitive overrides** (not direct deps — no `catalog:` entry needed): `flatted: "^3.4.2"` stays in root `package.json` > `pnpm.overrides`.
+
+> To update a governed version: change the value in `pnpm-workspace.yaml` catalog section, then run `pnpm install`.
 
 ---
 

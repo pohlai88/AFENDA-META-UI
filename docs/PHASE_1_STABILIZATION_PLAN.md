@@ -54,7 +54,7 @@ Phase 1 addresses five architecture integrity issues discovered during the depen
 
 3. Run `pnpm install` to validate resolution.
 
-**Compatibility note**: Current workspace pnpm runtime rejects the `catalog:` protocol. Overrides are used to keep deterministic, centralized version governance without forcing a package-manager upgrade in this phase.
+**Compatibility note**: pnpm was upgraded to 10.33.0 via `corepack prepare pnpm@10.33.0 --activate` + `corepack use pnpm@10.33.0`. The catalog: protocol is now the primary version governance mechanism. `pnpm.overrides` is retained only for `flatted` (transitive-only pin).
 
 **Verification**: `pnpm install` succeeds and lockfile is updated cleanly.
 

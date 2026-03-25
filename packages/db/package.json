@@ -49,16 +49,16 @@
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
     "drizzle-zod": "^0.8.3",
-    "drizzle-orm": "1.0.0-beta.19",
-    "pg": "^8.20.0",
-    "zod": "^4.3.6"
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/pg": "^8.20.0",
-    "drizzle-kit": "1.0.0-beta.19",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.0",
-    "vitest": "^4.1.1"
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "drizzle-kit": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

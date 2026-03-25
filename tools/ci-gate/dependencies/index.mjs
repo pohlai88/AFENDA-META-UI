@@ -17,6 +17,38 @@ import { dirname } from "node:path";
 import { execSync } from "node:child_process";
 import { formatDependencyIssues, summarizeDependencyIssues } from "./utils/diagnostics.mjs";
 
+/**
+ * Parse the catalog: section from pnpm-workspace.yaml without an external YAML parser.
+ * Supports the default catalog only (not named catalogs).
+ */
+function readWorkspaceCatalog(root) {
+  const yamlPath = join(root, "pnpm-workspace.yaml");
+  if (!existsSync(yamlPath)) return {};
+
+  const lines = readFileSync(yamlPath, "utf-8").split("\n");
+  const catalog = {};
+  let inCatalog = false;
+
+  for (const line of lines) {
+    const trimmed = line.trimEnd();
+    if (trimmed.trimStart() === "catalog:") {
+      inCatalog = true;
+      continue;
+    }
+    if (inCatalog) {
+      // A new top-level key (no leading spaces) ends the catalog block
+      if (trimmed.length > 0 && !/^\s/.test(trimmed)) {
+        inCatalog = false;
+        continue;
+      }
+      const match = trimmed.match(/^\s+["']?(@?[\w\-./]+)["']?:\s*["']?([^"'\s]+)["']?/);
+      if (match) catalog[match[1]] = match[2];
+    }
+  }
+
+  return catalog;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = join(__dirname, "..", "..", "..");
@@ -173,24 +205,62 @@ function main() {
   const errors = [];
   const warnings = [];
 
-  // Rule 0: Governance versions should be centrally defined in root overrides.
+  // Rule 0: Governance versions should be centrally defined — either in the workspace
+  // catalog (preferred, pnpm-workspace.yaml > catalog:) or in root pnpm.overrides
+  // (acceptable for transitive-only pins).
   const rootOverrides = rootPkg.pnpm?.overrides || {};
-  for (const dep of [...criticalAlignedPackages, "typescript", "pg", "@types/node", "@types/pg"]) {
-    if (!rootOverrides[dep]) {
+  const workspaceCatalog = readWorkspaceCatalog(repoRoot);
+  const governedPackages = [...criticalAlignedPackages, "typescript", "tsx", "pg", "@types/node", "@types/pg"];
+  for (const dep of governedPackages) {
+    const inCatalog = Boolean(workspaceCatalog[dep]);
+    const inOverride = Boolean(rootOverrides[dep]);
+    if (!inCatalog && !inOverride) {
       warnings.push(
         createIssue({
           level: "warning",
-          category: "ROOT_OVERRIDE_MISSING",
-          message: `Missing root pnpm override for ${dep}.`,
+          category: "GOVERNANCE_VERSION_MISSING",
+          message: `${dep} is not governed by the workspace catalog or a root override.`,
           explanation:
-            "Central overrides keep critical dependency versions consistent across all packages.",
-          relatedFiles: ["package.json"],
+            "Governed packages must have their version defined in pnpm-workspace.yaml catalog: (preferred) " +
+            "or in package.json > pnpm.overrides (for transitive-only pins). " +
+            "This ensures deterministic, drift-resistant version resolution.",
+          relatedFiles: ["pnpm-workspace.yaml", "package.json"],
           fixes: [
-            `Add \"${dep}\" under package.json > pnpm.overrides.`,
-            "Re-run pnpm install to ensure lockfile consistency.",
+            `Add \"${dep}\" to the catalog: section in pnpm-workspace.yaml.`,
+            `Then reference it as \"catalog:\" in any workspace package.json that declares ${dep}.`,
+            "Re-run pnpm install to regenerate the lockfile.",
           ],
         })
       );
+    }
+  }
+
+  // Bonus: warn if any workspace manifest declares a governed dep with an explicit version
+  // instead of "catalog:". This means the dep drifted out of governance.
+  for (const manifest of manifests) {
+    for (const sectionName of ["dependencies", "devDependencies"]) {
+      const section = manifest.pkgJson[sectionName] || {};
+      for (const dep of governedPackages) {
+        const version = section[dep];
+        if (!version) continue;
+        if (version !== "catalog:" && !version.startsWith("workspace:")) {
+          warnings.push(
+            createIssue({
+              level: "warning",
+              category: "CATALOG_BYPASS",
+              message: `${rel(manifest.path)} declares ${dep}@${version} explicitly instead of using catalog:.`,
+              explanation:
+                "Packages governed by the workspace catalog should reference them as \"catalog:\" " +
+                "so version changes only need to be made in one place.",
+              relatedFiles: [rel(manifest.path), "pnpm-workspace.yaml"],
+              fixes: [
+                `Change ${dep} to \"catalog:\" in ${sectionName} of ${rel(manifest.path)}.`,
+                `Ensure the version is defined in pnpm-workspace.yaml catalog: section.`,
+              ],
+            })
+          );
+        }
+      }
     }
   }
 
@@ -211,7 +281,7 @@ function main() {
           relatedFiles: ["package.json", "pnpm-lock.yaml"],
           fixes: [
             `Align ${dep} to a single version across workspace manifests.`,
-            "Prefer defining canonical versions in root pnpm.overrides.",
+            "Use catalog: in pnpm-workspace.yaml to ensure a single source of truth.",
           ],
         })
       );
@@ -321,7 +391,7 @@ function main() {
         relatedFiles: ["package.json"],
         fixes: [
           "Align TypeScript ranges where possible.",
-          "Prefer root override or catalog pattern for long-term consistency.",
+          "Use catalog: in pnpm-workspace.yaml for long-term consistency.",
         ],
       })
     );
