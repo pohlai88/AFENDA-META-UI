@@ -11,6 +11,9 @@ on:
 
 env:
   PNPM_VERSION: 10.33.0
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  TURBO_LOG_ORDER: grouped
 
 jobs:
   quality-gate:
@@ -47,12 +50,21 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref }}-
+            turbo-${{ runner.os }}-
+
       - name: 📦 Dependency Governance Gate
         run: pnpm ci:gate:dependencies
 
       # GATE 1: TypeScript Strict Type Checking
       - name: 🔍 TypeScript Check
-        run: pnpm --filter web typecheck
+        run: turbo run typecheck --filter=@afenda/web
 
       # GATE 2: ESLint with React Hooks Rules (CRITICAL)
       - name: 🧹 ESLint (React Hooks + Best Practices)
@@ -64,7 +76,7 @@ jobs:
 
       # GATE 4: Production Build Verification
       - name: 🏗️ Production Build
-        run: pnpm --filter web build
+        run: turbo run build --filter=@afenda/web
 
       # GATE 5: Bundle Size Analysis
       - name: 📊 Bundle Size Check
