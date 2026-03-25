@@ -1,7 +1,7 @@
 /**
  * Module System Types
  * ===================
- * 
+ *
  * Defines the plugin architecture for AFENDA META UI.
  * Modules are self-contained packages that register:
  * - Models (database schemas)
@@ -148,11 +148,7 @@ export interface ModuleHooks {
   afterCreate?: (model: string, record: Record<string, unknown>) => void | Promise<void>;
 
   /** Called before a record is updated */
-  beforeUpdate?: (
-    model: string,
-    id: string,
-    data: Record<string, unknown>
-  ) => void | Promise<void>;
+  beforeUpdate?: (model: string, id: string, data: Record<string, unknown>) => void | Promise<void>;
 
   /** Called after a record is updated */
   afterUpdate?: (

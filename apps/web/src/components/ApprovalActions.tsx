@@ -89,14 +89,16 @@ export function ApprovalActions({
   };
 
   // Filter actions by status context (if provided)
-  const relevantActions = (status
-    ? allActions.filter((action) => {
-        // Example: only show approve/reject for "submitted" status
-        if (status === "draft" && action.id === "submit") return true;
-        if (status === "submitted" && ["approve", "reject"].includes(action.id)) return true;
-        return false;
-      })
-    : allActions).filter(canExecuteAction);
+  const relevantActions = (
+    status
+      ? allActions.filter((action) => {
+          // Example: only show approve/reject for "submitted" status
+          if (status === "draft" && action.id === "submit") return true;
+          if (status === "submitted" && ["approve", "reject"].includes(action.id)) return true;
+          return false;
+        })
+      : allActions
+  ).filter(canExecuteAction);
 
   // Handler that wraps action execution with audit logging
   const handleAction = async (action: MetaAction) => {
@@ -162,11 +164,7 @@ export function ApprovalActions({
       {effectiveRole ? (
         <p className="text-xs text-muted-foreground">Acting as {formatRoleLabel(effectiveRole)}</p>
       ) : null}
-      <ActionButtons
-        actions={relevantActions}
-        size={size}
-        onAction={handleAction}
-      />
+      <ActionButtons actions={relevantActions} size={size} onAction={handleAction} />
     </div>
   );
 }

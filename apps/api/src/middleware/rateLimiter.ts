@@ -28,11 +28,11 @@ function keyGenerator(req: Request): string {
       : undefined;
   const rawIp = req.ip || forwardedIp || req.socket.remoteAddress || "unknown";
   const ip = ipKeyGenerator(rawIp);
-  
+
   if (session?.uid && session.uid !== "anonymous") {
     return `${ip}:${session.uid}`;
   }
-  
+
   return ip;
 }
 

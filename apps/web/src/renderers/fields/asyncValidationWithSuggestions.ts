@@ -206,7 +206,8 @@ export async function transformFetchResponseToValidationWithSuggestions(
   const suggestions = extractPersonalizedSuggestions(validation, context);
   const suggestionsMeta: ValidationResponseWithSuggestions["_suggestionsMeta"] = suggestions.length
     ? {
-        source: validation.suggestions && validation.suggestions.length > 0 ? "backend" : "frontend",
+        source:
+          validation.suggestions && validation.suggestions.length > 0 ? "backend" : "frontend",
         count: suggestions.length,
       }
     : undefined;

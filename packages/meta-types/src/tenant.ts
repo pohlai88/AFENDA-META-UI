@@ -12,8 +12,8 @@
 // ---------------------------------------------------------------------------
 
 export type TenantIsolationStrategy =
-  | "logical"   // Shared infra, tenant IDs on all rows
-  | "schema"    // Separate DB schemas per tenant
+  | "logical" // Shared infra, tenant IDs on all rows
+  | "schema" // Separate DB schemas per tenant
   | "physical"; // Dedicated infrastructure
 
 export interface TenantDefinition {
@@ -52,12 +52,7 @@ export interface TenantBranding {
 // Override — a patch applied at a specific layer
 // ---------------------------------------------------------------------------
 
-export type OverrideScope =
-  | "global"
-  | "industry"
-  | "tenant"
-  | "department"
-  | "user";
+export type OverrideScope = "global" | "industry" | "tenant" | "department" | "user";
 
 export interface MetadataOverride {
   /** Unique override ID */

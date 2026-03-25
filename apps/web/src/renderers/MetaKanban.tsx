@@ -100,7 +100,10 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
   // ============================================================================
   const { grouped, miscRecords } = useMemo(() => {
     if (!groupByField || columns.length === 0) {
-      return { grouped: new Map<string, Record<string, unknown>[]>(), miscRecords: [] as Record<string, unknown>[] };
+      return {
+        grouped: new Map<string, Record<string, unknown>[]>(),
+        miscRecords: [] as Record<string, unknown>[],
+      };
     }
     const knownKeys = new Set(columns.map((c) => String(c.value)));
     const map = new Map<string, Record<string, unknown>[]>(
@@ -120,105 +123,117 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
     return { grouped: map, miscRecords: misc };
   }, [records, columns, groupByField, localOverrides]);
 
-  const resolveEffectiveGroupForRecord = useCallback((record: Record<string, unknown>) => {
-    if (!groupByField) {
-      return "";
-    }
+  const resolveEffectiveGroupForRecord = useCallback(
+    (record: Record<string, unknown>) => {
+      if (!groupByField) {
+        return "";
+      }
 
-    const recordId = String(record.id ?? "");
-    return localOverrides.get(recordId) ?? String(record[groupByField] ?? "");
-  }, [groupByField, localOverrides]);
+      const recordId = String(record.id ?? "");
+      return localOverrides.get(recordId) ?? String(record[groupByField] ?? "");
+    },
+    [groupByField, localOverrides]
+  );
 
-  const moveRecordToGroup = useCallback(async (record: Record<string, unknown>, targetGroup: string) => {
-    if (!groupByField) return;
-    if (!canUpdate) {
-      setMutationError("You do not have permission to move cards.");
-      return;
-    }
+  const moveRecordToGroup = useCallback(
+    async (record: Record<string, unknown>, targetGroup: string) => {
+      if (!groupByField) return;
+      if (!canUpdate) {
+        setMutationError("You do not have permission to move cards.");
+        return;
+      }
 
-    const recordId = String(record.id ?? "");
-    if (!recordId) {
-      setMutationError("Unable to move card: missing record id.");
-      return;
-    }
+      const recordId = String(record.id ?? "");
+      if (!recordId) {
+        setMutationError("Unable to move card: missing record id.");
+        return;
+      }
 
-    const previousGroup = resolveEffectiveGroupForRecord(record);
-    if (previousGroup === targetGroup) {
-      return;
-    }
+      const previousGroup = resolveEffectiveGroupForRecord(record);
+      if (previousGroup === targetGroup) {
+        return;
+      }
 
-    setLocalOverrides((current) => {
-      const next = new Map(current);
-      next.set(recordId, targetGroup);
-      return next;
-    });
-    setPendingRecordIds((current) => {
-      const next = new Set(current);
-      next.add(recordId);
-      return next;
-    });
-
-    try {
-      if (!updateRecord) throw new Error("Update operation unavailable");
-      await updateRecord(recordId, {
-        [groupByField]: targetGroup,
-      });
-      setMutationError(null);
       setLocalOverrides((current) => {
         const next = new Map(current);
-        next.delete(recordId);
+        next.set(recordId, targetGroup);
         return next;
       });
       setPendingRecordIds((current) => {
         const next = new Set(current);
-        next.delete(recordId);
+        next.add(recordId);
         return next;
       });
-      await refetch();
-    } catch (err) {
-      console.error("Kanban drop failed:", err);
-      setMutationError(errorMessageFromUnknown(err));
-      setLocalOverrides((current) => {
-        const next = new Map(current);
-        if (previousGroup) {
-          next.set(recordId, previousGroup);
-        } else {
+
+      try {
+        if (!updateRecord) throw new Error("Update operation unavailable");
+        await updateRecord(recordId, {
+          [groupByField]: targetGroup,
+        });
+        setMutationError(null);
+        setLocalOverrides((current) => {
+          const next = new Map(current);
           next.delete(recordId);
-        }
-        return next;
-      });
-      setPendingRecordIds((current) => {
-        const next = new Set(current);
-        next.delete(recordId);
-        return next;
-      });
-    }
-  }, [groupByField, canUpdate, resolveEffectiveGroupForRecord, updateRecord, refetch]);
+          return next;
+        });
+        setPendingRecordIds((current) => {
+          const next = new Set(current);
+          next.delete(recordId);
+          return next;
+        });
+        await refetch();
+      } catch (err) {
+        console.error("Kanban drop failed:", err);
+        setMutationError(errorMessageFromUnknown(err));
+        setLocalOverrides((current) => {
+          const next = new Map(current);
+          if (previousGroup) {
+            next.set(recordId, previousGroup);
+          } else {
+            next.delete(recordId);
+          }
+          return next;
+        });
+        setPendingRecordIds((current) => {
+          const next = new Set(current);
+          next.delete(recordId);
+          return next;
+        });
+      }
+    },
+    [groupByField, canUpdate, resolveEffectiveGroupForRecord, updateRecord, refetch]
+  );
 
   // ============================================================================
   // CALLBACKS (must be after all other hooks)
   // ============================================================================
-  const handleDrop = useCallback(async (targetGroup: string) => {
-    if (!dragging || !groupByField) return;
-    await moveRecordToGroup(dragging, targetGroup);
-    setDragging(null);
-  }, [dragging, groupByField, moveRecordToGroup]);
+  const handleDrop = useCallback(
+    async (targetGroup: string) => {
+      if (!dragging || !groupByField) return;
+      await moveRecordToGroup(dragging, targetGroup);
+      setDragging(null);
+    },
+    [dragging, groupByField, moveRecordToGroup]
+  );
 
-  const handleKeyboardGrabToggle = useCallback((record: Record<string, unknown>) => {
-    const recordId = String(record.id ?? "");
-    if (!recordId || pendingRecordIds.has(recordId)) {
-      return;
-    }
+  const handleKeyboardGrabToggle = useCallback(
+    (record: Record<string, unknown>) => {
+      const recordId = String(record.id ?? "");
+      if (!recordId || pendingRecordIds.has(recordId)) {
+        return;
+      }
 
-    if (keyboardGrabbedId === recordId) {
-      setKeyboardGrabbedId(null);
-      setLiveMessage("Card dropped.");
-      return;
-    }
+      if (keyboardGrabbedId === recordId) {
+        setKeyboardGrabbedId(null);
+        setLiveMessage("Card dropped.");
+        return;
+      }
 
-    setKeyboardGrabbedId(recordId);
-    setLiveMessage(`Picked up card ${String(record[titleField] ?? recordId)}.`);
-  }, [keyboardGrabbedId, pendingRecordIds, titleField]);
+      setKeyboardGrabbedId(recordId);
+      setLiveMessage(`Picked up card ${String(record[titleField] ?? recordId)}.`);
+    },
+    [keyboardGrabbedId, pendingRecordIds, titleField]
+  );
 
   const handleKeyboardCancel = useCallback(() => {
     if (!keyboardGrabbedId) {
@@ -229,29 +244,32 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
     setLiveMessage("Move cancelled.");
   }, [keyboardGrabbedId]);
 
-  const handleKeyboardMove = useCallback(async (record: Record<string, unknown>, direction: -1 | 1) => {
-    if (!groupByField || columnValues.length === 0) {
-      return;
-    }
+  const handleKeyboardMove = useCallback(
+    async (record: Record<string, unknown>, direction: -1 | 1) => {
+      if (!groupByField || columnValues.length === 0) {
+        return;
+      }
 
-    const currentGroup = resolveEffectiveGroupForRecord(record);
-    const currentIndex = columnValues.indexOf(currentGroup);
-    if (currentIndex < 0) {
-      setLiveMessage("This card cannot be moved with keyboard from its current column.");
-      return;
-    }
+      const currentGroup = resolveEffectiveGroupForRecord(record);
+      const currentIndex = columnValues.indexOf(currentGroup);
+      if (currentIndex < 0) {
+        setLiveMessage("This card cannot be moved with keyboard from its current column.");
+        return;
+      }
 
-    const nextIndex = currentIndex + direction;
-    if (nextIndex < 0 || nextIndex >= columnValues.length) {
-      setLiveMessage("No adjacent column available.");
-      return;
-    }
+      const nextIndex = currentIndex + direction;
+      if (nextIndex < 0 || nextIndex >= columnValues.length) {
+        setLiveMessage("No adjacent column available.");
+        return;
+      }
 
-    const targetGroup = columnValues[nextIndex];
-    await moveRecordToGroup(record, targetGroup);
-    setKeyboardGrabbedId(null);
-    setLiveMessage("Card moved.");
-  }, [groupByField, columnValues, resolveEffectiveGroupForRecord, moveRecordToGroup]);
+      const targetGroup = columnValues[nextIndex];
+      await moveRecordToGroup(record, targetGroup);
+      setKeyboardGrabbedId(null);
+      setLiveMessage("Card moved.");
+    },
+    [groupByField, columnValues, resolveEffectiveGroupForRecord, moveRecordToGroup]
+  );
 
   const handleDragStart = useCallback((rec: Record<string, unknown>) => {
     setMutationError(null);
@@ -259,9 +277,12 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
     setDragging(rec);
   }, []);
 
-  const handleCardClick = useCallback((rec: Record<string, unknown>) => {
-    onCardClick?.(rec);
-  }, [onCardClick]);
+  const handleCardClick = useCallback(
+    (rec: Record<string, unknown>) => {
+      onCardClick?.(rec);
+    },
+    [onCardClick]
+  );
 
   // ============================================================================
   // CONDITIONAL RENDERING (after all hooks)
@@ -286,8 +307,8 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
       )}
       {canUpdate && (
         <p style={{ color: "#475467", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-          Keyboard move: focus a card, press Enter or Space to pick it up, use Left/Right arrows to move,
-          then Enter/Space to drop or Escape to cancel.
+          Keyboard move: focus a card, press Enter or Space to pick it up, use Left/Right arrows to
+          move, then Enter/Space to drop or Escape to cancel.
         </p>
       )}
       <p
@@ -354,7 +375,9 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
             onKeyboardGrabToggle={handleKeyboardGrabToggle}
             onKeyboardCancel={handleKeyboardCancel}
             onKeyboardMove={handleKeyboardMove}
-            onDrop={() => { /* Uncategorized: dropping here has no valid target group */ }}
+            onDrop={() => {
+              /* Uncategorized: dropping here has no valid target group */
+            }}
             renderCard={renderCard}
           />
         )}
@@ -414,9 +437,16 @@ const KanbanColumn = memo(function KanbanColumn({
       role="listitem"
       aria-labelledby={labelId}
       aria-dropeffect={dragOver ? "move" : "none"}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
       onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => { e.preventDefault(); setDragOver(false); onDrop(); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        onDrop();
+      }}
       style={{
         minWidth: 260,
         maxHeight: "80vh",
@@ -428,7 +458,16 @@ const KanbanColumn = memo(function KanbanColumn({
         border: dragOver ? "2px dashed #3b5bdb" : "2px solid transparent",
       }}
     >
-      <div id={labelId} style={{ fontWeight: 600, marginBottom: "0.75rem", flexShrink: 0, display: "flex", justifyContent: "space-between" }}>
+      <div
+        id={labelId}
+        style={{
+          fontWeight: 600,
+          marginBottom: "0.75rem",
+          flexShrink: 0,
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
         <span>{label}</span>
         <span style={{ color: "#666", fontSize: "0.8rem" }}>{records.length}</span>
       </div>
@@ -462,7 +501,10 @@ const KanbanColumn = memo(function KanbanColumn({
                   return;
                 }
 
-                if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && isKeyboardGrabbed) {
+                if (
+                  (event.key === "ArrowRight" || event.key === "ArrowLeft") &&
+                  isKeyboardGrabbed
+                ) {
                   event.preventDefault();
                   void onKeyboardMove(rec, event.key === "ArrowRight" ? 1 : -1);
                   return;
@@ -499,7 +541,8 @@ const KanbanColumn = memo(function KanbanColumn({
                     if (!f || rec[cf] == null) return null;
                     return (
                       <div key={cf} style={{ fontSize: "0.8rem", color: "#555" }}>
-                        <strong>{f.label}: </strong>{String(rec[cf])}
+                        <strong>{f.label}: </strong>
+                        {String(rec[cf])}
                       </div>
                     );
                   })}

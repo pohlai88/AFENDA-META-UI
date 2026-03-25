@@ -7,17 +7,20 @@ AFENDA API implements enterprise-grade security with multiple defense layers:
 ### 1. Authentication & Authorization
 
 #### JWT (JSON Web Tokens)
+
 - **Access tokens**: Short-lived (24h default), used for API requests
 - **Refresh tokens**: Long-lived (7d default), used to obtain new access tokens
 - **Algorithm**: HS256 (HMAC-SHA256)
 - **Claims**: `{ sub: userId, roles: string[], lang: string, type: "access" | "refresh" }`
 
 #### API Keys
+
 - Service-to-service authentication via `X-API-Key` header
 - API keys grant admin-level access (use with caution)
 - Store in environment variable `API_KEYS` (comma-separated)
 
 #### Role-Based Access Control (RBAC)
+
 - Every request includes a `SessionContext` with user roles
 - Anonymous users default to `viewer` role
 - Use `requireAuth()` middleware for protected routes
@@ -27,13 +30,13 @@ AFENDA API implements enterprise-grade security with multiple defense layers:
 
 Protects against brute force attacks and API abuse:
 
-| Endpoint | Window | Max Requests | Purpose |
-|----------|--------|--------------|---------|
-| Global | 15 min | 100 | Overall API protection |
-| /auth/* | 15 min | 5 | Brute force prevention |
-| /graphql | 15 min | 50 | Expensive query protection |
-| /api/* | 15 min | 150 | CRUD operation limits |
-| /meta/* | 15 min | 200 | Lenient (mostly reads) |
+| Endpoint | Window | Max Requests | Purpose                    |
+| -------- | ------ | ------------ | -------------------------- |
+| Global   | 15 min | 100          | Overall API protection     |
+| /auth/\* | 15 min | 5            | Brute force prevention     |
+| /graphql | 15 min | 50           | Expensive query protection |
+| /api/\*  | 15 min | 150          | CRUD operation limits      |
+| /meta/\* | 15 min | 200          | Lenient (mostly reads)     |
 
 **Key generator**: Combines IP + user ID for authenticated requests
 
@@ -44,20 +47,24 @@ Protects against brute force attacks and API abuse:
 Multiple layers prevent injection attacks:
 
 #### NoSQL Injection
+
 - Strips `$` and `.` operators from input
 - Uses `express-mongo-sanitize`
 - Applies to: `req.body`, `req.query`, `req.params`
 
 #### XSS (Cross-Site Scripting)
+
 - Strips dangerous HTML/JS patterns: `<script>`, `javascript:`, `on*=` handlers
 - Removes `<iframe>`, `<object>`, `<embed>` tags
 - Recursive sanitization of nested objects/arrays
 
 #### Path Traversal
+
 - Blocks `../` patterns in params and query strings
 - Returns 400 Bad Request on detection
 
 #### SQL Injection
+
 - Mitigated by Drizzle ORM parameterized queries
 - Never use raw string concatenation in SQL
 
@@ -92,11 +99,13 @@ X-XSS-Protection: 1; mode=block
 Winston-based structured logging:
 
 **Development**:
+
 - Colorized console output
 - Human-readable format
 - Debug-level logging
 
 **Production**:
+
 - JSON format (for log aggregation)
 - File transports: `logs/combined.log`, `logs/error.log`
 - Rotating logs (10MB max, 5-10 file retention)
@@ -228,10 +237,13 @@ if (!isValid) {
 import { asyncHandler } from "./middleware/errorHandler.js";
 
 // Automatically catches async errors
-router.get("/users", asyncHandler(async (req, res) => {
-  const users = await db.select().from(usersTable);
-  res.json(users);
-}));
+router.get(
+  "/users",
+  asyncHandler(async (req, res) => {
+    const users = await db.select().from(usersTable);
+    res.json(users);
+  })
+);
 ```
 
 ---
@@ -258,6 +270,7 @@ curl http://localhost:4000/health
 ```
 
 Response:
+
 ```json
 {
   "status": "ok",
@@ -270,6 +283,7 @@ Response:
 ### Rate Limit Headers
 
 Check remaining requests:
+
 ```
 RateLimit-Limit: 100
 RateLimit-Remaining: 87

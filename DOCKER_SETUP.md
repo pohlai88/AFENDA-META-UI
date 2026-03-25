@@ -5,6 +5,7 @@
 This project includes a `docker-compose.yml` configuration that sets up PostgreSQL and Redis for local development.
 
 ### Prerequisites
+
 - Docker 20.10+
 - Docker Compose 2.0+
 
@@ -33,10 +34,10 @@ pnpm dev
 
 ### Service Details
 
-| Service   | Container Name    | Port  | Credentials                     |
-|-----------|-------------------|-------|---------------------------------|
-| PostgreSQL| `afenda-postgres` | 5432  | `afenda:afenda-dev-password`   |
-| Redis     | `afenda-redis`    | 6379  | None (auth-free for dev)       |
+| Service    | Container Name    | Port | Credentials                  |
+| ---------- | ----------------- | ---- | ---------------------------- |
+| PostgreSQL | `afenda-postgres` | 5432 | `afenda:afenda-dev-password` |
+| Redis      | `afenda-redis`    | 6379 | None (auth-free for dev)     |
 
 ### Stopping Services
 
@@ -70,11 +71,13 @@ docker exec -i afenda-postgres psql -U afenda afenda < backup.sql
 ### Environment Variables
 
 Database URL for `apps/api/.env` is already configured:
+
 ```
 DATABASE_URL=postgresql://afenda:afenda@localhost:5432/afenda
 ```
 
 If using Docker from within a container, use the service name:
+
 ```
 DATABASE_URL=postgresql://afenda:afenda@postgres:5432/afenda
 ```
@@ -82,6 +85,7 @@ DATABASE_URL=postgresql://afenda:afenda@postgres:5432/afenda
 ### Troubleshooting
 
 **Port already in use**
+
 ```bash
 # Find process using port
 lsof -i :5432  # PostgreSQL
@@ -94,6 +98,7 @@ kill -9 <PID>
 ```
 
 **Database connection refused**
+
 ```bash
 # Check if services are running
 docker-compose ps
@@ -107,6 +112,7 @@ docker-compose restart
 ```
 
 **Out of disk space**
+
 ```bash
 # Remove all stopped containers and images
 docker system prune -a

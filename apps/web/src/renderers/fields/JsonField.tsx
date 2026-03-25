@@ -22,7 +22,11 @@ export function JsonField({ field, value, onChange, readonly }: RendererFieldPro
   const toText = (v: unknown): string => {
     if (v == null) return "";
     if (typeof v === "string") return v;
-    try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+    try {
+      return JSON.stringify(v, null, 2);
+    } catch {
+      return String(v);
+    }
   };
 
   const [text, setText] = useState(() => toText(value));
@@ -86,9 +90,7 @@ export function JsonField({ field, value, onChange, readonly }: RendererFieldPro
             aria-invalid={!!parseError || undefined}
             aria-required={field.required || undefined}
           />
-          {parseError && (
-            <p className="text-xs text-destructive">{parseError}</p>
-          )}
+          {parseError && <p className="text-xs text-destructive">{parseError}</p>}
         </div>
       )}
     </FieldWrapper>

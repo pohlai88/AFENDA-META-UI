@@ -57,27 +57,32 @@ A **metadata-driven ERP platform** inspired by Odoo but designed around JSON sch
 ### Core Concepts
 
 #### 1. **Schema Registry** (DB-backed)
+
 - Tables, fields, views, actions, permissions stored as **JSONB in PostgreSQL**
 - Queryable and versionable — no XML brittleness
 - `schema_registry` table: `{ model, meta: ModelMeta, version, created_at, updated_at }`
 
 #### 2. **RBAC at Multiple Layers**
+
 - **Model-level**: `can_create`, `can_read`, `can_update`, `can_delete` per role
 - **Field-level**: `visible_to` and `writable_by` role arrays
 - **Action-level**: `allowed_roles` whitelist + `visible_when` expressions
 - **Server-side evaluation**: front-end never receives data it isn't allowed to see
 
 #### 3. **Metadata-Driven Rendering**
+
 - One JSON ModelMeta document drives **form, list, kanban, dashboard, filters, bulk actions**
 - No need to maintain UI and data schema separately
-- Developers patch ModelMeta *incrementally* via migration scripts
+- Developers patch ModelMeta _incrementally_ via migration scripts
 
 #### 4. **API-First Design**
+
 - `/meta/{model}` — returns RBAC-filtered ModelMeta → FE knows what to render
 - `/api/{model}` — REST CRUD with automatic column projection
 - `/graphql` — complex queries, nested relations, dashboards (internal + advanced users)
 
 #### 5. **MetaExpression** (Server-Evaluated)
+
 - Actions visibility: `"visible_when": "record.status == 'draft' && user.roles.includes('sales')"`
 - Default values, computed fields, state machines — all as expressions
 - Currently stubbed; ready for a safe sandbox VM (e.g., restricted eval)
@@ -87,6 +92,7 @@ A **metadata-driven ERP platform** inspired by Odoo but designed around JSON sch
 ## ⚡ Quick Start
 
 ### Prerequisites
+
 - **Node.js** 18+
 - **pnpm** (or npm/yarn)
 - **PostgreSQL** 13+
@@ -227,6 +233,7 @@ d:\AFENDA-META-UI
 #### 1. **User navigates to `/order/123`**
 
 Frontend calls `useMeta("sales_order")`:
+
 ```typescript
 GET /meta/sales_order
     ↓
@@ -316,6 +323,7 @@ pnpm --filter @afenda/api meta:introspect
 ```
 
 This CLI:
+
 - Queries GraphQL introspection
 - Compiles each new table → ModelMeta
 - Upserts into schema_registry
@@ -323,6 +331,7 @@ This CLI:
 #### 4. **Patch the schema (optional)**
 
 If auto-compiled schema needs tweaks (custom widgets, field order, permissions), edit via:
+
 - Direct SQL `UPDATE schema_registry SET meta = ... WHERE model = '...';`
 - Or write a migration script
 
@@ -339,16 +348,19 @@ export function MyFormPage() {
 ### Testing & Development
 
 **Run tests** (coming soon):
+
 ```bash
 pnpm test
 pnpm --filter @afenda/api test
 ```
 
 **GraphQL Introspection & Yoga GraphiQL**:
+
 - Disable in production via `NODE_ENV=production`
 - Dev mode: http://localhost:4000/graphql
 
 **Database Studio** (Drizzle Kit UI):
+
 ```bash
 pnpm --filter @afenda/api db:studio
 ```
@@ -358,9 +370,9 @@ pnpm --filter @afenda/api db:studio
 ## 🔐 Security Best Practices
 
 1. **Change `JWT_SECRET` in production** — use a strong random string (32+ chars)
-2. **Enable HTTPS** — set `NODE_ENV=production` to mask GraphQL introspection  
+2. **Enable HTTPS** — set `NODE_ENV=production` to mask GraphQL introspection
 3. **Field-level RBAC** — use `field_permissions` to hide sensitive data at the schema level
-4. **Server-side MetaExpression evaluation** — don't trust client-provided expressions  
+4. **Server-side MetaExpression evaluation** — don't trust client-provided expressions
 5. **Rate limiting** — add middleware (e.g., `express-rate-limit`) before deployment
 6. **Audit logging** — log all mutations with user context
 

@@ -9,16 +9,16 @@ This document tracks progress against the enterprise enrichment plan, identifies
 
 ## 📊 Overall Progress
 
-| Phase | Status | Completion | Priority |
-|-------|--------|------------|----------|
-| **Phase 1** - Design System | ✅ Complete | 100% | P0 |
-| **Phase 2** - Renderer Upgrades | 🟡 Partial | 40% | P0/P1 |
-| **Phase 3** - Field Components | 🟡 Partial | 30% | P1 |
-| **Phase 4** - API Hardening | ✅ Complete | 95% | P0 |
-| **Phase 5** - Module Architecture | ❌ Not Started | 0% | P1 |
-| **Phase 6** - Frontend Architecture | ❌ Not Started | 0% | P0 |
-| **Phase 7** - Testing & Quality | ✅ Complete | 100% | P0 |
-| **Phase 8** - DevX & Documentation | 🟡 Partial | 50% | P2 |
+| Phase                               | Status         | Completion | Priority |
+| ----------------------------------- | -------------- | ---------- | -------- |
+| **Phase 1** - Design System         | ✅ Complete    | 100%       | P0       |
+| **Phase 2** - Renderer Upgrades     | 🟡 Partial     | 40%        | P0/P1    |
+| **Phase 3** - Field Components      | 🟡 Partial     | 30%        | P1       |
+| **Phase 4** - API Hardening         | ✅ Complete    | 95%        | P0       |
+| **Phase 5** - Module Architecture   | ❌ Not Started | 0%         | P1       |
+| **Phase 6** - Frontend Architecture | ❌ Not Started | 0%         | P0       |
+| **Phase 7** - Testing & Quality     | ✅ Complete    | 100%       | P0       |
+| **Phase 8** - DevX & Documentation  | 🟡 Partial     | 50%        | P2       |
 
 **Overall: 64% Complete**
 
@@ -36,6 +36,7 @@ This document tracks progress against the enterprise enrichment plan, identifies
 - [x] `cn()` utility available in `packages/ui/src/lib/utils.ts`
 
 **Components in packages/ui:**
+
 ```
 alert-dialog.tsx    form.tsx          skeleton.tsx
 avatar.tsx          input-group.tsx   sonner.tsx
@@ -118,6 +119,7 @@ dialog.tsx          dropdown-menu.tsx
 - [ ] Animate card movement (framer-motion)
 
 **Missing Dependencies:**
+
 - `@dnd-kit/core`
 - `@dnd-kit/sortable`
 - `@dnd-kit/utilities`
@@ -134,6 +136,7 @@ dialog.tsx          dropdown-menu.tsx
 - [ ] Dashboard persistence (user preferences API)
 
 **Missing Dependencies:**
+
 - `recharts`
 - `react-grid-layout`
 
@@ -142,6 +145,7 @@ dialog.tsx          dropdown-menu.tsx
 **Status: STUB ONLY**
 
 Current implementation in `apps/web/src/renderers/fields/One2ManyField.tsx`:
+
 - [x] Basic placeholder rendering
 - [x] Shows linked record count
 - [ ] ⚠️ Inline sub-table using MetaList
@@ -167,6 +171,7 @@ Current implementation in `apps/web/src/renderers/fields/One2ManyField.tsx`:
 ### 3.1 New Field Types 🟡
 
 **Currently Implemented (10 types):**
+
 - [x] `string` → StringField
 - [x] `integer`, `float` → StringField with number input
 - [x] `boolean` → BooleanField (Checkbox)
@@ -180,21 +185,22 @@ Current implementation in `apps/web/src/renderers/fields/One2ManyField.tsx`:
 
 **Missing Field Types (11 types):**
 
-| Field Type | Component | Widget | Priority |
-|-----------|-----------|---------|----------|
-| `currency` | Input + currency prefix/suffix | `currency` | P1 |
-| `phone` | International phone input | `phone` | P2 |
-| `email` | Input type="email" + mailto link | `email` | P1 |
-| `url` | Input type="url" + external link | `url` | P1 |
-| `richtext` | TipTap editor | `richtext` | P1 |
-| `json` | Monaco Editor or JSON tree | `json` | P2 |
-| `color` | Color picker popover | `color` | P2 |
-| `rating` | Star rating (1-5) | `rating` | P3 |
-| `tags` | Multi-select tag input | `tags` | P2 |
-| `signature` | Canvas signature pad | `signature` | P3 |
-| `address` | Structured multi-field | `address` | P2 |
+| Field Type  | Component                        | Widget      | Priority |
+| ----------- | -------------------------------- | ----------- | -------- |
+| `currency`  | Input + currency prefix/suffix   | `currency`  | P1       |
+| `phone`     | International phone input        | `phone`     | P2       |
+| `email`     | Input type="email" + mailto link | `email`     | P1       |
+| `url`       | Input type="url" + external link | `url`       | P1       |
+| `richtext`  | TipTap editor                    | `richtext`  | P1       |
+| `json`      | Monaco Editor or JSON tree       | `json`      | P2       |
+| `color`     | Color picker popover             | `color`     | P2       |
+| `rating`    | Star rating (1-5)                | `rating`    | P3       |
+| `tags`      | Multi-select tag input           | `tags`      | P2       |
+| `signature` | Canvas signature pad             | `signature` | P3       |
+| `address`   | Structured multi-field           | `address`   | P2       |
 
 **Required Dependencies:**
+
 ```json
 {
   "@tiptap/react": "^2.x",
@@ -235,6 +241,7 @@ Current implementation in `apps/web/src/renderers/fields/One2ManyField.tsx`:
 **Critical Gap: Expression Evaluator**
 
 Current implementation in `apps/api/src/meta/rbac.ts:114`:
+
 ```typescript
 function evalVisibility(expression: string | undefined, _session: SessionContext): boolean {
   if (!expression) return true;
@@ -244,6 +251,7 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 ```
 
 **Recommended Solutions:**
+
 1. `filtrex` - Safe expression evaluator (recommended in plan)
 2. `expr-eval` - Math/logical expression parser
 3. Custom parser with whitelisted operations
@@ -281,6 +289,7 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 - [ ] Cursor-based pagination option
 
 **Missing Dependencies:**
+
 - `ioredis`
 
 **Priority: P2 (optimization)**
@@ -345,10 +354,12 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 **Status: NOT IMPLEMENTED**
 
 **Current State:**
+
 - [x] `react-router-dom` v6.24.0 installed
 - [ ] ⚠️ **Routes NOT implemented** in App.tsx
 
 **Required Routes:**
+
 ```
 /                           → Dashboard (home)
 /:module                    → Module landing page
@@ -359,6 +370,7 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 ```
 
 **Gap Items:**
+
 - [ ] Route definitions with react-router-dom
 - [ ] Sidebar navigation (auto-generated from modules + models)
 - [ ] Breadcrumb (auto-generated from route hierarchy)
@@ -371,12 +383,14 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 **Status: NOT IMPLEMENTED**
 
 **Current State:**
+
 - [x] Basic landing page in App.tsx
 - [ ] ⚠️ No collapsible sidebar
 - [ ] ⚠️ No top bar
 - [ ] ⚠️ No main content area routing
 
 **Gap Items:**
+
 - [ ] `<AppShell>` layout with collapsible sidebar + top bar + main
 - [ ] Sidebar: module groups → model links, icons, active state
 - [ ] Top bar: global search, user menu, theme toggle, notifications
@@ -416,6 +430,7 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 - [ ] RTL support
 
 **Missing Dependencies:**
+
 - `react-i18next`
 - `i18next`
 - `i18next-http-backend`
@@ -473,6 +488,7 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 **File:** `apps/web/playwright.config.ts`
 
 **Recommended Tests:**
+
 - [ ] Form: Create record → verify in list
 - [ ] List: Sort, filter, paginate, select, bulk action
 - [ ] Kanban: Drag card → verify status update
@@ -507,6 +523,7 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 - [x] `.env.example` files in apps/api
 
 **Missing:**
+
 - [ ] `docker-compose.yml` with PostgreSQL + Redis
 - [ ] Seed data script (partners, products, orders)
 
@@ -542,7 +559,6 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
    - Files to create:
      - `apps/web/src/routes/index.tsx` (route definitions)
      - Update `apps/web/src/App.tsx` (wrap with BrowserRouter)
-   
 2. **⚠️ CRITICAL: App Shell (Phase 6.2)**
    - Status: NOT IMPLEMENTED
    - Impact: No sidebar, no top bar, no navigation structure

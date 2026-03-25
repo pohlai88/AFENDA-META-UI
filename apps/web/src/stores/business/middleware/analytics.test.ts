@@ -9,11 +9,7 @@ import {
 } from "../analytics";
 import authReducer, { loginSuccess, logout } from "../slices/auth-slice";
 import permissionsReducer, { bootstrapPermissionsSuccess } from "../slices/permissions-slice";
-import {
-  analytics,
-  buildAnalyticsEvent,
-  shouldTrackAnalytics,
-} from "./analytics";
+import { analytics, buildAnalyticsEvent, shouldTrackAnalytics } from "./analytics";
 
 describe("analytics middleware", () => {
   let trackedEvents: unknown[];
@@ -90,22 +86,20 @@ describe("analytics middleware", () => {
   it("tracks metadata-declared events even when action type is outside tracked namespaces", async () => {
     const store = createStore();
 
-    store.dispatch(
-      {
-        type: "salesOrder/bulkApprove",
-        payload: { ids: ["SO-1", "SO-2"] },
-        meta: {
-          analytics: {
-            event: "salesOrder.bulkApproved",
-            category: "sales",
-            label: "bulk-approve",
-          },
-          model: "sales_order",
-          recordId: "SO-1",
-          viewId: "orders.list",
+    store.dispatch({
+      type: "salesOrder/bulkApprove",
+      payload: { ids: ["SO-1", "SO-2"] },
+      meta: {
+        analytics: {
+          event: "salesOrder.bulkApproved",
+          category: "sales",
+          label: "bulk-approve",
         },
-      } as UnknownAction
-    );
+        model: "sales_order",
+        recordId: "SO-1",
+        viewId: "orders.list",
+      },
+    } as UnknownAction);
 
     await flushAnalytics();
 

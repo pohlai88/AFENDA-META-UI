@@ -60,6 +60,7 @@ Added to root `package.json`:
 **Current Status**: 66 violations found (expected — migration in progress)
 
 **Allowed Files**:
+
 - `apps/api/src/config/index.ts` — Startup validation
 - `apps/api/src/utils/generateToken.ts` — CLI utility
 - `apps/api/src/meta/introspect-cli.ts` — CLI utility
@@ -71,6 +72,7 @@ Added to root `package.json`:
 **Purpose**: Prevents deprecated Winston/Morgan imports.
 
 **Validates**:
+
 - No `import ... from "winston"`
 - No `import ... from "morgan"`
 - Only `import ... from "../logging/index.js"` allowed
@@ -82,6 +84,7 @@ Added to root `package.json`:
 **Purpose**: Ensures route handlers use request-scoped logging.
 
 **Validates**:
+
 - Route handlers use `req.log` instead of root `logger`
 - Pattern: `(req as any).log?.error({ err }, "message")`
 
@@ -92,6 +95,7 @@ Added to root `package.json`:
 **Purpose**: Validates correct Pino API signature.
 
 **Validates**:
+
 - Correct: `logger.info({ data }, "message")` ✅
 - Wrong: `logger.info("message", { data })` ❌
 

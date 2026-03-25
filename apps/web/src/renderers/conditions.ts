@@ -29,9 +29,7 @@ export interface ComputedFieldState {
 // React Context
 // ---------------------------------------------------------------------------
 
-const FieldConditionsContext = React.createContext<Map<string, ComputedFieldState>>(
-  new Map(),
-);
+const FieldConditionsContext = React.createContext<Map<string, ComputedFieldState>>(new Map());
 
 export const FieldConditionsProvider = FieldConditionsContext.Provider;
 
@@ -51,10 +49,7 @@ function isConditionGroup(expr: ConditionExpression): expr is ConditionGroup {
   return "logic" in expr && "conditions" in expr;
 }
 
-function evaluateSingle(
-  condition: FieldCondition,
-  values: Record<string, unknown>,
-): boolean {
+function evaluateSingle(condition: FieldCondition, values: Record<string, unknown>): boolean {
   const fieldValue = values[condition.field];
 
   switch (condition.operator) {
@@ -105,13 +100,11 @@ function evaluateSingle(
 
 export function evaluateCondition(
   expression: ConditionExpression,
-  values: Record<string, unknown>,
+  values: Record<string, unknown>
 ): boolean {
   if (isConditionGroup(expression)) {
     const results = expression.conditions.map((c) => evaluateCondition(c, values));
-    return expression.logic === "and"
-      ? results.every(Boolean)
-      : results.some(Boolean);
+    return expression.logic === "and" ? results.every(Boolean) : results.some(Boolean);
   }
   return evaluateSingle(expression, values);
 }
@@ -120,10 +113,7 @@ export function evaluateCondition(
 // Dependency collection
 // ---------------------------------------------------------------------------
 
-function collectDeps(
-  expr: ConditionExpression | undefined,
-  deps: Set<string>,
-): void {
+function collectDeps(expr: ConditionExpression | undefined, deps: Set<string>): void {
   if (!expr) return;
   if (isConditionGroup(expr)) {
     for (const c of expr.conditions) collectDeps(c, deps);
@@ -146,7 +136,7 @@ function collectDeps(
 export function useFieldConditions(
   fields: MetaField[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  control: Control<any>,
+  control: Control<any>
 ): Map<string, ComputedFieldState> {
   const depFields = React.useMemo(() => {
     const deps = new Set<string>();
@@ -173,12 +163,8 @@ export function useFieldConditions(
       if (!f.visibleIf && !f.requiredIf && !f.readonlyIf) continue;
       states.set(f.name, {
         visible: f.visibleIf ? evaluateCondition(f.visibleIf, values) : true,
-        required: f.requiredIf
-          ? evaluateCondition(f.requiredIf, values)
-          : (f.required ?? false),
-        readonly: f.readonlyIf
-          ? evaluateCondition(f.readonlyIf, values)
-          : (f.readonly ?? false),
+        required: f.requiredIf ? evaluateCondition(f.requiredIf, values) : (f.required ?? false),
+        readonly: f.readonlyIf ? evaluateCondition(f.readonlyIf, values) : (f.readonly ?? false),
       });
     }
 

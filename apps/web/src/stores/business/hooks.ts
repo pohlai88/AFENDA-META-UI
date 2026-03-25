@@ -2,11 +2,11 @@
  * Typed Redux Hooks
  * ==================
  * Pre-typed versions of useDispatch and useSelector.
- * 
+ *
  * Usage:
  * ```tsx
  * import { useAppDispatch, useAppSelector } from "~/stores/business/hooks";
- * 
+ *
  * const dispatch = useAppDispatch();
  * const user = useAppSelector((state) => state.auth.user);
  * ```

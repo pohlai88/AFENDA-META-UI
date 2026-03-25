@@ -6,9 +6,7 @@ import { invalidateDomain } from "./query-invalidation";
 describe("invalidateDomain", () => {
   it("invalidates model domain using top-level key definition", async () => {
     const queryClient = new QueryClient();
-    const invalidateSpy = vi
-      .spyOn(queryClient, "invalidateQueries")
-      .mockResolvedValue();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue();
 
     await invalidateDomain(queryClient, "models");
 
@@ -19,9 +17,7 @@ describe("invalidateDomain", () => {
 
   it("invalidates purchaseOrders domain using top-level key definition", async () => {
     const queryClient = new QueryClient();
-    const invalidateSpy = vi
-      .spyOn(queryClient, "invalidateQueries")
-      .mockResolvedValue();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue();
 
     await invalidateDomain(queryClient, "purchaseOrders");
 

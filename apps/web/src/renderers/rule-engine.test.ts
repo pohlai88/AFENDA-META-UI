@@ -241,7 +241,9 @@ describe("Cross-Module Rule Engine", () => {
       });
 
       expect(results[0].decision.type).toBe("block");
-      expect(results[0].decision.type === "block" && results[0].decision.reason).toBe("Insufficient permissions");
+      expect(results[0].decision.type === "block" && results[0].decision.reason).toBe(
+        "Insufficient permissions"
+      );
     });
   });
 
@@ -387,7 +389,9 @@ describe("Cross-Module Rule Engine", () => {
       const results = await engine.execute("sales.order.created", context);
 
       expect(results[0].decision.type).toBe("block");
-      expect(results[0].decision.type === "block" && results[0].decision.reason).toContain("Credit limit");
+      expect(results[0].decision.type === "block" && results[0].decision.reason).toContain(
+        "Credit limit"
+      );
     });
   });
 });

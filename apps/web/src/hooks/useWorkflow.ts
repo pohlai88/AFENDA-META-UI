@@ -54,7 +54,15 @@ export function useWorkflow(): {
   submitApproval: (decision: ApprovalDecision) => Promise<WorkflowInstance | null>;
   isLoading: boolean;
   error: string | null;
-  myApprovals: Array<{ instanceId: string; workflowId: string; currentStepId: string; stepLabel: string; decision?: "approved" | "rejected"; reason?: string; actor?: string }>;
+  myApprovals: Array<{
+    instanceId: string;
+    workflowId: string;
+    currentStepId: string;
+    stepLabel: string;
+    decision?: "approved" | "rejected";
+    reason?: string;
+    actor?: string;
+  }>;
   approvalCount: number;
 } {
   const dispatch = useAppDispatch();
@@ -139,18 +147,15 @@ export function useWorkflow(): {
       setLocalError(null);
 
       try {
-        const response = await fetch(
-          `/api/workflows/instances/${decision.instanceId}/approve`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              decision: decision.decision,
-              actor: decision.actor,
-              reason: decision.reason,
-            }),
-          }
-        );
+        const response = await fetch(`/api/workflows/instances/${decision.instanceId}/approve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            decision: decision.decision,
+            actor: decision.actor,
+            reason: decision.reason,
+          }),
+        });
 
         if (!response.ok) {
           let errorMsg = "Failed to submit approval";

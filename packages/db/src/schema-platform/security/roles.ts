@@ -3,7 +3,12 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from "driz
 import { boolean, foreignKey, index, integer, jsonb, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { auditColumns, nameColumn, softDeleteColumns, timestampColumns } from "../../_shared/index.js";
+import {
+  auditColumns,
+  nameColumn,
+  softDeleteColumns,
+  timestampColumns,
+} from "../../_shared/index.js";
 import { tenants } from "../core/tenants.js";
 import { securitySchema } from "./users.js";
 

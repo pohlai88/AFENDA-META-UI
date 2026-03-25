@@ -42,7 +42,9 @@ export function collectHiddenFieldPaths(
     }
 
     if (isFieldGroupConfig(field)) {
-      hidden.push(...collectHiddenFieldPaths(field.fields, values, joinPath(scopePath, field.name)));
+      hidden.push(
+        ...collectHiddenFieldPaths(field.fields, values, joinPath(scopePath, field.name))
+      );
       return;
     }
 
@@ -52,7 +54,9 @@ export function collectHiddenFieldPaths(
 
       if (Array.isArray(items)) {
         items.forEach((_, index) => {
-          hidden.push(...collectHiddenFieldPaths(field.fields, values, joinPath(arrayPath, String(index))));
+          hidden.push(
+            ...collectHiddenFieldPaths(field.fields, values, joinPath(arrayPath, String(index)))
+          );
         });
       }
     }

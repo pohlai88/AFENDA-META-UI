@@ -6,16 +6,13 @@ export default defineConfig({
     alias: {
       "@afenda/db/schema-meta": path.resolve(
         __dirname,
-        "../../packages/db/src/schema-meta/index.ts",
+        "../../packages/db/src/schema-meta/index.ts"
       ),
       "@afenda/db/schema-domain": path.resolve(
         __dirname,
-        "../../packages/db/src/schema-domain/index.ts",
+        "../../packages/db/src/schema-domain/index.ts"
       ),
-      "@afenda/db": path.resolve(
-        __dirname,
-        "../../packages/db/src/index.ts",
-      ),
+      "@afenda/db": path.resolve(__dirname, "../../packages/db/src/index.ts"),
     },
   },
   test: {

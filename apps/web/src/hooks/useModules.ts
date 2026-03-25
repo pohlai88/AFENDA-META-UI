@@ -1,9 +1,9 @@
 /**
  * useModules Hook
  * ===============
- * 
+ *
  * Fetches module definitions and menus from the module registry.
- * 
+ *
  * Usage:
  * ```tsx
  * const { data: menus, isLoading } = useModules();
@@ -48,7 +48,7 @@ async function fetchModuleMenus(): Promise<ModuleMenu[]> {
       statusText: res.statusText,
     });
   }
-  
+
   const data: ModulesResponse = await res.json();
   return data.menus;
 }
@@ -84,9 +84,7 @@ export function useAccessibleModules(): AccessibleModulesResult {
 
   const accessibleMenus = useMemo(() => {
     if (!menus) return [];
-    return menus.filter((menu) =>
-      menu.models.some((model) => hasAnyPermission(model.name))
-    );
+    return menus.filter((menu) => menu.models.some((model) => hasAnyPermission(model.name)));
   }, [hasAnyPermission, menus]);
 
   return { menus: accessibleMenus, isLoading, error };

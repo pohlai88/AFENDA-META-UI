@@ -94,9 +94,7 @@ router.post("/resolve", async (req: Request, res: Response) => {
   try {
     const { nodes } = req.body as { nodes: any[] };
     if (!Array.isArray(nodes) || nodes.length === 0) {
-      return res
-        .status(400)
-        .json({ error: "Nodes array is required and must not be empty" });
+      return res.status(400).json({ error: "Nodes array is required and must not be empty" });
     }
     const conflict = resolveConflict(nodes);
     res.json({ conflict });

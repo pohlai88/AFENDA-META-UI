@@ -47,11 +47,7 @@ function RowActionButtons({ orderId, status }: RowActionButtonsProps) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {status === "draft" ? (
-        <Button
-          size="sm"
-          onClick={() => void submit.mutateAsync(orderId)}
-          disabled={isAnyPending}
-        >
+        <Button size="sm" onClick={() => void submit.mutateAsync(orderId)} disabled={isAnyPending}>
           {submitPending ? "Submitting..." : "Submit"}
         </Button>
       ) : null}

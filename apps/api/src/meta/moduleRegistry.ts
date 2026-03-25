@@ -1,26 +1,26 @@
 /**
  * Module Registry
  * ===============
- * 
+ *
  * Discovers, loads, and manages application modules.
- * 
+ *
  * Features:
  * - Automatic module discovery from /modules directory
  * - Dependency resolution and load ordering
  * - Enable/disable modules via configuration
  * - Model → Module mapping
  * - Menu generation from module definitions
- * 
+ *
  * Usage:
  * ```ts
  * import { moduleRegistry } from './meta/moduleRegistry';
- * 
+ *
  * // Get all modules
  * const modules = moduleRegistry.getAll();
- * 
+ *
  * // Get module by name
  * const salesModule = moduleRegistry.get('sales');
- * 
+ *
  * // Get module providing a model
  * const module = moduleRegistry.getModuleForModel('partner');
  * ```
@@ -56,11 +56,11 @@ class ModuleRegistry {
     try {
       // Scan modules directory
       const entries = await readdir(modulesDir, { withFileTypes: true });
-      const moduleNames = entries
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name);
+      const moduleNames = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
-      console.log(`[ModuleRegistry] Found ${moduleNames.length} module(s): ${moduleNames.join(", ")}`);
+      console.log(
+        `[ModuleRegistry] Found ${moduleNames.length} module(s): ${moduleNames.join(", ")}`
+      );
 
       // Load each module
       for (const moduleName of moduleNames) {
@@ -87,13 +87,10 @@ class ModuleRegistry {
       const moduleExports = await import(modulePath);
 
       // Module should export a default or named export called "module"
-      const moduleDefinition: MetaModule =
-        moduleExports.default || moduleExports.module;
+      const moduleDefinition: MetaModule = moduleExports.default || moduleExports.module;
 
       if (!moduleDefinition) {
-        console.warn(
-          `[ModuleRegistry] Module "${moduleName}" does not export a module definition`
-        );
+        console.warn(`[ModuleRegistry] Module "${moduleName}" does not export a module definition`);
         return;
       }
 
@@ -224,7 +221,12 @@ class ModuleRegistry {
   /**
    * Get module navigation menus (for sidebar)
    */
-  getMenus(): Array<{ module: string; label: string; icon?: string; models: Array<{ name: string; label: string; icon?: string }> }> {
+  getMenus(): Array<{
+    module: string;
+    label: string;
+    icon?: string;
+    models: Array<{ name: string; label: string; icon?: string }>;
+  }> {
     const menus: Array<{
       module: string;
       label: string;

@@ -40,11 +40,11 @@ export function appendEvent<T extends Record<string, unknown>>(
   aggregateId: string,
   eventType: string,
   payload: T,
-  metadata?: DomainEvent["metadata"],
+  metadata?: DomainEvent["metadata"]
 ): DomainEvent<T> {
   // Compute next version for this aggregate
   const currentVersion = eventLog.filter(
-    (e) => e.aggregateType === aggregateType && e.aggregateId === aggregateId,
+    (e) => e.aggregateType === aggregateType && e.aggregateId === aggregateId
   ).length;
 
   const event: DomainEvent<T> = {
@@ -110,15 +110,9 @@ export function queryEvents(query: EventQuery = {}): DomainEvent[] {
 /**
  * Get all events for a specific aggregate, sorted by version.
  */
-export function getAggregateEvents(
-  aggregateType: string,
-  aggregateId: string,
-): DomainEvent[] {
+export function getAggregateEvents(aggregateType: string, aggregateId: string): DomainEvent[] {
   return eventLog
-    .filter(
-      (e) =>
-        e.aggregateType === aggregateType && e.aggregateId === aggregateId,
-    )
+    .filter((e) => e.aggregateType === aggregateType && e.aggregateId === aggregateId)
     .sort((a, b) => a.version - b.version);
 }
 
@@ -136,7 +130,7 @@ export function getAggregateEvents(
 export function replayEvents<TState = Record<string, unknown>>(
   events: DomainEvent[],
   reducer: EventReducer<TState>,
-  initialState: TState = {} as TState,
+  initialState: TState = {} as TState
 ): TState {
   return events.reduce(reducer, initialState);
 }
@@ -148,7 +142,7 @@ export function rebuildAggregate<TState = Record<string, unknown>>(
   aggregateType: string,
   aggregateId: string,
   reducer: EventReducer<TState>,
-  initialState: TState = {} as TState,
+  initialState: TState = {} as TState
 ): TState {
   const events = getAggregateEvents(aggregateType, aggregateId);
   return replayEvents(events, reducer, initialState);
@@ -171,7 +165,7 @@ export function saveSnapshot<TState = Record<string, unknown>>(
   aggregateType: string,
   aggregateId: string,
   state: TState,
-  version: number,
+  version: number
 ): void {
   snapshotStore.set(snapshotKey(aggregateType, aggregateId), {
     aggregateType,
@@ -187,7 +181,7 @@ export function saveSnapshot<TState = Record<string, unknown>>(
  */
 export function getSnapshot(
   aggregateType: string,
-  aggregateId: string,
+  aggregateId: string
 ): AggregateSnapshot | undefined {
   return snapshotStore.get(snapshotKey(aggregateType, aggregateId));
 }
@@ -199,14 +193,14 @@ export function rebuildFromSnapshot<TState = Record<string, unknown>>(
   aggregateType: string,
   aggregateId: string,
   reducer: EventReducer<TState>,
-  initialState: TState = {} as TState,
+  initialState: TState = {} as TState
 ): TState {
   const snapshot = getSnapshot(aggregateType, aggregateId);
 
   if (snapshot) {
     // Get only events after the snapshot version
     const deltaEvents = getAggregateEvents(aggregateType, aggregateId).filter(
-      (e) => e.version > snapshot.version,
+      (e) => e.version > snapshot.version
     );
     return replayEvents(deltaEvents, reducer, snapshot.state as TState);
   }
@@ -221,9 +215,7 @@ export function rebuildFromSnapshot<TState = Record<string, unknown>>(
 
 export function getEventStoreStats(): EventStoreStats {
   const types = new Set(eventLog.map((e) => e.aggregateType));
-  const latest = eventLog.length > 0
-    ? eventLog[eventLog.length - 1].timestamp
-    : undefined;
+  const latest = eventLog.length > 0 ? eventLog[eventLog.length - 1].timestamp : undefined;
 
   return {
     totalEvents: eventLog.length,

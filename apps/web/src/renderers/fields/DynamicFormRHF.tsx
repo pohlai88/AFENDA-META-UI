@@ -135,9 +135,10 @@ function createFieldRendererProps(
     case "time":
       return {
         field,
-        value: rawValue == null || typeof rawValue === "string" || rawValue instanceof Date
-          ? rawValue
-          : String(rawValue),
+        value:
+          rawValue == null || typeof rawValue === "string" || rawValue instanceof Date
+            ? rawValue
+            : String(rawValue),
         onChange: (value: string | Date | null) => onValueChange(value),
         readonly,
       } as DiscriminatedFieldProps;
@@ -145,9 +146,10 @@ function createFieldRendererProps(
     case "many2one":
       return {
         field,
-        value: rawValue == null || typeof rawValue === "string" || typeof rawValue === "number"
-          ? rawValue
-          : String(rawValue),
+        value:
+          rawValue == null || typeof rawValue === "string" || typeof rawValue === "number"
+            ? rawValue
+            : String(rawValue),
         onChange: (value: string | number | null) => onValueChange(value),
         readonly,
       };
@@ -182,7 +184,11 @@ function ArrayFieldSection({
   renderNodes: (nodes: FieldConfig[], nextScopePath: string, path: string[]) => React.ReactNode[];
 }) {
   const arrayPath = joinPath(scopePath, field.name);
-  const { fields: items, append, remove } = useFieldArray({
+  const {
+    fields: items,
+    append,
+    remove,
+  } = useFieldArray({
     control: context.control,
     name: arrayPath as never,
   });
@@ -199,7 +205,11 @@ function ArrayFieldSection({
 
         return (
           <fieldset key={item.id} className="rounded-md border p-3">
-            {field.itemLabel && <legend className="px-1 text-sm font-medium">{field.itemLabel} {index + 1}</legend>}
+            {field.itemLabel && (
+              <legend className="px-1 text-sm font-medium">
+                {field.itemLabel} {index + 1}
+              </legend>
+            )}
             <div className="space-y-3">
               {renderNodes(field.fields, itemScope, [field.name, String(index)])}
             </div>
@@ -255,12 +265,19 @@ export function DynamicFormRHF({
 
   const asyncFieldRules = React.useMemo(() => collectAsyncFieldRules(fields), [fields]);
   const asyncFormRules = React.useMemo(
-    () => (formLevelValidate ?? []).filter((rule): rule is AsyncFormValidationRule => rule.rule === "async"),
+    () =>
+      (formLevelValidate ?? []).filter(
+        (rule): rule is AsyncFormValidationRule => rule.rule === "async"
+      ),
     [formLevelValidate]
   );
 
-  const pendingAsyncValidationRef = React.useRef<Map<string, PendingAsyncValidationState>>(new Map());
-  const pendingAsyncFormValidationRef = React.useRef<Map<string, PendingAsyncFormValidationState>>(new Map());
+  const pendingAsyncValidationRef = React.useRef<Map<string, PendingAsyncValidationState>>(
+    new Map()
+  );
+  const pendingAsyncFormValidationRef = React.useRef<Map<string, PendingAsyncFormValidationState>>(
+    new Map()
+  );
 
   const cancelPendingAsyncWork = React.useCallback(() => {
     pendingAsyncValidationRef.current.forEach((state) => {
@@ -310,7 +327,13 @@ export function DynamicFormRHF({
 
         const abortController = new AbortController();
         const timer = setTimeout(() => {
-          void runAsyncValidation(rule, path, resolvedValidationCacheScope, value, abortController.signal)
+          void runAsyncValidation(
+            rule,
+            path,
+            resolvedValidationCacheScope,
+            value,
+            abortController.signal
+          )
             .then((outcome) => {
               if (outcome.cacheable) {
                 asyncFieldValidationCache.set(cacheKey, outcome.message);
@@ -338,7 +361,10 @@ export function DynamicFormRHF({
   );
 
   const runDebouncedAsyncFormValidation = React.useCallback(
-    (rule: AsyncFormValidationRule, values: DynamicFormValues): Promise<{ message: string | null; path: string }> => {
+    (
+      rule: AsyncFormValidationRule,
+      values: DynamicFormValues
+    ): Promise<{ message: string | null; path: string }> => {
       const cacheKey = buildAsyncFormCacheKey(resolvedValidationCacheScope, rule, values);
       const cacheTtlMs = rule.asyncValidate.cacheTtlMs ?? DEFAULT_ASYNC_VALIDATION_CACHE_TTL_MS;
       const cached = asyncFormValidationCache.get(cacheKey, cacheTtlMs);
@@ -365,7 +391,12 @@ export function DynamicFormRHF({
 
         const abortController = new AbortController();
         const timer = setTimeout(() => {
-          void runAsyncFormLevelValidation(rule, resolvedValidationCacheScope, values, abortController.signal)
+          void runAsyncFormLevelValidation(
+            rule,
+            resolvedValidationCacheScope,
+            values,
+            abortController.signal
+          )
             .then((result) => {
               if (result.cacheable) {
                 asyncFormValidationCache.set(cacheKey, {
@@ -404,9 +435,10 @@ export function DynamicFormRHF({
       }
 
       const namesFromOptions = (options.names ?? []).map((name) => String(name));
-      const candidatePaths = namesFromOptions.length > 0
-        ? namesFromOptions
-        : asyncFieldRules.flatMap((rule) => resolveWildcardPaths(values, rule.pathPattern));
+      const candidatePaths =
+        namesFromOptions.length > 0
+          ? namesFromOptions
+          : asyncFieldRules.flatMap((rule) => resolveWildcardPaths(values, rule.pathPattern));
 
       const mergedErrors = { ...baseResult.errors } as Record<string, unknown>;
 
@@ -484,8 +516,12 @@ export function DynamicFormRHF({
 
   const runFreshSubmissionChecks = React.useCallback(
     async (values: DynamicFormValues): Promise<boolean> => {
-      const fieldRules = asyncFieldRules.filter((rule) => rule.asyncValidate.finalCheckOnSubmit !== false);
-      const formRules = asyncFormRules.filter((rule) => rule.asyncValidate.finalCheckOnSubmit !== false);
+      const fieldRules = asyncFieldRules.filter(
+        (rule) => rule.asyncValidate.finalCheckOnSubmit !== false
+      );
+      const formRules = asyncFormRules.filter(
+        (rule) => rule.asyncValidate.finalCheckOnSubmit !== false
+      );
 
       if (fieldRules.length === 0 && formRules.length === 0) {
         return true;
@@ -504,7 +540,12 @@ export function DynamicFormRHF({
           const outcome = await runAsyncValidation(rule, path, resolvedValidationCacheScope, value);
 
           if (outcome.cacheable) {
-            const cacheKey = buildAsyncFieldCacheKey(resolvedValidationCacheScope, path, rule, value);
+            const cacheKey = buildAsyncFieldCacheKey(
+              resolvedValidationCacheScope,
+              path,
+              rule,
+              value
+            );
             asyncFieldValidationCache.set(cacheKey, outcome.message);
           }
 
@@ -521,7 +562,11 @@ export function DynamicFormRHF({
       }
 
       for (const rule of formRules) {
-        const outcome = await runAsyncFormLevelValidation(rule, resolvedValidationCacheScope, values);
+        const outcome = await runAsyncFormLevelValidation(
+          rule,
+          resolvedValidationCacheScope,
+          values
+        );
 
         if (outcome.cacheable) {
           const formCacheKey = buildAsyncFormCacheKey(resolvedValidationCacheScope, rule, values);
@@ -627,7 +672,9 @@ export function DynamicFormRHF({
           return (
             <fieldset key={nodeKey} className="rounded-md border p-4">
               {field.label && <legend className="px-1 text-sm font-semibold">{field.label}</legend>}
-              <div className="space-y-4">{renderNodes(field.fields, groupScope, [...path, field.name])}</div>
+              <div className="space-y-4">
+                {renderNodes(field.fields, groupScope, [...path, field.name])}
+              </div>
             </fieldset>
           );
         }
@@ -697,7 +744,10 @@ export function DynamicFormRHF({
   }, [allValues, clearErrors, fields, setValue]);
 
   return (
-    <form onSubmit={handleSubmit(handleSubmitWithInvalidation)} className={className ?? "space-y-4"}>
+    <form
+      onSubmit={handleSubmit(handleSubmitWithInvalidation)}
+      className={className ?? "space-y-4"}
+    >
       {renderNodes(fields)}
 
       {typeof (errors as { root?: { message?: unknown } }).root?.message === "string" && (

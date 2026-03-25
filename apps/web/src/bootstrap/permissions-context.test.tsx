@@ -37,9 +37,7 @@ function PermissionsProbe() {
       <p data-testid="status">{bootstrapStatus}</p>
       <p data-testid="ready">{String(isReady)}</p>
       <p data-testid="error">{bootstrapError ?? "none"}</p>
-      <p data-testid="can-read-sales-orders">
-        {String(hasPermission("sales.orders", "read"))}
-      </p>
+      <p data-testid="can-read-sales-orders">{String(hasPermission("sales.orders", "read"))}</p>
       <p data-testid="has-sales-resource">{String(hasAnyPermission("sales"))}</p>
       <button type="button" onClick={retryBootstrap}>
         retry

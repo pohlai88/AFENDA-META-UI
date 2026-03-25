@@ -112,10 +112,22 @@ function unwrap(t: GqlType): { name: string; kind: string; isList: boolean; isRe
 }
 
 const SKIP_TYPES = new Set([
-  "Query", "Mutation", "Subscription",
-  "String", "Boolean", "Int", "Float", "ID",
-  "__Schema", "__Type", "__Field", "__InputValue", "__EnumValue", "__Directive",
-  "PageInfo", "OrderByDirection",
+  "Query",
+  "Mutation",
+  "Subscription",
+  "String",
+  "Boolean",
+  "Int",
+  "Float",
+  "ID",
+  "__Schema",
+  "__Type",
+  "__Field",
+  "__InputValue",
+  "__EnumValue",
+  "__Directive",
+  "PageInfo",
+  "OrderByDirection",
 ]);
 
 const INPUT_SUFFIX = /Input$|OrderBy$|Filters$|InnerFilter$/;
@@ -137,13 +149,9 @@ function singularize(s: string): string {
 }
 
 function normalizeModelName(typeName: string): string {
-  const snake = typeName
-    .replace(/([A-Z])/g, (m) => `_${m.toLowerCase()}`)
-    .replace(/^_/, "");
+  const snake = typeName.replace(/([A-Z])/g, (m) => `_${m.toLowerCase()}`).replace(/^_/, "");
 
-  const withoutWrapperSuffix = snake
-    .replace(/_select_item$/, "")
-    .replace(/_item$/, "");
+  const withoutWrapperSuffix = snake.replace(/_select_item$/, "").replace(/_item$/, "");
 
   return withoutWrapperSuffix
     .split("_")

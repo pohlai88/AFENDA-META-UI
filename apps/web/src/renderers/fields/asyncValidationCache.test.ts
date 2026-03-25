@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createAsyncValidationCache,
-  type StorageLike,
-} from "./asyncValidationCache";
+import { createAsyncValidationCache, type StorageLike } from "./asyncValidationCache";
 
 class MemoryStorage implements StorageLike {
   private state = new Map<string, string>();
@@ -140,7 +137,7 @@ describe("asyncValidationCache", () => {
     const userTwoKey = buildScopedCacheKey("user-2", "username", "alex");
 
     cache.set(userOneKey, "taken");
-  cache.set(userTwoKey, null);
+    cache.set(userTwoKey, null);
 
     expect(cache.get(userOneKey)).toBe("taken");
     expect(cache.get(userTwoKey)).toBeNull();

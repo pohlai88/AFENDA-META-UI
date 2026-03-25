@@ -2,7 +2,7 @@
  * Redux Store
  * ============
  * Root Redux store configuration with middleware.
- * 
+ *
  * Features:
  * - Combines all slices
  * - Configures middleware (audit, analytics)
@@ -21,7 +21,7 @@ const appConfig = getAppConfig();
 
 /**
  * Root Redux store
- * 
+ *
  * Usage:
  * ```tsx
  * import { store } from "~/stores/business/store";

@@ -32,12 +32,12 @@ Tenant
 
 ### Validation
 
-| Component | Location | Status |
-|-----------|----------|--------|
-| Graph schema | `packages/meta-types/src/graph.ts` | ✅ Defined |
-| Graph queries | `apps/api/src/routes/graph.ts` | ✅ Implemented |
-| Tenant hierarchy | `apps/api/src/routes/tenant.ts` | ✅ Complete |
-| Metadata models | `apps/api/src/meta/index.ts` | ✅ Queryable |
+| Component        | Location                           | Status         |
+| ---------------- | ---------------------------------- | -------------- |
+| Graph schema     | `packages/meta-types/src/graph.ts` | ✅ Defined     |
+| Graph queries    | `apps/api/src/routes/graph.ts`     | ✅ Implemented |
+| Tenant hierarchy | `apps/api/src/routes/tenant.ts`    | ✅ Complete    |
+| Metadata models  | `apps/api/src/meta/index.ts`       | ✅ Queryable   |
 
 **Result**: Routes use the Truth Graph to source everything from metadata, not hardcoded assumptions.
 
@@ -53,10 +53,10 @@ The Event Mesh is the **business nervous system** — all significant state chan
 
 ```typescript
 interface MeshEvent<T = any> {
-  id: string;                    // Unique event ID
-  type: string;                  // e.g., "invoice.created", "workflow.transitioned"
-  tenantId: string;              // Tenant scope
-  payload: T;                    // Event data
+  id: string; // Unique event ID
+  type: string; // e.g., "invoice.created", "workflow.transitioned"
+  tenantId: string; // Tenant scope
+  payload: T; // Event data
   metadata?: {
     timestamp: string;
     userId?: string;
@@ -79,13 +79,13 @@ Event Mesh Router
 
 ### Validation
 
-| Component | Location | Status |
-|-----------|----------|--------|
-| Event types | `packages/meta-types/src/events.ts` | ✅ Defined |
-| Mesh publish | `apps/api/src/mesh/index.ts:65-100` | ✅ Works |
-| Mesh subscribe | `apps/api/src/mesh/index.ts:155-180` | ✅ Works |
-| Stream processors | `apps/api/src/mesh/index.ts:126-150` | ✅ Works |
-| Event handlers | `apps/api/src/events/index.ts` | ✅ Implemented |
+| Component         | Location                             | Status         |
+| ----------------- | ------------------------------------ | -------------- |
+| Event types       | `packages/meta-types/src/events.ts`  | ✅ Defined     |
+| Mesh publish      | `apps/api/src/mesh/index.ts:65-100`  | ✅ Works       |
+| Mesh subscribe    | `apps/api/src/mesh/index.ts:155-180` | ✅ Works       |
+| Stream processors | `apps/api/src/mesh/index.ts:126-150` | ✅ Works       |
+| Event handlers    | `apps/api/src/events/index.ts`       | ✅ Implemented |
 
 **Evidence**: Every workflow trigger, metadata change, and rule evaluation can publish events without code refactoring.
 
@@ -103,17 +103,17 @@ The Workflow Engine automatically orchestrates business processes.
 interface WorkflowDefinition {
   id: string;
   name: string;
-  scope: string;              // e.g., "invoice.approval"
-  tenantId: string;           // Tenant-specific workflow
-  
+  scope: string; // e.g., "invoice.approval"
+  tenantId: string; // Tenant-specific workflow
+
   triggers: {
-    on: string;               // e.g., "invoice.created"
+    on: string; // e.g., "invoice.created"
     when?: ConditionExpression; // Optional condition
   }[];
-  
+
   steps: WorkflowStep[];
-  
-  metadata?: Record<string, unknown>;  // Tenant overrides workflow behavior
+
+  metadata?: Record<string, unknown>; // Tenant overrides workflow behavior
 }
 
 interface WorkflowStep {
@@ -121,7 +121,7 @@ interface WorkflowStep {
   name: string;
   action: "send_event" | "apply_rule" | "check_policy" | "human_decision";
   params: Record<string, unknown>;
-  nextSteps?: string[];       // Branching
+  nextSteps?: string[]; // Branching
 }
 ```
 
@@ -161,13 +161,13 @@ Workflow execution picks up overrides automatically
 
 ### Validation
 
-| Component | Location | Status |
-|-----------|----------|--------|
-| Workflow definition | `packages/meta-types/src/workflow.ts` | ✅ Defined |
-| Workflow registry | `apps/api/src/workflow/index.ts:30-60` | ✅ Works |
-| Trigger evaluation | `apps/api/src/workflow/index.ts:100-140` | ✅ Works |
-| Step execution | `apps/api/src/workflow/index.ts:180-280` | ✅ Works |
-| Tenant-aware execution | `apps/api/src/workflow/index.ts:75-95` | ✅ Works |
+| Component              | Location                                 | Status     |
+| ---------------------- | ---------------------------------------- | ---------- |
+| Workflow definition    | `packages/meta-types/src/workflow.ts`    | ✅ Defined |
+| Workflow registry      | `apps/api/src/workflow/index.ts:30-60`   | ✅ Works   |
+| Trigger evaluation     | `apps/api/src/workflow/index.ts:100-140` | ✅ Works   |
+| Step execution         | `apps/api/src/workflow/index.ts:180-280` | ✅ Works   |
+| Tenant-aware execution | `apps/api/src/workflow/index.ts:75-95`   | ✅ Works   |
 
 **Evidence**: Workflows are scoped per tenant and can be deployed without code.
 
@@ -183,16 +183,16 @@ The Tenant Layer enforces **deterministic metadata resolution** across all syste
 
 ```typescript
 interface ResolutionContext {
-  tenantId: string;           // Which tenant
-  userId?: string;            // Which user
-  departmentId?: string;      // Which department
-  industry?: string;          // Which industry
+  tenantId: string; // Which tenant
+  userId?: string; // Which user
+  departmentId?: string; // Which department
+  industry?: string; // Which industry
 }
 
 function resolveMetadata(
   model: string,
   globalMeta: Record<string, unknown>,
-  ctx: ResolutionContext,
+  ctx: ResolutionContext
 ): Record<string, unknown> {
   // Applies layers in order, merging deeply
   return mergeDeep(
@@ -200,7 +200,7 @@ function resolveMetadata(
     industryLayers[ctx.industry]?.[model],
     tenantLayers[ctx.tenantId]?.[model],
     departmentLayers[ctx.departmentId]?.[model],
-    userLayers[ctx.userId]?.[model],
+    userLayers[ctx.userId]?.[model]
   );
 }
 ```
@@ -237,13 +237,13 @@ Response respects tenant truth
 
 ### Validation
 
-| Component | Location | Status |
-|-----------|----------|--------|
-| ResolutionContext | `packages/meta-types/src/rbac.ts` | ✅ Defined |
-| Middleware | `apps/api/src/middleware/tenantContext.ts` | ✅ Implemented |
-| resolveMetadata | `apps/api/src/tenant/index.ts:50-120` | ✅ Works |
-| Reverse resolution | `apps/api/src/tenant/index.ts:130-180` | ✅ Works |
-| Tenant storage | `packages/db/src/schema/tenant.ts` | ✅ Schema |
+| Component          | Location                                   | Status         |
+| ------------------ | ------------------------------------------ | -------------- |
+| ResolutionContext  | `packages/meta-types/src/rbac.ts`          | ✅ Defined     |
+| Middleware         | `apps/api/src/middleware/tenantContext.ts` | ✅ Implemented |
+| resolveMetadata    | `apps/api/src/tenant/index.ts:50-120`      | ✅ Works       |
+| Reverse resolution | `apps/api/src/tenant/index.ts:130-180`     | ✅ Works       |
+| Tenant storage     | `packages/db/src/schema/tenant.ts`         | ✅ Schema      |
 
 **Evidence**: Same request with different tenant context produces different behavior automatically.
 
@@ -257,7 +257,7 @@ Response respects tenant truth
 
 ```typescript
 // When event published
-publishEvent('invoice.created', payload);
+publishEvent("invoice.created", payload);
 
 // Mesh automatically:
 // 1. Routes to event handlers
@@ -302,7 +302,7 @@ function resolveLayoutWithContext(ctx: {
 function evaluateRule(
   ruleId: string,
   context: RuleExecutionContext,
-  tenantContext: ResolutionContext,
+  tenantContext: ResolutionContext
 ): RuleExecutionResult {
   // 1. Get rule definition
   // 2. Resolve rule via resolveMetadata (tenant can override!)
@@ -325,7 +325,7 @@ function evaluateRule(
 function evaluatePoliciesWithTenantContext(
   context: PolicyContext,
   tenantCtx: ResolutionContext,
-  globalMeta: Record<string, unknown>,
+  globalMeta: Record<string, unknown>
 ): PolicyEvaluationResult {
   // 1. Get policies for scope
   // 2. Resolve each policy via tenant context
@@ -346,9 +346,9 @@ function evaluatePoliciesWithTenantContext(
 **Location**: [apps/api/src/middleware/tenantContext.ts](apps/api/src/middleware/tenantContext.ts)
 
 ```typescript
-app.use(authMiddleware);           // Extracts session
-app.use(tenantContextMiddleware);  // Builds ResolutionContext
-app.use(routes);                   // All routes have req.tenantContext
+app.use(authMiddleware); // Extracts session
+app.use(tenantContextMiddleware); // Builds ResolutionContext
+app.use(routes); // All routes have req.tenantContext
 
 // Result: Every endpoint automatically tenant-aware
 ```
@@ -426,6 +426,7 @@ Total: 122/122 tests passing
 **Property**: Same input → Same output (always)
 
 **Proof**:
+
 ```
 tenant="acme-corp", userId="alice", model="invoice"
   → Unique ResolutionContext hash
@@ -443,11 +444,13 @@ tenant="acme-corp", userId="alice", model="invoice"
 **Property**: Tenant boundaries enforced at middleware
 
 **Proof**:
+
 - ResolutionContext built at middleware layer
 - Prevents any route from reading cross-tenant data
 - Even if developer mistakenly queries without context, middleware intercepts
 
 **Test Case**:
+
 ```typescript
 // Attempt to break isolation in a route
 const data = db.query("SELECT * FROM invoices"); // ❌ No context!
@@ -465,6 +468,7 @@ const data = db.query("SELECT * FROM invoices"); // ❌ No context!
 **Property**: Rules + workflows + layouts can be recombined safely
 
 **Proof**:
+
 ```
 Rule "compute_tax" works in:
   - Workflow step
@@ -484,6 +488,7 @@ All tenant-aware. All consistent.
 **Property**: New modules plug in without rewrites
 
 **Proof**:
+
 ```
 Adding new module "inventory"?
   1. Define in Truth Graph ✅
@@ -496,15 +501,15 @@ Adding new module "inventory"?
 
 ## Production Readiness Checklist
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Determinism | ✅ Yes | Same context → same output |
-| Scalability | ✅ Yes | Middleware-enforced (constant time) |
-| Observability | 🟡 Ready for Phase 4 | Audit layer pending |
-| Compliance | ✅ Yes | Tenant isolation enforced |
-| Debuggability | 🟡 Ready for Phase 4 | Audit chain pending |
-| DevX | ✅ Good | Clear abstractions |
-| Performance | ✅ Good | No N+1 queries |
+| Criterion     | Status               | Evidence                            |
+| ------------- | -------------------- | ----------------------------------- |
+| Determinism   | ✅ Yes               | Same context → same output          |
+| Scalability   | ✅ Yes               | Middleware-enforced (constant time) |
+| Observability | 🟡 Ready for Phase 4 | Audit layer pending                 |
+| Compliance    | ✅ Yes               | Tenant isolation enforced           |
+| Debuggability | 🟡 Ready for Phase 4 | Audit chain pending                 |
+| DevX          | ✅ Good              | Clear abstractions                  |
+| Performance   | ✅ Good              | No N+1 queries                      |
 
 ---
 
@@ -512,14 +517,15 @@ Adding new module "inventory"?
 
 Your Phase 3 completion puts you at architectural parity with:
 
-| System | Aspect | Your Implementation |
-|--------|--------|-------------------|
-| **SAP S/4HANA** | Metadata runtime | ✅ Comparable |
-| **Salesforce** | Tenant resolution | ✅ Comparable |
-| **Microsoft Dynamics 365** | Event-driven behavior | ✅ Comparable |
-| **Workday** | Workflow orchestration | ✅ Comparable |
+| System                     | Aspect                 | Your Implementation |
+| -------------------------- | ---------------------- | ------------------- |
+| **SAP S/4HANA**            | Metadata runtime       | ✅ Comparable       |
+| **Salesforce**             | Tenant resolution      | ✅ Comparable       |
+| **Microsoft Dynamics 365** | Event-driven behavior  | ✅ Comparable       |
+| **Workday**                | Workflow orchestration | ✅ Comparable       |
 
 But with:
+
 - ✅ More modular
 - ✅ More event-native (true mesh, not polling)
 - ✅ More metadata-driven (no hardcoded behavior)
@@ -530,18 +536,21 @@ But with:
 ## What Phase 3 Unlocks
 
 ### ✅ For Business Users
+
 - Tenant-specific behavior without code deployment
 - Metadata overrides for any layer
 - Workflow customization per tenant
 - Policy adaptation (strict vs. lenient auditing)
 
 ### ✅ For Operators
+
 - Complete tenant isolation (no data leaks possible)
 - Full audit trail (coming Phase 4)
 - Easy onboarding (bootstrap scripts exist)
 - Scaling (stateless middleware)
 
 ### ✅ For Developers
+
 - Zero cross-tenant logic in code (middleware prevents)
 - All tenants get same updates (centralized truth)
 - Rules as first-class citizens (not scattered in code)
@@ -555,11 +564,11 @@ Your platform has achieved **architectural maturity class** equivalent to system
 
 You've moved from:
 
-> *"Services that exist"*
+> _"Services that exist"_
 
 to
 
-> *"A business operating system"*
+> _"A business operating system"_
 
 Every meaningful decision the platform makes can now be:
 
@@ -577,6 +586,7 @@ This is enterprise-grade infrastructure. Phase 4 adds visibility and developer e
 ## Reference
 
 **Phase 3 Delivery**:
+
 - ResolutionContext + Middleware ✅
 - Tenant-aware metadata resolution ✅
 - Event → Workflow wiring ✅
@@ -586,4 +596,3 @@ This is enterprise-grade infrastructure. Phase 4 adds visibility and developer e
 - Zero TypeScript errors ✅
 
 **Next**: Phase 4 (Audit + Cache + Control Plane + GraphQL)
-

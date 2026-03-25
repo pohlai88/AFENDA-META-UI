@@ -27,48 +27,49 @@ apps/web/
 ### Conditional Dev/Build Config
 
 Uses `defineConfig(({ command, mode }) => ...)` pattern for mode-specific optimization:
+
 - **Dev (`vite`)**: Server warmup, dep pre-bundling, security headers, proxy
 - **Build (`vite build`)**: Sourcemaps, chunk splitting, minification, manifest, license
 
 ### Build Optimization
 
-| Feature | Value | Rationale |
-|---------|-------|-----------|
-| `build.target` | `es2022` | Matches tsconfig target, modern browsers |
-| `build.sourcemap` | `hidden` | Generated for error tracking (Sentry), not exposed to browser |
-| `build.minify` | `oxc` | 30-90x faster than terser, ~0.5-2% worse compression |
-| `build.cssMinify` | `lightningcss` | Native CSS minification engine |
-| `build.cssCodeSplit` | `true` | Per-route CSS loading |
-| `build.manifest` | `true` | Asset manifest for cache busting / backend integration |
-| `build.license` | `true` | License compliance for bundled dependencies |
+| Feature              | Value          | Rationale                                                     |
+| -------------------- | -------------- | ------------------------------------------------------------- |
+| `build.target`       | `es2022`       | Matches tsconfig target, modern browsers                      |
+| `build.sourcemap`    | `hidden`       | Generated for error tracking (Sentry), not exposed to browser |
+| `build.minify`       | `oxc`          | 30-90x faster than terser, ~0.5-2% worse compression          |
+| `build.cssMinify`    | `lightningcss` | Native CSS minification engine                                |
+| `build.cssCodeSplit` | `true`         | Per-route CSS loading                                         |
+| `build.manifest`     | `true`         | Asset manifest for cache busting / backend integration        |
+| `build.license`      | `true`         | License compliance for bundled dependencies                   |
 
 ### Chunk Splitting Strategy
 
 Manual vendor chunks for optimal caching:
 
-| Chunk | Contents | Cache Strategy |
-|-------|----------|---------------|
-| `vendor-react` | react, react-dom, react-router-dom | Changes rarely → long TTL |
-| `vendor-query` | @tanstack/react-query, devtools | Semi-stable → medium TTL |
-| `vendor-ui` | radix-ui, lucide-react, sonner, cmdk | Semi-stable → medium TTL |
-| `[auto]` | Application code | Changes frequently → short TTL / hash-based |
+| Chunk          | Contents                             | Cache Strategy                              |
+| -------------- | ------------------------------------ | ------------------------------------------- |
+| `vendor-react` | react, react-dom, react-router-dom   | Changes rarely → long TTL                   |
+| `vendor-query` | @tanstack/react-query, devtools      | Semi-stable → medium TTL                    |
+| `vendor-ui`    | radix-ui, lucide-react, sonner, cmdk | Semi-stable → medium TTL                    |
+| `[auto]`       | Application code                     | Changes frequently → short TTL / hash-based |
 
 ### Dev Server Performance
 
-| Feature | Configuration |
-|---------|--------------|
-| **Warmup** | Pre-transforms `main.tsx`, `App.tsx`, layout components, renderers |
-| **Pre-bundling** | react, react-dom, react-router-dom, @tanstack/react-query, lucide-react |
-| **Monorepo dedup** | `resolve.dedupe` prevents duplicate react/react-dom copies |
+| Feature            | Configuration                                                           |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Warmup**         | Pre-transforms `main.tsx`, `App.tsx`, layout components, renderers      |
+| **Pre-bundling**   | react, react-dom, react-router-dom, @tanstack/react-query, lucide-react |
+| **Monorepo dedup** | `resolve.dedupe` prevents duplicate react/react-dom copies              |
 
 ### Security
 
-| Feature | Configuration |
-|---------|--------------|
-| `server.fs.strict` | `true` — restricts file serving to workspace |
-| `server.fs.deny` | Blocks `.env`, `.env.*`, cert/key files, `.git/` |
-| `server.headers` | `X-Content-Type-Options: nosniff` |
-| `.gitignore` | Prevents `.env.local`, `.env.*.local` from being committed |
+| Feature            | Configuration                                              |
+| ------------------ | ---------------------------------------------------------- |
+| `server.fs.strict` | `true` — restricts file serving to workspace               |
+| `server.fs.deny`   | Blocks `.env`, `.env.*`, cert/key files, `.git/`           |
+| `server.headers`   | `X-Content-Type-Options: nosniff`                          |
+| `.gitignore`       | Prevents `.env.local`, `.env.*.local` from being committed |
 
 ---
 
@@ -90,19 +91,19 @@ Access via `import.meta.env.VITE_API_URL` with full IntelliSense.
 
 ### Mode-Specific `.env` Files
 
-| File | Loaded When | Purpose |
-|------|------------|---------|
-| `.env.development` | `vite` (dev server) | Local API URL, dev title |
-| `.env.production` | `vite build` | Prod title, API URL placeholder |
-| `.env.local` | Always (git-ignored) | Local overrides, secrets |
-| `.env.development.local` | Dev only (git-ignored) | Per-developer overrides |
+| File                     | Loaded When            | Purpose                         |
+| ------------------------ | ---------------------- | ------------------------------- |
+| `.env.development`       | `vite` (dev server)    | Local API URL, dev title        |
+| `.env.production`        | `vite build`           | Prod title, API URL placeholder |
+| `.env.local`             | Always (git-ignored)   | Local overrides, secrets        |
+| `.env.development.local` | Dev only (git-ignored) | Per-developer overrides         |
 
 ### Compile-Time Constants
 
-| Constant | Type | Usage |
-|----------|------|-------|
+| Constant          | Type     | Usage                               |
+| ----------------- | -------- | ----------------------------------- |
 | `__APP_VERSION__` | `string` | Package version from `package.json` |
-| `__BUILD_TIME__` | `string` | ISO timestamp of build |
+| `__BUILD_TIME__`  | `string` | ISO timestamp of build              |
 
 ### HTML Constant Replacement
 

@@ -77,9 +77,10 @@ function createFieldRendererProps(
     case "time":
       return {
         field: field as MetaFieldOfType<"date" | "datetime" | "time">,
-        value: rawValue == null || typeof rawValue === "string" || rawValue instanceof Date
-          ? rawValue
-          : String(rawValue),
+        value:
+          rawValue == null || typeof rawValue === "string" || rawValue instanceof Date
+            ? rawValue
+            : String(rawValue),
         onChange: (value: string | Date | null) => onValueChange(value),
         readonly,
       } as DiscriminatedFieldProps;
@@ -87,9 +88,10 @@ function createFieldRendererProps(
     case "many2one":
       return {
         field: field as MetaFieldOfType<"many2one">,
-        value: rawValue == null || typeof rawValue === "string" || typeof rawValue === "number"
-          ? rawValue
-          : String(rawValue),
+        value:
+          rawValue == null || typeof rawValue === "string" || typeof rawValue === "number"
+            ? rawValue
+            : String(rawValue),
         onChange: (value: string | number | null) => onValueChange(value),
         readonly,
       };
@@ -131,8 +133,12 @@ function GroupGrid({
 }) {
   const fieldMap = new Map(fields.map((f) => [f.name, f]));
   return (
-    <fieldset style={{ border: "1px solid #ddd", borderRadius: 4, padding: "1rem", marginBottom: "1rem" }}>
-      {group.label && <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>{group.label}</legend>}
+    <fieldset
+      style={{ border: "1px solid #ddd", borderRadius: 4, padding: "1rem", marginBottom: "1rem" }}
+    >
+      {group.label && (
+        <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>{group.label}</legend>
+      )}
       <div
         style={{
           display: "grid",
@@ -149,12 +155,7 @@ function GroupGrid({
             (nextValue) => onChange(fname, nextValue),
             readonly || !!field.readonly
           );
-          return (
-            <FieldRenderer
-              key={fname}
-              {...rendererProps}
-            />
-          );
+          return <FieldRenderer key={fname} {...rendererProps} />;
         })}
       </div>
     </fieldset>
@@ -217,36 +218,41 @@ function TabbedGroup({
 
   return (
     <div style={{ border: "1px solid #ddd", borderRadius: 4, marginBottom: "1rem" }}>
-      <div id={tabListId} role="tablist" aria-label={group.label ?? group.name} style={{ display: "flex", borderBottom: "1px solid #ddd" }}>
-        {tabs.map((tab, i) => (
+      <div
+        id={tabListId}
+        role="tablist"
+        aria-label={group.label ?? group.name}
+        style={{ display: "flex", borderBottom: "1px solid #ddd" }}
+      >
+        {tabs.map((tab, i) =>
           (() => {
             const isActive = activeTab === i;
             const tabId = `${tabListId}-tab-${i}`;
             const panelId = `${tabListId}-panel-${i}`;
             return (
-          <button
-            key={tab.name}
-            id={tabId}
-            type="button"
-            onClick={() => setActiveTab(i)}
-            role="tab"
-            aria-selected={isActive}
-            aria-controls={panelId}
-            tabIndex={isActive ? 0 : -1}
-            style={{
-              padding: "0.5rem 1rem",
-              background: isActive ? "#f0f4ff" : "transparent",
-              border: "none",
-              borderBottom: isActive ? "2px solid #3b5bdb" : "none",
-              cursor: "pointer",
-              fontWeight: isActive ? 600 : 400,
-            }}
-          >
-            {tab.label ?? tab.name}
-          </button>
+              <button
+                key={tab.name}
+                id={tabId}
+                type="button"
+                onClick={() => setActiveTab(i)}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={panelId}
+                tabIndex={isActive ? 0 : -1}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: isActive ? "#f0f4ff" : "transparent",
+                  border: "none",
+                  borderBottom: isActive ? "2px solid #3b5bdb" : "none",
+                  cursor: "pointer",
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                {tab.label ?? tab.name}
+              </button>
             );
           })()
-        ))}
+        )}
       </div>
       <div
         id={`${tabListId}-panel-${activeTab}`}
@@ -274,7 +280,11 @@ function TabbedGroup({
 // ---------------------------------------------------------------------------
 
 export function MetaForm({ model, recordId, meta: staticMeta, onSaved, onCancel }: MetaFormProps) {
-  const { data: metaResponse, isLoading: metaLoading, error: metaError } = useMeta(model, { skip: !!staticMeta });
+  const {
+    data: metaResponse,
+    isLoading: metaLoading,
+    error: metaError,
+  } = useMeta(model, { skip: !!staticMeta });
   const { data: record, isLoading: recordLoading } = useModel(model, recordId);
   const { createRecord, updateRecord, isMutating } = useModel(model);
 
@@ -364,7 +374,14 @@ export function MetaForm({ model, recordId, meta: staticMeta, onSaved, onCancel 
           <button
             type="submit"
             disabled={isMutating}
-            style={{ padding: "0.5rem 1.5rem", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}
+            style={{
+              padding: "0.5rem 1.5rem",
+              background: "#3b5bdb",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
           >
             {isMutating ? "Saving…" : "Save"}
           </button>

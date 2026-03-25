@@ -33,9 +33,7 @@ export function Sidebar() {
 
       {/* Sidebar Footer */}
       <div className="p-4 border-t border-border">
-        <p className="text-xs text-muted-foreground text-center">
-          v0.1.0 • Enterprise Edition
-        </p>
+        <p className="text-xs text-muted-foreground text-center">v0.1.0 • Enterprise Edition</p>
       </div>
     </div>
   );

@@ -13,9 +13,7 @@ describe("timelineFormatter", () => {
     });
 
     it("shows high-sensitivity values when viewer has high clearance", () => {
-      expect(maskValue("secret@email.com", "high", "high")).toBe(
-        "secret@email.com"
-      );
+      expect(maskValue("secret@email.com", "high", "high")).toBe("secret@email.com");
     });
 
     it("partially masks medium-sensitivity values for low-clearance viewer", () => {
@@ -54,9 +52,7 @@ describe("timelineFormatter", () => {
         timestamp: "2024-06-01T10:00:00Z",
         actor: "user-1",
         operation: "create",
-        changes: [
-          { field: "status", oldValue: undefined, newValue: "draft", sensitivity: "low" },
-        ],
+        changes: [{ field: "status", oldValue: undefined, newValue: "draft", sensitivity: "low" }],
         source: "api",
       },
       {
@@ -66,9 +62,7 @@ describe("timelineFormatter", () => {
         timestamp: "2024-06-02T10:00:00Z",
         actor: "user-2",
         operation: "update",
-        changes: [
-          { field: "total", oldValue: 100, newValue: 200, sensitivity: "low" },
-        ],
+        changes: [{ field: "total", oldValue: 100, newValue: 200, sensitivity: "low" }],
         source: "ui",
       },
     ];

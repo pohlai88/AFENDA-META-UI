@@ -101,15 +101,15 @@ tools/ci-gate/logger/
 
 ## File Count Summary
 
-| Type | Count | Total Lines |
-|------|-------|-------------|
-| Documentation | 4 | ~1,350 |
-| Checker modules | 4 | ~300 |
-| Utilities | 1 | ~45 |
-| Templates | 3 | ~215 |
-| Entry point | 1 | ~60 |
-| Package config | 1 | ~25 |
-| **Total** | **14** | **~2,000** |
+| Type            | Count  | Total Lines |
+| --------------- | ------ | ----------- |
+| Documentation   | 4      | ~1,350      |
+| Checker modules | 4      | ~300        |
+| Utilities       | 1      | ~45         |
+| Templates       | 3      | ~215        |
+| Entry point     | 1      | ~60         |
+| Package config  | 1      | ~25         |
+| **Total**       | **14** | **~2,000**  |
 
 ## Size Breakdown
 
@@ -128,17 +128,20 @@ Total                   1,995 lines
 ## Key Features
 
 ### 4 Validation Checks
+
 1. No Console Usage (80 lines) —detects 33 violations
 2. Proper Imports (70 lines) — 0 violations ✅
 3. req.log Usage (90 lines) — 0 violations ✅
 4. Message Format (60 lines) — 0 violations ✅
 
 ### 3 Example Templates
+
 1. logger-usage.example.ts — General Pino patterns
 2. req-log.example.ts — Route handler patterns
 3. mock-logger.ts — Test utilities (70 lines, full featured)
 
 ### 4 Documentation Files
+
 1. README.md (450 lines) — Comprehensive guide
 2. MIGRATION.md (200 lines) — Step-by-step migration
 3. SUMMARY.md (400 lines) — Implementation summary
@@ -153,6 +156,7 @@ Total                   1,995 lines
 ## Integration
 
 Added to root `package.json`:
+
 ```json
 {
   "scripts": {
@@ -165,6 +169,7 @@ Added to root `package.json`:
 ## Status
 
 ✅ **Production Ready**
+
 - All checkers working
 - Documentation complete
 - Examples provided

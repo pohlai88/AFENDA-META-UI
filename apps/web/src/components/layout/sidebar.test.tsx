@@ -103,10 +103,7 @@ describe("Sidebar", () => {
     const { store } = renderSidebar();
     bootstrapPermissions(store);
 
-    expect(screen.getByRole("link", { name: "Orders" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    );
+    expect(screen.getByRole("link", { name: "Orders" })).toHaveAttribute("aria-current", "page");
 
     const inventoryButton = screen.getByRole("button", { name: /inventory/i });
     expect(inventoryButton).toHaveAttribute("aria-expanded", "false");
@@ -171,10 +168,7 @@ describe("Sidebar", () => {
 
     await user.click(inventoryButton);
     expect(inventoryButton).toHaveAttribute("aria-expanded", "true");
-    expect(useSidebarStore.getState().expandedModules).toEqual([
-      "sales",
-      "inventory",
-    ]);
+    expect(useSidebarStore.getState().expandedModules).toEqual(["sales", "inventory"]);
 
     const searchInput = screen.getByLabelText(/search modules and models/i);
     await user.type(searchInput, "stock");
@@ -188,18 +182,12 @@ describe("Sidebar", () => {
 
     await user.clear(searchInput);
 
-    expect(screen.getByRole("button", { name: /sales/i })).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    );
+    expect(screen.getByRole("button", { name: /sales/i })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: /inventory/i })).toHaveAttribute(
       "aria-expanded",
       "true"
     );
-    expect(useSidebarStore.getState().expandedModules).toEqual([
-      "sales",
-      "inventory",
-    ]);
+    expect(useSidebarStore.getState().expandedModules).toEqual(["sales", "inventory"]);
   });
 
   it("keeps modules hidden while permissions are not bootstrapped", () => {

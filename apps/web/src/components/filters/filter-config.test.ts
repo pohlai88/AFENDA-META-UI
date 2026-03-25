@@ -87,8 +87,7 @@ describe("filter-config", () => {
   });
 
   it("selects all visible enum values while preserving existing selections", () => {
-    expect(selectVisibleEnumInValues(["draft"], ["confirmed"]))
-      .toEqual(["draft", "confirmed"]);
+    expect(selectVisibleEnumInValues(["draft"], ["confirmed"])).toEqual(["draft", "confirmed"]);
   });
 
   it("provides display value without wildcard wrappers", () => {

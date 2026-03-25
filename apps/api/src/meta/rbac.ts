@@ -34,8 +34,7 @@ import { compileExpression } from "filtrex";
 /** Derive the effective RbacResult for a session against a model's meta. */
 export function resolveRbac(meta: ModelMeta, session: SessionContext): RbacResult {
   const { roles } = session;
-  const { default_role_permissions: drp = {}, field_permissions: fp = {} } =
-    meta.permissions ?? {};
+  const { default_role_permissions: drp = {}, field_permissions: fp = {} } = meta.permissions ?? {};
 
   // Merge permissions across all roles the user holds (additive)
   const allowedOps = {
@@ -113,32 +112,29 @@ function pruneListView(view: MetaListView, visibleFields: Set<string>): MetaList
 
 /**
  * Safely evaluate a visibility expression using filtrex.
- * 
+ *
  * Available context variables:
  * - role: first role in the session (string)
  * - roles: array of all roles (converted to hasRole function)
  * - uid: user ID (string)
  * - lang: user language (string)
- * 
+ *
  * Filtrex expression syntax:
  * - Comparison: = (equals), != (not equals), <, >, <=, >=
  * - Logical: and, or, not
  * - Strings: use single or double quotes
- * 
+ *
  * Example expressions:
  * - "role = 'admin'"
  * - "role = 'admin' or role = 'manager'"
  * - "hasRole('admin')"
  * - "hasRole('admin') or hasRole('manager')"
- * 
+ *
  * @param expression MetaExpression string (optional)
  * @param session Current user session
  * @returns boolean result of expression evaluation
  */
-function evalVisibility(
-  expression: string | undefined,
-  session: SessionContext
-): boolean {
+function evalVisibility(expression: string | undefined, session: SessionContext): boolean {
   if (!expression) return true;
 
   try {
@@ -156,13 +152,12 @@ function evalVisibility(
         // Helper: check if any role in session matches
         hasRole: (roleName: string) => session.roles.includes(roleName),
         // Helper: check if session has all specified roles
-        hasAllRoles: (...roleNames: string[]) => 
-          roleNames.every((r) => session.roles.includes(r)),
+        hasAllRoles: (...roleNames: string[]) => roleNames.every((r) => session.roles.includes(r)),
       },
     });
 
     const result = compiledExpr(context);
-    
+
     // Ensure boolean result
     return Boolean(result);
   } catch (error) {
@@ -172,10 +167,7 @@ function evalVisibility(
   }
 }
 
-function filterActions(
-  actions: MetaAction[],
-  session: SessionContext
-): MetaAction[] {
+function filterActions(actions: MetaAction[], session: SessionContext): MetaAction[] {
   return actions.filter((action) => {
     // Role whitelist check
     if (action.allowed_roles?.length) {
@@ -216,12 +208,8 @@ export function applyRbac(meta: ModelMeta, session: SessionContext): MetaRespons
     fields: filteredFields,
     views: {
       ...meta.views,
-      ...(meta.views.form
-        ? { form: pruneFormView(meta.views.form, visibleSet) }
-        : {}),
-      ...(meta.views.list
-        ? { list: pruneListView(meta.views.list, visibleSet) }
-        : {}),
+      ...(meta.views.form ? { form: pruneFormView(meta.views.form, visibleSet) } : {}),
+      ...(meta.views.list ? { list: pruneListView(meta.views.list, visibleSet) } : {}),
     },
     actions: filterActions(meta.actions ?? [], session),
   };

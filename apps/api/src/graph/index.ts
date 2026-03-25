@@ -50,7 +50,7 @@ export function upsertNode<TData = Record<string, unknown>>(
   type: GraphNodeType,
   localId: string,
   data: TData,
-  truthPriority = 50,
+  truthPriority = 50
 ): GraphNode<TData> {
   const id = buildNodeId(type, localId);
   const node: GraphNode<TData> = {
@@ -74,10 +74,7 @@ export function getNode(id: string): GraphNode | undefined {
 /**
  * Get a node by type and local ID.
  */
-export function getNodeByTypeId(
-  type: GraphNodeType,
-  localId: string,
-): GraphNode | undefined {
+export function getNodeByTypeId(type: GraphNodeType, localId: string): GraphNode | undefined {
   return nodeStore.get(buildNodeId(type, localId));
 }
 
@@ -116,7 +113,7 @@ export function createEdge(
   fromId: string,
   toId: string,
   type: GraphEdgeType,
-  properties?: Record<string, unknown>,
+  properties?: Record<string, unknown>
 ): GraphEdge | undefined {
   if (!nodeStore.has(fromId) || !nodeStore.has(toId)) return undefined;
 
@@ -173,9 +170,7 @@ export function queryGraph(query: GraphQuery): GraphQueryResult {
 
   // If no starting node, return all filtered nodes
   if (!query.startNodeId) {
-    const nodes = listNodes().filter(
-      (n) => !query.nodeTypes || query.nodeTypes.includes(n.type),
-    );
+    const nodes = listNodes().filter((n) => !query.nodeTypes || query.nodeTypes.includes(n.type));
     return { nodes, edges: [] };
   }
 
@@ -216,10 +211,7 @@ export function queryGraph(query: GraphQuery): GraphQueryResult {
 /**
  * Find all nodes directly reachable from a node via a specific edge type.
  */
-export function getRelated(
-  nodeId: string,
-  edgeType: GraphEdgeType,
-): GraphNode[] {
+export function getRelated(nodeId: string, edgeType: GraphEdgeType): GraphNode[] {
   return listEdges({ fromId: nodeId, type: edgeType })
     .map((e) => nodeStore.get(e.toId))
     .filter((n): n is GraphNode => n !== undefined);
@@ -251,9 +243,7 @@ export function resolveConflict(nodes: GraphNode[]): TruthConflict | null {
 
   const resolvedNode = sorted[0];
   const strategy: TruthConflict["strategy"] =
-    nodes[0].truthPriority !== nodes[1].truthPriority
-      ? "highest_priority"
-      : "latest_timestamp";
+    nodes[0].truthPriority !== nodes[1].truthPriority ? "highest_priority" : "latest_timestamp";
 
   return {
     nodeId,

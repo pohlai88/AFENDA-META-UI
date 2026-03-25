@@ -42,9 +42,7 @@ function flattenObject(
         const sampleKeys = Object.keys(value[0] as Record<string, unknown>);
         for (const subKey of sampleKeys) {
           const aggKey = `${flatKey}_${subKey}`;
-          target[aggKey] = value.map(
-            (item) => (item as Record<string, unknown>)[subKey]
-          );
+          target[aggKey] = value.map((item) => (item as Record<string, unknown>)[subKey]);
         }
       }
       continue;

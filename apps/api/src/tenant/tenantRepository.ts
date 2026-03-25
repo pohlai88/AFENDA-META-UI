@@ -10,15 +10,8 @@
 
 import { eq, and, asc } from "drizzle-orm";
 import { db } from "../db/index.js";
-import {
-  tenantDefinitions,
-  metadataOverrides,
-  industryTemplates,
-} from "../db/schema/index.js";
-import type {
-  TenantDefinition,
-  MetadataOverride,
-} from "@afenda/meta-types";
+import { tenantDefinitions, metadataOverrides, industryTemplates } from "../db/schema/index.js";
+import type { TenantDefinition, MetadataOverride } from "@afenda/meta-types";
 
 // ── Tenant Definitions ─────────────────────────────────────────────────────
 
@@ -75,9 +68,7 @@ export async function dbUpsertTenant(tenant: TenantDefinition): Promise<void> {
 }
 
 export async function dbRemoveTenant(id: string): Promise<boolean> {
-  const result = await db
-    .delete(tenantDefinitions)
-    .where(eq(tenantDefinitions.id, id));
+  const result = await db.delete(tenantDefinitions).where(eq(tenantDefinitions.id, id));
   return (result as { rowCount?: number }).rowCount !== 0;
 }
 
@@ -119,9 +110,7 @@ export async function dbUpsertOverride(override: MetadataOverride): Promise<void
 }
 
 export async function dbRemoveOverride(id: string): Promise<boolean> {
-  const result = await db
-    .delete(metadataOverrides)
-    .where(eq(metadataOverrides.id, id));
+  const result = await db.delete(metadataOverrides).where(eq(metadataOverrides.id, id));
   return (result as { rowCount?: number }).rowCount !== 0;
 }
 
@@ -129,12 +118,7 @@ export async function dbGetOverridesForModel(model: string): Promise<MetadataOve
   const rows = await db
     .select()
     .from(metadataOverrides)
-    .where(
-      and(
-        eq(metadataOverrides.model, model),
-        eq(metadataOverrides.enabled, true),
-      ),
-    )
+    .where(and(eq(metadataOverrides.model, model), eq(metadataOverrides.enabled, true)))
     .orderBy(asc(metadataOverrides.scope));
   return rows.map(rowToOverride);
 }
@@ -150,7 +134,7 @@ export async function dbGetOverridesForTenant(tenantId: string): Promise<Metadat
 // ── Industry Templates ─────────────────────────────────────────────────────
 
 export async function dbGetIndustryTemplate(
-  industry: string,
+  industry: string
 ): Promise<Record<string, unknown> | null> {
   const rows = await db
     .select()
@@ -162,7 +146,7 @@ export async function dbGetIndustryTemplate(
 
 export async function dbUpsertIndustryTemplate(
   industry: string,
-  template: Record<string, unknown>,
+  template: Record<string, unknown>
 ): Promise<void> {
   const existing = await db
     .select({ industry: industryTemplates.industry })

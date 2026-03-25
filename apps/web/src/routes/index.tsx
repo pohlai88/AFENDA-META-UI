@@ -37,9 +37,10 @@ const PurchaseOrdersExamplePage = lazy(() => import("../pages/purchase-orders-ex
 const PaymentHubPage = lazy(() => import("../pages/payment-hub"));
 const SuggestionsDemoPage = lazy(() => import("../pages/suggestions-demo"));
 
-const breadcrumbFromParam = (paramName: string) => (
-  { params }: { params: Record<string, string | undefined> }
-) => toTitle(params[paramName]);
+const breadcrumbFromParam =
+  (paramName: string) =>
+  ({ params }: { params: Record<string, string | undefined> }) =>
+    toTitle(params[paramName]);
 
 const errorRouteDefinitions = [
   {
@@ -89,133 +90,136 @@ const routerFuture = {
   v7_relativeSplatPath: true,
 } as const;
 
-const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
+const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <AppShell />,
+      errorElement: <ErrorBoundary />,
+      children: [
+        {
+          index: true,
+          element: <HomePage />,
+          handle: {
+            breadcrumb: "Dashboard",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: ":module",
+          handle: {
+            breadcrumb: breadcrumbFromParam("module"),
+          } satisfies BreadcrumbHandle,
+          children: [
+            {
+              index: true,
+              element: <ModuleLandingPage />,
+            },
+            {
+              path: ":model",
+              handle: {
+                breadcrumb: breadcrumbFromParam("model"),
+              } satisfies BreadcrumbHandle,
+              children: [
+                {
+                  index: true,
+                  element: <ModelListPage />,
+                },
+                {
+                  path: "new",
+                  element: <ModelFormPage />,
+                  handle: {
+                    breadcrumb: "New",
+                  } satisfies BreadcrumbHandle,
+                },
+                {
+                  path: ":id",
+                  handle: {
+                    breadcrumb: ({ params }: { params: { id?: string } }) =>
+                      params.id ? `Record ${params.id}` : "Record",
+                  } satisfies BreadcrumbHandle,
+                  children: [
+                    {
+                      index: true,
+                      element: <ModelFormPage />,
+                    },
+                    {
+                      path: ":view",
+                      element: <ModelViewPage />,
+                      handle: {
+                        breadcrumb: breadcrumbFromParam("view"),
+                      } satisfies BreadcrumbHandle,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          path: "examples/purchase-orders",
+          element: <PurchaseOrdersExamplePage />,
+          handle: {
+            breadcrumb: "Purchase Orders",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: "payment-hub",
+          element: <PaymentHubPage />,
+          handle: {
+            breadcrumb: "Payment Hub",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: "demo/suggestions",
+          element: <SuggestionsDemoPage />,
+          handle: {
+            breadcrumb: "Personalized Suggestions",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: "errors",
+          children: [
+            {
+              index: true,
+              element: <ErrorCatalogPage />,
+              handle: {
+                breadcrumb: "Error Catalog",
+              } satisfies BreadcrumbHandle,
+            },
+            ...errorRouteDefinitions.map(({ code, label, element }) => ({
+              path: code,
+              element,
+              handle: {
+                breadcrumb: label,
+              } satisfies BreadcrumbHandle,
+            })),
+          ],
+        },
+        {
+          path: "404",
+          element: <NotFoundPage />,
+          handle: {
+            breadcrumb: "Not Found",
+          } satisfies BreadcrumbHandle,
+        },
+        ...errorRouteDefinitions.map(({ code }) => ({
+          path: code,
+          element: <Navigate to={`/errors/${code}`} replace />,
+        })),
+        {
+          path: "*",
+          element: <NotFoundPage />,
+          handle: {
+            breadcrumb: "Not Found",
+          } satisfies BreadcrumbHandle,
+        },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <AppShell />,
-    errorElement: <ErrorBoundary />,
-    children: [
-      {
-        index: true,
-        element: <HomePage />,
-        handle: {
-          breadcrumb: "Dashboard",
-        } satisfies BreadcrumbHandle,
-      },
-      {
-        path: ":module",
-        handle: {
-          breadcrumb: breadcrumbFromParam("module"),
-        } satisfies BreadcrumbHandle,
-        children: [
-          {
-            index: true,
-            element: <ModuleLandingPage />,
-          },
-          {
-            path: ":model",
-            handle: {
-              breadcrumb: breadcrumbFromParam("model"),
-            } satisfies BreadcrumbHandle,
-            children: [
-              {
-                index: true,
-                element: <ModelListPage />,
-              },
-              {
-                path: "new",
-                element: <ModelFormPage />,
-                handle: {
-                  breadcrumb: "New",
-                } satisfies BreadcrumbHandle,
-              },
-              {
-                path: ":id",
-                handle: {
-                  breadcrumb: ({ params }: { params: { id?: string } }) =>
-                    params.id ? `Record ${params.id}` : "Record",
-                } satisfies BreadcrumbHandle,
-                children: [
-                  {
-                    index: true,
-                    element: <ModelFormPage />,
-                  },
-                  {
-                    path: ":view",
-                    element: <ModelViewPage />,
-                    handle: {
-                      breadcrumb: breadcrumbFromParam("view"),
-                    } satisfies BreadcrumbHandle,
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        path: "examples/purchase-orders",
-        element: <PurchaseOrdersExamplePage />,
-        handle: {
-          breadcrumb: "Purchase Orders",
-        } satisfies BreadcrumbHandle,
-      },
-      {
-        path: "payment-hub",
-        element: <PaymentHubPage />,
-        handle: {
-          breadcrumb: "Payment Hub",
-        } satisfies BreadcrumbHandle,
-      },
-      {
-        path: "demo/suggestions",
-        element: <SuggestionsDemoPage />,
-        handle: {
-          breadcrumb: "Personalized Suggestions",
-        } satisfies BreadcrumbHandle,
-      },
-      {
-        path: "errors",
-        children: [
-          {
-            index: true,
-            element: <ErrorCatalogPage />,
-            handle: {
-              breadcrumb: "Error Catalog",
-            } satisfies BreadcrumbHandle,
-          },
-          ...errorRouteDefinitions.map(({ code, label, element }) => ({
-            path: code,
-            element,
-            handle: {
-              breadcrumb: label,
-            } satisfies BreadcrumbHandle,
-          })),
-        ],
-      },
-      {
-        path: "404",
-        element: <NotFoundPage />,
-        handle: {
-          breadcrumb: "Not Found",
-        } satisfies BreadcrumbHandle,
-      },
-      ...errorRouteDefinitions.map(({ code }) => ({
-        path: code,
-        element: <Navigate to={`/errors/${code}`} replace />,
-      })),
-      {
-        path: "*",
-        element: <NotFoundPage />,
-        handle: {
-          breadcrumb: "Not Found",
-        } satisfies BreadcrumbHandle,
-      },
-    ],
-  },
-], {
-  future: routerFuture,
-});
+    future: routerFuture,
+  }
+);
 
 export function AppRouter() {
   return (

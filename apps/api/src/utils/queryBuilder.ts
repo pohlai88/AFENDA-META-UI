@@ -1,12 +1,12 @@
 /**
  * Query Builder
  * =============
- * 
+ *
  * Translates API filter objects into Drizzle ORM where conditions.
- * 
+ *
  * Filter API format (JSON in query params):
  * ?filters=[{"field":"status","op":"eq","value":"draft"}]
- * 
+ *
  * Supported operators:
  * - eq (equals)
  * - neq (not equals)
@@ -23,16 +23,16 @@
  */
 
 import { z } from "zod";
-import { 
-  and, 
-  or, 
-  eq, 
+import {
+  and,
+  or,
+  eq,
   ne,
-  gt, 
-  gte, 
-  lt, 
-  lte, 
-  like, 
+  gt,
+  gte,
+  lt,
+  lte,
+  like,
   ilike,
   inArray,
   between,
@@ -84,17 +84,14 @@ export type FilterGroup = z.infer<typeof FilterGroupSchema>;
 
 /**
  * Build a Drizzle where condition from a single filter
- * 
+ *
  * @param table Drizzle table object
  * @param filter Filter condition
  * @returns Drizzle SQL condition
  */
-function buildCondition(
-  table: Record<string, Column>,
-  filter: FilterCondition
-): SQL | undefined {
+function buildCondition(table: Record<string, Column>, filter: FilterCondition): SQL | undefined {
   const column = table[filter.field];
-  
+
   if (!column) {
     console.warn(`[QueryBuilder] Unknown field: ${filter.field}`);
     return undefined;
@@ -106,48 +103,48 @@ function buildCondition(
     switch (op) {
       case "eq":
         return eq(column, value);
-      
+
       case "neq":
         return ne(column, value);
-      
+
       case "gt":
         return gt(column, value);
-      
+
       case "gte":
         return gte(column, value);
-      
+
       case "lt":
         return lt(column, value);
-      
+
       case "lte":
         return lte(column, value);
-      
+
       case "like":
         return like(column, value);
-      
+
       case "ilike":
         return ilike(column, value);
-      
+
       case "in":
         if (!Array.isArray(value)) {
           console.warn(`[QueryBuilder] 'in' operator requires array value`);
           return undefined;
         }
         return inArray(column, value);
-      
+
       case "between":
         if (!Array.isArray(value) || value.length !== 2) {
           console.warn(`[QueryBuilder] 'between' operator requires array of 2 values`);
           return undefined;
         }
         return between(column, value[0], value[1]);
-      
+
       case "is_null":
         return isNull(column);
-      
+
       case "is_not_null":
         return isNotNull(column);
-      
+
       default:
         console.warn(`[QueryBuilder] Unknown operator: ${op}`);
         return undefined;
@@ -160,7 +157,7 @@ function buildCondition(
 
 /**
  * Build Drizzle where clause from filter group
- * 
+ *
  * @param table Drizzle table object
  * @param filterGroup Group of filter conditions
  * @returns Drizzle SQL condition
@@ -181,14 +178,12 @@ export function buildWhereClause(
     return conditions[0];
   }
 
-  return filterGroup.logic === "and" 
-    ? and(...conditions) 
-    : or(...conditions);
+  return filterGroup.logic === "and" ? and(...conditions) : or(...conditions);
 }
 
 /**
  * Parse and validate filters from query string
- * 
+ *
  * @param filtersParam Query param value (JSON string or object)
  * @returns Validated filter group or error
  */
@@ -201,9 +196,7 @@ export function parseFilters(
 
   try {
     // Parse JSON if string
-    const parsed = typeof filtersParam === "string" 
-      ? JSON.parse(filtersParam) 
-      : filtersParam;
+    const parsed = typeof filtersParam === "string" ? JSON.parse(filtersParam) : filtersParam;
 
     // Handle legacy format: array of conditions (assume AND logic)
     if (Array.isArray(parsed)) {
@@ -219,20 +212,20 @@ export function parseFilters(
     return { success: true, data: validated };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { 
-        success: false, 
-        error: `Filter validation failed: ${error.issues.map((e) => e.message).join(", ")}` 
+      return {
+        success: false,
+        error: `Filter validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
       };
     }
     if (error instanceof SyntaxError) {
-      return { 
-        success: false, 
-        error: "Invalid JSON in filters parameter" 
+      return {
+        success: false,
+        error: "Invalid JSON in filters parameter",
       };
     }
-    return { 
-      success: false, 
-      error: "Failed to parse filters" 
+    return {
+      success: false,
+      error: "Failed to parse filters",
     };
   }
 }
@@ -253,7 +246,7 @@ export type SortParam = z.infer<typeof SortParamSchema>;
 
 /**
  * Parse and validate sort parameters
- * 
+ *
  * @param sortParam Query param value (JSON string or object)
  * @returns Validated sort params or error
  */
@@ -265,9 +258,7 @@ export function parseSortParams(
   }
 
   try {
-    const parsed = typeof sortParam === "string" 
-      ? JSON.parse(sortParam) 
-      : sortParam;
+    const parsed = typeof sortParam === "string" ? JSON.parse(sortParam) : sortParam;
 
     // Handle single sort object
     if (!Array.isArray(parsed)) {
@@ -280,14 +271,14 @@ export function parseSortParams(
     return { success: true, data: validated };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { 
-        success: false, 
-        error: `Sort validation failed: ${error.issues.map((e) => e.message).join(", ")}` 
+      return {
+        success: false,
+        error: `Sort validation failed: ${error.issues.map((e) => e.message).join(", ")}`,
       };
     }
-    return { 
-      success: false, 
-      error: "Failed to parse sort parameters" 
+    return {
+      success: false,
+      error: "Failed to parse sort parameters",
     };
   }
 }

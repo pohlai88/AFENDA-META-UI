@@ -141,13 +141,17 @@ export interface FormConfig {
   formLevelValidate?: FormLevelValidationRule[];
 }
 
-type FieldValueByType<T extends FieldType> =
-  T extends "boolean" ? boolean :
-  T extends "integer" | "float" | "currency" | "decimal" ? number | null :
-  T extends "date" | "datetime" | "time" ? string | Date | null :
-  T extends "many2one" ? string | number | null :
-  T extends "one2many" ? Record<string, unknown>[] :
-  unknown;
+type FieldValueByType<T extends FieldType> = T extends "boolean"
+  ? boolean
+  : T extends "integer" | "float" | "currency" | "decimal"
+    ? number | null
+    : T extends "date" | "datetime" | "time"
+      ? string | Date | null
+      : T extends "many2one"
+        ? string | number | null
+        : T extends "one2many"
+          ? Record<string, unknown>[]
+          : unknown;
 
 export type DiscriminatedFieldProps = {
   [K in FieldType]: {
@@ -189,12 +193,20 @@ export interface RendererFieldProps {
   invalid?: boolean;
 }
 
-type DiscriminatedPropsFor<T extends FieldType> = Extract<DiscriminatedFieldProps, { field: { type: T } }>;
+type DiscriminatedPropsFor<T extends FieldType> = Extract<
+  DiscriminatedFieldProps,
+  { field: { type: T } }
+>;
 type NumericFieldType = "integer" | "float" | "currency" | "decimal";
 type DateLikeFieldType = "date" | "datetime" | "time";
-type FallbackFieldType = Exclude<FieldType, "boolean" | NumericFieldType | DateLikeFieldType | "many2one" | "one2many">;
+type FallbackFieldType = Exclude<
+  FieldType,
+  "boolean" | NumericFieldType | DateLikeFieldType | "many2one" | "one2many"
+>;
 
-function normalizeToDiscriminatedProps(props: RendererFieldProps | DiscriminatedFieldProps): DiscriminatedFieldProps {
+function normalizeToDiscriminatedProps(
+  props: RendererFieldProps | DiscriminatedFieldProps
+): DiscriminatedFieldProps {
   const { field, value, onChange, readonly = false, invalid } = props;
   const emitChange = (next: unknown) => onChange?.(next as never);
 
@@ -259,7 +271,10 @@ function normalizeToDiscriminatedProps(props: RendererFieldProps | Discriminated
     case "date": {
       const normalized: DiscriminatedPropsFor<"date"> = {
         field: field as MetaFieldOfType<"date">,
-        value: value == null || typeof value === "string" || value instanceof Date ? value : String(value),
+        value:
+          value == null || typeof value === "string" || value instanceof Date
+            ? value
+            : String(value),
         onChange: (next: string | Date | null) => emitChange(next),
         readonly,
         invalid,
@@ -271,7 +286,10 @@ function normalizeToDiscriminatedProps(props: RendererFieldProps | Discriminated
     case "datetime": {
       const normalized: DiscriminatedPropsFor<"datetime"> = {
         field: field as MetaFieldOfType<"datetime">,
-        value: value == null || typeof value === "string" || value instanceof Date ? value : String(value),
+        value:
+          value == null || typeof value === "string" || value instanceof Date
+            ? value
+            : String(value),
         onChange: (next: string | Date | null) => emitChange(next),
         readonly,
         invalid,
@@ -283,7 +301,10 @@ function normalizeToDiscriminatedProps(props: RendererFieldProps | Discriminated
     case "time": {
       const normalized: DiscriminatedPropsFor<"time"> = {
         field: field as MetaFieldOfType<"time">,
-        value: value == null || typeof value === "string" || value instanceof Date ? value : String(value),
+        value:
+          value == null || typeof value === "string" || value instanceof Date
+            ? value
+            : String(value),
         onChange: (next: string | Date | null) => emitChange(next),
         readonly,
         invalid,
@@ -295,7 +316,10 @@ function normalizeToDiscriminatedProps(props: RendererFieldProps | Discriminated
     case "many2one": {
       const normalized: DiscriminatedPropsFor<"many2one"> = {
         field: field as MetaFieldOfType<"many2one">,
-        value: value == null || typeof value === "string" || typeof value === "number" ? value : String(value),
+        value:
+          value == null || typeof value === "string" || typeof value === "number"
+            ? value
+            : String(value),
         onChange: (next: string | number | null) => emitChange(next),
         readonly,
         invalid,

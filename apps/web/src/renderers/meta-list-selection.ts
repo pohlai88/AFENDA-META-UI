@@ -106,9 +106,7 @@ export function toggleRowSelection(
 
   return {
     ...normalized,
-    ids: checked
-      ? unique([...normalized.ids, rowId])
-      : normalized.ids.filter((id) => id !== rowId),
+    ids: checked ? unique([...normalized.ids, rowId]) : normalized.ids.filter((id) => id !== rowId),
   };
 }
 
@@ -189,7 +187,10 @@ export function isAllPageRowsSelected(
   pageRowIds: string[],
   queryHash: string
 ): boolean {
-  return pageRowIds.length > 0 && getPageSelectedIds(selection, pageRowIds, queryHash).length === pageRowIds.length;
+  return (
+    pageRowIds.length > 0 &&
+    getPageSelectedIds(selection, pageRowIds, queryHash).length === pageRowIds.length
+  );
 }
 
 export function isSomePageRowsSelected(

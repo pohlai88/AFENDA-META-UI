@@ -79,8 +79,8 @@ describe("generatePersonalizedSuggestions", () => {
         includeUnderscore: true,
       });
 
-      const withInitials = suggestions.find((s) =>
-        s.value.includes("jd") && s.personalizationLevel === "user-derived"
+      const withInitials = suggestions.find(
+        (s) => s.value.includes("jd") && s.personalizationLevel === "user-derived"
       );
       expect(withInitials).toBeDefined();
       expect(withInitials?.reason).toContain("initials");
@@ -93,9 +93,7 @@ describe("generatePersonalizedSuggestions", () => {
         includeUnderscore: true,
       });
 
-      const withYear = suggestions.find((s) =>
-        s.value === "alex_2026"
-      );
+      const withYear = suggestions.find((s) => s.value === "alex_2026");
       expect(withYear).toBeDefined();
       expect(withYear?.reason).toContain("year");
     });
@@ -107,8 +105,8 @@ describe("generatePersonalizedSuggestions", () => {
         includeLocation: true,
       });
 
-      const withLocation = suggestions.find((s) =>
-        s.value.includes("hcm") && s.personalizationLevel === "location-based"
+      const withLocation = suggestions.find(
+        (s) => s.value.includes("hcm") && s.personalizationLevel === "location-based"
       );
       expect(withLocation).toBeDefined();
     });
@@ -120,8 +118,8 @@ describe("generatePersonalizedSuggestions", () => {
         includeUnderscore: true,
       });
 
-      const withTeam = suggestions.find((s) =>
-        s.value.includes("manchester") && s.personalizationLevel === "preference-based"
+      const withTeam = suggestions.find(
+        (s) => s.value.includes("manchester") && s.personalizationLevel === "preference-based"
       );
       expect(withTeam).toBeDefined();
     });
@@ -132,8 +130,8 @@ describe("generatePersonalizedSuggestions", () => {
         userContext,
       });
 
-      const hybrid = suggestions.find((s) =>
-        s.value === "alex2026jd" && s.personalizationLevel === "user-derived"
+      const hybrid = suggestions.find(
+        (s) => s.value === "alex2026jd" && s.personalizationLevel === "user-derived"
       );
       expect(hybrid).toBeDefined();
     });
@@ -144,8 +142,8 @@ describe("generatePersonalizedSuggestions", () => {
         userContext,
       });
 
-      const hybrid = suggestions.find((s) =>
-        s.value === "alex2026hcmc" && s.personalizationLevel === "location-based"
+      const hybrid = suggestions.find(
+        (s) => s.value === "alex2026hcmc" && s.personalizationLevel === "location-based"
       );
       expect(hybrid).toBeDefined();
     });
@@ -162,18 +160,11 @@ describe("generatePersonalizedSuggestions", () => {
       const suggestions = generatePersonalizedSuggestions({
         baseValue: "jane",
         userContext,
-        patterns: [
-          "{{base}}_{{year}}",
-          "{{base}}{{initials}}{{year}}",
-        ],
+        patterns: ["{{base}}_{{year}}", "{{base}}{{initials}}{{year}}"],
       });
 
-      expect(suggestions).toContainEqual(
-        expect.objectContaining({ value: "jane_2026" })
-      );
-      expect(suggestions).toContainEqual(
-        expect.objectContaining({ value: "janejs2026" })
-      );
+      expect(suggestions).toContainEqual(expect.objectContaining({ value: "jane_2026" }));
+      expect(suggestions).toContainEqual(expect.objectContaining({ value: "janejs2026" }));
     });
 
     it("handles location in patterns", () => {
@@ -183,9 +174,7 @@ describe("generatePersonalizedSuggestions", () => {
         patterns: ["{{base}}_{{location}}"],
       });
 
-      expect(suggestions).toContainEqual(
-        expect.objectContaining({ value: "jane_sf" })
-      );
+      expect(suggestions).toContainEqual(expect.objectContaining({ value: "jane_sf" }));
     });
   });
 
@@ -319,9 +308,7 @@ describe("extractSuggestionsFromResponse", () => {
 
     const suggestions = extractSuggestionsFromResponse(response, "alex", userContext);
 
-    const hasPersonalized = suggestions.some(
-      (s) => s.personalizationLevel !== "generic"
-    );
+    const hasPersonalized = suggestions.some((s) => s.personalizationLevel !== "generic");
     expect(hasPersonalized).toBe(true);
   });
 });
@@ -344,7 +331,7 @@ describe("real-world scenarios", () => {
 
     expect(suggestions.length).toBeGreaterThan(0);
     const reasons = suggestions.map((s) => s.reason).join(", ");
-    
+
     // Should have variety in personalization
     expect(reasons).toMatch(/initials|year|location|team/i);
   });
@@ -362,9 +349,7 @@ describe("real-world scenarios", () => {
       count: 3,
     });
 
-    const withInitials = suggestions.find((s) =>
-      s.personalizationLevel === "user-derived"
-    );
+    const withInitials = suggestions.find((s) => s.personalizationLevel === "user-derived");
     expect(withInitials).toBeDefined();
   });
 

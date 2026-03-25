@@ -2,7 +2,7 @@
  * Analytics Middleware
  * ====================
  * Redux middleware for tracking user actions to analytics.
- * 
+ *
  * Features:
  * - Pattern-based action tracking
  * - Metadata-driven event enrichment
@@ -61,7 +61,9 @@ export function shouldTrackAnalytics(action: AnalyticsAction): boolean {
 
 type TrackPattern = RegExp;
 
-function getAnalyticsConfig(meta: AnalyticsActionMeta | undefined): AnalyticsMetaConfig | undefined {
+function getAnalyticsConfig(
+  meta: AnalyticsActionMeta | undefined
+): AnalyticsMetaConfig | undefined {
   return typeof meta?.analytics === "object" ? meta.analytics : undefined;
 }
 
@@ -85,7 +87,10 @@ function deriveAnalyticsDomain(actionType: string, config?: AnalyticsMetaConfig)
   }
 }
 
-function deriveAnalyticsOutcome(action: AnalyticsAction, config?: AnalyticsMetaConfig): AnalyticsOutcome {
+function deriveAnalyticsOutcome(
+  action: AnalyticsAction,
+  config?: AnalyticsMetaConfig
+): AnalyticsOutcome {
   if (config?.outcome) {
     return config.outcome;
   }
@@ -101,7 +106,10 @@ function deriveAnalyticsOutcome(action: AnalyticsAction, config?: AnalyticsMetaC
   return "unknown";
 }
 
-export function buildAnalyticsEvent(action: AnalyticsAction, state: Record<string, unknown>): ErpAnalyticsEvent {
+export function buildAnalyticsEvent(
+  action: AnalyticsAction,
+  state: Record<string, unknown>
+): ErpAnalyticsEvent {
   const authState = (state.auth ?? {}) as {
     user?: { id?: string; role?: string } | null;
     isAuthenticated?: boolean;
@@ -126,7 +134,10 @@ export function buildAnalyticsEvent(action: AnalyticsAction, state: Record<strin
     module: analyticsMeta?.module ?? action.meta?.module,
     feature: analyticsMeta?.feature,
     operation: analyticsMeta?.operation,
-    category: analyticsMeta?.category ?? action.meta?.category ?? deriveAnalyticsDomain(action.type, analyticsMeta),
+    category:
+      analyticsMeta?.category ??
+      action.meta?.category ??
+      deriveAnalyticsDomain(action.type, analyticsMeta),
     label: analyticsMeta?.label ?? action.meta?.label,
     tags: analyticsMeta?.tags ?? [],
     properties: analyticsMeta?.properties ?? {},
@@ -137,7 +148,7 @@ export function buildAnalyticsEvent(action: AnalyticsAction, state: Record<strin
 
 /**
  * Analytics middleware
- * 
+ *
  * In production, this would send events to analytics service
  */
 export const analytics: Middleware = (store) => (next) => (action) => {

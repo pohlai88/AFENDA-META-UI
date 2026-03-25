@@ -210,10 +210,7 @@ export function filterEnumOptions(
   });
 }
 
-export function buildConditionSummary(
-  condition: FilterCondition,
-  fields: MetaField[]
-): string {
+export function buildConditionSummary(condition: FilterCondition, fields: MetaField[]): string {
   const field = fields.find((candidate) => candidate.name === condition.field);
   const operators = getOperatorsForField(field);
   const operatorLabel =

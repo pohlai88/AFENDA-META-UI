@@ -30,21 +30,23 @@ export async function runAsyncFormLevelValidation(
   const requestShape = rule.asyncValidate.requestShape ?? "legacy";
 
   try {
-    const requestUrl = method === "GET"
-      ? appendQueryParam(rule.asyncValidate.url, "scope", cacheScope)
-      : rule.asyncValidate.url;
+    const requestUrl =
+      method === "GET"
+        ? appendQueryParam(rule.asyncValidate.url, "scope", cacheScope)
+        : rule.asyncValidate.url;
 
-    const requestBody = method === "POST"
-      ? requestShape === "contract-v1"
-        ? JSON.stringify({
-            scope: cacheScope,
-            values,
-            startField: rule.startField,
-            endField: rule.endField,
-            targetField: rule.targetField,
-          })
-        : JSON.stringify(values)
-      : undefined;
+    const requestBody =
+      method === "POST"
+        ? requestShape === "contract-v1"
+          ? JSON.stringify({
+              scope: cacheScope,
+              values,
+              startField: rule.startField,
+              endField: rule.endField,
+              targetField: rule.targetField,
+            })
+          : JSON.stringify(values)
+        : undefined;
 
     const response = await fetch(requestUrl, {
       method,
@@ -56,15 +58,17 @@ export async function runAsyncFormLevelValidation(
       body: requestBody,
     });
 
-    const data = await response
-      .json()
-      .catch(() => ({} as Record<string, unknown>)) as Record<string, unknown>;
+    const data = (await response.json().catch(() => ({}) as Record<string, unknown>)) as Record<
+      string,
+      unknown
+    >;
 
     const valid = typeof data.valid === "boolean" ? data.valid : response.ok;
     const responseMessage = typeof data.message === "string" ? data.message : undefined;
-    const issuePath = typeof data.path === "string"
-      ? data.path
-      : rule.targetField ?? rule.endField ?? rule.startField ?? "";
+    const issuePath =
+      typeof data.path === "string"
+        ? data.path
+        : (rule.targetField ?? rule.endField ?? rule.startField ?? "");
 
     if (!response.ok && responseMessage) {
       return { message: responseMessage, path: issuePath, cacheable: true };

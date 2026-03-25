@@ -1,6 +1,11 @@
 export { buildDiff } from "./diffBuilder.js";
 export { detectChanges, trackCreate, trackDelete } from "./changeDetector.js";
-export { logAuditEntry, queryAuditLog, getAuditLogForEntity, clearAuditLog } from "./auditLogger.js";
+export {
+  logAuditEntry,
+  queryAuditLog,
+  getAuditLogForEntity,
+  clearAuditLog,
+} from "./auditLogger.js";
 export { maskValue, formatTimeline } from "./timelineFormatter.js";
 
 // Decision audit (Phase 4)

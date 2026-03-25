@@ -2,13 +2,13 @@
  * App Shell
  * ==========
  * Main application layout with collapsible sidebar, top bar, and content area.
- * 
+ *
  * Features:
  * - Collapsible sidebar with module/model navigation
  * - Top bar with breadcrumb, user menu, theme toggle
  * - Responsive design (mobile-friendly)
  * - Sidebar state managed by Zustand store (auto-persisted)
- * 
+ *
  * State Management:
  * - Sidebar → Zustand (useSidebarStore)
  */
@@ -55,9 +55,7 @@ export function AppShell() {
 
     addNotification({
       title: isOpen ? "Navigation opened" : "Navigation collapsed",
-      message: isOpen
-        ? "Sidebar navigation is now visible."
-        : "Sidebar navigation is now hidden.",
+      message: isOpen ? "Sidebar navigation is now visible." : "Sidebar navigation is now hidden.",
       type: "info",
     });
   }, [addNotification, dispatch, isOpen]);

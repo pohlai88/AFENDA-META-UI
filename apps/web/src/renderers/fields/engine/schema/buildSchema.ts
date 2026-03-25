@@ -43,7 +43,11 @@ export function buildObjectShape(
       : inheritedConditions;
 
     if (isFieldGroupConfig(field)) {
-      const nestedResult = buildObjectShape(field.fields, effectiveConditions, joinPath(basePath, field.name));
+      const nestedResult = buildObjectShape(
+        field.fields,
+        effectiveConditions,
+        joinPath(basePath, field.name)
+      );
       shape[field.name] = z.object(nestedResult.shape);
       rules.push(...nestedResult.rules);
       return;
@@ -62,7 +66,9 @@ export function buildObjectShape(
               return;
             }
 
-            const isVisible = rule.conditions.every((condition) => isConditionSatisfied(condition, normalizedValues));
+            const isVisible = rule.conditions.every((condition) =>
+              isConditionSatisfied(condition, normalizedValues)
+            );
             if (!isVisible) {
               return;
             }
@@ -202,7 +208,9 @@ export function buildZodSchemaFromFormConfig(form: FormConfig | FieldConfig[]) {
       const normalizedValues = values as DynamicFormValues;
 
       compiled.rules.forEach((rule) => {
-        const isVisible = rule.conditions.every((condition) => isConditionSatisfied(condition, normalizedValues, rule.scopePath));
+        const isVisible = rule.conditions.every((condition) =>
+          isConditionSatisfied(condition, normalizedValues, rule.scopePath)
+        );
         if (!isVisible) {
           return;
         }

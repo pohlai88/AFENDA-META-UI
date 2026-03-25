@@ -92,9 +92,7 @@ function compileField(f: IntrospectedField): MetaField {
 
 /** Build a default MetaFormView — all non-id+timestamp fields in one group. */
 function buildFormView(fields: MetaField[]): MetaFormView {
-  const visible = fields.filter(
-    (f) => !["createdAt", "updatedAt"].includes(f.name)
-  );
+  const visible = fields.filter((f) => !["createdAt", "updatedAt"].includes(f.name));
   return {
     type: "form",
     groups: [
@@ -153,9 +151,7 @@ export function compileModel(model: IntrospectedModel): ModelMeta {
 
 /** "salesOrderLine" → "sales_order_line" */
 function camelToSnake(str: string): string {
-  return str
-    .replace(/([A-Z])/g, (m) => "_" + m.toLowerCase())
-    .replace(/^_/, "");
+  return str.replace(/([A-Z])/g, (m) => "_" + m.toLowerCase()).replace(/^_/, "");
 }
 
 /** "sales_order_line" | "salesOrderLine" → "Sales Order Line" */

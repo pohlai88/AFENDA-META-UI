@@ -89,9 +89,7 @@ export function RegistrationFormWithSuggestions() {
 
       {/* Regular email field (no suggestions) */}
       <div>
-        <label className="block text-sm font-medium text-gray-900 mb-1">
-          Email Address
-        </label>
+        <label className="block text-sm font-medium text-gray-900 mb-1">Email Address</label>
         <input
           type="email"
           placeholder="you@example.com"
@@ -101,9 +99,7 @@ export function RegistrationFormWithSuggestions() {
 
       {/* Password field */}
       <div>
-        <label className="block text-sm font-medium text-gray-900 mb-1">
-          Password
-        </label>
+        <label className="block text-sm font-medium text-gray-900 mb-1">Password</label>
         <input
           type="password"
           placeholder="••••••••"
@@ -281,8 +277,8 @@ export function ServerDrivenFormWithSuggestions() {
     <div className="p-4">
       <h2>Form with server-driven config (see `serverDrivenFormConfig`)</h2>
       <p className="text-sm text-gray-600 mt-2">
-        When loaded with DynamicFormRHF, the asyncValidate configs with
-        `enableSuggestions: true` will automatically use personalized suggestions.
+        When loaded with DynamicFormRHF, the asyncValidate configs with `enableSuggestions: true`
+        will automatically use personalized suggestions.
       </p>
       <pre className="bg-gray-100 p-4 rounded mt-4 text-xs overflow-auto max-h-64">
         {JSON.stringify(serverDrivenFormConfig, null, 2)}
@@ -330,4 +326,3 @@ export function ServerDrivenFormWithSuggestions() {
  *   });
  * });
  */
-

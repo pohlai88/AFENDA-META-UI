@@ -29,11 +29,7 @@ declare global {
  * Middleware that attaches a ResolutionContext to the request.
  * Called after authMiddleware to ensure session exists.
  */
-export function tenantContextMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function tenantContextMiddleware(req: Request, res: Response, next: NextFunction): void {
   const session = (req as any).session as SessionContext | undefined;
 
   if (!session) {
@@ -49,8 +45,7 @@ export function tenantContextMiddleware(
   }
 
   // Build ResolutionContext from session
-  const tenantId =
-    session.tenantId ?? req.headers["x-tenant-id"] ?? "default";
+  const tenantId = session.tenantId ?? req.headers["x-tenant-id"] ?? "default";
   const departmentId = session.departmentId ?? req.headers["x-department-id"];
   const industry = session.industry;
 

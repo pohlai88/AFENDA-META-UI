@@ -63,7 +63,7 @@ vi.mock("../audit/decisionAuditLogger.js", () => ({
   },
   getUserAuditTrail(tenantId: string, userId: string) {
     return auditState.store.filter(
-      (entry) => entry.tenantId === tenantId && entry.userId === userId,
+      (entry) => entry.tenantId === tenantId && entry.userId === userId
     );
   },
   verifyDecisionCompliance() {
@@ -93,11 +93,7 @@ import {
 import { clearPolicies, registerPolicy } from "../policy/policyRegistry.js";
 import { evaluatePoliciesWithTenantContext } from "../policy/policyEvaluator.js";
 import { clearRules, evaluateRule, type RuleDefinition } from "../rules/index.js";
-import {
-  CachedResolution,
-  clearTenants,
-  registerTenant,
-} from "./index.js";
+import { CachedResolution, clearTenants, registerTenant } from "./index.js";
 
 vi.mock("./tenantRepository.js", () => ({
   dbGetTenant: vi.fn().mockResolvedValue(null),
@@ -291,9 +287,7 @@ describe("E2E: Cached Rule Evaluation and Audit Continuity", () => {
       limit: 50,
     });
 
-    const missEvents = metadataEvents.filter((entry) =>
-      entry.scope.endsWith(".cache_miss"),
-    );
+    const missEvents = metadataEvents.filter((entry) => entry.scope.endsWith(".cache_miss"));
 
     expect(missEvents.length).toBeGreaterThanOrEqual(2);
   });
@@ -304,7 +298,7 @@ describe("E2E: Cached Rule Evaluation and Audit Continuity", () => {
       policyContext(-1),
       tenantContext,
       globalMetadata,
-      "finance",
+      "finance"
     );
 
     expect(ruleResult.passed).toBe(true);
@@ -339,12 +333,7 @@ describe("E2E: Cached Rule Evaluation and Audit Continuity", () => {
 
   it("supports adding external events into an existing decision chain", () => {
     evaluateRule(computeRule, ruleContext(900), globalMetadata);
-    evaluatePoliciesWithTenantContext(
-      policyContext(-10),
-      tenantContext,
-      globalMetadata,
-      "finance",
-    );
+    evaluatePoliciesWithTenantContext(policyContext(-10), tenantContext, globalMetadata, "finance");
 
     const events = queryDecisionAuditLog({
       tenantId: tenantContext.tenantId,

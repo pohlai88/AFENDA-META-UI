@@ -21,11 +21,13 @@ All core functionality works. All performance optimizations completed.
 ### ✅ 1. Policy DSL Grammar — COMPLETE (100%)
 
 **Spec Requirements** (ui-system.md lines 12-82):
+
 - EBNF grammar with operators, comparators, logical ops, functions
 - Tokenizer → AST → Interpreter pipeline
 - Support for: simple rules, cross-model (dots), IN operator, IF/THEN/BLOCK, date functions, role checks
 
 **Implementation**:
+
 - ✅ Full tokenizer: [apps/api/src/policy/dsl/tokenizer.ts](apps/api/src/policy/dsl/tokenizer.ts) (155 lines)
 - ✅ Recursive descent parser: [apps/api/src/policy/dsl/parser.ts](apps/api/src/policy/dsl/parser.ts) (300+ lines)
 - ✅ AST types: [apps/api/src/policy/dsl/ast.ts](apps/api/src/policy/dsl/ast.ts) (91 lines)
@@ -42,11 +44,13 @@ All core functionality works. All performance optimizations completed.
 ### ✅ 2. Layout Rendering Algorithm — COMPLETE (100%)
 
 **Spec Requirements** (ui-system.md lines 84-159):
+
 - Pipeline: Layout Tree → Normalize → Resolve Visibility → Flatten → Virtualize → Render
 - Node types: tabs, grid, section, field, custom
 - Performance: virtual scrolling, mount-on-demand, memoization, flatten render map, cached rule results
 
 **Implementation**:
+
 - ✅ Server-side engine: [apps/api/src/layout/index.ts](apps/api/src/layout/index.ts) (260 lines)
   - ✅ Layout registry (in-memory)
   - ✅ Resolution (role-specific → default → first available)
@@ -63,6 +67,7 @@ All core functionality works. All performance optimizations completed.
 **Test Coverage**: 14 tests in `apps/api/src/layout/index.test.ts`, all passing
 
 **Performance Optimizations** (COMPLETED):
+
 1. ✅ **Virtual scrolling for long field lists** (spec line 152)
    - Implementation: react-window's List component
    - Activated for sections with 100+ children
@@ -84,6 +89,7 @@ All core functionality works. All performance optimizations completed.
 ### ✅ 3. Metadata Database Schema — COMPLETE (100%)
 
 **Spec Requirements** (ui-system.md lines 161-283):
+
 - `entities` table
 - `fields` table (compute_formula, visibility_rule, access_roles, audit_level)
 - `layouts` table (layout_json JSONB, version, is_active)
@@ -93,6 +99,7 @@ All core functionality works. All performance optimizations completed.
 **Implementation**: [apps/api/src/db/schema/metadata.ts](apps/api/src/db/schema/metadata.ts) (200 lines)
 
 ✅ **All 6 tables exist**:
+
 1. `entities` — uuid PK, name (unique), module, label, description, timestamps
 2. `fields` — entityId FK→entities, name, dataType, businessType, isRequired, isUnique, defaultValue, computeFormula, visibilityRule (JSONB), accessRoles (JSONB), auditLevel, fieldOrder, timestamps
 3. `layouts` — entityId FK→entities, name, viewType (enum), layoutJson (JSONB→LayoutNode), roles (JSONB), version, isActive, isDefault, timestamps
@@ -105,6 +112,7 @@ All core functionality works. All performance optimizations completed.
 ✅ **JSONB typing**: All JSONB columns use `.$type<>()` for TypeScript safety
 
 **Minor Deviation**:
+
 - Spec uses `rule_dsl` (single field), we use `whenDsl` + `validateDsl` (split)
 - **Reasoning**: Cleaner separation of precondition vs. assertion
 - **Impact**: None — semantically equivalent, better API
@@ -116,11 +124,13 @@ All core functionality works. All performance optimizations completed.
 ### ✅ 4. Event-Sourcing Architecture — COMPLETE (100%)
 
 **Spec Requirements** (ui-system.md lines 285-376):
+
 - `events` table (aggregate_type, aggregate_id, event_type, event_payload JSONB, metadata JSONB, timestamp)
 - Replay flow: Load events → Sort → Apply reducers → Rebuild state
 - Features: time travel, full history, undo, audit compliance
 
 **Implementation**:
+
 - ✅ Events table in metadata.ts (lines 150-169)
 - ✅ Event store: [apps/api/src/events/eventStore.ts](apps/api/src/events/eventStore.ts) (250 lines)
   - ✅ appendEvent (auto-incrementing version per aggregate)
@@ -136,6 +146,7 @@ All core functionality works. All performance optimizations completed.
 **Test Coverage**: 14 tests in `apps/api/src/events/eventStore.test.ts`, all passing
 
 **Bonus Features** (not in spec):
+
 - ✅ Snapshot optimization for fast replay
 - ✅ Delta events (only replay after snapshot version)
 - ✅ EventMetadata tracking (actor, correlationId, source)
@@ -147,6 +158,7 @@ All core functionality works. All performance optimizations completed.
 ### ✅ 5. Rule Simulation Sandbox — COMPLETE (100%)
 
 **Spec Requirements** (ui-system.md lines 378-470):
+
 - Scenario Builder: create fake business cases
 - Policy Simulator: run all policies, show results
 - Impact Analysis: show pass/fail/warning per policy
@@ -155,6 +167,7 @@ All core functionality works. All performance optimizations completed.
 **Implementation**: [apps/api/src/sandbox/index.ts](apps/api/src/sandbox/index.ts) (200 lines)
 
 ✅ **Functions**:
+
 1. `simulateScenario(scenario, policies?)` — runs all policies, returns SimulationReport
    - Per-policy results (applicable, passed, violation, evaluationTimeMs)
    - Aggregate evaluation (passed, errors, warnings, info)
@@ -166,6 +179,7 @@ All core functionality works. All performance optimizations completed.
 3. `simulateBatch(scenarios, policies?)` — runs multiple scenarios
 
 ✅ **Types**: [packages/meta-types/src/sandbox.ts](packages/meta-types/src/sandbox.ts)
+
 - SimulationScenario
 - PolicySimulationResult
 - SimulationReport
@@ -179,13 +193,13 @@ All core functionality works. All performance optimizations completed.
 
 ## Overall Gaps Summary
 
-| Component              | Coverage | Gaps                           | Priority |
-| ---------------------- | -------- | ------------------------------ | -------- |
-| Policy DSL Grammar     | 100%     | None                           | —        |
-| Layout Rendering       | 100%     | None (all optimizations done)  | —        |
-| Metadata DB Schema     | 100%     | None                           | —        |
-| Event-Sourcing         | 100%     | None (exceeds spec)            | —        |
-| Rule Simulation Sandbox| 100%     | None                           | —        |
+| Component               | Coverage | Gaps                          | Priority |
+| ----------------------- | -------- | ----------------------------- | -------- |
+| Policy DSL Grammar      | 100%     | None                          | —        |
+| Layout Rendering        | 100%     | None (all optimizations done) | —        |
+| Metadata DB Schema      | 100%     | None                          | —        |
+| Event-Sourcing          | 100%     | None (exceeds spec)           | —        |
+| Rule Simulation Sandbox | 100%     | None                          | —        |
 
 **Overall Score**: 100% complete
 
@@ -198,18 +212,20 @@ All core functionality works. All performance optimizations completed.
 **Status**: COMPLETED  
 **Effort**: 3 hours  
 **Files modified**:
+
 - `apps/web/src/renderers/layout/LayoutRenderer.tsx` — Added react-window List component for SectionRenderer children
 - `apps/web/package.json` — Added react-window dependency
 
 **Implementation**:
+
 ```tsx
-import { List } from 'react-window';
+import { List } from "react-window";
 
 const VIRTUAL_SCROLL_THRESHOLD = 100;
 
 const SectionRenderer = React.memo(function SectionRenderer({ node, ctx }) {
   const useVirtualScrolling = node.children.length >= VIRTUAL_SCROLL_THRESHOLD;
-  
+
   const RowComponent = useCallback(
     ({ index, style }) =>
       React.createElement(
@@ -218,9 +234,9 @@ const SectionRenderer = React.memo(function SectionRenderer({ node, ctx }) {
         React.createElement(LayoutNodeRenderer, {
           node: node.children[index],
           ctx,
-        }),
+        })
       ),
-    [node.children, ctx],
+    [node.children, ctx]
   );
 
   return useVirtualScrolling
@@ -233,7 +249,7 @@ const SectionRenderer = React.memo(function SectionRenderer({ node, ctx }) {
       })
     : // Standard rendering for normal sections
       node.children.map((child, i) =>
-        React.createElement(LayoutNodeRenderer, { key: i, node: child, ctx }),
+        React.createElement(LayoutNodeRenderer, { key: i, node: child, ctx })
       );
 });
 ```
@@ -247,9 +263,11 @@ const SectionRenderer = React.memo(function SectionRenderer({ node, ctx }) {
 **Status**: COMPLETED  
 **Effort**: 1 hour  
 **Files modified**:
+
 - `apps/web/src/renderers/layout/LayoutRenderer.tsx` — Added visibility cache with TTL
 
 **Implementation**:
+
 ```ts
 const visibilityCache = new Map<string, boolean>();
 
@@ -293,16 +311,16 @@ function isVisible(
 
 ## Test Coverage Summary
 
-| Component              | Test File                                  | Tests | Status |
-| ---------------------- | ------------------------------------------ | ----- | ------ |
-| Policy DSL             | apps/api/src/policy/policyDSL.test.ts      | 14    | ✅ Pass |
-| Policy Evaluator       | apps/api/src/policy/policyEvaluator.test.ts| 8     | ✅ Pass |
-| Policy Registry        | apps/api/src/policy/policyRegistry.test.ts | 6     | ✅ Pass |
-| Audit Engine           | apps/api/src/audit/*.test.ts               | 28    | ✅ Pass |
-| Layout Engine          | apps/api/src/layout/index.test.ts          | 14    | ✅ Pass |
-| Event Store            | apps/api/src/events/eventStore.test.ts     | 14    | ✅ Pass |
-| Sandbox                | apps/api/src/sandbox/index.test.ts         | 12    | ✅ Pass |
-| **Total**              |                                            | **96**| ✅ Pass |
+| Component        | Test File                                   | Tests  | Status  |
+| ---------------- | ------------------------------------------- | ------ | ------- |
+| Policy DSL       | apps/api/src/policy/policyDSL.test.ts       | 14     | ✅ Pass |
+| Policy Evaluator | apps/api/src/policy/policyEvaluator.test.ts | 8      | ✅ Pass |
+| Policy Registry  | apps/api/src/policy/policyRegistry.test.ts  | 6      | ✅ Pass |
+| Audit Engine     | apps/api/src/audit/\*.test.ts               | 28     | ✅ Pass |
+| Layout Engine    | apps/api/src/layout/index.test.ts           | 14     | ✅ Pass |
+| Event Store      | apps/api/src/events/eventStore.test.ts      | 14     | ✅ Pass |
+| Sandbox          | apps/api/src/sandbox/index.test.ts          | 12     | ✅ Pass |
+| **Total**        |                                             | **96** | ✅ Pass |
 
 **Coverage**: 96/96 tests passing (100%)
 
@@ -310,11 +328,12 @@ function isVisible(
 
 ## Build Verification
 
-✅ **Monorepo Build**: 4/4 packages  
-- `@afenda/meta-types` — ✅ Pass  
-- `@afenda/ui` — ✅ Pass  
-- `api` — ✅ Pass  
-- `@afenda/web` — ✅ Pass  
+✅ **Monorepo Build**: 4/4 packages
+
+- `@afenda/meta-types` — ✅ Pass
+- `@afenda/ui` — ✅ Pass
+- `api` — ✅ Pass
+- `@afenda/web` — ✅ Pass
 
 **Command**: `npx turbo run build`  
 **Duration**: 15.4s  

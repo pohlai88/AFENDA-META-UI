@@ -17,7 +17,15 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import LinkExtension from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { BoldIcon, ItalicIcon, ListIcon, ListOrderedIcon, LinkIcon, Undo2Icon, Redo2Icon } from "lucide-react";
+import {
+  BoldIcon,
+  ItalicIcon,
+  ListIcon,
+  ListOrderedIcon,
+  LinkIcon,
+  Undo2Icon,
+  Redo2Icon,
+} from "lucide-react";
 import type { RendererFieldProps } from "./index.js";
 import { FieldWrapper } from "./FieldWrapper.js";
 import { cn } from "~/lib/utils";
@@ -34,7 +42,10 @@ function ToolbarButton({ onClick, active, disabled, title, children }: ToolbarBu
   return (
     <button
       type="button"
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
       disabled={disabled}
       title={title}
       aria-pressed={active}
@@ -58,7 +69,10 @@ export function RichTextField({ field, value, onChange, readonly }: RendererFiel
   const editor = useEditor({
     extensions: [
       StarterKit,
-      LinkExtension.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
+      LinkExtension.configure({
+        openOnClick: false,
+        HTMLAttributes: { class: "text-primary underline" },
+      }),
       Placeholder.configure({ placeholder: `Enter ${field.label?.toLowerCase() ?? "content"}...` }),
     ],
     content: typeof value === "string" ? value : "",
@@ -136,11 +150,7 @@ export function RichTextField({ field, value, onChange, readonly }: RendererFiel
 
           <div className="w-px h-4 bg-border mx-1" />
 
-          <ToolbarButton
-            onClick={addLink}
-            active={editor?.isActive("link")}
-            title="Insert Link"
-          >
+          <ToolbarButton onClick={addLink} active={editor?.isActive("link")} title="Insert Link">
             <LinkIcon className="h-4 w-4" />
           </ToolbarButton>
 

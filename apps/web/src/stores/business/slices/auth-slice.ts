@@ -2,7 +2,7 @@
  * Auth Slice
  * ==========
  * Redux slice for authentication state management.
- * 
+ *
  * Features:
  * - User authentication state
  * - Login/logout actions
@@ -38,7 +38,7 @@ const initialState: AuthState = {
 
 /**
  * Auth slice
- * 
+ *
  * Usage:
  * ```tsx
  * const user = useSelector((state: RootState) => state.auth.user);
@@ -88,21 +88,14 @@ const authSlice = createSlice({
   },
 });
 
-export const {
-  loginStart,
-  loginSuccess,
-  loginFailure,
-  logout,
-  updateUser,
-  clearError,
-} = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, updateUser, clearError } =
+  authSlice.actions;
 
 export default authSlice.reducer;
 
 // Selectors
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectIsAuthenticated = (state: { auth: AuthState }) =>
-  state.auth.isAuthenticated;
+export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
 
 // Export types

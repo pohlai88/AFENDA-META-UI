@@ -1,12 +1,12 @@
 /**
  * Sales Module
  * ============
- * 
+ *
  * Provides core sales functionality including:
  * - Partner management (customers/vendors)
  * - Product catalog
  * - Sales orders and order lines
- * 
+ *
  * Models: partner, product, product_category, sales_order, sales_order_line
  */
 

@@ -23,24 +23,24 @@ describe("parseNotificationToastDedupeMs", () => {
     expect(parseNotificationToastDedupeMs("1800")).toBe(1800);
   });
 
-    it("uses default for empty string", () => {
-      expect(parseNotificationToastDedupeMs("")).toBe(2500);
-    });
+  it("uses default for empty string", () => {
+    expect(parseNotificationToastDedupeMs("")).toBe(2500);
+  });
 
-    it("accepts exact boundary values without clamping", () => {
-      expect(parseNotificationToastDedupeMs("0")).toBe(0);
-      expect(parseNotificationToastDedupeMs("60000")).toBe(60000);
-    });
+  it("accepts exact boundary values without clamping", () => {
+    expect(parseNotificationToastDedupeMs("0")).toBe(0);
+    expect(parseNotificationToastDedupeMs("60000")).toBe(60000);
+  });
 
-    it("uses default for strings with mixed numeric/non-numeric content", () => {
-      // Number("500ms") is NaN — stricter than parseInt which would silently return 500
-      expect(parseNotificationToastDedupeMs("500ms")).toBe(2500);
-      expect(parseNotificationToastDedupeMs("abc123")).toBe(2500);
-    });
+  it("uses default for strings with mixed numeric/non-numeric content", () => {
+    // Number("500ms") is NaN — stricter than parseInt which would silently return 500
+    expect(parseNotificationToastDedupeMs("500ms")).toBe(2500);
+    expect(parseNotificationToastDedupeMs("abc123")).toBe(2500);
+  });
 
-    it("accepts scientific notation as a valid numeric string", () => {
-      expect(parseNotificationToastDedupeMs("1e3")).toBe(1000);
-    });
+  it("accepts scientific notation as a valid numeric string", () => {
+    expect(parseNotificationToastDedupeMs("1e3")).toBe(1000);
+  });
 });
 
 describe("getAppConfig", () => {
@@ -72,47 +72,47 @@ describe("getAppConfig", () => {
     expect(config.permissionsBootstrapEndpoint).toBe("/meta/bootstrap");
   });
 
-    it("applies all defaults when env is empty", () => {
-      const config = getAppConfig({});
-      expect(config.notificationToastDedupeMs).toBe(2500);
-      expect(config.permissionsBootstrapEndpoint).toBe("/meta/bootstrap");
-      expect(config.analyticsProviders).toEqual([]);
-      expect(config.analyticsBatchSize).toBe(20);
-      expect(config.analyticsFlushIntervalMs).toBe(5000);
+  it("applies all defaults when env is empty", () => {
+    const config = getAppConfig({});
+    expect(config.notificationToastDedupeMs).toBe(2500);
+    expect(config.permissionsBootstrapEndpoint).toBe("/meta/bootstrap");
+    expect(config.analyticsProviders).toEqual([]);
+    expect(config.analyticsBatchSize).toBe(20);
+    expect(config.analyticsFlushIntervalMs).toBe(5000);
+  });
+
+  describe("dev warnings", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
-    describe("dev warnings", () => {
-      afterEach(() => {
-        vi.restoreAllMocks();
-      });
-
-      it("emits a console.warn in dev mode when dedupe ms is invalid", () => {
-        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-        getAppConfig({ DEV: true, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "not-a-number" });
-        expect(warnSpy).toHaveBeenCalledOnce();
-        expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining("VITE_NOTIFICATION_TOAST_DEDUPE_MS")
-        );
-      });
-
-      it("does not warn in production mode for invalid dedupe ms", () => {
-        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-        getAppConfig({ DEV: false, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "not-a-number" });
-        expect(warnSpy).not.toHaveBeenCalled();
-      });
-
-      it("does not warn when a valid dedupe ms is provided in dev mode", () => {
-        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-        getAppConfig({ DEV: true, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "3000" });
-        expect(warnSpy).not.toHaveBeenCalled();
-      });
-
-      it("does not warn when dedupe ms is omitted entirely", () => {
-        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-        getAppConfig({ DEV: true });
-        expect(warnSpy).not.toHaveBeenCalled();
-      });
+    it("emits a console.warn in dev mode when dedupe ms is invalid", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      getAppConfig({ DEV: true, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "not-a-number" });
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("VITE_NOTIFICATION_TOAST_DEDUPE_MS")
+      );
     });
+
+    it("does not warn in production mode for invalid dedupe ms", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      getAppConfig({ DEV: false, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "not-a-number" });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not warn when a valid dedupe ms is provided in dev mode", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      getAppConfig({ DEV: true, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "3000" });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not warn when dedupe ms is omitted entirely", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      getAppConfig({ DEV: true });
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("parsePermissionsBootstrapEndpoint", () => {
@@ -122,20 +122,16 @@ describe("parsePermissionsBootstrapEndpoint", () => {
   });
 
   it("returns trimmed endpoint when provided", () => {
-    expect(parsePermissionsBootstrapEndpoint("  /meta/bootstrap/v2  ")).toBe(
-      "/meta/bootstrap/v2"
-    );
+    expect(parsePermissionsBootstrapEndpoint("  /meta/bootstrap/v2  ")).toBe("/meta/bootstrap/v2");
   });
 
-    it("uses default for empty string", () => {
-      expect(parsePermissionsBootstrapEndpoint("")).toBe("/meta/bootstrap");
-    });
+  it("uses default for empty string", () => {
+    expect(parsePermissionsBootstrapEndpoint("")).toBe("/meta/bootstrap");
+  });
 
-    it("preserves non-default paths as-is after trimming", () => {
-      expect(parsePermissionsBootstrapEndpoint("/api/v2/permissions")).toBe(
-        "/api/v2/permissions"
-      );
-    });
+  it("preserves non-default paths as-is after trimming", () => {
+    expect(parsePermissionsBootstrapEndpoint("/api/v2/permissions")).toBe("/api/v2/permissions");
+  });
 });
 
 describe("analytics config parsing", () => {

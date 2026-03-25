@@ -13,7 +13,7 @@ Phase 3 established the **central nervous system** — the wiring that makes all
 Phase 4 adds **eyes, hands, and voice**:
 
 - **Eyes** — Audit Fabric (observability into business logic execution)
-- **Hands** — Resolution Caching Layer (computational efficiency at scale)  
+- **Hands** — Resolution Caching Layer (computational efficiency at scale)
 - **Voice** — Admin Control Plane (non-technical business users own the system)
 - **Tools** — GraphQL Surface (unified client access to the graph)
 
@@ -53,7 +53,7 @@ Phase 4 adds:
         │         │
         │   ┌─────────────────────┐
         │───┤ Resolution Cache    │ (NEW)
-        │   │ (99% Hit Optimized) │  
+        │   │ (99% Hit Optimized) │
         │   └─────────────────────┘
         │         ↑
 ┌──────────────────────────────────┐
@@ -121,29 +121,29 @@ interface AuditLogEntry {
   timestamp: ISO8601;
   tenantId: string;
   userId?: string;
-  
-  eventType: 
+
+  eventType:
     | "metadata_resolved"
     | "rule_evaluated"
     | "policy_enforced"
     | "workflow_transitioned"
     | "event_propagated";
-    
-  scope: string;  // "model.field.action"
+
+  scope: string; // "model.field.action"
   context: {
     model?: string;
     field?: string;
     workflowId?: string;
     eventId?: string;
   };
-  
+
   decision: {
     input: Record<string, unknown>;
     output: Record<string, unknown>;
-    reasoning?: string;  // Why this outcome
-    layers?: string[];   // Which tenant layers applied
+    reasoning?: string; // Why this outcome
+    layers?: string[]; // Which tenant layers applied
   };
-  
+
   durationMs: number;
   status: "success" | "error";
 }
@@ -152,6 +152,7 @@ interface AuditLogEntry {
 **2. Capture Points**
 
 Inject logging at:
+
 - `resolveMetadata()` — Log each layer applied
 - `evaluateRule()` — Log rule trigger + result
 - `evaluatePoliciesWithTenantContext()` — Log policy enforcement
@@ -228,6 +229,7 @@ For a given resolved layout, show:
 ```
 
 **Files to create/modify:**
+
 - `packages/meta-types/src/audit.ts` — Audit schema
 - `apps/api/src/audit/index.ts` — Audit log interface + implementation
 - `apps/api/src/routes/audit.ts` — HTTP handlers
@@ -258,10 +260,7 @@ For identical resolution contexts, return cached result instead of recomputing l
 ```typescript
 // apps/api/src/tenant/cache.ts
 
-function resolutionCacheKey(
-  model: string,
-  context: ResolutionContext,
-): string {
+function resolutionCacheKey(model: string, context: ResolutionContext): string {
   return JSON.stringify({
     model,
     tenantId: context.tenantId,
@@ -278,29 +277,29 @@ function resolutionCacheKey(
 interface ResolutionCache {
   get(key: string): Record<string, unknown> | null;
   set(key: string, value: Record<string, unknown>, ttlMs?: number): void;
-  invalidate(pattern: string): void;  // Tenant/model pattern
+  invalidate(pattern: string): void; // Tenant/model pattern
 }
 
 function resolveMetadataWithCache(
   model: string,
   globalMeta: Record<string, unknown>,
   ctx: ResolutionContext,
-  cache: ResolutionCache,
+  cache: ResolutionCache
 ): Record<string, unknown> {
   const key = resolutionCacheKey(model, ctx);
-  
+
   // Check cache (default TTL: 5 minutes per entry)
   const cached = cache.get(key);
   if (cached) {
     return cached;
   }
-  
+
   // Compute if miss
   const resolved = resolveMetadata(model, globalMeta, ctx);
-  
+
   // Store (auto-expires)
   cache.set(key, resolved, 5 * 60 * 1000);
-  
+
   return resolved;
 }
 ```
@@ -316,11 +315,11 @@ async function updateTenantMetadata(
   tenantId: string,
   model: string,
   patch: MetadataPatch,
-  cache: ResolutionCache,
+  cache: ResolutionCache
 ): Promise<void> {
   // Apply patch to database
   await db.tenantMetadata.update(tenantId, model, patch);
-  
+
   // Invalidate all resolution caches for this tenant+model
   cache.invalidate(`${tenantId}:${model}:*`);
 }
@@ -333,6 +332,7 @@ async function updateTenantMetadata(
 - **Hybrid**: In-memory + Redis fallback
 
 **Files to create/modify:**
+
 - `apps/api/src/tenant/cache.ts` — Cache interface + implementation
 - `apps/api/src/tenant/index.ts` — Integrate cache into `resolveMetadata()`
 - `apps/api/src/tenant/management.ts` — Invalidation on updates
@@ -406,6 +406,7 @@ This is inherently iterative. Start with:
    - One-click deploy to tenant
 
 **Files to create:**
+
 - `apps/api/src/routes/admin.ts` — Admin API handlers
 - `apps/web/src/components/admin/MetadataOverrideEditor.tsx`
 - `apps/web/src/components/admin/RuleExpressionBuilder.tsx`
@@ -430,19 +431,19 @@ query GetInvoiceWithContext($tenantId: ID!, $invoiceId: ID!) {
       # Resolved metadata for this tenant
       fields { name type visibility rules }
     }
-    
+
     invoice(id: $invoiceId) {
       # Data shaped by layout
       id amount tax_code
-      
+
       # Computed fields via rules
       totalTax: computed(rule: "compute_tax_amount")
-      
+
       # Visibility via rules
       financeNotes @include(if: isFieldVisible(rule: "show_finance_notes")) {
         text author createdAt
       }
-      
+
       # Workflow state
       workflow {
         currentState possibleTransitions
@@ -506,7 +507,7 @@ const resolvers = {
       };
     },
   },
-  
+
   Invoice: {
     computed: (invoice, { rule }, ctx) => {
       return evaluateRule(rule, invoice, ctx.tenantContext);
@@ -520,20 +521,21 @@ const resolvers = {
 ```typescript
 // apps/api/src/routes/graphql.ts
 
-router.post('/graphql', async (req, res) => {
+router.post("/graphql", async (req, res) => {
   const { query, variables } = req.body;
-  
+
   // Context includes tenantContext from middleware
   const result = await graphqlExecute(schema, query, variables, {
     req,
     tenantContext: req.tenantContext,
   });
-  
+
   res.json(result);
 });
 ```
 
 **Files to create:**
+
 - `apps/api/src/graphql/schema.ts` — Type definitions
 - `apps/api/src/graphql/resolvers.ts` — Query resolvers
 - `apps/api/src/routes/graphql.ts` — HTTP handler
@@ -551,7 +553,7 @@ Week 1-2: Audit Fabric
 
 Week 2: Resolution Caching
   ├─ Cache implementation
-  ├─ Invalidation strategy  
+  ├─ Invalidation strategy
   └─ Performance benchmarks
 
 Week 3-4: Admin Control Plane
@@ -570,21 +572,25 @@ Week 4+: GraphQL Surface Layer
 ## Success Metrics
 
 ### Audit Fabric
+
 - [ ] 100% of decisions captured in audit log
 - [ ] Query API returns full decision chain in <100ms
 - [ ] Can replay any business decision from audit trail
 
 ### Resolution Caching
+
 - [ ] 90%+ cache hit rate for typical workloads
 - [ ] Metadata resolution time <10ms (cached) vs 50-200ms (uncached)
 - [ ] Memory footprint <100MB per 1M unique resolution contexts
 
 ### Admin Control Plane
+
 - [ ] Business users (non-Dev) can modify tenant metadata without code
 - [ ] Workflow deployment time <5s
 - [ ] Rule expression validation provides real-time feedback
 
 ### GraphQL Surface Layer
+
 - [ ] Single GraphQL query replaces 3-5 HTTP calls
 - [ ] Latency improvement: 40-60% reduction on typical workflows
 - [ ] Type safety for client code generation
@@ -595,16 +601,17 @@ Week 4+: GraphQL Surface Layer
 
 After Phase 4, the system will have achieved:
 
-| Attribute | Capability |
-|-----------|-----------|
-| **Determinism** | Audit chain proves reproducibility |
-| **Scalability** | Caching handles 10k+ tenants efficiently |
-| **Approachability** | Non-developers can configure platform |
-| **Efficiency** | GraphQL reduces client/server chattiness |
-| **Composability** | Building blocks can be recombined |
-| **Traceability** | Every decision is logged + queryable |
+| Attribute           | Capability                               |
+| ------------------- | ---------------------------------------- |
+| **Determinism**     | Audit chain proves reproducibility       |
+| **Scalability**     | Caching handles 10k+ tenants efficiently |
+| **Approachability** | Non-developers can configure platform    |
+| **Efficiency**      | GraphQL reduces client/server chattiness |
+| **Composability**   | Building blocks can be recombined        |
+| **Traceability**    | Every decision is logged + queryable     |
 
 This positions the platform for:
+
 - Multi-tenant SaaS at scale
 - Enterprise compliance audits
 - Business user autonomy
@@ -615,21 +622,25 @@ This positions the platform for:
 ## Decision Gates
 
 ### Gate 1: Audit Fabric Sign-Off (End of Week 2)
+
 - [ ] Audit API queries verified against business requirements
 - [ ] Capture points validated to cover all decision types
 - [ ] Performance acceptable (<2% overhead)
 
 ### Gate 2: Caching Performance (End of Week 2)
+
 - [ ] Hit rates meet 90% target
 - [ ] Memory usage within limits
 - [ ] Invalidation strategy tested
 
 ### Gate 3: Admin UX (End of Week 4)
+
 - [ ] Usability testing with non-technical users
 - [ ] Workflow builders considered "easy to use"
 - [ ] No code required for typical operations
 
 ### Gate 4: GraphQL Integration (Week 4+)
+
 - [ ] Schema matches Truth Graph structure
 - [ ] Client code generation verified
 - [ ] Performance within SLA
@@ -649,14 +660,15 @@ This positions the platform for:
 ## Reference
 
 **Phase 3 Foundations**
+
 - Tenant-aware metadata resolution ✅
 - Event mesh + workflow wiring ✅
 - Rule + policy infrastructure ✅
 - Layout + graph integration ✅
 
 **Phase 4 Builds On**
+
 - Visibility into execution (Audit)
 - Efficiency at scale (Cache)
 - User autonomy (Control Plane)
 - Integrated client access (GraphQL)
-

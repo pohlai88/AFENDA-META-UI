@@ -12,10 +12,7 @@
 
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import {
-  decisionAuditEntries,
-  decisionAuditChains,
-} from "../db/schema/index.js";
+import { decisionAuditEntries, decisionAuditChains } from "../db/schema/index.js";
 import type {
   DecisionAuditEntry,
   DecisionAuditQuery,
@@ -45,15 +42,15 @@ export async function flushBuffer(): Promise<number> {
         timestamp: new Date(entry.timestamp),
         tenantId: entry.tenantId,
         userId: entry.userId ?? null,
-        eventType: entry.eventType as typeof decisionAuditEntries.$inferInsert["eventType"],
+        eventType: entry.eventType as (typeof decisionAuditEntries.$inferInsert)["eventType"],
         scope: entry.scope,
         context: entry.context,
         decision: entry.decision,
         durationMs: entry.durationMs,
-        status: entry.status as typeof decisionAuditEntries.$inferInsert["status"],
+        status: entry.status as (typeof decisionAuditEntries.$inferInsert)["status"],
         error: entry.error ?? null,
         chainId: entry.chainId ?? null,
-      })),
+      }))
     );
     return batch.length;
   } catch (err) {
@@ -89,10 +86,7 @@ export function dbLogDecisionAuditBatch(entries: DecisionAuditEntry[]): void {
   }
 }
 
-export async function dbLinkToChain(
-  chainId: string,
-  entry: DecisionAuditEntry,
-): Promise<void> {
+export async function dbLinkToChain(chainId: string, entry: DecisionAuditEntry): Promise<void> {
   dbLogDecisionAudit(entry, chainId);
 
   // Upsert chain summary
@@ -128,7 +122,7 @@ export async function dbLinkToChain(
 // ── Query Operations ───────────────────────────────────────────────────────
 
 export async function dbQueryDecisionAuditLog(
-  query: DecisionAuditQuery,
+  query: DecisionAuditQuery
 ): Promise<DecisionAuditEntry[]> {
   const conditions = [eq(decisionAuditEntries.tenantId, query.tenantId)];
 
@@ -136,8 +130,8 @@ export async function dbQueryDecisionAuditLog(
     conditions.push(
       eq(
         decisionAuditEntries.eventType,
-        query.eventType as typeof decisionAuditEntries.$inferInsert["eventType"],
-      ),
+        query.eventType as (typeof decisionAuditEntries.$inferInsert)["eventType"]
+      )
     );
   }
   if (query.userId) {
@@ -195,7 +189,7 @@ export async function dbGetDecisionChain(chainId: string): Promise<DecisionAudit
 export async function dbGetDecisionStats(
   tenantId: string,
   eventType: string,
-  timeWindowMs = 3600000,
+  timeWindowMs = 3600000
 ): Promise<{
   count: number;
   avgDurationMs: number;
@@ -219,10 +213,10 @@ export async function dbGetDecisionStats(
         eq(decisionAuditEntries.tenantId, tenantId),
         eq(
           decisionAuditEntries.eventType,
-          eventType as typeof decisionAuditEntries.$inferInsert["eventType"],
+          eventType as (typeof decisionAuditEntries.$inferInsert)["eventType"]
         ),
-        gte(decisionAuditEntries.timestamp, cutoff),
-      ),
+        gte(decisionAuditEntries.timestamp, cutoff)
+      )
     );
 
   const row = result[0];
@@ -238,7 +232,7 @@ export async function dbGetDecisionStats(
 export async function dbGetSlowDecisions(
   tenantId: string,
   thresholdMs: number,
-  limit = 10,
+  limit = 10
 ): Promise<DecisionAuditEntry[]> {
   const rows = await db
     .select()
@@ -246,8 +240,8 @@ export async function dbGetSlowDecisions(
     .where(
       and(
         eq(decisionAuditEntries.tenantId, tenantId),
-        gte(decisionAuditEntries.durationMs, thresholdMs),
-      ),
+        gte(decisionAuditEntries.durationMs, thresholdMs)
+      )
     )
     .orderBy(desc(decisionAuditEntries.durationMs))
     .limit(limit);
@@ -256,16 +250,13 @@ export async function dbGetSlowDecisions(
 
 export async function dbGetAuditFailures(
   tenantId: string,
-  limit = 50,
+  limit = 50
 ): Promise<DecisionAuditEntry[]> {
   const rows = await db
     .select()
     .from(decisionAuditEntries)
     .where(
-      and(
-        eq(decisionAuditEntries.tenantId, tenantId),
-        eq(decisionAuditEntries.status, "error"),
-      ),
+      and(eq(decisionAuditEntries.tenantId, tenantId), eq(decisionAuditEntries.status, "error"))
     )
     .orderBy(desc(decisionAuditEntries.timestamp))
     .limit(limit);
@@ -275,16 +266,13 @@ export async function dbGetAuditFailures(
 export async function dbGetUserAuditTrail(
   tenantId: string,
   userId: string,
-  limit = 100,
+  limit = 100
 ): Promise<DecisionAuditEntry[]> {
   const rows = await db
     .select()
     .from(decisionAuditEntries)
     .where(
-      and(
-        eq(decisionAuditEntries.tenantId, tenantId),
-        eq(decisionAuditEntries.userId, userId),
-      ),
+      and(eq(decisionAuditEntries.tenantId, tenantId), eq(decisionAuditEntries.userId, userId))
     )
     .orderBy(desc(decisionAuditEntries.timestamp))
     .limit(limit);

@@ -2,7 +2,7 @@
  * Notification Store
  * ===================
  * Zustand store for managing notification state.
- * 
+ *
  * Features:
  * - Tracks unread notification count
  * - Manages notification list (future)
@@ -32,7 +32,7 @@ interface NotificationState {
 
 /**
  * Notification state store
- * 
+ *
  * Usage:
  * ```tsx
  * const unreadCount = useNotificationStore((s) => s.unreadCount);
@@ -64,9 +64,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       if (!notification || notification.read) return state;
 
       return {
-        notifications: state.notifications.map((n) =>
-          n.id === id ? { ...n, read: true } : n
-        ),
+        notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
         unreadCount: state.unreadCount - 1,
       };
     }),

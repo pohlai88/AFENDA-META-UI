@@ -106,7 +106,8 @@ describe("usePurchaseOrderActions", () => {
     });
 
     await waitFor(() => {
-      const orders = queryClient.getQueryData<PurchaseOrder[]>(queryKeys.purchaseOrders.list()) ?? [];
+      const orders =
+        queryClient.getQueryData<PurchaseOrder[]>(queryKeys.purchaseOrders.list()) ?? [];
       expect(orders.find((order) => order.id === "PO-1")?.status).toBe("submitted");
     });
 
@@ -135,14 +136,16 @@ describe("usePurchaseOrderActions", () => {
     });
 
     await waitFor(() => {
-      const orders = queryClient.getQueryData<PurchaseOrder[]>(queryKeys.purchaseOrders.list()) ?? [];
+      const orders =
+        queryClient.getQueryData<PurchaseOrder[]>(queryKeys.purchaseOrders.list()) ?? [];
       expect(orders.find((order) => order.id === "PO-1")?.status).toBe("approved");
     });
 
     deferred.reject(new Error("Network down"));
 
     await waitFor(() => {
-      const orders = queryClient.getQueryData<PurchaseOrder[]>(queryKeys.purchaseOrders.list()) ?? [];
+      const orders =
+        queryClient.getQueryData<PurchaseOrder[]>(queryKeys.purchaseOrders.list()) ?? [];
       expect(orders.find((order) => order.id === "PO-1")?.status).toBe("draft");
     });
   });
@@ -180,7 +183,9 @@ describe("usePurchaseOrderActions", () => {
     });
 
     await waitFor(() => {
-      expect(toastError).toHaveBeenCalledWith("Failed to submit purchase order PO-1: No permission");
+      expect(toastError).toHaveBeenCalledWith(
+        "Failed to submit purchase order PO-1: No permission"
+      );
       expect(emitAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "purchaseOrder.submit",

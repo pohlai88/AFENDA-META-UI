@@ -59,10 +59,7 @@ describe("workflow-slice", () => {
 
     it("handles loadInstancesSuccess", () => {
       const instances = [mockInstance];
-      const state = workflowReducer(
-        initialState,
-        loadInstancesSuccess({ instances })
-      );
+      const state = workflowReducer(initialState, loadInstancesSuccess({ instances }));
 
       expect(state.isLoading).toBe(false);
       expect(state.instances.size).toBe(1);
@@ -70,10 +67,7 @@ describe("workflow-slice", () => {
     });
 
     it("handles loadInstancesFailure", () => {
-      const state = workflowReducer(
-        initialState,
-        loadInstancesFailure("Network error")
-      );
+      const state = workflowReducer(initialState, loadInstancesFailure("Network error"));
 
       expect(state.isLoading).toBe(false);
       expect(state.error).toBe("Network error");
@@ -86,10 +80,7 @@ describe("workflow-slice", () => {
     });
 
     it("handles createInstanceSuccess", () => {
-      const state = workflowReducer(
-        initialState,
-        createInstanceSuccess(mockInstance)
-      );
+      const state = workflowReducer(initialState, createInstanceSuccess(mockInstance));
 
       expect(state.isLoading).toBe(false);
       expect(state.instances.size).toBe(1);
@@ -97,10 +88,7 @@ describe("workflow-slice", () => {
     });
 
     it("handles createInstanceFailure", () => {
-      const state = workflowReducer(
-        initialState,
-        createInstanceFailure("Failed to create")
-      );
+      const state = workflowReducer(initialState, createInstanceFailure("Failed to create"));
 
       expect(state.isLoading).toBe(false);
       expect(state.error).toBe("Failed to create");
@@ -133,10 +121,7 @@ describe("workflow-slice", () => {
     });
 
     it("handles updateInstanceFailure", () => {
-      const state = workflowReducer(
-        initialState,
-        updateInstanceFailure("Update failed")
-      );
+      const state = workflowReducer(initialState, updateInstanceFailure("Update failed"));
 
       expect(state.isLoading).toBe(false);
       expect(state.error).toBe("Update failed");
@@ -147,10 +132,7 @@ describe("workflow-slice", () => {
         initialState,
         loadInstancesSuccess({ instances: [mockInstance] })
       );
-      const active = workflowReducer(
-        loaded,
-        setActiveInstance("wf_1")
-      );
+      const active = workflowReducer(loaded, setActiveInstance("wf_1"));
 
       const completed = workflowReducer(
         active,
@@ -176,10 +158,7 @@ describe("workflow-slice", () => {
         initialState,
         loadInstancesSuccess({ instances: [mockInstance] })
       );
-      const active = workflowReducer(
-        loaded,
-        setActiveInstance("wf_1")
-      );
+      const active = workflowReducer(loaded, setActiveInstance("wf_1"));
 
       const cleared = workflowReducer(active, clearInstance("wf_1"));
 
@@ -300,10 +279,7 @@ describe("workflow-slice", () => {
 
   describe("error handling", () => {
     it("clears errors", () => {
-      let state = workflowReducer(
-        initialState,
-        loadInstancesFailure("Error occurred")
-      );
+      let state = workflowReducer(initialState, loadInstancesFailure("Error occurred"));
 
       expect(state.error).toBe("Error occurred");
 

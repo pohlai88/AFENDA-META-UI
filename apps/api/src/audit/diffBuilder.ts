@@ -41,7 +41,10 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 }
 
 /** Resolve the sensitivity level for a field from its metadata. */
-function getFieldSensitivity(fieldName: string, fieldsMap: Map<string, MetaField>): SensitivityLevel {
+function getFieldSensitivity(
+  fieldName: string,
+  fieldsMap: Map<string, MetaField>
+): SensitivityLevel {
   const meta = fieldsMap.get(fieldName);
   return meta?.audit?.sensitivityLevel ?? "low";
 }

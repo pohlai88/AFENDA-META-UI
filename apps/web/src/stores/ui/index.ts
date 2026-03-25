@@ -2,7 +2,7 @@
  * UI Stores
  * ==========
  * Central export for all Zustand UI stores.
- * 
+ *
  * These stores manage lightweight UI state that doesn't require
  * Redux middleware (logging, audit, etc.).
  */

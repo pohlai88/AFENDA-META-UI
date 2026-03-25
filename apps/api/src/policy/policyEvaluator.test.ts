@@ -1,13 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  evaluatePolicies,
-  evaluateExplicitPolicies,
-} from "./policyEvaluator.js";
+import { evaluatePolicies, evaluateExplicitPolicies } from "./policyEvaluator.js";
 import { registerPolicies, clearPolicies } from "./policyRegistry.js";
-import type {
-  PolicyContext,
-  PolicyDefinition,
-} from "@afenda/meta-types";
+import type { PolicyContext, PolicyDefinition } from "@afenda/meta-types";
 
 function makeContext(overrides: Partial<PolicyContext> = {}): PolicyContext {
   return {
@@ -61,9 +55,7 @@ describe("policyEvaluator", () => {
 
     it("fails when a policy is violated", () => {
       registerPolicies([positiveAmountPolicy]);
-      const result = evaluatePolicies(
-        makeContext({ record: { status: "draft", total: -5 } })
-      );
+      const result = evaluatePolicies(makeContext({ record: { status: "draft", total: -5 } }));
       expect(result.passed).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].policyId).toBe("pol-positive");
@@ -86,16 +78,12 @@ describe("policyEvaluator", () => {
         })
       );
       expect(result.passed).toBe(false);
-      expect(result.errors[0].message).toBe(
-        "Only draft invoices may be deleted"
-      );
+      expect(result.errors[0].message).toBe("Only draft invoices may be deleted");
     });
 
     it("collects warnings separately from errors", () => {
       registerPolicies([positiveAmountPolicy, largeInvoiceWarning]);
-      const result = evaluatePolicies(
-        makeContext({ record: { status: "draft", total: 200000 } })
-      );
+      const result = evaluatePolicies(makeContext({ record: { status: "draft", total: 200000 } }));
       expect(result.passed).toBe(true); // warnings don't block
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0].policyId).toBe("pol-large");
@@ -105,10 +93,7 @@ describe("policyEvaluator", () => {
   describe("evaluateExplicitPolicies", () => {
     it("evaluates an explicit list without scope lookup", () => {
       // Don't register anything in the registry
-      const result = evaluateExplicitPolicies(
-        [positiveAmountPolicy],
-        makeContext()
-      );
+      const result = evaluateExplicitPolicies([positiveAmountPolicy], makeContext());
       expect(result.passed).toBe(true);
     });
 

@@ -9,10 +9,8 @@ import * as schema from "../db/schema/index.js";
 //   2. GraphQL introspection → feeding the Meta Compiler pipeline
 const { schema: graphqlSchema } = buildSchema(db);
 
-export async function execute(
-	args: Omit<ExecutionArgs, "schema">
-): Promise<ExecutionResult> {
-	return graphqlExecute({ schema: graphqlSchema, ...args });
+export async function execute(args: Omit<ExecutionArgs, "schema">): Promise<ExecutionResult> {
+  return graphqlExecute({ schema: graphqlSchema, ...args });
 }
 
 export { graphqlSchema };

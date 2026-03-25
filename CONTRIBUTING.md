@@ -50,6 +50,7 @@ pnpm dev
 ### Making Changes
 
 1. **Create a branch** from `master`:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -57,16 +58,19 @@ pnpm dev
 2. **Make your changes** following our code standards
 
 3. **Run tests** to ensure nothing breaks:
+
    ```bash
    pnpm test
    ```
 
 4. **Run CI gates** before committing:
+
    ```bash
    pnpm ci:gate
    ```
 
 5. **Commit your changes**:
+
    ```bash
    git add .
    git commit -m "feat: add new feature"
@@ -144,6 +148,7 @@ describe("validateEmail", () => {
 ```
 
 **Run unit tests:**
+
 ```bash
 pnpm test
 ```
@@ -183,6 +188,7 @@ test("user can log in", async ({ page }) => {
 ```
 
 **Run E2E tests:**
+
 ```bash
 pnpm test:e2e
 ```
@@ -201,7 +207,7 @@ This runs:
 
 1. **Logger Gate** — Validates logging patterns (no `console.log`)
 2. **Export Contracts Gate** — Validates lazy-loaded module exports
-3. *(More gates added as needed)*
+3. _(More gates added as needed)_
 
 ### Individual Gates
 
@@ -224,6 +230,7 @@ pnpm ci:gate --fix
 ```
 
 This will:
+
 - Replace `console.log` with proper logger calls (where safe)
 - Fix other auto-fixable violations
 
@@ -256,7 +263,7 @@ TypeScript **cannot validate** lazy imports:
 // This builds successfully even if MetaListV2 doesn't exist!
 const MetaListV2 = lazy(async () => {
   const module = await import("~/renderers/MetaListV2");
-  return { default: module.MetaListV2 };  // ⚠️ No type checking
+  return { default: module.MetaListV2 }; // ⚠️ No type checking
 });
 ```
 
@@ -285,6 +292,7 @@ Error: Element type is invalid. Received a promise that resolves to: undefined.
 When adding a new lazy-loaded route:
 
 1. **Create the page component**:
+
    ```typescript
    // apps/web/src/pages/new-page.tsx
    export default function NewPage() {
@@ -293,17 +301,19 @@ When adding a new lazy-loaded route:
    ```
 
 2. **Add route definition**:
+
    ```typescript
    // apps/web/src/routes/index.tsx
    const NewPage = lazy(() => import("~/pages/new-page"));
    ```
 
 3. **Add to contract test**:
+
    ```typescript
    // apps/web/src/routes/lazy-pages.contract.test.ts
    const lazyPageModulePaths = [
      // ... existing paths
-     "../pages/new-page",  // ← Add this line
+     "../pages/new-page", // ← Add this line
    ] as const;
    ```
 
@@ -317,6 +327,7 @@ When adding a new lazy-loaded route:
 When adding a metadata-driven renderer:
 
 1. **Create the renderer**:
+
    ```typescript
    // apps/web/src/renderers/MetaGridV2.tsx
    export function MetaGridV2({ model }: MetaGridV2Props) {
@@ -325,6 +336,7 @@ When adding a metadata-driven renderer:
    ```
 
 2. **Create contract test**:
+
    ```typescript
    // apps/web/src/renderers/MetaGridV2.contract.test.ts
    import * as MetaGridV2Module from "./MetaGridV2";
@@ -337,6 +349,7 @@ When adding a metadata-driven renderer:
    ```
 
 3. **Update package script** to include new contract:
+
    ```json
    // apps/web/package.json
    {
@@ -352,6 +365,7 @@ When adding a metadata-driven renderer:
 ### Full Documentation
 
 For complete export contract documentation, see:
+
 - [apps/web/docs/export-contracts.md](./apps/web/docs/export-contracts.md)
 
 ---

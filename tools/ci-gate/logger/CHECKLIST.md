@@ -21,24 +21,24 @@ pnpm ci:logger
 
 # Expected output (current state)
 # ✅ Proper Imports: PASSED
-# ✅ req.log Usage: PASSED  
+# ✅ req.log Usage: PASSED
 # ✅ Message Format: PASSED
 # ❌ No Console Usage: 33 error(s) (in progress)
 ```
 
 ### Files & Locations
 
-| File | Purpose | Lines |
-|------|---------|-------|
-| `tools/ci-gate/logger/index.mjs` | Main entry point | 60 |
-| `tools/ci-gate/logger/README.md` | Full documentation | 450 |
-| `tools/ci-gate/logger/MIGRATION.md` | Migration guide | 200 |
-| `tools/ci-gate/logger/SUMMARY.md` | Implementation summary | 400 |
-| `checks/no-console-usage.mjs` | Console validation | 80 |
-| `checks/proper-imports.mjs` | Import validation | 70 |
-| `checks/req-log-usage.mjs` | Route handler validation | 90 |
-| `checks/message-format.mjs` | API signature validation | 60 |
-| `templates/mock-logger.ts` | Test utilities | 70 |
+| File                                | Purpose                  | Lines |
+| ----------------------------------- | ------------------------ | ----- |
+| `tools/ci-gate/logger/index.mjs`    | Main entry point         | 60    |
+| `tools/ci-gate/logger/README.md`    | Full documentation       | 450   |
+| `tools/ci-gate/logger/MIGRATION.md` | Migration guide          | 200   |
+| `tools/ci-gate/logger/SUMMARY.md`   | Implementation summary   | 400   |
+| `checks/no-console-usage.mjs`       | Console validation       | 80    |
+| `checks/proper-imports.mjs`         | Import validation        | 70    |
+| `checks/req-log-usage.mjs`          | Route handler validation | 90    |
+| `checks/message-format.mjs`         | API signature validation | 60    |
+| `templates/mock-logger.ts`          | Test utilities           | 70    |
 
 **Total**: 9 files, ~1,500 lines
 
@@ -167,19 +167,19 @@ const CHECKS = [
 
 ### Backend (apps/api)
 
-| Check | Status | Details |
-|-------|--------|---------|
+| Check            | Status           | Details                                    |
+| ---------------- | ---------------- | ------------------------------------------ |
 | No Console Usage | 🚧 23 violations | Utility files, middleware, module registry |
-| Proper Imports | ✅ PASSED | All Winston/Morgan removed |
-| req.log Usage | ✅ PASSED | All route handlers migrated |
-| Message Format | ✅ PASSED | Correct Pino API signature |
+| Proper Imports   | ✅ PASSED        | All Winston/Morgan removed                 |
+| req.log Usage    | ✅ PASSED        | All route handlers migrated                |
+| Message Format   | ✅ PASSED        | Correct Pino API signature                 |
 
 ### Frontend (apps/web)
 
-| Check | Status | Details |
-|-------|--------|---------|
-| No Console Usage | 🚧 10 violations | Renderers, hooks, lib utilities |
-| Logger Infrastructure | ⏳ TODO | Client-side logger not yet created |
+| Check                 | Status           | Details                            |
+| --------------------- | ---------------- | ---------------------------------- |
+| No Console Usage      | 🚧 10 violations | Renderers, hooks, lib utilities    |
+| Logger Infrastructure | ⏳ TODO          | Client-side logger not yet created |
 
 ## 🎯 Next Steps
 
@@ -208,12 +208,12 @@ const CHECKS = [
 
 ## 📚 Documentation
 
-| Document | Purpose | Link |
-|----------|---------|------|
-| README.md | Full documentation with examples | README.md |
-| MIGRATION.md | Step-by-step migration guide | MIGRATION.md |
-| SUMMARY.md | Implementation summary | SUMMARY.md |
-| CHECKLIST.md | This file — integration guide | CHECKLIST.md |
+| Document     | Purpose                          | Link         |
+| ------------ | -------------------------------- | ------------ |
+| README.md    | Full documentation with examples | README.md    |
+| MIGRATION.md | Step-by-step migration guide     | MIGRATION.md |
+| SUMMARY.md   | Implementation summary           | SUMMARY.md   |
+| CHECKLIST.md | This file — integration guide    | CHECKLIST.md |
 
 ## 💡 Usage Examples
 
@@ -255,6 +255,7 @@ pnpm ci:logger
 ### Issue: CI gate fails with "Cannot find module 'glob'"
 
 **Solution**: Install dependencies
+
 ```bash
 pnpm install
 ```
@@ -262,6 +263,7 @@ pnpm install
 ### Issue: False positive on legitimate console usage
 
 **Solution**: Add to ALLOWED_FILES
+
 ```javascript
 // tools/ci-gate/logger/checks/no-console-usage.mjs
 const ALLOWED_FILES = [
@@ -273,6 +275,7 @@ const ALLOWED_FILES = [
 ### Issue: CI gate misses actual violations
 
 **Solution**: Refine regex patterns
+
 ```javascript
 // tools/ci-gate/logger/checks/no-console-usage.mjs
 const PATTERNS = [

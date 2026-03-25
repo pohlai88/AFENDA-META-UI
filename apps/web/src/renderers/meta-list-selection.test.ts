@@ -14,13 +14,28 @@ import {
 describe("meta-list-selection", () => {
   it("tracks explicit selection across page transitions", () => {
     const queryHash = createSelectionScopeHash("purchase-orders");
-    const pageOneSelection = togglePageSelection(clearSelection(), ["PO-1", "PO-2"], true, queryHash);
-    const pageOneSnapshot = createSelectionSnapshot(pageOneSelection, ["PO-1", "PO-2"], 4, queryHash);
+    const pageOneSelection = togglePageSelection(
+      clearSelection(),
+      ["PO-1", "PO-2"],
+      true,
+      queryHash
+    );
+    const pageOneSnapshot = createSelectionSnapshot(
+      pageOneSelection,
+      ["PO-1", "PO-2"],
+      4,
+      queryHash
+    );
 
     expect(pageOneSnapshot.selectedCount).toBe(2);
     expect(pageOneSnapshot.ids).toEqual(["PO-1", "PO-2"]);
 
-    const pageTwoSnapshot = createSelectionSnapshot(pageOneSelection, ["PO-3", "PO-4"], 4, queryHash);
+    const pageTwoSnapshot = createSelectionSnapshot(
+      pageOneSelection,
+      ["PO-3", "PO-4"],
+      4,
+      queryHash
+    );
 
     expect(pageTwoSnapshot.selectedCount).toBe(2);
     expect(pageTwoSnapshot.pageSelectedIds).toEqual([]);

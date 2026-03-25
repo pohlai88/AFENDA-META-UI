@@ -167,7 +167,9 @@ export function createAsyncValidationCache<T>(options: AsyncValidationCacheOptio
       return;
     }
 
-    const sortedEntries = [...cache.entries()].sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
+    const sortedEntries = [...cache.entries()].sort(
+      (a, b) => a[1].lastAccessed - b[1].lastAccessed
+    );
     const removeCount = cache.size - options.maxEntries;
 
     for (let index = 0; index < removeCount; index += 1) {

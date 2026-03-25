@@ -20,7 +20,7 @@ import {
   selectVisibleEnumInValues,
   toggleEnumInValue,
 } from "./filter-config";
-import { 
+import {
   Button,
   Input,
   Select,
@@ -71,10 +71,7 @@ const EnumMultiSelectInput = React.memo(function EnumMultiSelectInput({
   const [query, setQuery] = React.useState("");
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
   const selectedValues = React.useMemo(() => getEnumInValues(value), [value]);
-  const filteredOptions = React.useMemo(
-    () => filterEnumOptions(options, query),
-    [options, query]
-  );
+  const filteredOptions = React.useMemo(() => filterEnumOptions(options, query), [options, query]);
   const optionRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
 
   React.useEffect(() => {
@@ -155,8 +152,9 @@ const EnumMultiSelectInput = React.memo(function EnumMultiSelectInput({
     selectedValues.length === 0
       ? "Select values"
       : selectedValues.length === 1
-      ? options.find((opt) => String(opt.value) === selectedValues[0])?.label ?? selectedValues[0]
-      : `${selectedValues.length} selected`;
+        ? (options.find((opt) => String(opt.value) === selectedValues[0])?.label ??
+          selectedValues[0])
+        : `${selectedValues.length} selected`;
 
   return (
     <Popover
@@ -191,7 +189,11 @@ const EnumMultiSelectInput = React.memo(function EnumMultiSelectInput({
           aria-label="Search filter values"
           className="mb-2"
         />
-        <div className="max-h-56 space-y-1 overflow-y-auto" role="listbox" aria-label="Filter values">
+        <div
+          className="max-h-56 space-y-1 overflow-y-auto"
+          role="listbox"
+          aria-label="Filter values"
+        >
           {filteredOptions.map((opt, index) => {
             const optionValue = String(opt.value);
             const isSelected = selectedValues.includes(optionValue);
@@ -281,10 +283,7 @@ const FilterConditionRow = React.memo(function FilterConditionRow({
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2">
       {/* Field selector */}
-      <Select
-        value={condition.field}
-        onValueChange={handleFieldChange}
-      >
+      <Select value={condition.field} onValueChange={handleFieldChange}>
         <SelectTrigger className="min-w-[12rem] flex-1 md:w-44 md:flex-none">
           <SelectValue placeholder="Select field" />
         </SelectTrigger>
@@ -298,10 +297,7 @@ const FilterConditionRow = React.memo(function FilterConditionRow({
       </Select>
 
       {/* Operator selector */}
-      <Select
-        value={condition.op}
-        onValueChange={handleOperatorChange}
-      >
+      <Select value={condition.op} onValueChange={handleOperatorChange}>
         <SelectTrigger className="min-w-[12rem] flex-1 md:w-52 md:flex-none">
           <SelectValue />
         </SelectTrigger>
@@ -331,36 +327,38 @@ const FilterConditionRow = React.memo(function FilterConditionRow({
               </SelectContent>
             </Select>
           ) : inputKind === "enum-multi" && selectedField.options ? (
-              <EnumMultiSelectInput
-                options={selectedField.options}
-                value={condition.value}
-                onChange={(nextValues) =>
-                  onChange({
-                    ...condition,
-                    value: nextValues,
-                  })
-                }
-              />
+            <EnumMultiSelectInput
+              options={selectedField.options}
+              value={condition.value}
+              onChange={(nextValues) =>
+                onChange({
+                  ...condition,
+                  value: nextValues,
+                })
+              }
+            />
           ) : inputKind === "enum-single" && selectedField.options ? (
-              <Select
-                value={String(condition.value ?? "")}
-                onValueChange={(val) => onChange({ ...condition, value: val })}
-              >
-                <SelectTrigger className="min-w-[12rem] flex-1">
-                  <SelectValue placeholder="Select value" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedField.options.map((opt) => (
-                    <SelectItem key={opt.value} value={String(opt.value)}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select
+              value={String(condition.value ?? "")}
+              onValueChange={(val) => onChange({ ...condition, value: val })}
+            >
+              <SelectTrigger className="min-w-[12rem] flex-1">
+                <SelectValue placeholder="Select value" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedField.options.map((opt) => (
+                  <SelectItem key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : (
             <Input
               type={inputKind === "number" ? "number" : "text"}
-              placeholder={condition.op === "like" || condition.op === "ilike" ? "Search..." : "Value"}
+              placeholder={
+                condition.op === "like" || condition.op === "ilike" ? "Search..." : "Value"
+              }
               value={getDisplayValue(condition)}
               onChange={(e) => {
                 onChange({
@@ -375,12 +373,7 @@ const FilterConditionRow = React.memo(function FilterConditionRow({
       )}
 
       {/* Remove button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onRemove}
-        className="shrink-0"
-      >
+      <Button variant="ghost" size="icon" onClick={onRemove} className="shrink-0">
         <X className="h-4 w-4" />
       </Button>
     </div>
@@ -450,11 +443,7 @@ export function DataTableFilter({ fields, value, onChange }: DataTableFilterProp
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold">Filters</h4>
               {activeFiltersCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearAll}
-                >
+                <Button variant="ghost" size="sm" onClick={handleClearAll}>
                   Clear all
                 </Button>
               )}
@@ -478,12 +467,7 @@ export function DataTableFilter({ fields, value, onChange }: DataTableFilterProp
               </div>
             )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddCondition}
-              className="w-full"
-            >
+            <Button variant="outline" size="sm" onClick={handleAddCondition} className="w-full">
               <Plus className="mr-2 h-4 w-4" />
               Add filter
             </Button>

@@ -123,9 +123,7 @@ router.get("/audit/decisions", (req: Request, res: Response) => {
     const query: DecisionAuditQuery = {
       tenantId,
       eventType:
-        eventType && validEventTypes.includes(eventType as string)
-          ? (eventType as any)
-          : undefined,
+        eventType && validEventTypes.includes(eventType as string) ? (eventType as any) : undefined,
       scope: scope ? (scope as string) : undefined,
       userId: userId ? (userId as string) : undefined,
       fromTimestamp: fromTimestamp ? (fromTimestamp as string) : undefined,
@@ -210,7 +208,7 @@ router.get("/audit/stats/:eventType", (req: Request, res: Response) => {
     const stats = getDecisionStats(
       tenantId,
       eventType,
-      timeWindowMs ? parseInt(timeWindowMs as string) : 3600000,
+      timeWindowMs ? parseInt(timeWindowMs as string) : 3600000
     );
 
     res.json(stats);
@@ -246,7 +244,7 @@ router.get("/audit/slow-decisions", (req: Request, res: Response) => {
     const decisions = getSlowDecisions(
       tenantId,
       thresholdMs ? parseInt(thresholdMs as string) : 100,
-      limit ? parseInt(limit as string) : 10,
+      limit ? parseInt(limit as string) : 10
     );
 
     res.json({

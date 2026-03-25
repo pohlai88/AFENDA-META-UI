@@ -4,14 +4,14 @@
  * Global test configuration and DOM matchers
  */
 
-import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
 
 // Cleanup after each test
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 // Mock scrollIntoView (not available in jsdom)
 if (!Element.prototype.scrollIntoView) {
@@ -26,7 +26,9 @@ global.IntersectionObserver = class MockIntersectionObserver implements Intersec
   constructor() {}
   disconnect() {}
   observe() {}
-  takeRecords(): IntersectionObserverEntry[] { return [] }
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
   unobserve() {}
 };
 
@@ -39,7 +41,7 @@ global.ResizeObserver = class MockResizeObserver implements ResizeObserver {
 };
 
 // Mock matchMedia (used by shadcn components)
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
     matches: false,
@@ -51,4 +53,4 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
-})
+});

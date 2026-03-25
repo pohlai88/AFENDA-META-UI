@@ -61,13 +61,14 @@ export const RendererRegistry: RendererRegistryMap = {
           customActions: true,
           responsive: true,
         },
-        description: "Enhanced list renderer with query-wide selection and permission-gated actions",
+        description:
+          "Enhanced list renderer with query-wide selection and permission-gated actions",
         requiredMetaFields: ["fields"],
         optionalMetaFields: ["actions", "filters", "defaultSort"],
       },
     },
   },
-  
+
   form: {
     v1: {
       loader: () => import("./MetaForm"),
@@ -103,7 +104,7 @@ export const RendererRegistry: RendererRegistryMap = {
       },
     },
   },
-  
+
   dashboard: {
     v1: {
       loader: () => import("./MetaDashboard"),
@@ -121,19 +122,19 @@ export const RendererRegistry: RendererRegistryMap = {
       },
     },
   },
-  
+
   detail: {
     // Placeholder for future detail view renderer
   },
-  
+
   grid: {
     // Placeholder for future grid renderer (cards, tiles)
   },
-  
+
   calendar: {
     // Placeholder for future calendar renderer
   },
-  
+
   kanban: {
     // Placeholder for future kanban board renderer
   },
@@ -155,7 +156,7 @@ export function getRenderer(
 export function getLatestRenderer(type: RendererType): RendererRegistration | null {
   const versions = Object.keys(RendererRegistry[type] || {}) as RendererVersion[];
   if (versions.length === 0) return null;
-  
+
   // Sort versions (v3 > v2 > v1)
   const sorted = versions.sort((a, b) => b.localeCompare(a));
   return RendererRegistry[type]?.[sorted[0]] || null;
@@ -183,10 +184,7 @@ export function hasCapability(
 /**
  * Get renderer contract without loading the module
  */
-export function getContract(
-  type: RendererType,
-  version: RendererVersion
-): RendererContract | null {
+export function getContract(type: RendererType, version: RendererVersion): RendererContract | null {
   return getRenderer(type, version)?.contract || null;
 }
 
@@ -203,7 +201,7 @@ export function listRenderers(): Array<{
     version: RendererVersion;
     contract: RendererContract;
   }> = [];
-  
+
   for (const type of Object.keys(RendererRegistry) as RendererType[]) {
     const versions = RendererRegistry[type];
     for (const version of Object.keys(versions) as RendererVersion[]) {
@@ -217,7 +215,7 @@ export function listRenderers(): Array<{
       }
     }
   }
-  
+
   return renderers;
 }
 
@@ -230,16 +228,16 @@ export function validateRegistration(
 ): { valid: boolean; errors: string[] } {
   const registration = getRenderer(type, version);
   const errors: string[] = [];
-  
+
   if (!registration) {
     errors.push(`No registration found for ${type}@${version}`);
     return { valid: false, errors };
   }
-  
+
   if (!registration.loader) {
     errors.push("Missing loader function");
   }
-  
+
   if (!registration.contract) {
     errors.push("Missing contract");
   } else {
@@ -252,10 +250,13 @@ export function validateRegistration(
     if (!registration.contract.type) {
       errors.push("Contract missing type");
     }
-    if (!registration.contract.supportedMetaVersions || registration.contract.supportedMetaVersions.length === 0) {
+    if (
+      !registration.contract.supportedMetaVersions ||
+      registration.contract.supportedMetaVersions.length === 0
+    ) {
       errors.push("Contract missing supportedMetaVersions");
     }
   }
-  
+
   return { valid: errors.length === 0, errors };
 }

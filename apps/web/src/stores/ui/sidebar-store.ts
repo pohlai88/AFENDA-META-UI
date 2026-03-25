@@ -2,7 +2,7 @@
  * Sidebar Store
  * ==============
  * Zustand store for sidebar visibility state.
- * 
+ *
  * Features:
  * - Persists state to localStorage
  * - Simple toggle/open/close actions
@@ -27,7 +27,7 @@ interface SidebarState {
 
 /**
  * Sidebar state store
- * 
+ *
  * Usage:
  * ```tsx
  * const { isOpen, toggle } = useSidebarStore();
@@ -56,9 +56,7 @@ export const useSidebarStore = create<SidebarState>()(
         })),
       collapseModule: (moduleName: string) =>
         set((state) => ({
-          expandedModules: state.expandedModules.filter(
-            (item) => item !== moduleName
-          ),
+          expandedModules: state.expandedModules.filter((item) => item !== moduleName),
         })),
       setExpandedModules: (modules: string[]) =>
         set({ expandedModules: Array.from(new Set(modules)) }),

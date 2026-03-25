@@ -211,14 +211,14 @@ When reviewing PRs:
 
 ## Quick Reference
 
-| Pattern | Old (Winston) | New (Pino) |
-|---------|---------------|------------|
-| Import | `import { logger } from "./middleware/logger.js"` | `import { logger } from "../logging/index.js"` |
-| Simple log | `logger.info("message")` | `logger.info("message")` ✅ |
-| Structured | `logger.info("message", { data })` ❌ | `logger.info({ data }, "message")` ✅ |
-| Error | `logger.error("error", { error: err })` ❌ | `logger.error({ err }, "error")` ✅ |
-| Route error | `logger.error(...)` ❌ | `(req as any).log?.error(...)` ✅ |
-| Child logger | N/A | `createChildLogger("module")` ✅ |
+| Pattern      | Old (Winston)                                     | New (Pino)                                     |
+| ------------ | ------------------------------------------------- | ---------------------------------------------- |
+| Import       | `import { logger } from "./middleware/logger.js"` | `import { logger } from "../logging/index.js"` |
+| Simple log   | `logger.info("message")`                          | `logger.info("message")` ✅                    |
+| Structured   | `logger.info("message", { data })` ❌             | `logger.info({ data }, "message")` ✅          |
+| Error        | `logger.error("error", { error: err })` ❌        | `logger.error({ err }, "error")` ✅            |
+| Route error  | `logger.error(...)` ❌                            | `(req as any).log?.error(...)` ✅              |
+| Child logger | N/A                                               | `createChildLogger("module")` ✅               |
 
 ---
 

@@ -95,10 +95,7 @@ export const adaptLegacyFormMeta: MetadataAdapter<LegacyFormMeta, ModernFormMeta
  * Generic metadata polyfill helper
  * Fills in missing fields with safe defaults
  */
-export function polyfillMetadata<T extends Record<string, any>>(
-  meta: Partial<T>,
-  defaults: T
-): T {
+export function polyfillMetadata<T extends Record<string, any>>(meta: Partial<T>, defaults: T): T {
   return { ...defaults, ...meta };
 }
 
@@ -111,7 +108,7 @@ export function adaptToCapabilities<T extends Record<string, any>>(
   capabilities: Record<string, boolean>
 ): Partial<T> {
   const adapted: Partial<T> = { ...meta };
-  
+
   // Remove features not supported by renderer
   if (!capabilities.bulkActions) {
     delete adapted.bulkActions;
@@ -122,7 +119,7 @@ export function adaptToCapabilities<T extends Record<string, any>>(
   if (!capabilities.sorting) {
     delete adapted.defaultSort;
   }
-  
+
   return adapted;
 }
 
@@ -135,12 +132,12 @@ export function detectMetadataVersion(meta: any): string {
   if (meta.bulkActions || meta.defaultSort || meta.permissions) {
     return "2.0";
   }
-  
+
   // v1.1 indicators
   if (meta.filters && Array.isArray(meta.filters)) {
     return "1.1";
   }
-  
+
   // Default to v1.0
   return "1.0";
 }
@@ -154,12 +151,12 @@ export function adaptMetadata(
   targetVersion: string = "2.0"
 ): ModernListMeta | ModernFormMeta {
   const sourceVersion = detectMetadataVersion(meta);
-  
+
   // If already at target version, return as-is
   if (sourceVersion === targetVersion) {
     return meta;
   }
-  
+
   // Apply version-specific adapters
   if (sourceVersion === "1.0" && targetVersion === "2.0") {
     // Detect type and apply appropriate adapter
@@ -171,7 +168,7 @@ export function adaptMetadata(
       return adaptLegacyFormMeta(meta);
     }
   }
-  
+
   // No adapter needed or available
   return meta;
 }

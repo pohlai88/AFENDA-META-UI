@@ -77,7 +77,7 @@ export function bootstrapMarketplace(): void {
     };
     registerFromRegistry("meta-list-v1", declaration);
   }
-  
+
   // List v2
   if (RendererRegistry.list?.v2) {
     const contract = RendererRegistry.list.v2.contract;
@@ -90,7 +90,7 @@ export function bootstrapMarketplace(): void {
     };
     registerFromRegistry("meta-list-v2", declaration);
   }
-  
+
   // Form v1
   if (RendererRegistry.form?.v1) {
     const contract = RendererRegistry.form.v1.contract;
@@ -103,7 +103,7 @@ export function bootstrapMarketplace(): void {
     };
     registerFromRegistry("meta-form-v1", declaration);
   }
-  
+
   // Form v2
   if (RendererRegistry.form?.v2) {
     const contract = RendererRegistry.form.v2.contract;
@@ -116,7 +116,7 @@ export function bootstrapMarketplace(): void {
     };
     registerFromRegistry("meta-form-v2", declaration);
   }
-  
+
   // Dashboard v1
   if (RendererRegistry.dashboard?.v1) {
     const contract = RendererRegistry.dashboard.v1.contract;
@@ -129,7 +129,7 @@ export function bootstrapMarketplace(): void {
     };
     registerFromRegistry("meta-dashboard-v1", declaration);
   }
-  
+
   console.log(`[Marketplace] Bootstrapped with ${marketplace.list().length} renderers`);
 }
 

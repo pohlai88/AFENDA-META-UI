@@ -53,8 +53,7 @@ export function bootstrapAnalytics(): void {
       }
       case "posthog": {
         const apiKey = import.meta.env.VITE_POSTHOG_API_KEY;
-        const host =
-          import.meta.env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com";
+        const host = import.meta.env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com";
 
         if (apiKey) {
           const g = globalThis as PostHogGlobal;

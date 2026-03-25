@@ -2,7 +2,7 @@
  * Currency Field Component
  * ========================
  * Enhanced currency input with formatting and localization.
- * 
+ *
  * Features:
  * - Currency symbol display
  * - Number formatting (1,000.00)
@@ -40,7 +40,7 @@ export function CurrencyField({
   // Format as currency for display
   const formattedValue = React.useMemo(() => {
     if (numericValue == null) return "";
-    
+
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
@@ -50,9 +50,7 @@ export function CurrencyField({
   }, [numericValue, locale, currency, decimals]);
 
   // Show raw number when focused for easier editing
-  const displayValue = isFocused
-    ? numericValue?.toString() ?? ""
-    : formattedValue;
+  const displayValue = isFocused ? (numericValue?.toString() ?? "") : formattedValue;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -28,12 +28,7 @@ export interface RowActionsMenuProps {
   actions?: MetaAction[];
 }
 
-export function RowActionsMenu({
-  model,
-  recordId,
-  record,
-  actions = [],
-}: RowActionsMenuProps) {
+export function RowActionsMenu({ model, recordId, record, actions = [] }: RowActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const { execute, isExecuting } = useActions(model);
 
@@ -75,7 +70,9 @@ export function RowActionsMenu({
             key={action.id}
             onClick={() => handleExecuteAction(action)}
             disabled={isExecuting}
-            className={action.style === "danger" ? "text-destructive focus:text-destructive" : undefined}
+            className={
+              action.style === "danger" ? "text-destructive focus:text-destructive" : undefined
+            }
           >
             {action.label}
           </DropdownMenuItem>

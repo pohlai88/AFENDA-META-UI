@@ -3,18 +3,16 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { persistUploadFileMock } = vi.hoisted(() => ({
-  persistUploadFileMock: vi.fn(async (params: {
-    originalName: string;
-    mimeType: string;
-    buffer: Buffer;
-  }) => ({
-    fileName: `stored-${params.originalName}`,
-    originalName: params.originalName,
-    mimeType: params.mimeType,
-    size: params.buffer.byteLength,
-    url: `/uploads/stored-${params.originalName}`,
-    uploadedAt: new Date("2026-03-25T00:00:00.000Z").toISOString(),
-  })),
+  persistUploadFileMock: vi.fn(
+    async (params: { originalName: string; mimeType: string; buffer: Buffer }) => ({
+      fileName: `stored-${params.originalName}`,
+      originalName: params.originalName,
+      mimeType: params.mimeType,
+      size: params.buffer.byteLength,
+      url: `/uploads/stored-${params.originalName}`,
+      uploadedAt: new Date("2026-03-25T00:00:00.000Z").toISOString(),
+    })
+  ),
 }));
 
 vi.mock("../uploads/storage.js", () => ({
@@ -26,11 +24,13 @@ import uploadsRouter from "./uploads.js";
 function createApp() {
   const app = express();
   app.use("/api", uploadsRouter);
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Unhandled error",
-    });
-  });
+  app.use(
+    (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unhandled error",
+      });
+    }
+  );
   return app;
 }
 
@@ -113,12 +113,10 @@ describe("/api/uploads route contract", () => {
 
     const oversized = Buffer.alloc(11 * 1024 * 1024, 1);
 
-    const response = await request(app)
-      .post("/api/uploads?kind=file")
-      .attach("file", oversized, {
-        filename: "too-large.bin",
-        contentType: "application/octet-stream",
-      });
+    const response = await request(app).post("/api/uploads?kind=file").attach("file", oversized, {
+      filename: "too-large.bin",
+      contentType: "application/octet-stream",
+    });
 
     expect(response.status).toBe(413);
     expect(response.body.code).toBe("FILE_TOO_LARGE");

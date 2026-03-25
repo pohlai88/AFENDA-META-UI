@@ -22,11 +22,17 @@ export function getBaseSchemaForField(field: LeafFieldConfig): z.ZodTypeAny {
       let numberSchema = z.number({ error: "Please enter a valid number." });
 
       if (field.validate?.min !== undefined) {
-        numberSchema = numberSchema.min(field.validate.min, `Value must be at least ${field.validate.min}.`);
+        numberSchema = numberSchema.min(
+          field.validate.min,
+          `Value must be at least ${field.validate.min}.`
+        );
       }
 
       if (field.validate?.max !== undefined) {
-        numberSchema = numberSchema.max(field.validate.max, `Value must be at most ${field.validate.max}.`);
+        numberSchema = numberSchema.max(
+          field.validate.max,
+          `Value must be at most ${field.validate.max}.`
+        );
       }
 
       return numberSchema;
@@ -71,40 +77,40 @@ export function applyFieldRequiredRule(
   }
 
   if (field.type === "date" || field.type === "datetime" || field.type === "time") {
-    return schema.refine(
-      (value) => {
-        if (value instanceof Date) {
-          return !Number.isNaN(value.getTime());
-        }
+    return schema.refine((value) => {
+      if (value instanceof Date) {
+        return !Number.isNaN(value.getTime());
+      }
 
-        if (typeof value === "string") {
-          return value.trim().length > 0;
-        }
+      if (typeof value === "string") {
+        return value.trim().length > 0;
+      }
 
-        return false;
-      },
-      "This field is required."
-    );
+      return false;
+    }, "This field is required.");
   }
 
   if (field.type === "many2one") {
-    return schema.refine(
-      (value) => {
-        if (typeof value === "number") {
-          return Number.isFinite(value);
-        }
+    return schema.refine((value) => {
+      if (typeof value === "number") {
+        return Number.isFinite(value);
+      }
 
-        if (typeof value === "string") {
-          return value.trim().length > 0;
-        }
+      if (typeof value === "string") {
+        return value.trim().length > 0;
+      }
 
-        return false;
-      },
-      "This field is required."
-    );
+      return false;
+    }, "This field is required.");
   }
 
-  if (field.type === "string" || field.type === "text" || field.type === "email" || field.type === "url" || field.type === "phone") {
+  if (
+    field.type === "string" ||
+    field.type === "text" ||
+    field.type === "email" ||
+    field.type === "url" ||
+    field.type === "phone"
+  ) {
     return z
       .string({ error: "This field is required." })
       .min(1, "This field is required.")

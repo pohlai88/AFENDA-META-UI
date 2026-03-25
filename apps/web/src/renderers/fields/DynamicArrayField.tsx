@@ -60,7 +60,15 @@ interface SortableArrayItemProps {
 }
 
 function SortableArrayItem({ id, disabled, children }: SortableArrayItemProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id,
     disabled,
   });
@@ -111,7 +119,10 @@ function parseDndItemIndex(id: string): number | null {
   return Number.isInteger(parsed) ? parsed : null;
 }
 
-function isConditionSatisfied(condition: FieldShowIfCondition, values: Record<string, unknown>): boolean {
+function isConditionSatisfied(
+  condition: FieldShowIfCondition,
+  values: Record<string, unknown>
+): boolean {
   const controllingValue = values[condition.field];
 
   if (condition.equals !== undefined && controllingValue !== condition.equals) {
@@ -221,7 +232,9 @@ function getDragInstructionText(field: FieldArrayConfig): string {
 }
 
 function toPathSegments(path: string): Array<string | number> {
-  return path.split(".").map((segment) => (Number.isInteger(Number(segment)) ? Number(segment) : segment));
+  return path
+    .split(".")
+    .map((segment) => (Number.isInteger(Number(segment)) ? Number(segment) : segment));
 }
 
 function getValueAtPath(source: unknown, path: string): unknown {
@@ -246,7 +259,11 @@ function getValueAtPath(source: unknown, path: string): unknown {
   }, source);
 }
 
-function setValueAtPath(source: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
+function setValueAtPath(
+  source: Record<string, unknown>,
+  path: string,
+  value: unknown
+): Record<string, unknown> {
   const segments = toPathSegments(path);
 
   const assign = (node: unknown, index: number): unknown => {
@@ -259,9 +276,10 @@ function setValueAtPath(source: Record<string, unknown>, path: string, value: un
         return nextArray;
       }
 
-      const nextObject = node && typeof node === "object" && !Array.isArray(node)
-        ? { ...(node as Record<string, unknown>) }
-        : {};
+      const nextObject =
+        node && typeof node === "object" && !Array.isArray(node)
+          ? { ...(node as Record<string, unknown>) }
+          : {};
       nextObject[segment] = value;
       return nextObject;
     }
@@ -272,9 +290,10 @@ function setValueAtPath(source: Record<string, unknown>, path: string, value: un
       return nextArray;
     }
 
-    const nextObject = node && typeof node === "object" && !Array.isArray(node)
-      ? { ...(node as Record<string, unknown>) }
-      : {};
+    const nextObject =
+      node && typeof node === "object" && !Array.isArray(node)
+        ? { ...(node as Record<string, unknown>) }
+        : {};
     nextObject[segment] = assign(nextObject[segment], index + 1);
     return nextObject;
   };
@@ -307,12 +326,7 @@ export function DynamicArrayField({
   );
 
   const handleArrayItemChange = React.useCallback(
-    (
-      itemField: LeafFieldConfig,
-      value: unknown,
-      fieldPath: string,
-      errorKey: string
-    ) => {
+    (itemField: LeafFieldConfig, value: unknown, fieldPath: string, errorKey: string) => {
       setValues((prev) => setValueAtPath(prev, fieldPath, value));
 
       const nextError = getFieldError(itemField, value);
@@ -348,13 +362,20 @@ export function DynamicArrayField({
             source[node.name] && typeof source[node.name] === "object"
               ? (source[node.name] as Record<string, unknown>)
               : {};
-          collectNewItemErrors(node.fields, nestedSource, buildErrorPath(pathPrefix, node.name), bucket);
+          collectNewItemErrors(
+            node.fields,
+            nestedSource,
+            buildErrorPath(pathPrefix, node.name),
+            bucket
+          );
           return;
         }
 
         if (isFieldArrayConfig(node)) {
           const nestedKey = buildErrorPath(pathPrefix, node.name);
-          const nestedItems = Array.isArray(source[node.name]) ? (source[node.name] as Record<string, unknown>[]) : [];
+          const nestedItems = Array.isArray(source[node.name])
+            ? (source[node.name] as Record<string, unknown>[])
+            : [];
           bucket[nestedKey] = getArrayValidationError(node, nestedItems.length);
           return;
         }
@@ -375,62 +396,64 @@ export function DynamicArrayField({
     });
   }, [arrayPath, field, getFieldError, items, setErrors, setValues]);
 
-  const handleArrayRemoveItem = React.useCallback((index: number) => {
-    if (index < 0 || index >= items.length) {
-      return;
-    }
+  const handleArrayRemoveItem = React.useCallback(
+    (index: number) => {
+      if (index < 0 || index >= items.length) {
+        return;
+      }
 
-    const nextItems = [...items];
-    nextItems.splice(index, 1);
-    setValues((prev) => setValueAtPath(prev, arrayPath, nextItems));
+      const nextItems = [...items];
+      nextItems.splice(index, 1);
+      setValues((prev) => setValueAtPath(prev, arrayPath, nextItems));
 
-    const removedPrefix = `${buildErrorPath(arrayPath, index)}.`;
-    const escapedPath = arrayPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const removedPrefix = `${buildErrorPath(arrayPath, index)}.`;
+      const escapedPath = arrayPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    setErrors((prev) => {
-      const nextEntries = Object.entries(prev)
-        .filter(([key]) => !key.startsWith(removedPrefix))
-        .map(([key, error]) => {
-          const match = key.match(new RegExp(`^${escapedPath}\\.(\\d+)\\.(.+)$`));
-          if (!match) {
+      setErrors((prev) => {
+        const nextEntries = Object.entries(prev)
+          .filter(([key]) => !key.startsWith(removedPrefix))
+          .map(([key, error]) => {
+            const match = key.match(new RegExp(`^${escapedPath}\\.(\\d+)\\.(.+)$`));
+            if (!match) {
+              return [key, error] as const;
+            }
+
+            const itemIndex = Number(match[1]);
+            if (itemIndex > index) {
+              return [buildErrorPath(arrayPath, itemIndex - 1, match[2]), error] as const;
+            }
+
             return [key, error] as const;
-          }
+          });
 
-          const itemIndex = Number(match[1]);
-          if (itemIndex > index) {
-            return [buildErrorPath(arrayPath, itemIndex - 1, match[2]), error] as const;
-          }
+        return {
+          ...Object.fromEntries(nextEntries),
+          [arrayPath]: getArrayValidationError(field, items.length - 1),
+        };
+      });
+    },
+    [arrayPath, field, items, setErrors, setValues]
+  );
 
-          return [key, error] as const;
-        });
+  const handleArrayMoveItem = React.useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex < 0 || fromIndex >= items.length || toIndex < 0 || toIndex >= items.length) {
+        return;
+      }
 
-      return {
-        ...Object.fromEntries(nextEntries),
-        [arrayPath]: getArrayValidationError(field, items.length - 1),
-      };
-    });
-  }, [arrayPath, field, items, setErrors, setValues]);
+      const nextItems = moveItem(items, fromIndex, toIndex);
+      const nextValues = setValueAtPath(values, arrayPath, nextItems);
 
-  const handleArrayMoveItem = React.useCallback((fromIndex: number, toIndex: number) => {
-    if (fromIndex < 0 || fromIndex >= items.length || toIndex < 0 || toIndex >= items.length) {
-      return;
-    }
-
-    const nextItems = moveItem(items, fromIndex, toIndex);
-    const nextValues = setValueAtPath(values, arrayPath, nextItems);
-
-    setValues(nextValues);
-    validateAll(nextValues);
-    const itemLabel = field.itemLabel || "Item";
-    setLiveAnnouncement(`Moved ${itemLabel} ${fromIndex + 1} to position ${toIndex + 1}.`);
-  }, [arrayPath, field.itemLabel, items, setValues, validateAll, values]);
+      setValues(nextValues);
+      validateAll(nextValues);
+      const itemLabel = field.itemLabel || "Item";
+      setLiveAnnouncement(`Moved ${itemLabel} ${fromIndex + 1} to position ${toIndex + 1}.`);
+    },
+    [arrayPath, field.itemLabel, items, setValues, validateAll, values]
+  );
 
   const handleArrayReorderShortcut = React.useCallback(
-    (
-      e: React.KeyboardEvent<HTMLButtonElement>,
-      itemIndex: number,
-      itemCount: number
-    ) => {
+    (e: React.KeyboardEvent<HTMLButtonElement>, itemIndex: number, itemCount: number) => {
       if (!e.altKey) {
         return;
       }
@@ -448,28 +471,31 @@ export function DynamicArrayField({
     [handleArrayMoveItem]
   );
 
-  const handleArrayDragEnd = React.useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) {
-      return;
-    }
+  const handleArrayDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) {
+        return;
+      }
 
-    const oldIndex = parseDndItemIndex(String(active.id));
-    const newIndex = parseDndItemIndex(String(over.id));
-    if (oldIndex == null || newIndex == null) {
-      return;
-    }
+      const oldIndex = parseDndItemIndex(String(active.id));
+      const newIndex = parseDndItemIndex(String(over.id));
+      if (oldIndex == null || newIndex == null) {
+        return;
+      }
 
-    if (oldIndex < 0 || oldIndex >= items.length || newIndex < 0 || newIndex >= items.length) {
-      return;
-    }
+      if (oldIndex < 0 || oldIndex >= items.length || newIndex < 0 || newIndex >= items.length) {
+        return;
+      }
 
-    const nextItems = arrayMove(items, oldIndex, newIndex);
-    const nextValues = setValueAtPath(values, arrayPath, nextItems);
+      const nextItems = arrayMove(items, oldIndex, newIndex);
+      const nextValues = setValueAtPath(values, arrayPath, nextItems);
 
-    setValues(nextValues);
-    validateAll(nextValues);
-  }, [arrayPath, items, setValues, validateAll, values]);
+      setValues(nextValues);
+      validateAll(nextValues);
+    },
+    [arrayPath, items, setValues, validateAll, values]
+  );
 
   const dndAccessibility = {
     announcements: {
@@ -482,7 +508,13 @@ export function DynamicArrayField({
 
         return `Picked up ${getArrayDragLabel(field, index)}.`;
       },
-      onDragOver({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) {
+      onDragOver({
+        active,
+        over,
+      }: {
+        active: { id: string | number };
+        over: { id: string | number } | null;
+      }) {
         if (!over) {
           return;
         }
@@ -495,7 +527,13 @@ export function DynamicArrayField({
 
         return `${getArrayDragLabel(field, fromIndex)} moved over position ${toIndex + 1}.`;
       },
-      onDragEnd({ active, over }: { active: { id: string | number }; over: { id: string | number } | null }) {
+      onDragEnd({
+        active,
+        over,
+      }: {
+        active: { id: string | number };
+        over: { id: string | number } | null;
+      }) {
         if (!over) {
           return "Drag ended.";
         }
@@ -524,7 +562,11 @@ export function DynamicArrayField({
   };
 
   const renderItemNodes = React.useCallback(
-    (nodes: FieldConfig[], itemPath: string, scopeValues: Record<string, unknown>): React.ReactNode[] => {
+    (
+      nodes: FieldConfig[],
+      itemPath: string,
+      scopeValues: Record<string, unknown>
+    ): React.ReactNode[] => {
       return nodes.map((itemFieldConfig, nestedIndex) => {
         const nestedKey = `${itemPath}.${itemFieldConfig.name || String(nestedIndex)}`;
 
@@ -535,9 +577,10 @@ export function DynamicArrayField({
         if (isFieldGroupConfig(itemFieldConfig)) {
           const groupPath = buildErrorPath(itemPath, itemFieldConfig.name);
           const groupValues = getValueAtPath(values, groupPath);
-          const groupScope = groupValues && typeof groupValues === "object"
-            ? (groupValues as Record<string, unknown>)
-            : {};
+          const groupScope =
+            groupValues && typeof groupValues === "object"
+              ? (groupValues as Record<string, unknown>)
+              : {};
 
           return (
             <fieldset key={nestedKey} className="rounded-md border p-3">
@@ -573,7 +616,8 @@ export function DynamicArrayField({
         const rendererProps = createFieldRendererProps(
           itemFieldConfig,
           itemValue,
-          (nextValue) => handleArrayItemChange(itemFieldConfig, nextValue, leafFieldPath, itemErrorKey),
+          (nextValue) =>
+            handleArrayItemChange(itemFieldConfig, nextValue, leafFieldPath, itemErrorKey),
           readonly || Boolean(itemFieldConfig.readonly),
           Boolean(errors[itemErrorKey])
         );
@@ -643,9 +687,13 @@ export function DynamicArrayField({
               return (
                 <SortableArrayItem key={itemKey} id={sortableId} disabled={readonly}>
                   {({ attributes, listeners, setActivatorNodeRef, isDragging }) => (
-                    <div className={`rounded-md border border-border p-3 ${isDragging ? "ring-2 ring-primary/50" : ""}`}>
+                    <div
+                      className={`rounded-md border border-border p-3 ${isDragging ? "ring-2 ring-primary/50" : ""}`}
+                    >
                       <div className="mb-3 flex items-center justify-between">
-                        <p className="text-xs font-medium text-muted-foreground">{itemLabel} {itemIndex + 1}</p>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {itemLabel} {itemIndex + 1}
+                        </p>
                         {!readonly && (
                           <div className="flex items-center gap-2">
                             <button
@@ -663,7 +711,9 @@ export function DynamicArrayField({
                             <button
                               type="button"
                               onClick={() => handleArrayMoveItem(itemIndex, itemIndex - 1)}
-                              onKeyDown={(e) => handleArrayReorderShortcut(e, itemIndex, items.length)}
+                              onKeyDown={(e) =>
+                                handleArrayReorderShortcut(e, itemIndex, items.length)
+                              }
                               disabled={itemIndex === 0}
                               aria-label={`Move ${itemLabel} ${itemIndex + 1} up`}
                               aria-keyshortcuts="Alt+ArrowUp"
@@ -674,7 +724,9 @@ export function DynamicArrayField({
                             <button
                               type="button"
                               onClick={() => handleArrayMoveItem(itemIndex, itemIndex + 1)}
-                              onKeyDown={(e) => handleArrayReorderShortcut(e, itemIndex, items.length)}
+                              onKeyDown={(e) =>
+                                handleArrayReorderShortcut(e, itemIndex, items.length)
+                              }
                               disabled={itemIndex === items.length - 1}
                               aria-label={`Move ${itemLabel} ${itemIndex + 1} down`}
                               aria-keyshortcuts="Alt+ArrowDown"

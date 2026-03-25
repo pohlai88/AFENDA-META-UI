@@ -36,16 +36,16 @@ A module is defined by the `MetaModule` interface:
 ```typescript
 interface MetaModule {
   // Module identity
-  name: string;           // Unique identifier (e.g., "sales")
-  label: string;          // Display name (e.g., "Sales")
-  version: string;        // Semantic version (e.g., "1.0.0")
+  name: string; // Unique identifier (e.g., "sales")
+  label: string; // Display name (e.g., "Sales")
+  version: string; // Semantic version (e.g., "1.0.0")
   description?: string;
   author?: string;
-  category: ModuleCategory;  // core, erp, crm, inventory, finance, custom
-  icon?: string;          // Lucide icon name
+  category: ModuleCategory; // core, erp, crm, inventory, finance, custom
+  icon?: string; // Lucide icon name
 
   // Dependencies
-  depends?: string[];     // Module names this module depends on
+  depends?: string[]; // Module names this module depends on
 
   // Configuration
   config?: ModuleConfig;
@@ -77,10 +77,10 @@ Modules can define hooks that run at specific lifecycle events:
 ```typescript
 interface ModuleHooks {
   // Module lifecycle
-  onLoad?: () => void | Promise<void>;      // Module loaded
-  onEnable?: () => void | Promise<void>;    // Module enabled
-  onDisable?: () => void | Promise<void>;   // Module disabled
-  onUnload?: () => void | Promise<void>;    // Module unloaded
+  onLoad?: () => void | Promise<void>; // Module loaded
+  onEnable?: () => void | Promise<void>; // Module enabled
+  onDisable?: () => void | Promise<void>; // Module disabled
+  onUnload?: () => void | Promise<void>; // Module unloaded
 
   // CRUD lifecycle
   beforeCreate?: (model: string, data: any) => void | Promise<void>;
@@ -390,18 +390,18 @@ Each module can define models that appear in the UI:
 ```typescript
 models: [
   {
-    name: "partner",           // Database table name (snake_case)
-    label: "Partners",         // Display name (plural)
-    visible: true,             // Show in sidebar
-    icon: "Users",             // Lucide icon name
+    name: "partner", // Database table name (snake_case)
+    label: "Partners", // Display name (plural)
+    visible: true, // Show in sidebar
+    icon: "Users", // Lucide icon name
   },
   {
     name: "sales_order_line",
     label: "Order Lines",
-    visible: false,            // Not in sidebar (accessed via one2many)
+    visible: false, // Not in sidebar (accessed via one2many)
     icon: "ListOrdered",
   },
-]
+];
 ```
 
 The actual `ModelMeta` (fields, views, permissions) is loaded from the schema registry via introspection.
@@ -418,7 +418,7 @@ menus: [
     path: "/sales/partner",
     icon: "Users",
     roles: ["admin", "manager", "viewer"], // Optional: restrict by role
-    order: 1,                              // Sort order
+    order: 1, // Sort order
   },
   {
     name: "reports",
@@ -426,7 +426,8 @@ menus: [
     path: "/sales/reports",
     icon: "BarChart",
     order: 10,
-    children: [                            // Nested menu
+    children: [
+      // Nested menu
       {
         name: "monthly",
         label: "Monthly Report",
@@ -435,7 +436,7 @@ menus: [
       },
     ],
   },
-]
+];
 ```
 
 ## Best Practices

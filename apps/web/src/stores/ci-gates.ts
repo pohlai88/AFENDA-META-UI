@@ -2,7 +2,7 @@
  * State Management CI Gates
  * ==========================
  * Automated validation rules for state management best practices.
- * 
+ *
  * These gates ensure:
  * - Proper store usage
  * - No state duplication
@@ -17,8 +17,7 @@ export const stateManagementRules = {
     "error",
     {
       name: "localStorage",
-      message:
-        "Use Zustand persist middleware instead of direct localStorage access",
+      message: "Use Zustand persist middleware instead of direct localStorage access",
     },
   ],
 
@@ -28,8 +27,7 @@ export const stateManagementRules = {
     {
       selector:
         "CallExpression[callee.name='useState']:has(~VariableDeclarator[id.name=/^(sidebar|notification|auth|user|permission)/i])",
-      message:
-        "Use Zustand or Redux stores for global state instead of useState",
+      message: "Use Zustand or Redux stores for global state instead of useState",
     },
   ],
 };

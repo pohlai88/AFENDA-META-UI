@@ -35,7 +35,7 @@ export interface DslEvaluationResult {
  */
 export function evaluate(
   expression: string,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): DslEvaluationResult {
   try {
     const tokens = tokenize(expression);
@@ -53,7 +53,7 @@ export function evaluate(
  */
 export function evaluateCondition(
   expression: string,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): { result: boolean; error?: string } {
   const { value, error } = evaluate(expression, context);
   if (error) return { result: false, error };

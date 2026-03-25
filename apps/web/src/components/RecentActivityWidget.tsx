@@ -18,7 +18,10 @@ function ActivityItem({ type, message, time }: ActivityItemData) {
 
   return (
     <div className="flex items-center gap-3 text-sm">
-      <div className="rounded-md border border-border p-1.5 text-muted-foreground" aria-hidden="true">
+      <div
+        className="rounded-md border border-border p-1.5 text-muted-foreground"
+        aria-hidden="true"
+      >
         <ActivityIcon className="h-3.5 w-3.5" />
       </div>
       <Badge variant="outline">{type}</Badge>

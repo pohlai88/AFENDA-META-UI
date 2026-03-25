@@ -2,12 +2,12 @@
  * Unsaved Changes Hook
  * ====================
  * Prevents accidental navigation away from forms with unsaved changes.
- * 
+ *
  * Features:
  * - Browser navigation warning (beforeunload)
  * - React Router navigation blocking (useBlocker)
  * - Custom confirmation dialog
- * 
+ *
  * Usage:
  * ```tsx
  * const methods = useForm();
@@ -38,13 +38,8 @@ export interface UseUnsavedChangesWarningOptions {
 /**
  * Hook to warn users about unsaved changes
  */
-export function useUnsavedChangesWarning(
-  isDirty: boolean,
-  message?: string
-): void;
-export function useUnsavedChangesWarning(
-  options: UseUnsavedChangesWarningOptions
-): void;
+export function useUnsavedChangesWarning(isDirty: boolean, message?: string): void;
+export function useUnsavedChangesWarning(options: UseUnsavedChangesWarningOptions): void;
 export function useUnsavedChangesWarning(
   isDirtyOrOptions: boolean | UseUnsavedChangesWarningOptions,
   message?: string

@@ -20,12 +20,13 @@ export interface SuggestionPromptProps {
 /**
  * Color-codes personalization level for quick visual recognition
  */
-function getPersonalizationBadge(level: string): { label: string; bgClass: string; textClass: string } {
-  const badges: Record<
-    string,
-    { label: string; bgClass: string; textClass: string }
-  > = {
-    "generic": {
+function getPersonalizationBadge(level: string): {
+  label: string;
+  bgClass: string;
+  textClass: string;
+} {
+  const badges: Record<string, { label: string; bgClass: string; textClass: string }> = {
+    generic: {
       label: "Generic",
       bgClass: "bg-gray-100",
       textClass: "text-gray-700",
@@ -144,13 +145,13 @@ function BlockVariant({
                 <span className="font-mono text-sm font-medium text-gray-900">
                   {suggestion.value}
                 </span>
-                <span className={`text-xs px-1.5 py-0.5 rounded ${badge.bgClass} ${badge.textClass}`}>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded ${badge.bgClass} ${badge.textClass}`}
+                >
                   {badge.label}
                 </span>
               </div>
-              {showReasons && (
-                <p className="text-xs text-gray-600 mt-0.5">{suggestion.reason}</p>
-              )}
+              {showReasons && <p className="text-xs text-gray-600 mt-0.5">{suggestion.reason}</p>}
             </button>
           );
         })}

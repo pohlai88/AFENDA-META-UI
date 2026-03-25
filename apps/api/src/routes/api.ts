@@ -65,7 +65,8 @@ function sendDatabaseUnavailable(res: Response) {
   res.status(503).json({
     error: "Database unavailable",
     code: "DB_UNAVAILABLE",
-    message: "Cannot connect to PostgreSQL. Ensure the database is running and DATABASE_URL is correct.",
+    message:
+      "Cannot connect to PostgreSQL. Ensure the database is running and DATABASE_URL is correct.",
   });
 }
 
@@ -80,7 +81,7 @@ async function resolveTable(model: string): Promise<Record<string, unknown> | nu
     const schema = await import("../db/schema/index.js");
     // Convention: model "sales_order" → camelCase "salesOrders" table export
     const camel = model.replace(/_([a-z])/g, (_, c) => c.toUpperCase()) + "s";
-    return (schema as Record<string, unknown>)[camel] as Record<string, unknown> ?? null;
+    return ((schema as Record<string, unknown>)[camel] as Record<string, unknown>) ?? null;
   } catch {
     return null;
   }
@@ -99,13 +100,22 @@ router.get("/:model", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_read) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_read) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const table = await resolveTable(model);
-    if (!table) { res.status(400).json({ error: `No table found for model: ${model}` }); return; }
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
     // Parse and validate filters
     const filtersResult = parseFilters(req.query.filters as string);
@@ -137,21 +147,22 @@ router.get("/:model", async (req: Request, res: Response) => {
 
     // Build query with Drizzle
     let query = (db as any).select().from(table);
-    
+
     if (whereClause) {
       query = query.where(whereClause);
     }
 
-    query = query.orderBy(...orderByClauses).limit(limit).offset(offset);
+    query = query
+      .orderBy(...orderByClauses)
+      .limit(limit)
+      .offset(offset);
 
     // Execute query
     const rows = await query;
 
     // Get total count (with filters applied)
-    let countQuery = (db as any)
-      .select({ count: sql`count(*)` })
-      .from(table);
-    
+    let countQuery = (db as any).select({ count: sql`count(*)` }).from(table);
+
     if (whereClause) {
       countQuery = countQuery.where(whereClause);
     }
@@ -201,17 +212,26 @@ router.get("/:model/:id", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_read) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_read) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const cols = rbac.visibleFields.join(", ");
     const rows = await db.execute(
       sql.raw(`SELECT ${cols} FROM ${model} WHERE id = '${id}' LIMIT 1`)
     );
 
-    if (!rows.rows.length) { res.status(404).json({ error: "Not found" }); return; }
+    if (!rows.rows.length) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
     res.json({ data: rows.rows[0] });
   } catch (err) {
@@ -234,10 +254,16 @@ router.post("/:model", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_create) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_create) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     // Strip any fields the role cannot write
     const body = req.body as Record<string, unknown>;
@@ -248,7 +274,10 @@ router.post("/:model", async (req: Request, res: Response) => {
     }
 
     const table = await resolveTable(model);
-    if (!table) { res.status(400).json({ error: `No table found for model: ${model}` }); return; }
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
     const [created] = await (db as any).insert(table).values(safe).returning();
     res.status(201).json({ data: created });
@@ -272,10 +301,16 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_update) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_update) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const body = req.body as Record<string, unknown>;
     const writableSet = new Set(rbac.writableFields);
@@ -290,7 +325,10 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
     }
 
     const table = await resolveTable(model);
-    if (!table) { res.status(400).json({ error: `No table found for model: ${model}` }); return; }
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
     const [updated] = await (db as any)
       .update(table)
@@ -298,7 +336,10 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
       .where(eq((table as any).id, id))
       .returning();
 
-    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+    if (!updated) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
     res.json({ data: updated });
   } catch (err) {
@@ -321,13 +362,22 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_delete) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_delete) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const table = await resolveTable(model);
-    if (!table) { res.status(400).json({ error: `No table found for model: ${model}` }); return; }
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
     await (db as any).delete(table).where(eq((table as any).id, id));
     res.status(204).send();
@@ -351,10 +401,16 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_update) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_update) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const { ids, updates } = req.body as { ids: string[]; updates: Record<string, unknown> };
 
@@ -381,7 +437,10 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
     }
 
     const table = await resolveTable(model);
-    if (!table) { res.status(400).json({ error: `No table found for model: ${model}` }); return; }
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
     // Update all matching IDs
     const result = await (db as any)
@@ -390,12 +449,12 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
       .where(sql`${(table as any).id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
       .returning();
 
-    res.json({ 
+    res.json({
       data: result,
-      meta: { 
+      meta: {
         updated: result.length,
-        requested: ids.length 
-      }
+        requested: ids.length,
+      },
     });
   } catch (err) {
     (req as any).log?.error({ err, model }, `POST /${model}/bulk-update failed`);
@@ -417,10 +476,16 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
 
   try {
     const meta = await getSchema(model);
-    if (!meta) { res.status(404).json({ error: `Unknown model: ${model}` }); return; }
+    if (!meta) {
+      res.status(404).json({ error: `Unknown model: ${model}` });
+      return;
+    }
 
     const rbac = resolveRbac(meta, sess);
-    if (!rbac.allowedOps.can_delete) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (!rbac.allowedOps.can_delete) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const { ids } = req.body as { ids: string[] };
 
@@ -430,7 +495,10 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
     }
 
     const table = await resolveTable(model);
-    if (!table) { res.status(400).json({ error: `No table found for model: ${model}` }); return; }
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
     // Delete all matching IDs
     const result = await (db as any)
@@ -438,11 +506,11 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
       .where(sql`${(table as any).id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
       .returning();
 
-    res.json({ 
-      meta: { 
+    res.json({
+      meta: {
         deleted: result.length,
-        requested: ids.length 
-      }
+        requested: ids.length,
+      },
     });
   } catch (err) {
     (req as any).log?.error({ err, model }, `POST /${model}/bulk-delete failed`);

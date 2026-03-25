@@ -318,7 +318,7 @@ describe("Decision Audit Logger", () => {
     it("gets decisions for specific scope", () => {
       const decisions = getDecisionsForScope("acme", "invoice");
       expect(decisions).toHaveLength(2);
-      expect(decisions.every(d => d.scope.startsWith("invoice"))).toBe(true);
+      expect(decisions.every((d) => d.scope.startsWith("invoice"))).toBe(true);
     });
 
     it("filters by event type within scope", () => {
@@ -367,13 +367,13 @@ describe("Decision Audit Logger", () => {
     it("identifies slow decisions", () => {
       const slow = getSlowDecisions("acme", 15, 5);
       expect(slow.length).toBeGreaterThan(0);
-      expect(slow.every(d => d.durationMs > 15)).toBe(true);
+      expect(slow.every((d) => d.durationMs > 15)).toBe(true);
     });
 
     it("identifies audit failures", () => {
       const failures = getAuditFailures("acme");
       expect(failures.length).toBeGreaterThan(0);
-      expect(failures.some(f => f.status === "error")).toBe(true);
+      expect(failures.some((f) => f.status === "error")).toBe(true);
     });
   });
 
@@ -399,13 +399,9 @@ describe("Decision Audit Logger", () => {
         status: "success",
       };
 
-      expect(
-        verifyDecisionCompliance(entry, ["global", "tenant:acme"])
-      ).toBe(true);
+      expect(verifyDecisionCompliance(entry, ["global", "tenant:acme"])).toBe(true);
 
-      expect(
-        verifyDecisionCompliance(entry, ["global", "user:alice"])
-      ).toBe(false);
+      expect(verifyDecisionCompliance(entry, ["global", "user:alice"])).toBe(false);
     });
 
     it("gets user audit trail for compliance", () => {
@@ -451,7 +447,7 @@ describe("Decision Audit Logger", () => {
 
       const trail = getUserAuditTrail("acme", "alice");
       expect(trail).toHaveLength(2);
-      expect(trail.every(t => t.userId === "alice")).toBe(true);
+      expect(trail.every((t) => t.userId === "alice")).toBe(true);
     });
   });
 

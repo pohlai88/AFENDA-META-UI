@@ -7,6 +7,7 @@ Enterprise-grade UI components that auto-generate from `ModelMeta` definitions.
 **Location**: `MetaListV2.tsx`
 
 Production-ready data table built with:
+
 - **@tanstack/react-table v8** - Headless table library
 - **shadcn/ui Table components** - Accessible styling
 - **Server-side pagination** - Efficient data loading
@@ -25,7 +26,7 @@ Production-ready data table built with:
 ✅ **Row click** - Optional callback for navigation  
 ✅ **Permission-aware** - Respects `can_create` permission  
 ✅ **Responsive** - Works on all screen sizes  
-✅ **Type-safe** - Full TypeScript coverage  
+✅ **Type-safe** - Full TypeScript coverage
 
 ### Usage
 
@@ -36,21 +37,22 @@ import { MetaListV2 } from "~/renderers/MetaListV2";
   model="partners"
   onRowClick={(record) => navigate(`/partners/${record.id}`)}
   onNew={() => navigate("/partners/new")}
-/>
+/>;
 ```
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `model` | `string` | Model name (e.g., "partners", "products") |
-| `onRowClick` | `(record) => void` | Optional callback when row is clicked |
-| `onNew` | `() => void` | Optional callback for "Create" button |
-| `embedded` | `boolean` | Render without PageContainer wrapper (default: `false`) |
+| Prop         | Type               | Description                                             |
+| ------------ | ------------------ | ------------------------------------------------------- |
+| `model`      | `string`           | Model name (e.g., "partners", "products")               |
+| `onRowClick` | `(record) => void` | Optional callback when row is clicked                   |
+| `onNew`      | `() => void`       | Optional callback for "Create" button                   |
+| `embedded`   | `boolean`          | Render without PageContainer wrapper (default: `false`) |
 
 ### Cell Formatting
 
 Auto-formats based on `MetaField.type`:
+
 - **boolean** → Badge ("Yes" / "No")
 - **date** → `toLocaleDateString()`
 - **datetime** → `toLocaleString()`
@@ -84,6 +86,7 @@ Auto-formats based on `MetaField.type`:
 **Location**: `MetaFormV2.tsx`
 
 Production-ready form engine built with:
+
 - **react-hook-form** - Type-safe form state
 - **Zod** - Runtime schema validation
 - **shadcn/ui Form components** - Accessible inputs
@@ -97,7 +100,7 @@ Production-ready form engine built with:
 ✅ **10+ field types** - String, email, enum, boolean, date, relation, etc.  
 ✅ **Toast notifications** - Success/error feedback with Sonner  
 ✅ **Permission-aware** - Respects field-level permissions  
-✅ **Type-safe** - Full TypeScript coverage  
+✅ **Type-safe** - Full TypeScript coverage
 
 ### Usage
 
@@ -109,22 +112,23 @@ import { MetaFormV2 } from "~/renderers/MetaFormV2";
   mode="create"
   onSuccess={(created) => navigate(`/partners/${created.id}`)}
   onCancel={() => navigate("/partners")}
-/>
+/>;
 ```
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `model` | `string` | Model name |
-| `mode` | `"create" \| "edit"` | Form mode |
-| `recordId` | `string` | Required for edit mode |
-| `onSuccess` | `(record) => void` | Callback after successful save |
-| `onCancel` | `() => void` | Callback when user cancels |
+| Prop        | Type                 | Description                    |
+| ----------- | -------------------- | ------------------------------ |
+| `model`     | `string`             | Model name                     |
+| `mode`      | `"create" \| "edit"` | Form mode                      |
+| `recordId`  | `string`             | Required for edit mode         |
+| `onSuccess` | `(record) => void`   | Callback after successful save |
+| `onCancel`  | `() => void`         | Callback when user cancels     |
 
 ### Field Types
 
 Supports all MetaField types:
+
 - `string`, `email`, `url`, `phone`
 - `integer`, `float`, `currency`
 - `boolean`
@@ -135,6 +139,7 @@ Supports all MetaField types:
 ### Validation
 
 Auto-generates Zod schema from:
+
 - `field.required` → `.min(1)` or `.refine()`
 - `field.type === "email"` → `.email()`
 - `field.type === "url"` → `.url()`
@@ -144,6 +149,7 @@ Auto-generates Zod schema from:
 ### Layout
 
 Respects `MetaFormView.layout`:
+
 - **Groups** → Card-wrapped sections
 - **Tabs** → Tabbed interface
 
@@ -152,6 +158,7 @@ Respects `MetaFormView.layout`:
 ## 🎨 Design System
 
 All renderers use:
+
 - **Tailwind CSS v4** - Utility-first styling with `@theme` syntax
 - **shadcn/ui** - Nova preset (Radix primitives + CVA)
 - **Light/Dark theme** - Automatic with ThemeProvider
@@ -181,10 +188,7 @@ Uses Tailwind's default spacing scale: `0`, `px`, `0.5`, `1`, `1.5`, `2`, `2.5`,
 ### Border Radius
 
 ```css
---radius-sm: 0.25rem
---radius-md: 0.5rem
---radius-lg: 0.75rem
---radius-xl: 1rem
+--radius-sm: 0.25rem --radius-md: 0.5rem --radius-lg: 0.75rem --radius-xl: 1rem;
 ```
 
 ---

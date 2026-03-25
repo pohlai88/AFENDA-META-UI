@@ -1,4 +1,5 @@
 # CRITICAL: Actual Implementation Status (Corrected)
+
 **Date**: March 25, 2026  
 **Previous Assessment**: 82% (VALIDATION_REPORT)  
 **Actual Audit Result**: ~75% (after re-examining code)
@@ -21,7 +22,7 @@ The codebase is more complete than the VALIDATION_REPORT indicated. Here's what 
    - Has: Row selection state, bulk utilities, CSV export infrastructure
    - Missing: UI buttons for bulk delete, export dialogs
 
-3. **MetaKanban** - IMPLEMENTED ✅  
+3. **MetaKanban** - IMPLEMENTED ✅
    - File: `apps/web/src/renderers/MetaKanban.tsx`
    - Uses @dnd-kit for drag-drop
 
@@ -42,10 +43,12 @@ The codebase is more complete than the VALIDATION_REPORT indicated. Here's what 
 ### TIER 1: P1 CRITICAL (3-4 items, ~15-20 hours)
 
 #### 1. **Module Registry Implementation** 🔴
+
 **Priority**: P1 - Architectural blocker  
 **Status**: 0% (types exist, implementation missing)
 
 What exists:
+
 - ✅ Type definitions: `packages/meta-types/src/module.ts`
 - ❌ Registry implementation: `apps/api/src/meta/moduleRegistry.ts` (MISSING)
 - ❌ Registry endpoints
@@ -53,6 +56,7 @@ What exists:
 - ❌ Dynamic model loading
 
 What needs doing:
+
 1. Create `moduleRegistry.ts` - scan modules, load metadata, resolve dependencies
 2. Implement topological sort for dependency ordering
 3. Create API endpoints: GET /api/meta/modules, POST /api/meta/modules/:id/enable, etc.
@@ -64,16 +68,19 @@ What needs doing:
 ---
 
 #### 2. **Unsaved Changes Prompt** 🟡
+
 **Priority**: P1 - Core UX  
 **Status**: 0% (partial)
 
 What needs doing:
+
 1. Add dirty-state tracking to MetaFormV2
 2. Show "Leave page?" dialog if form has unsaved changes
 3. Allow user to save/discard
 4. Prevent accidental navigation away
 
 **Files to modify**:
+
 - `apps/web/src/renderers/MetaFormV2.tsx`
 - `apps/web/src/components/layout/unsaved-changes-dialog.tsx` (create new)
 
@@ -82,14 +89,17 @@ What needs doing:
 ---
 
 #### 3. **Action Framework UI Integration** 🟡
+
 **Priority**: P1 - Feature  
 **Status**: 30% (backend exists, UI missing)
 
 What exists:
+
 - ✅ `apps/api/src/actions/index.ts` - types and registry
 - ✅ Action execution endpoint
 
 What's missing:
+
 - [ ] Row action menu (`RowActionsMenu` component needs update)
 - [ ] Form action buttons (MetaFormV2)
 - [ ] Permission checks for actions
@@ -97,6 +107,7 @@ What's missing:
 - [ ] Bulk action support
 
 **Files to create/modify**:
+
 - Update `apps/web/src/components/RowActionsMenu.tsx`
 - Update `apps/web/src/renderers/MetaFormV2.tsx`
 - Create `apps/web/src/lib/action-executor.ts`
@@ -108,9 +119,11 @@ What's missing:
 ### TIER 2: P2 IMPORTANT (3-4 items, ~10-15 hours)
 
 #### 1. **Complete MetaListV2 Bulk Ops UI** 🟡
+
 **Status**: 50% (logic done, UI incomplete)
 
 Missing:
+
 - [ ] Bulk delete button + confirmation
 - [ ] Bulk export button + format selection
 - [ ] Selection counter footer
@@ -121,9 +134,11 @@ Missing:
 ---
 
 #### 2. **File/Image Upload** ❌
+
 **Status**: 0%
 
 Missing:
+
 - [ ] FileField component
 - [x] Image preview
 - [ ] S3 / local upload handler
@@ -135,9 +150,11 @@ Missing:
 ---
 
 #### 3. **Global Search / Command Palette** 🔴
+
 **Status**: 0%
 
 Missing:
+
 - [ ] Cmd+K / Ctrl+K hotkey handler
 - [ ] Search UI component (popover with list)
 - [ ] Search backend (API endpoint)
@@ -148,9 +165,11 @@ Missing:
 ---
 
 #### 4. **DevOps/Infrastructure** 🟡
+
 **Status**: 50%
 
 Missing:
+
 - [ ] Docker Compose for local dev
 - [ ] Database seeding script
 - [ ] CI/CD pipeline (.github/workflows)
@@ -175,6 +194,7 @@ Missing:
 ### Sprint Plan (Next 24-48 hours)
 
 #### Phase 1: Module Registry (Core Blocker) - 8-10 hours
+
 ```
 Goal: Get Module System working
 Tasks:
@@ -190,6 +210,7 @@ Tasks:
 ---
 
 #### Phase 2: Unsaved Changes + Action UI - 6-9 hours
+
 ```
 Goal: Improve form/list UX
 Tasks:
@@ -204,6 +225,7 @@ Tasks:
 ---
 
 #### Phase 3: Bulk List Operations - 2-3 hours
+
 ```
 Goal: Complete MetaListV2 bulk features
 Tasks:
@@ -219,15 +241,15 @@ Tasks:
 
 ## Updated Completion Targets
 
-| Phase | Before | After | Gap |
-|-------|--------|-------|-----|
-| **5.3 Workflow** | ✅ 100% | ✅ 100% | **0%** |
-| **6.4 State Mgmt** | ✅ 100% | ✅ 100% | **0%** |
-| **2.5 One2Many** | 20% | ✅ **100%** | **Closed** ✅ |
-| **5.1 Module Sys** | 0% | 0% | **-80%** remaining |
-| **5.2 Actions UI** | 30% | 30% → 50% | **-60%** remaining |
-| **2.2 List UI** | 95% | 95% → 98% | **-30%** remaining |
-| **Overall** | 82% | 82% → **87%** | **+5% quick wins** |
+| Phase              | Before  | After         | Gap                |
+| ------------------ | ------- | ------------- | ------------------ |
+| **5.3 Workflow**   | ✅ 100% | ✅ 100%       | **0%**             |
+| **6.4 State Mgmt** | ✅ 100% | ✅ 100%       | **0%**             |
+| **2.5 One2Many**   | 20%     | ✅ **100%**   | **Closed** ✅      |
+| **5.1 Module Sys** | 0%      | 0%            | **-80%** remaining |
+| **5.2 Actions UI** | 30%     | 30% → 50%     | **-60%** remaining |
+| **2.2 List UI**    | 95%     | 95% → 98%     | **-30%** remaining |
+| **Overall**        | 82%     | 82% → **87%** | **+5% quick wins** |
 
 ---
 
@@ -235,7 +257,7 @@ Tasks:
 
 ### ✴️ QUICK WINS (Can do today) - 2-3 hours
 
-1. **Complete MetaListV2 Bulk UI** 
+1. **Complete MetaListV2 Bulk UI**
    - Add buttons for delete/export
    - Test end-to-end
    - Estimate: 2 hours
@@ -260,11 +282,13 @@ Tasks:
 ## Next Steps
 
 **Option A (Recommended)**: Implement in this order:
+
 1. Complete MetaListV2 bulk ops (quick win)
-2. Module Registry (strategic blocker)  
+2. Module Registry (strategic blocker)
 3. Form UX + Actions (polish)
 
 **Option B (Fastest to visible progress)**:
+
 1. Form UX (users notice immediately)
 2. Bulk ops (power users love this)
 3. Module Registry (architects need this)

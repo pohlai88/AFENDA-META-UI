@@ -25,7 +25,13 @@ vi.mock("@afenda/ui", async () => {
   };
 });
 
-function mutationMock(overrides?: Partial<{ isPending: boolean; variables: string; mutateAsync: (id: string) => Promise<unknown> }>) {
+function mutationMock(
+  overrides?: Partial<{
+    isPending: boolean;
+    variables: string;
+    mutateAsync: (id: string) => Promise<unknown>;
+  }>
+) {
   return {
     isPending: false,
     variables: undefined,
@@ -55,9 +61,7 @@ describe("PurchaseOrderApprovalActions", () => {
       reject: mutationMock(),
     });
 
-    const { container } = render(
-      <PurchaseOrderApprovalActions orderId="PO-1" status="draft" />
-    );
+    const { container } = render(<PurchaseOrderApprovalActions orderId="PO-1" status="draft" />);
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -145,7 +149,9 @@ describe("PurchaseOrderApprovalActions", () => {
 
     await user.click(approveButton);
 
-    expect(toastErrorMock).toHaveBeenCalledWith("You do not have permission to perform this action");
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "You do not have permission to perform this action"
+    );
     expect(approve.mutateAsync).not.toHaveBeenCalled();
     expect(reject.mutateAsync).not.toHaveBeenCalled();
   });

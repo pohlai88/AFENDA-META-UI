@@ -31,7 +31,10 @@ export const asyncFieldValidationCache = createAsyncValidationCache<string | nul
   maxEntries: DEFAULT_ASYNC_VALIDATION_CACHE_MAX_ENTRIES,
 });
 
-export const asyncFormValidationCache = createAsyncValidationCache<{ message: string | null; path: string }>({
+export const asyncFormValidationCache = createAsyncValidationCache<{
+  message: string | null;
+  path: string;
+}>({
   storageKey: ASYNC_FORM_VALIDATION_CACHE_STORAGE_KEY,
   defaultTtlMs: DEFAULT_ASYNC_VALIDATION_CACHE_TTL_MS,
   maxEntries: DEFAULT_ASYNC_VALIDATION_CACHE_MAX_ENTRIES,
@@ -115,7 +118,10 @@ function getScopePrefix(scope: string): string {
   return `${scope}::`;
 }
 
-export function invalidateAsyncValidationCacheByScope(scope: string): { fieldRemoved: number; formRemoved: number } {
+export function invalidateAsyncValidationCacheByScope(scope: string): {
+  fieldRemoved: number;
+  formRemoved: number;
+} {
   const scopePrefix = getScopePrefix(scope);
 
   return {

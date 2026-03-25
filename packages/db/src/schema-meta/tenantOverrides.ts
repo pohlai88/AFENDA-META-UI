@@ -8,21 +8,8 @@
  *   - Industry templates (vertical defaults)
  */
 
-import {
-  boolean,
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
-import type {
-  TenantBranding,
-  TenantIsolationStrategy,
-  OverrideScope,
-} from "@afenda/meta-types";
+import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import type { TenantBranding, TenantIsolationStrategy, OverrideScope } from "@afenda/meta-types";
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 
@@ -46,9 +33,7 @@ export const tenantDefinitions = pgTable("tenant_definitions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   industry: text("industry"),
-  isolationStrategy: isolationStrategyEnum("isolation_strategy")
-    .notNull()
-    .default("logical"),
+  isolationStrategy: isolationStrategyEnum("isolation_strategy").notNull().default("logical"),
   enabled: boolean("enabled").notNull().default(true),
   branding: jsonb("branding").$type<TenantBranding>(),
   features: jsonb("features").$type<Record<string, boolean>>().default({}),

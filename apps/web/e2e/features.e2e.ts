@@ -1,7 +1,7 @@
 /**
  * Comprehensive E2E Test Suite
  * =============================
- * 
+ *
  * Tests for:
  * - Command palette global search
  * - Row actions execution
@@ -392,7 +392,9 @@ test.describe("Accessibility", () => {
 
   test("should support dark mode", async ({ page }) => {
     // Click theme toggle
-    const themeToggle = page.locator("button[aria-label*='theme' i], button[aria-label*='dark' i]").first();
+    const themeToggle = page
+      .locator("button[aria-label*='theme' i], button[aria-label*='dark' i]")
+      .first();
     if (await themeToggle.isVisible()) {
       const screenBefore = await page.screenshot();
       await themeToggle.click();

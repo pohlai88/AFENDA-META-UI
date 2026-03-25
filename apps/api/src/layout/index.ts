@@ -75,17 +75,14 @@ export interface LayoutResolutionContext {
  */
 export function resolveLayout(ctx: LayoutResolutionContext): ResolvedLayout | null {
   const candidates = Array.from(layoutStore.values()).filter(
-    (l) => l.model === ctx.model && l.viewType === ctx.viewType,
+    (l) => l.model === ctx.model && l.viewType === ctx.viewType
   );
 
   if (candidates.length === 0) return null;
 
   // Find role-specific match first
   const roleMatch = candidates.find(
-    (l) =>
-      l.roles &&
-      l.roles.length > 0 &&
-      l.roles.some((r) => ctx.roles.includes(r)),
+    (l) => l.roles && l.roles.length > 0 && l.roles.some((r) => ctx.roles.includes(r))
   );
 
   // Then default
@@ -120,10 +117,10 @@ export interface TenantAwareLayoutResolutionContext {
 }
 
 export function resolveLayoutWithContext(
-  ctx: TenantAwareLayoutResolutionContext,
+  ctx: TenantAwareLayoutResolutionContext
 ): ResolvedLayout | null {
   const candidates = Array.from(layoutStore.values()).filter(
-    (l) => l.model === ctx.model && l.viewType === ctx.viewType,
+    (l) => l.model === ctx.model && l.viewType === ctx.viewType
   );
 
   if (candidates.length === 0) return null;
@@ -163,7 +160,7 @@ export function resolveLayoutWithContext(
     (s) =>
       s.layout.roles &&
       s.layout.roles.length > 0 &&
-      s.layout.roles.some((r) => ctx.roles.includes(r)),
+      s.layout.roles.some((r) => ctx.roles.includes(r))
   );
 
   const defaultMatch = topTier.find((s) => s.layout.isDefault);
@@ -220,7 +217,7 @@ export interface LayoutValidationError {
 
 export function validateLayout(
   layout: LayoutDefinition,
-  validFieldIds: Set<string>,
+  validFieldIds: Set<string>
 ): LayoutValidationError[] {
   const errors: LayoutValidationError[] = [];
   validateNode(layout.root, "root", validFieldIds, errors);
@@ -231,7 +228,7 @@ function validateNode(
   node: LayoutNode,
   path: string,
   validFieldIds: Set<string>,
-  errors: LayoutValidationError[],
+  errors: LayoutValidationError[]
 ): void {
   switch (node.type) {
     case "field":
@@ -244,7 +241,7 @@ function validateNode(
       break;
     case "section":
       node.children.forEach((child, i) =>
-        validateNode(child, `${path}.children[${i}]`, validFieldIds, errors),
+        validateNode(child, `${path}.children[${i}]`, validFieldIds, errors)
       );
       break;
     case "grid":
@@ -255,18 +252,13 @@ function validateNode(
         });
       }
       node.children.forEach((child, i) =>
-        validateNode(child, `${path}.children[${i}]`, validFieldIds, errors),
+        validateNode(child, `${path}.children[${i}]`, validFieldIds, errors)
       );
       break;
     case "tabs":
       node.tabs.forEach((tab, i) => {
         tab.children.forEach((child, j) =>
-          validateNode(
-            child,
-            `${path}.tabs[${i}].children[${j}]`,
-            validFieldIds,
-            errors,
-          ),
+          validateNode(child, `${path}.tabs[${i}].children[${j}]`, validFieldIds, errors)
         );
       });
       break;
@@ -304,7 +296,7 @@ function flattenNode(
   node: LayoutNode,
   depth: number,
   parentPath: string,
-  plan: RenderPlanItem[],
+  plan: RenderPlanItem[]
 ): void {
   const item: RenderPlanItem = {
     type: node.type,
@@ -319,14 +311,14 @@ function flattenNode(
     case "section":
     case "grid":
       node.children.forEach((child, i) =>
-        flattenNode(child, depth + 1, `${parentPath}.${i}`, plan),
+        flattenNode(child, depth + 1, `${parentPath}.${i}`, plan)
       );
       break;
     case "tabs":
       node.tabs.forEach((tab, i) =>
         tab.children.forEach((child, j) =>
-          flattenNode(child, depth + 1, `${parentPath}.tab${i}.${j}`, plan),
-        ),
+          flattenNode(child, depth + 1, `${parentPath}.tab${i}.${j}`, plan)
+        )
       );
       break;
   }

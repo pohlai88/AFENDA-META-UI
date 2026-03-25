@@ -94,6 +94,7 @@ node tools/ci-gate/index.mjs --help
 ### 2. Unified Command
 
 Before (multiple commands):
+
 ```bash
 pnpm ci:logger
 pnpm ci:security
@@ -102,6 +103,7 @@ pnpm ci:typescript
 ```
 
 After (single command):
+
 ```bash
 pnpm ci:gate  # Runs ALL gates automatically
 ```
@@ -109,6 +111,7 @@ pnpm ci:gate  # Runs ALL gates automatically
 ### 3. Consistent Interface
 
 All gates receive the same arguments:
+
 ```bash
 pnpm ci:gate             # Run all
 pnpm ci:gate:fix         # Auto-fix all
@@ -126,6 +129,7 @@ pnpm ci:gate:verbose     # Verbose output for all
 ### 5. Selective Execution
 
 Run specific gates when needed:
+
 ```bash
 # Only run logger gate
 pnpm ci:gate:logger
@@ -156,25 +160,25 @@ Create `tools/ci-gate/my-new-gate/index.mjs`:
 
 // Parse arguments
 const args = process.argv.slice(2);
-const fix = args.includes('--fix');
+const fix = args.includes("--fix");
 
-console.log('Running my validation checks...\n');
+console.log("Running my validation checks...\n");
 
 // Your validation logic
 const errors = [];
 
 // Example check
 if (somethingIsWrong) {
-  errors.push('Error: Something is wrong');
+  errors.push("Error: Something is wrong");
 }
 
 // Report results
 if (errors.length > 0) {
   console.error(`❌ Found ${errors.length} error(s)\n`);
-  errors.forEach(err => console.error(err));
+  errors.forEach((err) => console.error(err));
   process.exit(1);
 } else {
-  console.log('✅ All checks passed\n');
+  console.log("✅ All checks passed\n");
   process.exit(0);
 }
 ```
@@ -205,14 +209,14 @@ Add to root `package.json`:
 
 ## 📋 Available Commands Reference
 
-| Command | Description | Notes |
-|---------|-------------|-------|
-| `pnpm ci:gate` | Run all gates | Master command (NEW) |
-| `pnpm ci:gate:fix` | Run all with auto-fix | Master + --fix (NEW) |
-| `pnpm ci:gate:verbose` | Run all with verbose output | Master + --verbose (NEW) |
-| `pnpm ci:gate:logger` | Run logger gate via master | Master + --gate=logger (NEW) |
-| `pnpm ci:logger` | Run logger gate directly | Direct execution (existing) |
-| `pnpm ci:logger:fix` | Run logger with auto-fix | Direct + --fix (existing) |
+| Command                | Description                 | Notes                        |
+| ---------------------- | --------------------------- | ---------------------------- |
+| `pnpm ci:gate`         | Run all gates               | Master command (NEW)         |
+| `pnpm ci:gate:fix`     | Run all with auto-fix       | Master + --fix (NEW)         |
+| `pnpm ci:gate:verbose` | Run all with verbose output | Master + --verbose (NEW)     |
+| `pnpm ci:gate:logger`  | Run logger gate via master  | Master + --gate=logger (NEW) |
+| `pnpm ci:logger`       | Run logger gate directly    | Direct execution (existing)  |
+| `pnpm ci:logger:fix`   | Run logger with auto-fix    | Direct + --fix (existing)    |
 
 ## 🚀 CI/CD Integration
 
@@ -236,12 +240,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - uses: pnpm/action-setup@v2
         with:
           version: 9
       - run: pnpm install --frozen-lockfile
-      - run: pnpm ci:gate  # Single command runs ALL gates
+      - run: pnpm ci:gate # Single command runs ALL gates
 ```
 
 ### GitLab CI
@@ -256,7 +260,7 @@ ci-gates:
     - npm install -g pnpm@9
     - pnpm install --frozen-lockfile
   script:
-    - pnpm ci:gate  # Single command runs ALL gates
+    - pnpm ci:gate # Single command runs ALL gates
 ```
 
 ### Pre-commit Hook
@@ -424,6 +428,7 @@ AVAILABLE GATES:
 5. ✅ Scales as your codebase grows
 
 **Next time you create a gate, just:**
+
 1. Create directory: `tools/ci-gate/new-gate/`
 2. Add `index.mjs` with validation logic
 3. Run `pnpm ci:gate` — your gate is automatically included!

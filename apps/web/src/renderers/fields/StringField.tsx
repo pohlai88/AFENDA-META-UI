@@ -8,12 +8,20 @@ interface StringFieldProps extends RendererFieldProps {
   type?: string;
 }
 
-export function StringField({ field, value, onChange, readonly, multiline, password, type }: StringFieldProps) {
+export function StringField({
+  field,
+  value,
+  onChange,
+  readonly,
+  multiline,
+  password,
+  type,
+}: StringFieldProps) {
   const inputId = React.useId();
   const controlId = `string-${field.name}-${inputId}`;
   const helpTextId = field.help_text ? getFieldHelpTextId(field.name) : undefined;
   const typeMap: Record<string, string> = { email: "email", url: "url", number: "number" };
-  const inputType = password ? "password" : typeMap[type ?? ""] ?? "text";
+  const inputType = password ? "password" : (typeMap[type ?? ""] ?? "text");
 
   return (
     <FieldWrapper field={field} required={field.required} htmlFor={controlId}>
@@ -36,11 +44,11 @@ export function StringField({ field, value, onChange, readonly, multiline, passw
           id={controlId}
           type={inputType}
           value={String(value ?? "")}
-          onChange={(e) => onChange?.(
-            type === "number" && e.target.value !== ""
-              ? Number(e.target.value)
-              : e.target.value
-          )}
+          onChange={(e) =>
+            onChange?.(
+              type === "number" && e.target.value !== "" ? Number(e.target.value) : e.target.value
+            )
+          }
           disabled={readonly}
           required={field.required}
           aria-required={field.required || undefined}

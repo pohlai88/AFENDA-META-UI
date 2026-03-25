@@ -80,14 +80,22 @@ export function errorHandler(
   _next: NextFunction
 ) {
   const isDev = process.env.NODE_ENV !== "production";
-  
+
   // Log error (use req.log from pino-http for automatic requestId context)
   const log = (req as any).log ?? logger;
-  log.error({ err, url: req.url, method: req.method, userId: (req as Request & { session?: { uid: string } }).session?.uid }, "Error caught by global handler");
-  
+  log.error(
+    {
+      err,
+      url: req.url,
+      method: req.method,
+      userId: (req as Request & { session?: { uid: string } }).session?.uid,
+    },
+    "Error caught by global handler"
+  );
+
   // Determine status code
   const statusCode = err instanceof AppError ? err.statusCode : 500;
-  
+
   // Build response
   const response: {
     error: string;
@@ -99,17 +107,17 @@ export function errorHandler(
     error: err.name,
     message: err.message,
   };
-  
+
   if (err instanceof AppError) {
     response.code = err.code;
     response.details = err.details;
   }
-  
+
   // Include stack trace in dev mode only
   if (isDev) {
     response.stack = err.stack;
   }
-  
+
   res.status(statusCode).json(response);
 }
 
@@ -120,7 +128,7 @@ export function errorHandler(
 export function notFoundHandler(req: Request, res: Response) {
   const log = (req as any).log ?? logger;
   log.warn({ url: req.url, method: req.method }, "404 Not Found");
-  
+
   res.status(404).json({
     error: "Not Found",
     message: `Route ${req.method} ${req.url} does not exist`,

@@ -5,14 +5,11 @@ export interface BreadcrumbItem {
   href?: string | null;
 }
 
-export type BreadcrumbLabelResolver =
-  | string
-  | ((args: { params: RouteParams }) => string);
+export type BreadcrumbLabelResolver = string | ((args: { params: RouteParams }) => string);
 
 export type BreadcrumbHrefResolver =
   | string
-  | ((args: { pathname: string; params: RouteParams }) =>
-      string | null | undefined);
+  | ((args: { pathname: string; params: RouteParams }) => string | null | undefined);
 
 export interface BreadcrumbHandle {
   breadcrumb?: BreadcrumbLabelResolver;
@@ -123,9 +120,7 @@ export function getAutoBreadcrumbsFromMatches(matches: BreadcrumbMatchLike[]) {
     };
   });
 
-  const nonNullItems = items.filter(
-    (item): item is BreadcrumbItem => item !== null
-  );
+  const nonNullItems = items.filter((item): item is BreadcrumbItem => item !== null);
 
   const resolvedItems = nonNullItems.map((item, index) =>
     index === nonNullItems.length - 1

@@ -66,11 +66,7 @@ export function PurchaseOrderApprovalActions({
 
       <div className="flex gap-2 flex-wrap">
         {status === "draft" && (
-          <Button
-            size="sm"
-            onClick={() => void handleSubmit()}
-            disabled={isAnyPending}
-          >
+          <Button size="sm" onClick={() => void handleSubmit()} disabled={isAnyPending}>
             {submitPending ? "Submitting..." : "Submit"}
           </Button>
         )}

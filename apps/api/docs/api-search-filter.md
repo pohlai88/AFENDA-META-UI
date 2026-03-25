@@ -11,7 +11,7 @@ The API now supports **advanced filtering and sorting** for all model endpoints.
 ✅ **Sorting** - Single or multiple field sorting (asc/desc)  
 ✅ **Zod Validation** - All filter inputs validated before execution  
 ✅ **RBAC Integration** - Filters respect field visibility permissions  
-✅ **SQL Injection Safe** - Uses parameterized queries via Drizzle ORM  
+✅ **SQL Injection Safe** - Uses parameterized queries via Drizzle ORM
 
 ## Filter API
 
@@ -31,40 +31,41 @@ For explicit AND/OR logic:
 {
   "logic": "and",
   "conditions": [
-    {"field": "type", "op": "eq", "value": "customer"},
-    {"field": "isActive", "op": "eq", "value": true}
+    { "field": "type", "op": "eq", "value": "customer" },
+    { "field": "isActive", "op": "eq", "value": true }
   ]
 }
 ```
 
 URL encoded:
+
 ```
 GET /api/partner?filters=%7B%22logic%22%3A%22and%22%2C%22conditions%22%3A%5B...
 ```
 
 ## Supported Operators
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `eq` | Equals | `{"field":"status","op":"eq","value":"draft"}` |
-| `neq` | Not equals | `{"field":"status","op":"neq","value":"cancelled"}` |
-| `gt` | Greater than | `{"field":"price","op":"gt","value":100}` |
-| `gte` | Greater than or equal | `{"field":"price","op":"gte","value":100}` |
-| `lt` | Less than | `{"field":"price","op":"lt","value":50}` |
-| `lte` | Less than or equal | `{"field":"price","op":"lte","value":50}` |
-| `like` | SQL LIKE (case-sensitive) | `{"field":"name","op":"like","value":"%Corp%"}` |
-| `ilike` | SQL ILIKE (case-insensitive) | `{"field":"email","op":"ilike","value":"%@example.com"}` |
-| `in` | Value in array | `{"field":"status","op":"in","value":["draft","confirmed"]}` |
-| `between` | Between two values | `{"field":"price","op":"between","value":[10,50]}` |
-| `is_null` | Field is NULL | `{"field":"categoryId","op":"is_null"}` |
-| `is_not_null` | Field is NOT NULL | `{"field":"email","op":"is_not_null"}` |
+| Operator      | Description                  | Example                                                      |
+| ------------- | ---------------------------- | ------------------------------------------------------------ |
+| `eq`          | Equals                       | `{"field":"status","op":"eq","value":"draft"}`               |
+| `neq`         | Not equals                   | `{"field":"status","op":"neq","value":"cancelled"}`          |
+| `gt`          | Greater than                 | `{"field":"price","op":"gt","value":100}`                    |
+| `gte`         | Greater than or equal        | `{"field":"price","op":"gte","value":100}`                   |
+| `lt`          | Less than                    | `{"field":"price","op":"lt","value":50}`                     |
+| `lte`         | Less than or equal           | `{"field":"price","op":"lte","value":50}`                    |
+| `like`        | SQL LIKE (case-sensitive)    | `{"field":"name","op":"like","value":"%Corp%"}`              |
+| `ilike`       | SQL ILIKE (case-insensitive) | `{"field":"email","op":"ilike","value":"%@example.com"}`     |
+| `in`          | Value in array               | `{"field":"status","op":"in","value":["draft","confirmed"]}` |
+| `between`     | Between two values           | `{"field":"price","op":"between","value":[10,50]}`           |
+| `is_null`     | Field is NULL                | `{"field":"categoryId","op":"is_null"}`                      |
+| `is_not_null` | Field is NOT NULL            | `{"field":"email","op":"is_not_null"}`                       |
 
 ## Sorting
 
 ### Single Field Sort
 
 ```json
-{"field": "name", "order": "asc"}
+{ "field": "name", "order": "asc" }
 ```
 
 ```
@@ -75,8 +76,8 @@ GET /api/partner?sort={"field":"name","order":"asc"}
 
 ```json
 [
-  {"field": "status", "order": "desc"},
-  {"field": "name", "order": "asc"}
+  { "field": "status", "order": "desc" },
+  { "field": "name", "order": "asc" }
 ]
 ```
 
@@ -114,10 +115,11 @@ curl -X GET "http://localhost:3001/api/partner?filters=%5B%7B%22field%22%3A%22ty
 ```
 
 Filter (decoded):
+
 ```json
 [
-  {"field":"type","op":"eq","value":"customer"},
-  {"field":"isActive","op":"eq","value":true}
+  { "field": "type", "op": "eq", "value": "customer" },
+  { "field": "isActive", "op": "eq", "value": true }
 ]
 ```
 
@@ -129,10 +131,9 @@ curl -X GET "http://localhost:3001/api/product?filters=%5B%7B%22field%22%3A%22un
 ```
 
 Filter (decoded):
+
 ```json
-[
-  {"field":"unitPrice","op":"between","value":[10,50]}
-]
+[{ "field": "unitPrice", "op": "between", "value": [10, 50] }]
 ```
 
 ### Example 3: Search by Name (Case-Insensitive)
@@ -143,10 +144,9 @@ curl -X GET "http://localhost:3001/api/partner?filters=%5B%7B%22field%22%3A%22na
 ```
 
 Filter (decoded):
+
 ```json
-[
-  {"field":"name","op":"ilike","value":"%acme%"}
-]
+[{ "field": "name", "op": "ilike", "value": "%acme%" }]
 ```
 
 ### Example 4: Orders from 2024
@@ -157,15 +157,15 @@ curl -X GET "http://localhost:3001/api/sales_order?filters=%5B%7B%22field%22%3A%
 ```
 
 Filter (decoded):
+
 ```json
-[
-  {"field":"orderDate","op":"gte","value":"2024-01-01"}
-]
+[{ "field": "orderDate", "op": "gte", "value": "2024-01-01" }]
 ```
 
 Sort (decoded):
+
 ```json
-{"field":"orderDate","order":"desc"}
+{ "field": "orderDate", "order": "desc" }
 ```
 
 ## RBAC Integration
@@ -223,6 +223,7 @@ SortParamSchema = z.object({
   "error": "Filter validation failed: Field name is required"
 }
 ```
+
 HTTP Status: `400 Bad Request`
 
 ### Invalid JSON
@@ -232,6 +233,7 @@ HTTP Status: `400 Bad Request`
   "error": "Invalid JSON in filters parameter"
 }
 ```
+
 HTTP Status: `400 Bad Request`
 
 ### Unknown Field
@@ -245,12 +247,14 @@ Test file with examples: `apps/api/src/utils/test-api-filters.ts`
 ### Quick Test (using curl)
 
 1. Start API server:
+
    ```bash
    cd apps/api
    pnpm dev
    ```
 
 2. Generate auth token:
+
    ```bash
    pnpm auth:token --userId admin --roles admin
    ```

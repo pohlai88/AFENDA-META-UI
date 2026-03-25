@@ -13,10 +13,7 @@ import {
   getWorkflowStats,
   clearWorkflows,
 } from "./index.js";
-import {
-  clearDecisionAuditLog,
-  queryDecisionAuditLog,
-} from "../audit/decisionAuditLogger.js";
+import { clearDecisionAuditLog, queryDecisionAuditLog } from "../audit/decisionAuditLogger.js";
 import type { WorkflowDefinition } from "@afenda/meta-types";
 
 beforeEach(() => {
@@ -31,7 +28,7 @@ beforeEach(() => {
 function makeSimpleWorkflow(
   id: string,
   trigger: string,
-  opts?: Partial<WorkflowDefinition>,
+  opts?: Partial<WorkflowDefinition>
 ): WorkflowDefinition {
   return {
     id,
@@ -100,9 +97,7 @@ describe("workflow — definitions", () => {
 
   it("throws when registering a duplicate ID", () => {
     registerWorkflow(makeSimpleWorkflow("wf-dup", "sales.order.*"));
-    expect(() =>
-      registerWorkflow(makeSimpleWorkflow("wf-dup", "sales.order.*")),
-    ).toThrow();
+    expect(() => registerWorkflow(makeSimpleWorkflow("wf-dup", "sales.order.*"))).toThrow();
   });
 
   it("updateWorkflow replaces existing definition", () => {
@@ -155,9 +150,7 @@ describe("workflow — triggering", () => {
   });
 
   it("does not trigger disabled workflows", async () => {
-    registerWorkflow(
-      makeSimpleWorkflow("wf-disabled", "sales.order.*", { enabled: false }),
-    );
+    registerWorkflow(makeSimpleWorkflow("wf-disabled", "sales.order.*", { enabled: false }));
     const instances = await triggerWorkflows("sales.order.created", {});
     expect(instances.length).toBe(0);
   });
@@ -172,7 +165,7 @@ describe("workflow — triggering", () => {
     registerWorkflow(
       makeSimpleWorkflow("wf-cond", "sales.order.*", {
         condition: "amount > 5000",
-      }),
+      })
     );
 
     const low = await triggerWorkflows("sales.order.created", { amount: 100 });
@@ -247,16 +240,10 @@ describe("workflow — approvals", () => {
     registerWorkflow(makeApprovalWorkflow("wf-appr2", "order.approve.*"));
     const [paused] = await triggerWorkflows("order.approve.request", {});
 
-    const approved = await submitApproval(
-      paused.id,
-      "approved",
-      "manager@co.com",
-    );
+    const approved = await submitApproval(paused.id, "approved", "manager@co.com");
     expect(approved.status).toBe("completed");
     expect(
-      approved.history.some(
-        (h) => h.result === "completed" && h.actor === "manager@co.com",
-      ),
+      approved.history.some((h) => h.result === "completed" && h.actor === "manager@co.com")
     ).toBe(true);
   });
 
@@ -264,12 +251,7 @@ describe("workflow — approvals", () => {
     registerWorkflow(makeApprovalWorkflow("wf-appr3", "order.approve.*"));
     const [paused] = await triggerWorkflows("order.approve.request", {});
 
-    const rejected = await submitApproval(
-      paused.id,
-      "rejected",
-      "manager@co.com",
-      "Too expensive",
-    );
+    const rejected = await submitApproval(paused.id, "rejected", "manager@co.com", "Too expensive");
     expect(rejected.status).toBe("completed");
     expect(rejected.history.some((h) => h.result === "rejected")).toBe(true);
   });
@@ -279,9 +261,7 @@ describe("workflow — approvals", () => {
     const [completed] = await triggerWorkflows("notif.event.fired", {});
     expect(completed.status).toBe("completed");
 
-    await expect(
-      submitApproval(completed.id, "approved", "actor"),
-    ).rejects.toThrow();
+    await expect(submitApproval(completed.id, "approved", "actor")).rejects.toThrow();
   });
 });
 
@@ -412,7 +392,9 @@ describe("workflow — decision audit hooks", () => {
 
   it("writes workflow_transitioned audit entries for human approval decisions", async () => {
     registerWorkflow(makeApprovalWorkflow("wf-audit-approval", "audit.approval.*"));
-    const [instance] = await triggerWorkflows("audit.approval.request", { tenantId: "tenant-approval" });
+    const [instance] = await triggerWorkflows("audit.approval.request", {
+      tenantId: "tenant-approval",
+    });
 
     await submitApproval(instance.id, "approved", "approver@acme.com", "Looks good");
 

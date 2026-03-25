@@ -16,9 +16,7 @@ export default function NotFoundPage() {
       <Card className="w-full max-w-lg text-center">
         <CardHeader>
           <CardTitle className="text-8xl font-bold text-muted-foreground">404</CardTitle>
-          <CardDescription className="text-lg">
-            Page not found
-          </CardDescription>
+          <CardDescription className="text-lg">Page not found</CardDescription>
           <CardDescription className="text-sm text-muted-foreground">
             You tried to access: {location.pathname}
           </CardDescription>

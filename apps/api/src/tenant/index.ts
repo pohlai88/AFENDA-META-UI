@@ -113,15 +113,13 @@ export function removeTenant(id: string): boolean {
  */
 export function registerIndustryTemplate(
   industry: string,
-  template: Record<string, unknown>,
+  template: Record<string, unknown>
 ): void {
   industryTemplates.set(industry, template);
   if (dbPersistEnabled) void tenantRepo.dbUpsertIndustryTemplate(industry, template);
 }
 
-export function getIndustryTemplate(
-  industry: string,
-): Record<string, unknown> | undefined {
+export function getIndustryTemplate(industry: string): Record<string, unknown> | undefined {
   return industryTemplates.get(industry);
 }
 
@@ -174,7 +172,7 @@ export function getOverridesForModel(model: string): MetadataOverride[] {
 export function resolveMetadata(
   model: string,
   globalMeta: Record<string, unknown>,
-  ctx: ResolutionContext,
+  ctx: ResolutionContext
 ): Record<string, unknown> {
   const startTime = Date.now();
   const appliedLayers: string[] = [];
@@ -204,7 +202,9 @@ export function resolveMetadata(
       // Check scope relevance
       if (!isOverrideRelevant(override, ctx)) continue;
       resolved = deepMerge(resolved, override.patch);
-      appliedLayers.push(`${override.scope}:${override.tenantId || override.departmentId || override.userId || "global"}`);
+      appliedLayers.push(
+        `${override.scope}:${override.tenantId || override.departmentId || override.userId || "global"}`
+      );
     }
 
     // Log the resolution decision (Phase 4: Audit Fabric)
@@ -281,10 +281,7 @@ export function resolveMetadata(
 /**
  * Determine if an override applies to the given resolution context.
  */
-function isOverrideRelevant(
-  override: MetadataOverride,
-  ctx: ResolutionContext,
-): boolean {
+function isOverrideRelevant(override: MetadataOverride, ctx: ResolutionContext): boolean {
   switch (override.scope) {
     case "global":
       return true;
@@ -293,15 +290,9 @@ function isOverrideRelevant(
     case "tenant":
       return override.tenantId === ctx.tenantId;
     case "department":
-      return (
-        override.tenantId === ctx.tenantId &&
-        override.departmentId === ctx.departmentId
-      );
+      return override.tenantId === ctx.tenantId && override.departmentId === ctx.departmentId;
     case "user":
-      return (
-        override.tenantId === ctx.tenantId &&
-        override.userId === ctx.userId
-      );
+      return override.tenantId === ctx.tenantId && override.userId === ctx.userId;
     default:
       return false;
   }
@@ -314,7 +305,7 @@ function isOverrideRelevant(
  */
 export function deepMerge(
   target: Record<string, unknown>,
-  source: Record<string, unknown>,
+  source: Record<string, unknown>
 ): Record<string, unknown> {
   const result: Record<string, unknown> = { ...target };
 
@@ -329,7 +320,7 @@ export function deepMerge(
     ) {
       result[key] = deepMerge(
         result[key] as Record<string, unknown>,
-        value as Record<string, unknown>,
+        value as Record<string, unknown>
       );
     } else {
       result[key] = value;
@@ -347,16 +338,12 @@ export function deepMerge(
  * Validate an override before it enters the registry.
  * Returns a (possibly empty) list of violations.
  */
-export function validateOverride(
-  override: MetadataOverride,
-): GovernanceViolation[] {
+export function validateOverride(override: MetadataOverride): GovernanceViolation[] {
   const violations: GovernanceViolation[] = [];
 
   // Rule 1: Tenant-scoped overrides must reference a known tenant
   if (
-    (override.scope === "tenant" ||
-      override.scope === "department" ||
-      override.scope === "user") &&
+    (override.scope === "tenant" || override.scope === "department" || override.scope === "user") &&
     override.tenantId &&
     !tenantStore.has(override.tenantId)
   ) {
@@ -423,7 +410,7 @@ export function safeRegisterOverride(override: MetadataOverride): GovernanceViol
 
   if (errors.length > 0) {
     throw new Error(
-      `Override "${override.id}" failed governance: ${errors.map((e) => e.message).join("; ")}`,
+      `Override "${override.id}" failed governance: ${errors.map((e) => e.message).join("; ")}`
     );
   }
 
@@ -477,8 +464,7 @@ export async function initTenantStore(): Promise<{
 
   for (const t of allTenants) tenantStore.set(t.id, t);
   for (const o of allOverrides) overrideStore.set(o.id, o);
-  for (const tpl of allTemplates)
-    industryTemplates.set(tpl.industry, tpl.template);
+  for (const tpl of allTemplates) industryTemplates.set(tpl.industry, tpl.template);
 
   return {
     tenants: allTenants.length,
@@ -495,7 +481,7 @@ export async function initTenantStore(): Promise<{
  */
 export function reverseResolution(
   resolved: Record<string, unknown>,
-  model: string,
+  model: string
 ): Array<{ path: string; value: unknown }> {
   const patches: Array<{ path: string; value: unknown }> = [];
 
@@ -503,11 +489,7 @@ export function reverseResolution(
     for (const key of Object.keys(obj)) {
       const fullPath = `${prefix}.${key}`;
       const value = obj[key];
-      if (
-        value !== null &&
-        typeof value === "object" &&
-        !Array.isArray(value)
-      ) {
+      if (value !== null && typeof value === "object" && !Array.isArray(value)) {
         extract(value as Record<string, unknown>, fullPath);
       } else {
         patches.push({ path: fullPath, value });

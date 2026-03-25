@@ -9,16 +9,18 @@ The RBAC expression evaluator provides a **secure, sandboxed** way to evaluate v
 ✅ **Sandboxed Execution** - No access to Node.js globals, `eval`, or dangerous functions  
 ✅ **Whitelisted Operations** - Only approved operators and functions are allowed  
 ✅ **Fail-Safe** - Expression errors default to `false` (deny access)  
-✅ **Input Validation** - All context values are controlled by the server  
+✅ **Input Validation** - All context values are controlled by the server
 
 ## Expression Syntax
 
 ### Logical Operators
+
 - `and` - Logical AND
-- `or` - Logical OR  
+- `or` - Logical OR
 - `not` - Logical NOT
 
 ### Comparison Operators
+
 - `==` - Equals
 - `!=` - Not equals
 - `<`, `>`, `<=`, `>=` - Numeric comparisons
@@ -26,6 +28,7 @@ The RBAC expression evaluator provides a **secure, sandboxed** way to evaluate v
 ### Helper Functions
 
 #### `hasRole(roleName)`
+
 Check if the current user has a specific role.
 
 ```javascript
@@ -37,22 +40,23 @@ hasRole("admin") or hasRole("manager")
 ```
 
 #### `hasAllRoles(...roleNames)`
+
 Check if the current user has ALL specified roles.
 
 ```javascript
 // User must have both roles
-hasAllRoles("manager", "sales")
+hasAllRoles("manager", "sales");
 ```
 
 ### Context Variables
 
 The following variables are available in expressions:
 
-| Variable | Type | Description | Example Value |
-|----------|------|-------------|---------------|
-| `role` | `string` | First role in user's role list | `"admin"` |
-| `uid` | `string` | User ID | `"user_123"` |
-| `lang` | `string` | User language| `"en"` |
+| Variable | Type     | Description                    | Example Value |
+| -------- | -------- | ------------------------------ | ------------- |
+| `role`   | `string` | First role in user's role list | `"admin"`     |
+| `uid`    | `string` | User ID                        | `"user_123"`  |
+| `lang`   | `string` | User language                  | `"en"`        |
 
 ## Usage Examples
 
@@ -93,7 +97,7 @@ The following variables are available in expressions:
 {
   name: "cost",
   type: "number",
-  label: "Cost", 
+  label: "Cost",
   visible_when: 'uid == "finance_user_1"'
 }
 ```
@@ -123,12 +127,14 @@ The following variables are available in expressions:
 A comprehensive test suite is available at `apps/api/src/meta/test-rbac-expressions.ts`.
 
 Run tests:
+
 ```bash
 cd apps/api
 pnpm exec tsx src/meta/test-rbac-expressions.ts
 ```
 
 Test scenarios:
+
 - ✅ Admin user (all actions visible)
 - ✅ Manager user (limited actions)
 - ✅ Viewer user (read-only)
@@ -137,14 +143,17 @@ Test scenarios:
 ## Important Notes
 
 ### String Literals
+
 - Use **double quotes** for string literals: `"admin"` ✓
 - Single quotes are **not supported**: `'admin'` ✗
 
 ### Operators
+
 - Use `or` / `and` / `not` (words)
 - Do NOT use `||` / `&&` / `!` (symbols)
 
 ### Error Handling
+
 - If an expression fails to parse or throws an error, it defaults to `false` (hidden/denied)
 - Errors are logged to console with `[RBAC]` prefix
 - Invalid expressions will not crash the application
@@ -158,6 +167,7 @@ Test scenarios:
 ## Migration from Stub
 
 **Before (security vulnerability):**
+
 ```typescript
 function evalVisibility(expression: string | undefined, _session: SessionContext): boolean {
   if (!expression) return true;
@@ -166,25 +176,25 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 ```
 
 **After (secure evaluation):**
+
 ```typescript
 function evalVisibility(expression: string | undefined, session: SessionContext): boolean {
   if (!expression) return true;
-  
+
   try {
     const compiledExpr = compileExpression(expression, {
       extraFunctions: {
         hasRole: (roleName: string) => session.roles.includes(roleName),
-        hasAllRoles: (...roleNames: string[]) => 
-          roleNames.every((r) => session.roles.includes(r)),
+        hasAllRoles: (...roleNames: string[]) => roleNames.every((r) => session.roles.includes(r)),
       },
     });
-    
+
     const result = compiledExpr({
       role: session.roles[0] ?? "viewer",
       uid: session.uid,
       lang: session.lang ?? "en",
     });
-    
+
     return Boolean(result);
   } catch (error) {
     console.error(`[RBAC] Expression evaluation failed: ${expression}`, error);

@@ -85,7 +85,7 @@ const computeRule: RuleDefinition = {
 };
 
 function buildRuleContext(
-  record: Record<string, unknown> = policyContext.record,
+  record: Record<string, unknown> = policyContext.record
 ): RuleExecutionContext {
   return {
     record,
@@ -123,13 +123,13 @@ describe("Decision Chain Integration", () => {
     const ruleResult = evaluateRule(
       computeRule,
       buildRuleContext(failingPolicyContext.record),
-      globalMeta,
+      globalMeta
     );
     const policyResult = evaluatePoliciesWithTenantContext(
       failingPolicyContext,
       tenantContext,
       globalMeta,
-      "finance",
+      "finance"
     );
 
     expect(metadata).toBeDefined();
@@ -195,22 +195,14 @@ describe("Decision Chain Integration", () => {
   it("supports scope queries and user audit trails for debugging", () => {
     resolveMetadata("finance", globalMeta, tenantContext);
     evaluateRule(computeRule, buildRuleContext(), globalMeta);
-    evaluatePoliciesWithTenantContext(
-      policyContext,
-      tenantContext,
-      globalMeta,
-      "finance",
-    );
+    evaluatePoliciesWithTenantContext(policyContext, tenantContext, globalMeta, "finance");
 
     const scopeEntries = queryDecisionAuditLog({
       tenantId: tenantContext.tenantId,
       scope: "finance*",
       limit: 20,
     });
-    const userTrail = getUserAuditTrail(
-      tenantContext.tenantId,
-      tenantContext.userId ?? "",
-    );
+    const userTrail = getUserAuditTrail(tenantContext.tenantId, tenantContext.userId ?? "");
 
     expect(scopeEntries.length).toBeGreaterThan(0);
     expect(userTrail.length).toBeGreaterThan(0);
@@ -231,7 +223,7 @@ describe("Decision Chain Integration", () => {
       failingContext,
       tenantContext,
       globalMeta,
-      "finance",
+      "finance"
     );
 
     const failures = queryDecisionAuditLog({
@@ -271,9 +263,9 @@ describe("Decision Chain Integration", () => {
     });
 
     expect(primaryTenantEntries.length).toBeGreaterThan(0);
-    expect(
-      primaryTenantEntries.every((entry) => entry.tenantId === tenantContext.tenantId),
-    ).toBe(true);
+    expect(primaryTenantEntries.every((entry) => entry.tenantId === tenantContext.tenantId)).toBe(
+      true
+    );
   });
 
   it("allows manual audit insertion for external chain participants", () => {

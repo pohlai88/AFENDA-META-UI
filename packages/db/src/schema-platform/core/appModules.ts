@@ -76,7 +76,10 @@ export const appModuleUpdateSchema = createUpdateSchema(appModules, {
   description: z.string().max(500).optional().nullable(),
   icon: z.string().max(50).optional().nullable(),
   color: z.string().max(50).optional().nullable(),
-  basePath: z.string().regex(/^\/[a-z-]+$/).optional(),
+  basePath: z
+    .string()
+    .regex(/^\/[a-z-]+$/)
+    .optional(),
   sortOrder: z.number().int().min(0).optional(),
   isEnabled: z.boolean().optional(),
 });

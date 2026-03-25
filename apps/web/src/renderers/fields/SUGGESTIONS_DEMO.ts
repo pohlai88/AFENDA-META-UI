@@ -112,11 +112,7 @@ export function exampleBackendSuggestions() {
     location: "Vietnam",
   };
 
-  const suggestions = extractSuggestionsFromResponse(
-    backendResponse,
-    "alex",
-    userContext
-  );
+  const suggestions = extractSuggestionsFromResponse(backendResponse, "alex", userContext);
 
   console.log("Backend suggestions:", suggestions);
   // Output: Uses backend suggestions as-is
@@ -141,11 +137,7 @@ export function exampleFrontendFallback() {
     location: "Seoul",
   };
 
-  const suggestions = extractSuggestionsFromResponse(
-    backendResponse,
-    "michael",
-    userContext
-  );
+  const suggestions = extractSuggestionsFromResponse(backendResponse, "michael", userContext);
 
   console.log("Frontend-generated fallback:", suggestions);
   // Output: Generates personalized suggestions when backend doesn't provide any

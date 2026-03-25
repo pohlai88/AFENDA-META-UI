@@ -5,10 +5,7 @@ import {
   type QueryClientConfig,
 } from "@tanstack/react-query";
 import { useNotificationStore } from "~/stores/ui";
-import {
-  classifyQueryError,
-  type QueryErrorClassification,
-} from "./query-error-classifier";
+import { classifyQueryError, type QueryErrorClassification } from "./query-error-classifier";
 import {
   getQueryErrorPresentationOverrides,
   registerQueryErrorPresentationOverrides,
@@ -100,7 +97,7 @@ export function createAppQueryClient(env?: QueryClientRuntimeEnv) {
  * Query Client Configuration
  * ===========================
  * Enterprise-grade defaults for React Query.
- * 
+ *
  * Key decisions:
  * - staleTime: prod=5min, dev=0 (surface stale-state bugs faster in local runs)
  * - refetchOnWindowFocus: false (avoid unexpected UI updates mid-use)

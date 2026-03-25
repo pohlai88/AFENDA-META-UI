@@ -1,6 +1,6 @@
 Excellent — now you're defining the **core operating system of your Business Truth Engine**.
 
-These five components transform metadata from *configuration* into an **executable business platform** like **SAP ERP**, **Oracle E-Business Suite**, and **Odoo**.
+These five components transform metadata from _configuration_ into an **executable business platform** like **SAP ERP**, **Oracle E-Business Suite**, and **Odoo**.
 
 We’ll design each as an **engine-level blueprint**.
 
@@ -325,10 +325,10 @@ Rebuild entity state
 
 | Feature          | Traditional DB | Event-Sourced |
 | ---------------- | -------------- | ------------- |
-| Full history     | ❌              | ✅             |
-| Time travel      | ❌              | ✅             |
+| Full history     | ❌             | ✅            |
+| Time travel      | ❌             | ✅            |
 | Audit compliance | Medium         | Maximum       |
-| Undo capability  | ❌              | ✅             |
+| Undo capability  | ❌             | ✅            |
 | Debugging        | Hard           | Easy          |
 
 ---
@@ -381,8 +381,8 @@ Show Results
 
 | Policy              | Result    | Severity |
 | ------------------- | --------- | -------- |
-| Invoice total match | ✅ Pass    | —        |
-| Vendor blacklist    | ❌ Fail    | BLOCK    |
+| Invoice total match | ✅ Pass   | —        |
+| Vendor blacklist    | ❌ Fail   | BLOCK    |
 | Tax rule            | ⚠ Warning | MEDIUM   |
 
 ---
@@ -466,17 +466,20 @@ Based on the current state (100% core engine compliance, production-ready founda
 ## 🎯 **Recommended: Batch 1 — Foundation & Deployment Tooling**
 
 ### Why This First
+
 You have a complete engine but **can't deploy it safely yet**. These three capabilities unblock real-world usage:
 
 **1. 🔧 Migration & Seeding Framework** ⭐ **CRITICAL**
+
 - **Why now**: Can't deploy metadata changes to production without versioned migrations
-- **What it enables**: 
+- **What it enables**:
   - Schema evolution (add fields, entities, policies without breaking)
   - Seed data for testing (sample invoices, vendors, policies)
   - Environment promotion (dev → staging → prod)
 - **Deliverable**: Drizzle migration system + seed scripts for all 5 components
 
 **2. 📦 Metadata Versioning Strategy** ⭐ **CRITICAL**
+
 - **Why now**: Live systems can't tolerate breaking changes to layouts/policies
 - **What it enables**:
   - Backward compatibility (old forms still work)
@@ -485,6 +488,7 @@ You have a complete engine but **can't deploy it safely yet**. These three capab
 - **Deliverable**: Version tracking in database + migration compatibility layer
 
 **3. 🔍 Observability & Rule Debugging Tools** ⭐ **HIGH VALUE**
+
 - **Why now**: When policies fail in production, you need to trace why
 - **What it enables**:
   - Policy execution logs (which rules fired, why they blocked)
@@ -512,12 +516,12 @@ You have a complete engine but **can't deploy it safely yet**. These three capab
 
 ## 📊 Why Not Others First?
 
-| Feature | Why Wait |
-|---------|----------|
-| Multi-tenant isolation | Not needed until SaaS launch |
-| Data lineage tracker | Compliance nice-to-have, not blocking |
-| Workflow engine | Complex, requires stable foundation first |
-| Admin studio | Useless without deployment tools |
+| Feature                | Why Wait                                  |
+| ---------------------- | ----------------------------------------- |
+| Multi-tenant isolation | Not needed until SaaS launch              |
+| Data lineage tracker   | Compliance nice-to-have, not blocking     |
+| Workflow engine        | Complex, requires stable foundation first |
+| Admin studio           | Useless without deployment tools          |
 
 ---
 

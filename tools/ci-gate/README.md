@@ -44,11 +44,11 @@ The Master CI Gate system provides a unified interface for running all code qual
 
 ### From Workspace Root
 
-```bash
+````bash
 # Run all gates
 pnpm ci:gate
 
-# Run all gates 
+# Run all gates
 
 # Run specific gate
 pnpm ci:gate --gate=logger
@@ -63,7 +63,7 @@ pnpm ci:gate:logger
 
 # Run with verbose output
 pnpm ci:gate:verbose
-```
+````
 
 ### From tools/ci-gate Directory
 
@@ -90,12 +90,14 @@ node index.mjs --help
 Validates Pino logger usage and best practices.
 
 **Checks:**
+
 - ✅ No console.log/error/warn usage
 - ✅ Proper logger imports (Pino, not Winston/Morgan)
 - ✅ Request-scoped logging (req.log) in routes
 - ✅ Correct message format (object first, message second)
 
 **Commands:**
+
 ```bash
 # Run logger gate only
 pnpm ci:gate:logger
@@ -111,6 +113,7 @@ node tools/ci-gate/index.mjs --gate=logger
 Validates export contracts for lazy-loaded routes and renderers.
 
 **Checks:**
+
 - ✅ All lazy route pages export default React component
 - ✅ All renderers export expected named functions
 - ✅ Module paths resolve correctly
@@ -119,6 +122,7 @@ Validates export contracts for lazy-loaded routes and renderers.
 **Enhanced diagnostics** with categorized errors and fix suggestions.
 
 **Commands:**
+
 ```bash
 # Run contracts gate only
 pnpm ci:contracts
@@ -127,9 +131,10 @@ pnpm ci:contracts
 node tools/ci-gate/index.mjs --gate=contracts
 ```
 
-**Do🔧 Actionable Fix Suggestions
+\*\*Do🔧 Actionable Fix Suggestions
 
 Each error includes:
+
 - **Problem explanation**: Why the error occurred
 - **Step-by-step fixes**: Exact code changes needed
 - **Related files**: Where to make changes
@@ -139,7 +144,7 @@ Each error includes:
 🔧 Fix suggestions:
    Add a default export to apps/web/src/pages/model-list.tsx:
      export default function YourComponent() { ... }
-   
+
    Or if using named export, wrap it:
      export { YourComponent as default };
 
@@ -165,12 +170,13 @@ Total violations: 3
 
 Enable detailed output for debugging:
 
-```bash#  Run with verbose flag for full test output
+```bash# Run with verbose flag for full test output
 pnpm ci:gate --verbose
 pnpm ci:gate --gate=contracts --verbose
 ```
 
 Shows:
+
 - Working directories
 - Full command output
 - Intermediate processing steps
@@ -188,12 +194,12 @@ node tools/ci-gate/index.mjs [OPTIONS]
 
 ### Options
 
-| Option | Description | Example |
-|--------|-------------|---------|
-| `--gate=<name>` | Run a specific gate | `--gate=logger` |
-| `--fix` | Enable auto-fix mode for all gates | `--fix` |
-| `--verbose`, `-v` | Show verbose output from all gates | `--verbose` |
-| `--help`, `-h` | Show help message | `--help` |
+| Option            | Description                        | Example         |
+| ----------------- | ---------------------------------- | --------------- |
+| `--gate=<name>`   | Run a specific gate                | `--gate=logger` |
+| `--fix`           | Enable auto-fix mode for all gates | `--fix`         |
+| `--verbose`, `-v` | Show verbose output from all gates | `--verbose`     |
+| `--help`, `-h`    | Show help message                  | `--help`        |
 
 ### Examples
 
@@ -207,7 +213,7 @@ pnpm ci:gate
 node index.mjs
 ```
 
-**Output:**** contracts/README.md
+**Output:\*\*** contracts/README.md
 
 ---
 
@@ -242,12 +248,14 @@ Each error includes:
 Validates export contracts for lazy-loaded routes and renderers.
 
 **Checks:**
+
 - ✅ All lazy route pages export default React component
 - ✅ All renderers export expected named functions
 - ✅ Module paths resolve correctly
 - ✅ Export types match route expectations
 
 **Commands:**
+
 ```bash
 # Run contracts gate only
 pnpm ci:contracts
@@ -261,6 +269,7 @@ node tools/ci-gate/index.mjs --gate=contracts
 ### Future Gates
 
 Additional gates can be added for:
+
 - TypeScript type safety
 - Security vulnerabilities (dependency scanning)
 - Code complexity metrics
@@ -280,12 +289,12 @@ node tools/ci-gate/index.mjs [OPTIONS]
 
 ### Options
 
-| Option | Description | Example |
-|--------|-------------|---------|
-| `--gate=<name>` | Run a specific gate | `--gate=logger` |
-| `--fix` | Enable auto-fix mode for all gates | `--fix` |
-| `--verbose`, `-v` | Show verbose output from all gates | `--verbose` |
-| `--help`, `-h` | Show help message | `--help` |
+| Option            | Description                        | Example         |
+| ----------------- | ---------------------------------- | --------------- |
+| `--gate=<name>`   | Run a specific gate                | `--gate=logger` |
+| `--fix`           | Enable auto-fix mode for all gates | `--fix`         |
+| `--verbose`, `-v` | Show verbose output from all gates | `--verbose`     |
+| `--help`, `-h`    | Show help message                  | `--help`        |
 
 ### Examples
 
@@ -300,6 +309,7 @@ node index.mjs
 ```
 
 **Output:**
+
 ```
 ╔═══════════════════════════════════════════════════════════╗
 ║           Master CI Gate Runner                           ║
@@ -399,40 +409,40 @@ Your gate's `index.mjs` must:
 
 /**
  * My Custom Gate
- * 
+ *
  * Description of what this gate validates.
  */
 
 // Parse arguments
 const args = process.argv.slice(2);
 const options = {
-  fix: args.includes('--fix'),
+  fix: args.includes("--fix"),
 };
 
 async function runChecks() {
-  console.log('Running my custom checks...\n');
-  
+  console.log("Running my custom checks...\n");
+
   // Your validation logic here
   const errors = [];
-  
+
   // Example check
   if (someConditionFails) {
-    errors.push('Error: something is wrong');
+    errors.push("Error: something is wrong");
   }
-  
+
   // Report results
   if (errors.length > 0) {
     console.error(`❌ Found ${errors.length} error(s)\n`);
-    errors.forEach(err => console.error(err));
+    errors.forEach((err) => console.error(err));
     process.exit(1);
   } else {
-    console.log('✅ All checks passed\n');
+    console.log("✅ All checks passed\n");
     process.exit(0);
   }
 }
 
-runChecks().catch(error => {
-  console.error('Fatal error:', error);
+runChecks().catch((error) => {
+  console.error("Fatal error:", error);
   process.exit(1);
 });
 ```
@@ -440,11 +450,13 @@ runChecks().catch(error => {
 ### Integration Steps
 
 1. **Create gate directory:**
+
    ```bash
    mkdir tools/ci-gate/my-gate
    ```
 
 2. **Create `index.mjs`:**
+
    ```bash
    touch tools/ci-gate/my-gate/index.mjs
    chmod +x tools/ci-gate/my-gate/index.mjs
@@ -453,16 +465,19 @@ runChecks().catch(error => {
 3. **Implement your checks** (see template above)
 
 4. **Test locally:**
+
    ```bash
    node tools/ci-gate/my-gate/index.mjs
    ```
 
 5. **Test with master runner:**
+
    ```bash
    node tools/ci-gate/index.mjs --gate=my-gate
    ```
 
 6. **Add to root package.json** (optional):
+
    ```json
    {
      "scripts": {
@@ -496,27 +511,27 @@ jobs:
   ci-gates:
     name: CI Gate Checks
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      
+          node-version: "20"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 9
-      
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
+
       - name: Run CI gates
         run: pnpm ci:gate
-      
+
       # Optional: Upload results as artifact
       - name: Upload gate results
         if: always()
@@ -622,10 +637,12 @@ The master runner automatically discovers gates by:
 Master runner ↔ Gate communication:
 
 **Input (from master to gate):**
+
 - CLI arguments: `--fix` (optional)
 - Environment: current working directory = gate directory
 
 **Output (from gate to master):**
+
 - Exit code: `0` = pass, `1` = fail
 - stdout: Results, progress messages
 - stderr: Errors, warnings
@@ -639,11 +656,13 @@ Master runner ↔ Gate communication:
 **Symptom:** Your gate doesn't appear when running `node tools/ci-gate/index.mjs --help`
 
 **Possible causes:**
+
 1. No `index.mjs` file in gate directory
 2. Gate directory not directly under `tools/ci-gate/`
 3. Typo in gate directory name
 
 **Solution:**
+
 ```bash
 # Check structure
 ls -la tools/ci-gate/my-gate/
@@ -657,11 +676,13 @@ ls -la tools/ci-gate/my-gate/
 **Symptom:** Gate exits with error before running checks
 
 **Possible causes:**
+
 1. Syntax error in gate's `index.mjs`
 2. Missing dependencies
 3. Incorrect file permissions
 
 **Solution:**
+
 ```bash
 # Test gate directly
 node tools/ci-gate/my-gate/index.mjs
@@ -679,15 +700,17 @@ pnpm install
 **Symptom:** Master runner shows "All gates passed" even when checks fail
 
 **Possible causes:**
+
 1. Gate not calling `process.exit(1)` on failure
 2. Gate catching errors and not propagating exit code
 
 **Solution:**
+
 ```javascript
 // In your gate code:
 if (errors.length > 0) {
   console.error(`Found ${errors.length} errors`);
-  process.exit(1);  // ← REQUIRED for failure
+  process.exit(1); // ← REQUIRED for failure
 }
 ```
 
@@ -696,14 +719,16 @@ if (errors.length > 0) {
 **Symptom:** `--verbose` flag shows no additional output
 
 **Possible causes:**
+
 1. Gate sends output to wrong stream
 2. Gate uses custom logging that doesn't go to stdout/stderr
 
 **Solution:**
+
 ```javascript
 // Use console.log/error (not custom loggers)
-console.log('Progress message');
-console.error('Error message');
+console.log("Progress message");
+console.error("Error message");
 ```
 
 ### Performance Issues
@@ -711,20 +736,17 @@ console.error('Error message');
 **Symptom:** Gates take too long to complete
 
 **Possible causes:**
+
 1. Scanning too many files
 2. Not excluding node_modules/dist
 3. Running expensive operations
 
 **Solution:**
+
 ```javascript
 // Exclude unnecessary directories
-const filesToScan = glob.sync('apps/**/*.ts', {
-  ignore: [
-    '**/node_modules/**',
-    '**/dist/**',
-    '**/build/**',
-    '**/*.test.ts',
-  ],
+const filesToScan = glob.sync("apps/**/*.ts", {
+  ignore: ["**/node_modules/**", "**/dist/**", "**/build/**", "**/*.test.ts"],
 });
 ```
 
@@ -734,12 +756,12 @@ const filesToScan = glob.sync('apps/**/*.ts', {
 
 From workspace root:
 
-| Script | Description | Equivalent |
-|--------|-------------|------------|
-| `pnpm ci:gate` | Run all gates | `node tools/ci-gate/index.mjs` |
-| `pnpm ci:gate:fix` | Run all gates with auto-fix | `node tools/ci-gate/index.mjs --fix` |
-| `pnpm ci:gate:logger` | Run logger gate only | `node tools/ci-gate/index.mjs --gate=logger` |
-| `pnpm ci:gate:verbose` | Run all gates with verbose output | `node tools/ci-gate/index.mjs --verbose` |
+| Script                 | Description                       | Equivalent                                   |
+| ---------------------- | --------------------------------- | -------------------------------------------- |
+| `pnpm ci:gate`         | Run all gates                     | `node tools/ci-gate/index.mjs`               |
+| `pnpm ci:gate:fix`     | Run all gates with auto-fix       | `node tools/ci-gate/index.mjs --fix`         |
+| `pnpm ci:gate:logger`  | Run logger gate only              | `node tools/ci-gate/index.mjs --gate=logger` |
+| `pnpm ci:gate:verbose` | Run all gates with verbose output | `node tools/ci-gate/index.mjs --verbose`     |
 
 ---
 

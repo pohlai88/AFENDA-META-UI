@@ -19,14 +19,17 @@ The personalized suggestions system provides **graceful fallback UX** when form 
 ## 📦 Core Modules
 
 ### 1. `suggestionGenerator.ts`
+
 Generates personalized alternatives based on user context and patterns.
 
 **Key Functions:**
+
 - `generatePersonalizedSuggestions()` - Main generation function
 - `extractSuggestionsFromResponse()` - Parse backend response and fallback to generation
 - `getUserInitials()`, `getLocationAbbrev()` - Personalization helpers
 
 **User Context:**
+
 ```typescript
 interface UserContext {
   userId?: string;
@@ -44,21 +47,26 @@ interface UserContext {
 ```
 
 ### 2. `useSuggestions.ts`
+
 React hook to manage suggestions state during validation lifecycle.
 
 **Main Hooks:**
+
 - `useSuggestions()` - Full state management for suggestions
 - `useSuggestionsFromResponse()` - Simpler alternative for response-driven suggestions
 
 ### 3. `SuggestionPrompt.tsx`
+
 UI components for displaying suggestions to users.
 
 **Key Components:**
+
 - `SuggestionPrompt` - Renders suggestions in 3 variants
 - `FieldWithSuggestions` - Field wrapper with integrated error + suggestions
 - Variants: `inline`, `compact` (default), `block`
 
 ### 4. `asyncValidationWithSuggestions.ts`
+
 Integration layer between async validation pipeline and suggestions.
 
 ---
@@ -135,7 +143,7 @@ export interface AsyncFieldValidationConfig {
   requestShape?: "legacy" | "contract-v1";
   finalCheckOnSubmit?: boolean;
   // NEW: Suggestions support
-  enableSuggestions?: boolean;           // enable suggestion collection/display
+  enableSuggestions?: boolean; // enable suggestion collection/display
   suggestionVariant?: "inline" | "compact" | "block"; // UI style
 }
 ```
@@ -145,6 +153,7 @@ export interface AsyncFieldValidationConfig {
 ## 🎨 Suggestion Variants
 
 ### 1. Inline (Minimal)
+
 Suggestions displayed inline with error message, comma-separated clickable links.
 
 **Best for:** Compact forms, minimal visual impact
@@ -154,6 +163,7 @@ Username is taken. Try one of these: alex123, alex_sf, alex_warriors
 ```
 
 ### 2. Compact (Default)
+
 Color-coded pills/badges showing personalization level.
 
 **Best for:** Most forms, good balance of clarity and space
@@ -164,6 +174,7 @@ Color-coded pills/badges showing personalization level.
 ```
 
 ### 3. Block (Full-width)
+
 Detailed cards with reasons and personalization metadata.
 
 **Best for:** Important fields, detailed explanations needed
@@ -185,42 +196,45 @@ Detailed cards with reasons and personalization metadata.
 ## 🔧 Personalization Strategies
 
 ### Strategy 1: Numeric Suffixes (Generic)
+
 ```
 alex → alex1, alex2, alex123
 ```
 
 ### Strategy 2: Year-based
+
 ```
 alex + 2026 → alex_2026, alex2026
 ```
 
 ### Strategy 3: Initials
+
 ```
 John Doe + alex → alex_jd, alexjd
 ```
 
 ### Strategy 4: Location
+
 ```
 Ho Chi Minh City + alex → alex_hcm, alex_hcm_2026
 ```
 
 ### Strategy 5: Preferences
+
 ```
 Favorite Team + alex → alex_manchester, alex_mu
 ```
 
 ### Strategy 6: Hybrid Combinations
+
 ```
 alex → alex2026jd, alex2026hcm, alex2026mu
 ```
 
 ### Strategy 7: Custom Patterns
+
 ```typescript
-patterns: [
-  "{{base}}_{{year}}",
-  "{{base}}_{{initials}}",
-  "{{base}}_{{location}}_{{year}}",
-]
+patterns: ["{{base}}_{{year}}", "{{base}}_{{initials}}", "{{base}}_{{location}}_{{year}}"];
 ```
 
 ---
@@ -310,8 +324,8 @@ const formConfig: FormConfig = {
       label: "Username",
       asyncValidate: {
         url: "/api/check-username",
-        enableSuggestions: true,        // Enable suggestions
-        suggestionVariant: "compact",   // UI style
+        enableSuggestions: true, // Enable suggestions
+        suggestionVariant: "compact", // UI style
         debounceMs: 400,
       },
       required: true,
@@ -362,7 +376,7 @@ User Clicks Suggestion → Field updates → Re-validate
 Suggestions are cached alongside validation results:
 
 ```
-Cache Key: 
+Cache Key:
   ${scope}::${fieldPath}::${method}::${url}::${value}::suggestions
 
 TTL: 5 minutes (configurable via `cacheTtlMs`)
@@ -410,6 +424,7 @@ npm test -- suggestionGenerator.test.ts
 ```
 
 **Key test scenarios:**
+
 - Generic numeric variants
 - User-derived variants (initials, year, location)
 - Preference-based variants
@@ -454,11 +469,7 @@ const suggestions = generatePersonalizedSuggestions({
     lastName: "Doe",
     location: "San Francisco",
   },
-  patterns: [
-    "{{base}}_{{year}}",
-    "{{base}}_{{location}}_{{initials}}",
-    "pro_{{base}}_{{year}}",
-  ],
+  patterns: ["{{base}}_{{year}}", "{{base}}_{{location}}_{{initials}}", "pro_{{base}}_{{year}}"],
   count: 5,
 });
 
@@ -477,7 +488,7 @@ const suggestions = generatePersonalizedSuggestions({
 
 export async function checkUsername(value: string) {
   const isTaken = await db.users.exists({ username: value });
-  
+
   if (!isTaken) {
     return { valid: true };
   }
@@ -493,7 +504,7 @@ export async function checkUsername(value: string) {
   return {
     valid: false,
     message: `"${value}" is already taken`,
-    suggestions: suggestions.filter(s => !await db.users.exists({ username: s })),
+    suggestions: suggestions.filter((s) => !(await db.users.exists({ username: s }))),
   };
 }
 ```
@@ -507,6 +518,7 @@ export async function checkUsername(value: string) {
 **Returns:** `PersonalizedSuggestion[]`
 
 **Config Options:**
+
 ```typescript
 {
   baseValue: string;                    // Required: base username/value
@@ -531,7 +543,7 @@ export async function checkUsername(value: string) {
   suggestions: PersonalizedSuggestion[];
   isLoading: boolean;
   errorMessage?: string;
-  
+
   handleValidationFailure(fieldValue, errorMessage, backendSuggestions?);
   clearSuggestions();
   setLoading(fieldValue);
@@ -541,6 +553,7 @@ export async function checkUsername(value: string) {
 ### `<SuggestionPrompt />`
 
 **Props:**
+
 ```typescript
 {
   suggestions: PersonalizedSuggestion[];
@@ -576,9 +589,9 @@ A: Yes, hook `onSuggestionClick` to log analytics.
 ## 📞 Integration Support
 
 For DynamicFormRHF integration questions, see:
+
 - `parseFieldConfigs.ts` - How asyncValidate config is parsed
 - `DynamicFormRHF.tsx` - How validation is executed
 - `EnhancedStringField.example.tsx` - Complete field implementation
 
 ---
-

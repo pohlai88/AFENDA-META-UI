@@ -22,9 +22,7 @@ export default function TooManyRequestsPage() {
           <CardDescription className="text-lg">Too Many Requests</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-muted-foreground">
-            Request limit reached. Wait a moment and retry.
-          </p>
+          <p className="text-muted-foreground">Request limit reached. Wait a moment and retry.</p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Button onClick={() => window.location.reload()} variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />

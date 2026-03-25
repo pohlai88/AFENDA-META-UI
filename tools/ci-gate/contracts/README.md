@@ -5,6 +5,7 @@ Validates that all lazy-loaded route pages and metadata-driven renderers export 
 ## Purpose
 
 Prevents **Renderer Version Drift** — a common failure mode in metadata-driven platforms where:
+
 - Lazy imports resolve to `undefined` because exports were renamed/removed
 - TypeScript can't catch these errors (dynamic imports bypass type checking)
 - Apps crash at runtime with: `Element type is invalid. Received a promise that resolves to: undefined.`
@@ -12,12 +13,14 @@ Prevents **Renderer Version Drift** — a common failure mode in metadata-driven
 ## What It Checks
 
 ### Export Contracts (19 tests)
+
 1. **Lazy route pages** export default React components
 2. **Metadata renderers** export named functions with correct signatures
 3. **Module paths** resolve correctly (no 404s on dynamic imports)
 4. **Export types** match what routes/orchestrators expect
 
 ### Registry Integrity (60 tests)
+
 1. **All registered renderers are loadable** (loader functions exist)
 2. **Contracts are complete** (rendererId, version, type, capabilities, etc.)
 3. **Modules export expected components** (named or default exports)
@@ -93,7 +96,7 @@ Validating lazy-page and renderer export contracts...
 🔧 Fix suggestions:
    Add a default export to apps/web/src/pages/model-list.tsx:
      export default function YourComponent() { ... }
-   
+
    Or if using named export, wrap it:
      export { YourComponent as default };
 
@@ -108,6 +111,7 @@ Validating lazy-page and renderer export contracts...
 **Cause**: Lazy route page doesn't export `default`
 
 **Fix**:
+
 ```typescript
 // ❌ Wrong
 export function ModelList() { ... }
@@ -121,6 +125,7 @@ export default function ModelList() { ... }
 **Cause**: Renderer doesn't export expected named function
 
 **Fix**:
+
 ```typescript
 // ❌ Wrong (in MetaListV2.tsx)
 export default function MetaList() { ... }
@@ -134,6 +139,7 @@ export function MetaListV2() { ... }
 **Cause**: Export exists but is wrong type (object instead of function, etc.)
 
 **Fix**:
+
 ```typescript
 // ❌ Wrong
 export default { Component: MyComponent };
@@ -147,6 +153,7 @@ export default function MyComponent() { ... }
 **Cause**: File doesn't exist at expected location
 
 **Fix**:
+
 - Restore file at expected path, OR
 - Update route definition path, OR
 - Update contract test path list
@@ -191,7 +198,7 @@ export default function MyComponent() { ... }
    ```typescript
    const lazyPageModulePaths = [
      // ... existing paths
-     "../pages/new-page",  // ← Add this
+     "../pages/new-page", // ← Add this
    ] as const;
    ```
 
@@ -199,15 +206,17 @@ export default function MyComponent() { ... }
 
 1. Create renderer at `apps/web/src/renderers/NewRenderer.tsx`
 2. **Create contract test** at `renderers/NewRenderer.contract.test.ts`:
+
    ```typescript
    import * as Module from "./NewRenderer";
-   
+
    describe("NewRenderer contract", () => {
      it("exports NewRenderer as callable component", () => {
        expect(typeof Module.NewRenderer).toBe("function");
      });
    });
    ```
+
 3. Update `test:contracts` script to include new test file
 
 ## Performance
@@ -253,6 +262,7 @@ pnpm ci:contracts         # Just contracts (fast feedback)
 ### Error Parsing
 
 Parses Vitest output to extract:
+
 - Test file location
 - Failing module path
 - Expected vs received types
@@ -261,6 +271,7 @@ Parses Vitest output to extract:
 ### Categorization
 
 Groups errors by type:
+
 - Missing default export
 - Missing named export
 - Wrong export type
@@ -270,6 +281,7 @@ Groups errors by type:
 ### Fix Suggestions
 
 For each error type, provides:
+
 - **Explanation**: Why it failed
 - **Fix steps**: Exact code changes needed
 - **Related files**: Where to make changes
@@ -278,6 +290,7 @@ For each error type, provides:
 ### Context Preservation
 
 Maintains test context:
+
 - Which test file failed
 - Which module is affected
 - What was expected
@@ -318,6 +331,7 @@ Maintains test context:
 ## Maintenance
 
 Contract tests are **self-maintaining** for existing modules:
+
 - No updates needed when module implementation changes
 - Only update when module paths change or new modules added
 - Test runtime stays constant (~5-7s) regardless of codebase size
@@ -325,6 +339,7 @@ Contract tests are **self-maintaining** for existing modules:
 ## Future Enhancements
 
 Potential improvements:
+
 - [ ] Auto-discover lazy pages from route definitions (no manual list)
 - [ ] Generate contract tests automatically from route config
 - [ ] Validate prop type contracts (beyond just export existence)

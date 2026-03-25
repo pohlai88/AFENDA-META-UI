@@ -91,7 +91,9 @@ export function matchPathPattern(pathPattern: string, actualPath: string): boole
     return false;
   }
 
-  return patternSegments.every((segment, index) => segment === "*" || segment === valueSegments[index]);
+  return patternSegments.every(
+    (segment, index) => segment === "*" || segment === valueSegments[index]
+  );
 }
 
 export function resolveWildcardPaths(values: DynamicFormValues, pathPattern: string): string[] {
@@ -118,9 +120,10 @@ export function resolveWildcardPaths(values: DynamicFormValues, pathPattern: str
       return;
     }
 
-    const next = current != null && typeof current === "object"
-      ? (current as Record<string, unknown>)[segment]
-      : undefined;
+    const next =
+      current != null && typeof current === "object"
+        ? (current as Record<string, unknown>)[segment]
+        : undefined;
 
     walk(next, depth + 1, [...prefix, segment]);
   };

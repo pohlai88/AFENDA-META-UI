@@ -36,10 +36,7 @@ describe("useSidebarStore", () => {
     expect(useSidebarStore.getState().expandedModules).toEqual(["sales"]);
 
     useSidebarStore.getState().toggleModule("inventory");
-    expect(useSidebarStore.getState().expandedModules).toEqual([
-      "sales",
-      "inventory",
-    ]);
+    expect(useSidebarStore.getState().expandedModules).toEqual(["sales", "inventory"]);
 
     useSidebarStore.getState().toggleModule("sales");
     expect(useSidebarStore.getState().expandedModules).toEqual(["inventory"]);
@@ -48,20 +45,12 @@ describe("useSidebarStore", () => {
   it("supports explicit module expansion actions", () => {
     useSidebarStore.getState().expandModule("crm");
     useSidebarStore.getState().expandModule("crm");
-    expect(useSidebarStore.getState().expandedModules).toEqual([
-      "sales",
-      "crm",
-    ]);
+    expect(useSidebarStore.getState().expandedModules).toEqual(["sales", "crm"]);
 
     useSidebarStore.getState().collapseModule("sales");
     expect(useSidebarStore.getState().expandedModules).toEqual(["crm"]);
 
-    useSidebarStore
-      .getState()
-      .setExpandedModules(["inventory", "inventory", "accounting"]);
-    expect(useSidebarStore.getState().expandedModules).toEqual([
-      "inventory",
-      "accounting",
-    ]);
+    useSidebarStore.getState().setExpandedModules(["inventory", "inventory", "accounting"]);
+    expect(useSidebarStore.getState().expandedModules).toEqual(["inventory", "accounting"]);
   });
 });

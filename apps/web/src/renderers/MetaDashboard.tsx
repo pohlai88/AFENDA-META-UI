@@ -52,7 +52,10 @@ type MultiSeriesDatum = Record<string, string | number>;
 
 const CHART_PALETTE = ["#3b5bdb", "#74c0fc", "#9775fa", "#fab005", "#40c057", "#ff922b"];
 
-const widgetRenderers: Record<MetaDashboardWidget["type"], React.ComponentType<WidgetRendererProps>> = {
+const widgetRenderers: Record<
+  MetaDashboardWidget["type"],
+  React.ComponentType<WidgetRendererProps>
+> = {
   stat: React.memo(StatWidget),
   chart: React.memo(ChartWidget),
   list: React.memo(ListWidget),
@@ -152,7 +155,9 @@ function StatWidget({ widget }: WidgetRendererProps) {
         </div>
       )}
       {widget.subtitle && (
-        <div style={{ color: "#666", fontSize: "0.85rem", marginTop: "0.25rem" }}>{widget.subtitle}</div>
+        <div style={{ color: "#666", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+          {widget.subtitle}
+        </div>
       )}
     </WidgetShell>
   );
@@ -260,11 +265,15 @@ function renderChart(
   if (chartType === "line") {
     return (
       <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-        {showGrid ? <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e9ecef" /> : null}
+        {showGrid ? (
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e9ecef" />
+        ) : null}
         <XAxis
           dataKey="name"
           tick={{ fontSize: 12 }}
-          label={xAxisLabel ? { value: xAxisLabel, position: "insideBottom", offset: -5 } : undefined}
+          label={
+            xAxisLabel ? { value: xAxisLabel, position: "insideBottom", offset: -5 } : undefined
+          }
         />
         <YAxis
           tick={{ fontSize: 12 }}
@@ -274,7 +283,13 @@ function renderChart(
           contentStyle={{ borderRadius: 8, border: "1px solid #dee2e6" }}
           cursor={{ fill: "rgba(59, 91, 219, 0.08)" }}
         />
-        <Line type="monotone" dataKey="value" stroke={primaryColor} strokeWidth={2} dot={{ r: 3 }} />
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={primaryColor}
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
       </LineChart>
     );
   }
@@ -328,7 +343,7 @@ function renderMultiSeriesChart(
   chartType: "bar" | "line",
   data: MultiSeriesDatum[],
   xKey: string,
-  chartConfig: MetaDashboardChartConfig,
+  chartConfig: MetaDashboardChartConfig
 ) {
   const series = chartConfig.series as MetaDashboardChartSeries[];
   const showGrid = chartConfig.show_grid ?? true;
@@ -345,7 +360,9 @@ function renderMultiSeriesChart(
         <XAxis
           dataKey={xKey}
           tick={{ fontSize: 12 }}
-          label={xAxisLabel ? { value: xAxisLabel, position: "insideBottom", offset: -5 } : undefined}
+          label={
+            xAxisLabel ? { value: xAxisLabel, position: "insideBottom", offset: -5 } : undefined
+          }
         />
         <YAxis
           tick={{ fontSize: 12 }}
@@ -476,7 +493,10 @@ function toChartData(rows: RecordRow[], chartConfig?: MetaDashboardChartConfig):
   const configuredXKey = chartConfig?.x_key;
 
   const numericField =
-    configuredYKey ?? rows.map((row) => Object.entries(row).find(([, value]) => toNumber(value) !== null)?.[0]).find(Boolean);
+    configuredYKey ??
+    rows
+      .map((row) => Object.entries(row).find(([, value]) => toNumber(value) !== null)?.[0])
+      .find(Boolean);
 
   if (!numericField) {
     return [];
@@ -491,10 +511,7 @@ function toChartData(rows: RecordRow[], chartConfig?: MetaDashboardChartConfig):
         return null;
       }
 
-      const labelSource =
-        (configuredXKey ? row[configuredXKey] : undefined) ??
-        row.name ??
-        row.id;
+      const labelSource = (configuredXKey ? row[configuredXKey] : undefined) ?? row.name ?? row.id;
 
       const name =
         typeof labelSource === "string" || typeof labelSource === "number"
@@ -522,7 +539,7 @@ function toNumber(value: unknown): number | null {
 
 function toMultiSeriesData(
   rows: RecordRow[],
-  chartConfig: MetaDashboardChartConfig,
+  chartConfig: MetaDashboardChartConfig
 ): { data: MultiSeriesDatum[]; xKey: string } {
   const series = chartConfig.series as MetaDashboardChartSeries[];
   const seriesKeySet = new Set(series.map((s) => s.key));
@@ -616,7 +633,9 @@ function RefreshButton({ onClick }: { onClick: () => void }) {
 }
 
 function WidgetErrorMessage() {
-  return <p style={{ color: "#c92a2a", fontSize: "0.85rem", margin: 0 }}>Failed to load widget data.</p>;
+  return (
+    <p style={{ color: "#c92a2a", fontSize: "0.85rem", margin: 0 }}>Failed to load widget data.</p>
+  );
 }
 
 function WidgetHint({ text }: { text: string }) {

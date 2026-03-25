@@ -19,13 +19,13 @@ export type TokenType =
   | "STRING"
   | "BOOLEAN"
   | "IDENTIFIER"
-  | "OPERATOR"       // + - * /
-  | "COMPARATOR"     // == != > < >= <=
+  | "OPERATOR" // + - * /
+  | "COMPARATOR" // == != > < >= <=
   | "PAREN_OPEN"
   | "PAREN_CLOSE"
   | "COMMA"
-  | "BRACKET_OPEN"   // [
-  | "BRACKET_CLOSE"  // ]
+  | "BRACKET_OPEN" // [
+  | "BRACKET_CLOSE" // ]
   | "KEYWORD_AND"
   | "KEYWORD_OR"
   | "KEYWORD_NOT"
@@ -64,7 +64,7 @@ const KEYWORDS: Record<string, TokenType> = {
 export class TokenizerError extends Error {
   constructor(
     message: string,
-    public position: number,
+    public position: number
   ) {
     super(`Tokenizer error at position ${position}: ${message}`);
     this.name = "TokenizerError";
@@ -86,19 +86,63 @@ export function tokenize(source: string): Token[] {
     const ch = source[i];
 
     // ── Single-character tokens ─────────────────────────────────────────
-    if (ch === "(") { tokens.push({ type: "PAREN_OPEN", value: "(", position: start }); i++; continue; }
-    if (ch === ")") { tokens.push({ type: "PAREN_CLOSE", value: ")", position: start }); i++; continue; }
-    if (ch === ",") { tokens.push({ type: "COMMA", value: ",", position: start }); i++; continue; }
-    if (ch === "[") { tokens.push({ type: "BRACKET_OPEN", value: "[", position: start }); i++; continue; }
-    if (ch === "]") { tokens.push({ type: "BRACKET_CLOSE", value: "]", position: start }); i++; continue; }
+    if (ch === "(") {
+      tokens.push({ type: "PAREN_OPEN", value: "(", position: start });
+      i++;
+      continue;
+    }
+    if (ch === ")") {
+      tokens.push({ type: "PAREN_CLOSE", value: ")", position: start });
+      i++;
+      continue;
+    }
+    if (ch === ",") {
+      tokens.push({ type: "COMMA", value: ",", position: start });
+      i++;
+      continue;
+    }
+    if (ch === "[") {
+      tokens.push({ type: "BRACKET_OPEN", value: "[", position: start });
+      i++;
+      continue;
+    }
+    if (ch === "]") {
+      tokens.push({ type: "BRACKET_CLOSE", value: "]", position: start });
+      i++;
+      continue;
+    }
 
     // ── Comparators (2-char then 1-char) ────────────────────────────────
-    if (ch === "=" && source[i + 1] === "=") { tokens.push({ type: "COMPARATOR", value: "==", position: start }); i += 2; continue; }
-    if (ch === "!" && source[i + 1] === "=") { tokens.push({ type: "COMPARATOR", value: "!=", position: start }); i += 2; continue; }
-    if (ch === ">" && source[i + 1] === "=") { tokens.push({ type: "COMPARATOR", value: ">=", position: start }); i += 2; continue; }
-    if (ch === "<" && source[i + 1] === "=") { tokens.push({ type: "COMPARATOR", value: "<=", position: start }); i += 2; continue; }
-    if (ch === ">") { tokens.push({ type: "COMPARATOR", value: ">", position: start }); i++; continue; }
-    if (ch === "<") { tokens.push({ type: "COMPARATOR", value: "<", position: start }); i++; continue; }
+    if (ch === "=" && source[i + 1] === "=") {
+      tokens.push({ type: "COMPARATOR", value: "==", position: start });
+      i += 2;
+      continue;
+    }
+    if (ch === "!" && source[i + 1] === "=") {
+      tokens.push({ type: "COMPARATOR", value: "!=", position: start });
+      i += 2;
+      continue;
+    }
+    if (ch === ">" && source[i + 1] === "=") {
+      tokens.push({ type: "COMPARATOR", value: ">=", position: start });
+      i += 2;
+      continue;
+    }
+    if (ch === "<" && source[i + 1] === "=") {
+      tokens.push({ type: "COMPARATOR", value: "<=", position: start });
+      i += 2;
+      continue;
+    }
+    if (ch === ">") {
+      tokens.push({ type: "COMPARATOR", value: ">", position: start });
+      i++;
+      continue;
+    }
+    if (ch === "<") {
+      tokens.push({ type: "COMPARATOR", value: "<", position: start });
+      i++;
+      continue;
+    }
 
     // ── Arithmetic operators ────────────────────────────────────────────
     if (ch === "+" || ch === "-" || ch === "*" || ch === "/") {

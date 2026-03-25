@@ -135,10 +135,12 @@ describe("MetaListV2", () => {
       data: metaResponse,
       isLoading: false,
     });
-    useModelListMock.mockImplementation((_model: string, options?: { page?: number; filters?: FilterGroup }) => ({
-      data: buildPageData(options?.page ?? 1, options?.filters),
-      isLoading: false,
-    }));
+    useModelListMock.mockImplementation(
+      (_model: string, options?: { page?: number; filters?: FilterGroup }) => ({
+        data: buildPageData(options?.page ?? 1, options?.filters),
+        isLoading: false,
+      })
+    );
   });
 
   it("supports select-page, select-all-query, and preserves selection on pagination", async () => {
@@ -149,7 +151,9 @@ describe("MetaListV2", () => {
     await user.click(screen.getByLabelText("Select all rows on this page"));
 
     expect(screen.getByText("2 selected")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select all 40 matching records" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Select all 40 matching records" })
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Select all 40 matching records" }));
 
@@ -166,7 +170,9 @@ describe("MetaListV2", () => {
 
     await waitFor(async () => {
       const rowCheckbox = screen.getByLabelText("Select row PO-3");
-      expect(rowCheckbox.getAttribute("data-state") ?? rowCheckbox.getAttribute("aria-checked")).toBeTruthy();
+      expect(
+        rowCheckbox.getAttribute("data-state") ?? rowCheckbox.getAttribute("aria-checked")
+      ).toBeTruthy();
     });
   });
 

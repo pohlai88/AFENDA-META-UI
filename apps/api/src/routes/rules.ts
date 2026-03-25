@@ -44,10 +44,7 @@ interface EvaluateRuleRequest {
   globalMetadata?: Record<string, unknown>;
 }
 
-export async function evaluateRuleHandler(
-  req: Request,
-  res: Response,
-): Promise<void> {
+export async function evaluateRuleHandler(req: Request, res: Response): Promise<void> {
   const { ruleId, record, relatedRecords, actor, tenantContext, globalMetadata } =
     req.body as EvaluateRuleRequest;
 
@@ -85,10 +82,7 @@ interface ComputeFieldRequest {
   globalMetadata?: Record<string, unknown>;
 }
 
-export async function computeFieldHandler(
-  req: Request,
-  res: Response,
-): Promise<void> {
+export async function computeFieldHandler(req: Request, res: Response): Promise<void> {
   const { fieldId, scope, record, relatedRecords, actor, tenantContext, globalMetadata } =
     req.body as ComputeFieldRequest;
 
@@ -121,10 +115,7 @@ interface VisibilityCheckRequest {
   defaultVisible?: boolean;
 }
 
-export async function visibilityCheckHandler(
-  req: Request,
-  res: Response,
-): Promise<void> {
+export async function visibilityCheckHandler(req: Request, res: Response): Promise<void> {
   const {
     fieldId,
     scope,
@@ -143,13 +134,7 @@ export async function visibilityCheckHandler(
     tenantContext,
   };
 
-  const visible = isFieldVisible(
-    fieldId,
-    scope,
-    context,
-    globalMetadata,
-    defaultVisible,
-  );
+  const visible = isFieldVisible(fieldId, scope, context, globalMetadata, defaultVisible);
   res.json({ fieldId, visible });
 }
 
@@ -169,10 +154,7 @@ interface ValidateRulesRequest {
   globalMetadata?: Record<string, unknown>;
 }
 
-export async function validateRulesHandler(
-  req: Request,
-  res: Response,
-): Promise<void> {
+export async function validateRulesHandler(req: Request, res: Response): Promise<void> {
   const { scope, record, relatedRecords, actor, tenantContext, globalMetadata } =
     req.body as ValidateRulesRequest;
 
@@ -183,12 +165,7 @@ export async function validateRulesHandler(
     tenantContext,
   };
 
-  const results = evaluateRulesForCategory(
-    scope,
-    "validate",
-    context,
-    globalMetadata,
-  );
+  const results = evaluateRulesForCategory(scope, "validate", context, globalMetadata);
 
   const passed = results.every((r) => r.passed);
   const violations = results.filter((r) => !r.passed || r.error);
@@ -205,10 +182,7 @@ interface TestExpressionRequest {
   context: Record<string, unknown>;
 }
 
-export async function testExpressionHandler(
-  req: Request,
-  res: Response,
-): Promise<void> {
+export async function testExpressionHandler(req: Request, res: Response): Promise<void> {
   const { expression, context } = req.body as TestExpressionRequest;
 
   const result = evaluateExpression(expression, context);

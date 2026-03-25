@@ -23,11 +23,7 @@ const iconRegistry = new Map<string, LucideIcon>([
 
 export function registerSidebarIcon(moduleName: string, name: string, icon: LucideIcon): void;
 export function registerSidebarIcon(name: string, icon: LucideIcon): void;
-export function registerSidebarIcon(
-  arg1: string,
-  arg2: string | LucideIcon,
-  arg3?: LucideIcon
-) {
+export function registerSidebarIcon(arg1: string, arg2: string | LucideIcon, arg3?: LucideIcon) {
   if (arg3) {
     iconRegistry.set(toScopedName(arg1, arg2 as string), arg3);
     return;

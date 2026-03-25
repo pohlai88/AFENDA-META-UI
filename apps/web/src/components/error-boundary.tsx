@@ -59,13 +59,7 @@ export class ErrorBoundaryClass extends Component<Props, State> {
   }
 }
 
-function ErrorBoundaryWithRetry({
-  error,
-  onReset,
-}: {
-  error: Error | null;
-  onReset: () => void;
-}) {
+function ErrorBoundaryWithRetry({ error, onReset }: { error: Error | null; onReset: () => void }) {
   const retryBootstrap = useRetryBootstrap();
 
   return (

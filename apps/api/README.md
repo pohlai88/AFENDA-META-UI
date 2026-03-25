@@ -25,17 +25,17 @@ pnpm dev
 
 ## 📦 Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start development server with hot reload |
-| `pnpm build` | Compile TypeScript to JavaScript |
-| `pnpm start` | Start production server |
-| `pnpm typecheck` | Type-check without emitting files |
-| `pnpm db:push` | Push schema changes to database |
-| `pnpm db:generate` | Generate Drizzle migrations |
-| `pnpm db:studio` | Open Drizzle Studio (GUI) |
+| Command                | Description                               |
+| ---------------------- | ----------------------------------------- |
+| `pnpm dev`             | Start development server with hot reload  |
+| `pnpm build`           | Compile TypeScript to JavaScript          |
+| `pnpm start`           | Start production server                   |
+| `pnpm typecheck`       | Type-check without emitting files         |
+| `pnpm db:push`         | Push schema changes to database           |
+| `pnpm db:generate`     | Generate Drizzle migrations               |
+| `pnpm db:studio`       | Open Drizzle Studio (GUI)                 |
 | `pnpm meta:introspect` | Introspect database and generate metadata |
-| `pnpm auth:token` | Generate JWT tokens for testing |
+| `pnpm auth:token`      | Generate JWT tokens for testing           |
 
 ## 🔒 Security Features
 
@@ -65,6 +65,7 @@ pnpm auth:token --userId user123 --type refresh
 ```
 
 Use the token in requests:
+
 ```bash
 curl -H "Authorization: Bearer <token>" \
   http://localhost:4000/api/partners
@@ -87,41 +88,41 @@ curl -H "X-API-Key: key1" \
 
 ### Authentication
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/login` | User login (returns access + refresh tokens) |
-| POST | `/auth/refresh` | Refresh access token |
-| POST | `/auth/logout` | Invalidate refresh token |
+| Method | Endpoint        | Description                                  |
+| ------ | --------------- | -------------------------------------------- |
+| POST   | `/auth/login`   | User login (returns access + refresh tokens) |
+| POST   | `/auth/refresh` | Refresh access token                         |
+| POST   | `/auth/logout`  | Invalidate refresh token                     |
 
 ### Metadata
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/meta` | List all registered models |
-| GET | `/meta/:model` | Get ModelMeta for specific model |
+| Method | Endpoint       | Description                      |
+| ------ | -------------- | -------------------------------- |
+| GET    | `/meta`        | List all registered models       |
+| GET    | `/meta/:model` | Get ModelMeta for specific model |
 
 ### CRUD API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/:model` | List records (paginated) |
-| GET | `/api/:model/:id` | Get single record |
-| POST | `/api/:model` | Create record |
-| PATCH | `/api/:model/:id` | Update record |
-| DELETE | `/api/:model/:id` | Delete record |
+| Method | Endpoint          | Description              |
+| ------ | ----------------- | ------------------------ |
+| GET    | `/api/:model`     | List records (paginated) |
+| GET    | `/api/:model/:id` | Get single record        |
+| POST   | `/api/:model`     | Create record            |
+| PATCH  | `/api/:model/:id` | Update record            |
+| DELETE | `/api/:model/:id` | Delete record            |
 
 ### GraphQL
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/graphql` | GraphQL operations |
-| GET | `/graphql` | GraphQL Playground (dev only) |
+| Method | Endpoint   | Description                   |
+| ------ | ---------- | ----------------------------- |
+| POST   | `/graphql` | GraphQL operations            |
+| GET    | `/graphql` | GraphQL Playground (dev only) |
 
 ### Health
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check endpoint |
+| Method | Endpoint  | Description           |
+| ------ | --------- | --------------------- |
+| GET    | `/health` | Health check endpoint |
 
 ## 🗄️ Database
 
@@ -161,6 +162,7 @@ Powered by **GraphQL Yoga** + **Drizzle-GraphQL**:
 - RBAC-aware queries
 
 Example query:
+
 ```graphql
 query GetPartners {
   partners(limit: 10) {
@@ -195,12 +197,14 @@ done
 ### Logs
 
 Development: Colorized console output
+
 ```
 10:30:15 [info]: 🚀 AFENDA API started
 10:30:16 [http]: HTTP Request { method: 'GET', url: '/health', statusCode: 200 }
 ```
 
 Production: JSON logs for aggregation
+
 ```json
 {
   "timestamp": "2026-03-23T10:30:15.123Z",
@@ -220,6 +224,7 @@ curl http://localhost:4000/health
 ```
 
 Response:
+
 ```json
 {
   "status": "ok",
@@ -236,6 +241,7 @@ See [SECURITY.md](./SECURITY.md) for comprehensive deployment checklist.
 ### Critical Steps
 
 1. **Environment Variables**
+
    ```bash
    NODE_ENV=production
    JWT_SECRET=<32+ char secret>
@@ -244,6 +250,7 @@ See [SECURITY.md](./SECURITY.md) for comprehensive deployment checklist.
    ```
 
 2. **Build & Start**
+
    ```bash
    pnpm build
    NODE_ENV=production pnpm start

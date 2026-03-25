@@ -174,7 +174,9 @@ export function Autocomplete<T>({
           ) : (
             options.map((o, index) => (
               <div
-                ref={(el) => { optionRefs.current[index] = el; }}
+                ref={(el) => {
+                  optionRefs.current[index] = el;
+                }}
                 id={`${listboxId}-option-${index}`}
                 role="option"
                 aria-selected={value === getOptionValue(o) || highlightedIndex === index}

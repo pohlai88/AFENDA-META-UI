@@ -42,9 +42,7 @@ export function parseNotificationToastDedupeMs(rawValue: string | undefined): nu
   return Math.min(Math.max(parsed, 0), MAX_NOTIFICATION_TOAST_DEDUPE_MS);
 }
 
-export function parsePermissionsBootstrapEndpoint(
-  rawValue: string | undefined
-): string {
+export function parsePermissionsBootstrapEndpoint(rawValue: string | undefined): string {
   if (!rawValue) {
     return DEFAULT_PERMISSIONS_BOOTSTRAP_ENDPOINT;
   }
@@ -100,9 +98,7 @@ export function parseAnalyticsFlushIntervalMs(rawValue: string | undefined): num
   return Math.min(Math.max(Math.floor(parsed), 250), MAX_ANALYTICS_FLUSH_INTERVAL_MS);
 }
 
-export function getAppConfig(
-  env: AppRuntimeEnv = import.meta.env
-): AppConfig {
+export function getAppConfig(env: AppRuntimeEnv = import.meta.env): AppConfig {
   const isTest = env.MODE === "test";
 
   if (env.DEV && env.VITE_NOTIFICATION_TOAST_DEDUPE_MS !== undefined) {
@@ -128,8 +124,6 @@ export function getAppConfig(
       isTest,
     }),
     analyticsBatchSize: parseAnalyticsBatchSize(env.VITE_ANALYTICS_BATCH_SIZE),
-    analyticsFlushIntervalMs: parseAnalyticsFlushIntervalMs(
-      env.VITE_ANALYTICS_FLUSH_INTERVAL_MS
-    ),
+    analyticsFlushIntervalMs: parseAnalyticsFlushIntervalMs(env.VITE_ANALYTICS_FLUSH_INTERVAL_MS),
   };
 }

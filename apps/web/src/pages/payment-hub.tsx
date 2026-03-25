@@ -14,7 +14,15 @@
 
 import { useState } from "react";
 import { PageContainer, PageHeader, PageShell } from "~/components/layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from "@afenda/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
+  Button,
+} from "@afenda/ui";
 import { ShoppingCart, ChevronRight } from "lucide-react";
 import { useModelList, useModel, type ListOptions } from "~/hooks/useModel";
 import { useMeta } from "~/hooks/useMeta";
@@ -52,16 +60,18 @@ export default function PaymentHub() {
 
   // --- List View: All sales orders
   const listOptions: ListOptions = { page, limit: 10 };
-  const { data: listResponse, isLoading: isListLoading, error: listError } = useModelList<SalesOrder>(
-    "sales_order",
-    listOptions
-  );
+  const {
+    data: listResponse,
+    isLoading: isListLoading,
+    error: listError,
+  } = useModelList<SalesOrder>("sales_order", listOptions);
 
   // --- Detail View: Selected order + metadata
-  const { data: selectedOrder, isLoading: isDetailLoading, error: detailError } = useModel<SalesOrder>(
-    "sales_order",
-    selectedOrderId ?? undefined
-  );
+  const {
+    data: selectedOrder,
+    isLoading: isDetailLoading,
+    error: detailError,
+  } = useModel<SalesOrder>("sales_order", selectedOrderId ?? undefined);
 
   const { data: metaResponse, isLoading: isMetaLoading } = useMeta("sales_order");
 
@@ -69,10 +79,15 @@ export default function PaymentHub() {
   const availableActions = (metaResponse?.meta.actions ?? []) as MetaAction[];
 
   const orders = listResponse?.data ?? [];
-  const totalPages = listResponse?.meta ? Math.ceil(listResponse.meta.total / listResponse.meta.limit) : 1;
+  const totalPages = listResponse?.meta
+    ? Math.ceil(listResponse.meta.total / listResponse.meta.limit)
+    : 1;
 
   return (
-    <PageShell variant="neutral" header={<PageHeader title="Payment Hub" description="Sales orders & approvals" />}>
+    <PageShell
+      variant="neutral"
+      header={<PageHeader title="Payment Hub" description="Sales orders & approvals" />}
+    >
       <PageContainer>
         {/* Quick Search + Filters */}
         <div className="grid gap-4 mb-8 md:grid-cols-3">
@@ -199,7 +214,8 @@ export default function PaymentHub() {
                       <CardTitle className="text-lg">{selectedOrderId}</CardTitle>
                       {selectedOrder && (
                         <CardDescription className="mt-1">
-                          {selectedOrder.supplier} • {new Date(selectedOrder.dueDate).toLocaleDateString()}
+                          {selectedOrder.supplier} •{" "}
+                          {new Date(selectedOrder.dueDate).toLocaleDateString()}
                         </CardDescription>
                       )}
                     </div>
@@ -214,7 +230,9 @@ export default function PaymentHub() {
 
                 <CardContent className="space-y-4">
                   {isDetailLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-                  {detailError && <p className="text-sm text-destructive">Failed to load details</p>}
+                  {detailError && (
+                    <p className="text-sm text-destructive">Failed to load details</p>
+                  )}
 
                   {selectedOrder && (
                     <>
@@ -246,14 +264,19 @@ export default function PaymentHub() {
                       <div className="flex justify-between gap-2 pb-4 border-b">
                         <span className="text-sm text-muted-foreground">Total</span>
                         <span className="text-lg font-bold">
-                          ${selectedOrder.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          $
+                          {selectedOrder.total.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                          })}
                         </span>
                       </div>
 
                       {/* Line Items (if available) */}
                       {selectedOrder.lineItems && selectedOrder.lineItems.length > 0 && (
                         <div className="space-y-2 pb-4 border-b">
-                          <p className="text-xs font-semibold text-muted-foreground uppercase">Line Items</p>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase">
+                            Line Items
+                          </p>
                           <div className="space-y-1 text-xs">
                             {selectedOrder.lineItems.map((item) => (
                               <div key={item.id} className="flex justify-between">
@@ -270,7 +293,9 @@ export default function PaymentHub() {
                       {/* Actions */}
                       {!isMetaLoading && (
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Actions</p>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                            Actions
+                          </p>
                           <ActionButtons
                             actions={availableActions}
                             size="sm"

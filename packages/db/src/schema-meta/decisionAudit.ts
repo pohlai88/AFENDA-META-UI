@@ -31,10 +31,7 @@ export const decisionEventTypeEnum = pgEnum("decision_event_type", [
   "layout_rendered",
 ]);
 
-export const decisionStatusEnum = pgEnum("decision_status", [
-  "success",
-  "error",
-]);
+export const decisionStatusEnum = pgEnum("decision_status", ["success", "error"]);
 
 // ── Decision Audit Entries ─────────────────────────────────────────────────
 
@@ -47,13 +44,8 @@ export const decisionAuditEntries = pgTable(
     userId: text("user_id"),
     eventType: decisionEventTypeEnum("event_type").notNull(),
     scope: text("scope").notNull(),
-    context: jsonb("context")
-      .$type<DecisionAuditEntry["context"]>()
-      .notNull()
-      .default({}),
-    decision: jsonb("decision")
-      .$type<DecisionAuditEntry["decision"]>()
-      .notNull(),
+    context: jsonb("context").$type<DecisionAuditEntry["context"]>().notNull().default({}),
+    decision: jsonb("decision").$type<DecisionAuditEntry["decision"]>().notNull(),
     durationMs: real("duration_ms").notNull(),
     status: decisionStatusEnum("status").notNull(),
     error: jsonb("error").$type<DecisionAuditEntry["error"]>(),

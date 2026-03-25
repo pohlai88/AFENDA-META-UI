@@ -48,9 +48,7 @@ function stableSerialize(value: unknown): string {
   const keys = Object.keys(record).sort();
   return (
     "{" +
-    keys
-      .map((key) => `${JSON.stringify(key)}:${stableSerialize(record[key])}`)
-      .join(",") +
+    keys.map((key) => `${JSON.stringify(key)}:${stableSerialize(record[key])}`).join(",") +
     "}"
   );
 }
@@ -81,14 +79,8 @@ export class ResolutionCache<T = Record<string, unknown>> {
     };
   }
 
-  generateKey(
-    tenantId: string,
-    model: string,
-    context?: Record<string, unknown>,
-  ): string {
-    const contextHash = context
-      ? hashString(stableSerialize(context))
-      : "default";
+  generateKey(tenantId: string, model: string, context?: Record<string, unknown>): string {
+    const contextHash = context ? hashString(stableSerialize(context)) : "default";
     return `${tenantId}::${model}::${contextHash}`;
   }
 
@@ -115,7 +107,7 @@ export class ResolutionCache<T = Record<string, unknown>> {
     key: string,
     value: T,
     ttlMs: number = this.config.defaultTtlMs,
-    dependencies?: CacheEntry<T>["dependencies"],
+    dependencies?: CacheEntry<T>["dependencies"]
   ): void {
     if (!this.cache.has(key) && this.cache.size >= this.config.maxEntries) {
       this.evictLeastUsed();
@@ -249,10 +241,7 @@ export class ResolutionCache<T = Record<string, unknown>> {
       hitRate: requests === 0 ? 0 : this.hits / requests,
       totalEntries: this.cache.size,
       totalSizeBytes,
-      avgEntryAgeMs:
-        ages.length === 0
-          ? 0
-          : ages.reduce((sum, age) => sum + age, 0) / ages.length,
+      avgEntryAgeMs: ages.length === 0 ? 0 : ages.reduce((sum, age) => sum + age, 0) / ages.length,
       oldestEntryAgeMs: ages.length === 0 ? 0 : Math.max(...ages),
     };
   }
@@ -298,15 +287,11 @@ export const ResolutionCacheService = {
     key: string,
     value: Record<string, unknown>,
     ttlMs?: number,
-    dependencies?: CacheEntry<Record<string, unknown>>["dependencies"],
+    dependencies?: CacheEntry<Record<string, unknown>>["dependencies"]
   ) {
     globalResolutionCache.set(key, value, ttlMs, dependencies);
   },
-  generateKey(
-    tenantId: string,
-    model: string,
-    context?: Record<string, unknown>,
-  ) {
+  generateKey(tenantId: string, model: string, context?: Record<string, unknown>) {
     return globalResolutionCache.generateKey(tenantId, model, context);
   },
   invalidateByDependency(tenantId: string, model: string) {

@@ -8,7 +8,7 @@
 /**
  * Plugin types
  */
-export type PluginType = 
+export type PluginType =
   | "renderer"
   | "validator"
   | "layout"
@@ -110,7 +110,7 @@ export interface AnalyticsPlugin extends UIPlugin {
 class PluginRegistry {
   private plugins = new Map<string, UIPlugin>();
   private activePlugins = new Set<string>();
-  
+
   /**
    * Register a plugin
    */
@@ -119,46 +119,46 @@ class PluginRegistry {
       console.warn(`[Plugins] Plugin already registered: ${plugin.id}`);
       return;
     }
-    
+
     this.plugins.set(plugin.id, plugin);
     console.log(`[Plugins] Registered: ${plugin.id} v${plugin.version}`);
   }
-  
+
   /**
    * Get a plugin by ID
    */
   get(id: string): UIPlugin | undefined {
     return this.plugins.get(id);
   }
-  
+
   /**
    * Get all plugins of a type
    */
   getByType(type: PluginType): UIPlugin[] {
-    return Array.from(this.plugins.values()).filter(p => p.type === type);
+    return Array.from(this.plugins.values()).filter((p) => p.type === type);
   }
-  
+
   /**
    * Check if plugin is active
    */
   isActive(id: string): boolean {
     return this.activePlugins.has(id);
   }
-  
+
   /**
    * Mark plugin as active
    */
   activate(id: string): void {
     this.activePlugins.add(id);
   }
-  
+
   /**
    * Mark plugin as inactive
    */
   deactivate(id: string): void {
     this.activePlugins.delete(id);
   }
-  
+
   /**
    * List all registered plugins
    */
@@ -173,15 +173,15 @@ class PluginRegistry {
 function resolveDependencies(plugins: UIPlugin[]): UIPlugin[] {
   const resolved: UIPlugin[] = [];
   const visited = new Set<string>();
-  
+
   function visit(plugin: UIPlugin) {
     if (visited.has(plugin.id)) return;
     visited.add(plugin.id);
-    
+
     // Visit dependencies first
     if (plugin.dependencies) {
       for (const dep of plugin.dependencies) {
-        const depPlugin = plugins.find(p => p.id === dep.id);
+        const depPlugin = plugins.find((p) => p.id === dep.id);
         if (!depPlugin && !dep.optional) {
           throw new Error(`Missing required dependency: ${dep.id} for plugin ${plugin.id}`);
         }
@@ -190,14 +190,14 @@ function resolveDependencies(plugins: UIPlugin[]): UIPlugin[] {
         }
       }
     }
-    
+
     resolved.push(plugin);
   }
-  
+
   for (const plugin of plugins) {
     visit(plugin);
   }
-  
+
   return resolved;
 }
 
@@ -207,7 +207,7 @@ function resolveDependencies(plugins: UIPlugin[]): UIPlugin[] {
 export class UIEngine {
   private registry = new PluginRegistry();
   private initialized = false;
-  
+
   /**
    * Use a plugin
    */
@@ -215,11 +215,11 @@ export class UIEngine {
     if (this.initialized) {
       throw new Error("Cannot add plugins after engine is initialized");
     }
-    
+
     this.registry.register(plugin);
     return this;
   }
-  
+
   /**
    * Initialize engine and activate all plugins
    */
@@ -228,77 +228,77 @@ export class UIEngine {
       console.warn("[Engine] Already initialized");
       return;
     }
-    
+
     console.log("[Engine] Initializing...");
-    
+
     const plugins = this.registry.list();
-    
+
     // Resolve dependency order
     const ordered = resolveDependencies(plugins);
-    
+
     // Load plugins
     for (const plugin of ordered) {
       await plugin.onLoad?.();
       console.log(`[Engine] Loaded: ${plugin.id}`);
     }
-    
+
     // Install plugins
     for (const plugin of ordered) {
       plugin.install(this);
       console.log(`[Engine] Installed: ${plugin.id}`);
     }
-    
+
     // Activate plugins
     for (const plugin of ordered) {
       await plugin.onActivate?.();
       this.registry.activate(plugin.id);
       console.log(`[Engine] Activated: ${plugin.id}`);
     }
-    
+
     this.initialized = true;
     console.log(`[Engine] Initialized with ${plugins.length} plugins`);
   }
-  
+
   /**
    * Get plugin by ID
    */
   getPlugin<T extends UIPlugin = UIPlugin>(id: string): T | undefined {
     return this.registry.get(id) as T | undefined;
   }
-  
+
   /**
    * Get plugins by type
    */
   getPluginsByType<T extends UIPlugin = UIPlugin>(type: PluginType): T[] {
     return this.registry.getByType(type) as T[];
   }
-  
+
   /**
    * Check if plugin is active
    */
   isPluginActive(id: string): boolean {
     return this.registry.isActive(id);
   }
-  
+
   /**
    * Execute action from action plugin
    */
   async executeAction(actionId: string, context: any): Promise<void> {
     const [pluginId, action] = actionId.split(".");
     const plugin = this.getPlugin<ActionPlugin>(pluginId);
-    
+
     if (!plugin || plugin.type !== "action") {
       throw new Error(`Action plugin not found: ${pluginId}`);
     }
-    
+
     const handler = plugin.actions[action];
     if (!handler) {
       throw new Error(`Action not found: ${actionId}`);
     }
-    
+
     await handler(context);
   }
-  
+
   /**
    * Track analytics event
    */

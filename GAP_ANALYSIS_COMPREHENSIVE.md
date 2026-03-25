@@ -1,4 +1,5 @@
 # Comprehensive Gap Analysis: AFENDA Meta-UI
+
 **Date**: March 25, 2026  
 **Purpose**: Compare actual codebase vs phase requirements  
 **Status**: Audit in progress
@@ -8,6 +9,7 @@
 ## Executive Summary
 
 Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
+
 - **Overall Project Completion**: 82% (from report)
 - **Critical Gaps (P0)**: **0** ✅ (all closed)
 - **Urgent Gaps (P1)**: **3-5** remaining
@@ -19,13 +21,13 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 
 ### Phase 1: Design System ✅ **100% COMPLETE**
 
-| Component | Status | Where |
-|-----------|--------|-------|
-| Tailwind CSS v4 | ✅ | `tailwind.config.ts` |
-| shadcn/ui (25 comps) | ✅ | `packages/ui/src/components/` |
-| cn() utility | ✅ | `packages/ui/src/lib/utils.ts` |
-| Layouts | ✅ | `apps/web/src/components/layout/` |
-| ThemeProvider | ✅ | `apps/web/src/components/theme-provider.tsx` |
+| Component            | Status | Where                                        |
+| -------------------- | ------ | -------------------------------------------- |
+| Tailwind CSS v4      | ✅     | `tailwind.config.ts`                         |
+| shadcn/ui (25 comps) | ✅     | `packages/ui/src/components/`                |
+| cn() utility         | ✅     | `packages/ui/src/lib/utils.ts`               |
+| Layouts              | ✅     | `apps/web/src/components/layout/`            |
+| ThemeProvider        | ✅     | `apps/web/src/components/theme-provider.tsx` |
 
 ---
 
@@ -36,6 +38,7 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 **File**: `apps/web/src/renderers/MetaFormV2.tsx`
 
 ✅ DONE:
+
 - [x] React Hook Form integration
 - [x] Zod validation
 - [x] Tab/group support
@@ -44,6 +47,7 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 - [x] Loading states
 
 ❌ MISSING:
+
 - [ ] **Unsaved changes prompt** (P1) - Ask before leaving if form modified
 - [ ] **Auto-save** (P2) - Periodically save without user action
 - [ ] **Optimistic updates** (P2) - Show changes immediately, sync to backend
@@ -57,6 +61,7 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 **File**: `apps/web/src/renderers/MetaListV2.tsx`
 
 ✅ DONE:
+
 - [x] TanStack Table v8
 - [x] Pagination
 - [x] Sorting
@@ -66,13 +71,15 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 - [x] Search placeholder integration
 
 ❌ MISSING:
+
 - [ ] **Row selection** (P1) - Checkbox column for bulk operations
 - [ ] **Bulk actions** (P1) - Delete/export selected rows
 - [ ] **CSV export** (P1) - Download all/selected rows
 - [ ] **Drag-reorder columns** (P2) - Userstate for column order
 - [ ] **Saved filters** (P2) - Save/load filter configs
 
-**Effort**: 
+**Effort**:
+
 - Row selection: 1-2 hours
 - Bulk actions: 2-3 hours
 - CSV export: 1-2 hours
@@ -85,6 +92,7 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 **File**: `apps/web/src/renderers/MetaKanban.tsx`
 
 ✅ DONE:
+
 - [x] Uses `@dnd-kit/core` for drag-drop
 - [x] Group by field support
 - [x] Cards with related data
@@ -92,6 +100,7 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 - [x] Column collapsing
 
 ❌ MISSING:
+
 - [ ] **Custom card templates** (P2) - More field layouts
 - [ ] **Column persistence** (P2) - Save column state
 
@@ -102,12 +111,14 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 **File**: `apps/web/src/renderers/MetaDashboard.tsx`
 
 ✅ DONE:
+
 - [x] Grid layout support
 - [x] Chart widgets (recharts)
 - [x] Stat cards
 - [x] Table widgets
 
 ❌ MISSING:
+
 - [ ] **Widget configuration** (P2) - Choose fields, aggregations
 - [ ] **Drill-down** (P2) - Click stat → filtered list
 - [ ] **Real-time updates** (P3) - WebSocket for live metrics
@@ -121,6 +132,7 @@ Based on audit of `VALIDATION_REPORT.md` + actual codebase inspection:
 Current: Shows count only (stub)
 
 ❌ MISSING:
+
 - [ ] **Nested list/table** (P1) - Edit related records inline
 - [ ] **Add dialog** (P1) - "+ Add" opens dialog with MetaForm
 - [ ] **Edit dialog** (P1) - Click row → edit in dialog
@@ -137,6 +149,7 @@ Current: Shows count only (stub)
 **Files**: None exist
 
 ❌ MISSING (all):
+
 - [ ] File input component
 - [ ] Image preview
 - [ ] S3 upload (or local)
@@ -153,6 +166,7 @@ Current: Shows count only (stub)
 #### Implemented (10/24)
 
 ✅ WORKING:
+
 - [x] string, text, integer, float, boolean
 - [x] date, datetime, time
 - [x] email, url, phone
@@ -161,6 +175,7 @@ Current: Shows count only (stub)
 #### Partially Implemented (11/24)
 
 🟡 WITH ISSUES:
+
 - [x] enum - Works but needs options
 - [x] **currency** - ✅ Implemented
 - [x] **json** - ✅ Implemented with editor
@@ -174,6 +189,7 @@ Current: Shows count only (stub)
 #### Not Implemented (3/24)
 
 ❌ MISSING:
+
 - [ ] **uuid** - Read-only ID field
 - [ ] **decimal** - Like float but fixed precision
 - [ ] **computed** - Read-only derived field
@@ -187,15 +203,15 @@ Current: Shows count only (stub)
 
 ### Phase 4: API Hardening ✅ **100% COMPLETE**
 
-| Item | Status | File |
-|------|--------|------|
-| JWT + RBAC | ✅ | `apps/api/src/middleware/auth.ts` |
-| Rate limiting | ✅ | `apps/api/src/middleware/rateLimit.ts` |
-| Input validation | ✅ | `apps/api/src/utils/validation.ts` |
-| Expression evaluator | ✅ | `apps/api/src/meta/rbac.ts` (filtrex) |
-| Search/filter API | ✅ | `apps/api/src/routes/api.ts` |
-| Helmet security | ✅ | `apps/api/src/index.ts` |
-| Winston logging | ✅ | `apps/api/src/logging/` |
+| Item                 | Status | File                                   |
+| -------------------- | ------ | -------------------------------------- |
+| JWT + RBAC           | ✅     | `apps/api/src/middleware/auth.ts`      |
+| Rate limiting        | ✅     | `apps/api/src/middleware/rateLimit.ts` |
+| Input validation     | ✅     | `apps/api/src/utils/validation.ts`     |
+| Expression evaluator | ✅     | `apps/api/src/meta/rbac.ts` (filtrex)  |
+| Search/filter API    | ✅     | `apps/api/src/routes/api.ts`           |
+| Helmet security      | ✅     | `apps/api/src/index.ts`                |
+| Winston logging      | ✅     | `apps/api/src/logging/`                |
 
 ---
 
@@ -204,11 +220,13 @@ Current: Shows count only (stub)
 #### 5.1 Module System ❌ **0% IMPLEMENTED**
 
 **Files**: Need to create:
+
 - `packages/meta-types/src/module.ts` - Type definitions
 - `apps/api/src/meta/moduleRegistry.ts` - Registry implementation
 - Update sidebar to use registry
 
 **Missing Features**:
+
 - [ ] Module registration & discovery
 - [ ] Dependency resolution
 - [ ] Module enable/disable
@@ -224,11 +242,13 @@ Current: Shows count only (stub)
 **File**: `apps/api/src/actions/`
 
 ✅ DONE:
+
 - [x] Action type definitions
 - [x] Action registry
 - [x] Execute action endpoint
 
 ❌ MISSING:
+
 - [ ] **Action permission checks** (P1) - Who can execute which action
 - [ ] **Action context** (P1) - Pass record data to action
 - [ ] **Action UI mapping** (P1) - Show action buttons in lists/forms
@@ -243,6 +263,7 @@ Current: Shows count only (stub)
 **File**: `apps/api/src/workflow/`
 
 ✅ DONE:
+
 - [x] Type definitions
 - [x] Service layer
 - [x] REST API
@@ -260,6 +281,7 @@ Current: Shows count only (stub)
 #### 6.1 Routing ✅ **100%**
 
 **File**: `apps/web/src/routes/index.tsx`
+
 - [x] React Router v6
 - [x] Nested routes
 - [x] Dynamic model routing
@@ -267,6 +289,7 @@ Current: Shows count only (stub)
 #### 6.2 App Shell ✅ **100%**
 
 **File**: `apps/web/src/components/layout/`
+
 - [x] Sidebar navigation
 - [x] Top bar with breadcrumbs
 - [x] Theme toggle
@@ -275,6 +298,7 @@ Current: Shows count only (stub)
 #### 6.3 Global Search ❌ **0%**
 
 **Missing**:
+
 - [ ] **Command palette** (Cmd+K) - Quick search/navigation
 - [ ] **Full-text search** - Backend indexing
 - [ ] **Search UI component** - Popover interface
@@ -287,12 +311,14 @@ Current: Shows count only (stub)
 #### 6.4 State Management 🟡 **70%**
 
 ✅ DONE:
+
 - [x] Redux Toolkit (auth, permissions, audit)
 - [x] Zustand (sidebar, notifications)
 - [x] React Query (server data)
 - [x] **Workflow Redux slice** (NEW!)
 
 ❌ MISSING:
+
 - [ ] **Optimistic UI updates** (P2) - UI updates before server confirms
 - [ ] **Offline support** (P3) - Cache-first strategy
 
@@ -301,6 +327,7 @@ Current: Shows count only (stub)
 #### 6.5 Internationalization (i18n) ❌ **0%**
 
 **Missing** (all):
+
 - [ ] i18next setup
 - [ ] Language selector
 - [ ] Translation files
@@ -314,6 +341,7 @@ Current: Shows count only (stub)
 #### 6.6 Error Boundaries ✅ **100%**
 
 **File**: `apps/web/src/components/error-boundary.tsx`
+
 - [x] Error boundary component
 - [x] 404/403/500 pages
 - [x] Route error handling
@@ -322,23 +350,25 @@ Current: Shows count only (stub)
 
 ### Phase 7: Testing & Quality ✅ **100%**
 
-| Framework | Status | Coverage |
-|-----------|--------|----------|
-| Vitest | ✅ | 27/27 tests passing |
-| Playwright | ✅ | 25 E2E tests |
-| Coverage | ✅ | 75%+ threshold |
+| Framework  | Status | Coverage            |
+| ---------- | ------ | ------------------- |
+| Vitest     | ✅     | 27/27 tests passing |
+| Playwright | ✅     | 25 E2E tests        |
+| Coverage   | ✅     | 75%+ threshold      |
 
 ---
 
 ### Phase 8: DevX & Documentation 🟡 **50%**
 
 ✅ DONE:
+
 - [x] `pnpm dev` works
 - [x] Good READMEs
 - [x] Type safety strict mode
 - [x] ESLint + Prettier
 
 ❌ MISSING:
+
 - [ ] **Docker Compose** (P2) - One-command local dev
 - [ ] **Database seeding** (P2) - Sample data for demo
 - [ ] **CI/CD pipeline** (P2) - GitHub Actions
@@ -356,6 +386,7 @@ Current: Shows count only (stub)
 **Goal**: Get to 95% completion + production-ready
 
 #### 1. **One2Many Field Implementation** (4-6 hours)
+
 ```
 File: apps/web/src/renderers/fields/One2ManyField.tsx
 Goal: Full nested record editing
@@ -369,6 +400,7 @@ Status: 🔴 BLOCKER for data management
 ```
 
 #### 2. **MetaList Bulk Operations** (4-7 hours)
+
 ```
 File: apps/web/src/renderers/MetaListV2.tsx
 Goal: Row selection + bulk actions + export
@@ -382,8 +414,9 @@ Status: 🔴 BLOCKER for power users
 ```
 
 #### 3. **Module System Architecture** (8-12 hours)
+
 ```
-Files: 
+Files:
   - packages/meta-types/src/module.ts
   - apps/api/src/meta/moduleRegistry.ts
   - Update sidebar
@@ -398,6 +431,7 @@ Status: 🔴 BLOCKER for scaling
 ```
 
 #### 4. **Unsaved Changes Prompt** (2-3 hours)
+
 ```
 File: apps/web/src/renderers/MetaFormV2.tsx
 Goal: Warn before leaving modified form
@@ -410,6 +444,7 @@ Status: 🟡 UX improvement
 ```
 
 #### 5. **Action Framework UI Integration** (4-6 hours)
+
 ```
 Files:
   - apps/web/src/components/action-menu.tsx
@@ -450,6 +485,7 @@ Status: 🟡 UX improvement
 ## Implementation Order
 
 ### Sprint 1 (This Sprint): One2Many + Module System + List Bulk Ops
+
 **Estimated**: 16-25 hours  
 **Priority**: P1 critical
 
@@ -458,6 +494,7 @@ Status: 🟡 UX improvement
 3. Module System (registry + discovery)
 
 ### Sprint 2: Form/List Polish
+
 **Estimated**: 6-10 hours  
 **Priority**: P1/P2 mix
 
@@ -466,6 +503,7 @@ Status: 🟡 UX improvement
 3. Global search (start)
 
 ### Sprint 3: DevX & Infrastructure
+
 **Estimated**: 6-10 hours  
 **Priority**: P2
 
@@ -478,15 +516,18 @@ Status: 🟡 UX improvement
 ## Risk Assessment
 
 ### HIGH RISK (might reveal blockers)
+
 - ⚠️ **One2Many nested MetaForm** - May need form lifecycle changes
 - ⚠️ **Module registry** - May reveal circular dependency issues
 - ⚠️ **Bulk operations** - May need permission checks per-row
 
 ### MEDIUM RISK
+
 - 🟡 **CSV export** - Large datasets might OOM browser
 - 🟡 **Action permissions** - Need to coordinate with auth middleware
 
 ### LOW RISK
+
 - ✅ Unsaved changes prompt - Straightforward React form state
 - ✅ Docker Compose - Standard setup
 
@@ -495,6 +536,7 @@ Status: 🟡 UX improvement
 ## Success Criteria
 
 After this plan:
+
 - ✅ 95%+ project completion
 - ✅ Zero P0 blockers
 - ✅ One P1 blocker remains (if any)

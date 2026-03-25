@@ -2,13 +2,13 @@
  * Query Key Factory
  * ==================
  * Centralized, typed query keys for React Query cache management.
- * 
+ *
  * Benefits:
  * - Type-safe query keys prevent cache mismatches
  * - Consistent structure across all queries
  * - Easy bulk invalidation (e.g., queryClient.invalidateQueries({ queryKey: queryKeys.models._def }))
  * - Better IntelliSense support
- * 
+ *
  * Pattern:
  * - Top-level: domain (meta, models, modules, dashboard)
  * - Second-level: operation (list, detail, all)
@@ -56,12 +56,10 @@ export const queryKeys = {
   models: {
     _def: ["model"] as const,
     lists: (model: string) => [...queryKeys.models._def, model, "list"] as const,
-    list: (
-      model: string,
-      options?: ModelListKeyOptions
-    ) => [...queryKeys.models.lists(model), stableSerializeQueryKeyOptions(options)] as const,
+    list: (model: string, options?: ModelListKeyOptions) =>
+      [...queryKeys.models.lists(model), stableSerializeQueryKeyOptions(options)] as const,
     details: (model: string) => [...queryKeys.models._def, model] as const,
-    detail: (model: string, recordId: string) => 
+    detail: (model: string, recordId: string) =>
       [...queryKeys.models.details(model), recordId] as const,
   },
 

@@ -11,12 +11,12 @@
 // ---------------------------------------------------------------------------
 
 export type WorkflowStepType =
-  | "approval"       // Human approval gate
-  | "action"         // Automated system action
-  | "condition"      // DSL-based branching
-  | "timer"          // Wait N seconds/minutes/hours
-  | "notification"   // Send notification
-  | "integration";   // Call external API / webhook
+  | "approval" // Human approval gate
+  | "action" // Automated system action
+  | "condition" // DSL-based branching
+  | "timer" // Wait N seconds/minutes/hours
+  | "notification" // Send notification
+  | "integration"; // Call external API / webhook
 
 // ---------------------------------------------------------------------------
 // Step Definitions

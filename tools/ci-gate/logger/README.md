@@ -50,10 +50,12 @@ tools/ci-gate/logger/
 **Purpose**: Ensures all logging goes through structured Pino logger, not `console.*`.
 
 **Validates**:
+
 - No `console.log()`, `console.error()`, `console.warn()` in source code
 - Exceptions: `config/index.ts` (startup validation), test files
 
 **Why**: Console logging is unstructured and doesn't support:
+
 - Log levels
 - Structured data (JSON)
 - Request tracing (requestId)
@@ -61,6 +63,7 @@ tools/ci-gate/logger/
 - PII redaction
 
 **Migration**:
+
 ```typescript
 // ❌ Before
 console.error("Error fetching orders:", err);
@@ -74,17 +77,20 @@ console.error("Error fetching orders:", err);
 **Purpose**: Prevents usage of deprecated Winston/Morgan logger imports.
 
 **Validates**:
+
 - No `import ... from "winston"`
 - No `import ... from "morgan"`
 - Only imports from `"../logging/index.js"` or `"./logging/logger.js"`
 
 **Why**: Winston is 5-10x slower than Pino and lacks:
+
 - Built-in PII redaction
 - Worker-thread transports
 - Native JSON output
 - Request-scoped child loggers
 
 **Migration**:
+
 ```typescript
 // ❌ Before
 import { logger } from "./middleware/logger.js"; // Winston
@@ -98,16 +104,19 @@ import { logger } from "../logging/index.js"; // Pino
 **Purpose**: Ensures route handlers use request-scoped logging for automatic `requestId` tracing.
 
 **Validates**:
+
 - Route handlers use `req.log` instead of root `logger`
 - Pattern: `(req as any).log?.error()` for safety
 
 **Why**: `req.log` is a child logger created by `pino-http` that automatically includes:
+
 - `requestId` (for end-to-end tracing)
 - `method` (GET, POST, etc.)
 - `url` (request path)
 - `userId` (from session)
 
 **Migration**:
+
 ```typescript
 // ❌ Before (loses requestId context)
 import { logger } from "../logging/index.js";
@@ -134,12 +143,14 @@ export async function getOrder(req: Request, res: Response) {
 **Purpose**: Validates correct Pino API signature (object first, message second).
 
 **Validates**:
+
 - Pino pattern: `logger.info({ data }, "message")` ✅
 - NOT Winston pattern: `logger.info("message", { data })` ❌
 
 **Why**: Pino's signature is `(mergingObject, message, ...interpolationValues)`, not `(message, mergingObject)` like Winston.
 
 **Migration**:
+
 ```typescript
 // ❌ Before (Winston pattern)
 logger.info("User logged in", { userId: "123" });
@@ -179,10 +190,10 @@ export async function getOrder(req: Request, res: Response) {
 
   try {
     const order = await fetchOrder(id);
-    
+
     // ✅ Success logging with structured data
     (req as any).log?.info({ orderId: order.id }, "Order fetched");
-    
+
     res.json({ data: order });
   } catch (err) {
     // ✅ Error logging with automatic requestId
@@ -225,9 +236,9 @@ describe("Order Service", () => {
 
   it("logs error when order fetch fails", async () => {
     await fetchOrder("non-existent-id");
-    
+
     expect(mockLogger.hasLog("error", "Failed to fetch order")).toBe(true);
-    
+
     const errorLog = mockLogger.findLog("error", /Failed/);
     expect(errorLog?.data?.orderId).toBe("non-existent-id");
   });
@@ -305,6 +316,7 @@ All changes are validated by this CI gate in PRs.
 ### False Positives
 
 If a check incorrectly flags valid code:
+
 1. Check if the file should be in `ALLOWED_FILES`
 2. Refine the regex pattern in the checker
 3. Add comments explaining the exception
@@ -312,6 +324,7 @@ If a check incorrectly flags valid code:
 ### Missing Violations
 
 If a check misses actual violations:
+
 1. Review the regex patterns in `checks/`
 2. Add test cases in `templates/` to verify
 3. Consider AST-based parsing (future enhancement)

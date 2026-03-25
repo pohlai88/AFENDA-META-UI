@@ -2,7 +2,7 @@
  * Permissions Slice
  * ==================
  * Redux slice for user permissions and RBAC management.
- * 
+ *
  * Features:
  * - Role-based access control
  * - Permission checks
@@ -34,7 +34,7 @@ const initialState: PermissionsState = {
 
 /**
  * Permissions slice
- * 
+ *
  * Usage:
  * ```tsx
  * const canEdit = useSelector(selectCanAccessResource("sales", "write"));
@@ -74,22 +74,16 @@ const permissionsSlice = createSlice({
       state.role = action.payload;
     },
     addPermission(state, action: PayloadAction<Permission>) {
-      const existing = state.permissions.find(
-        (p) => p.resource === action.payload.resource
-      );
+      const existing = state.permissions.find((p) => p.resource === action.payload.resource);
       if (existing) {
         // Merge actions
-        existing.actions = Array.from(
-          new Set([...existing.actions, ...action.payload.actions])
-        );
+        existing.actions = Array.from(new Set([...existing.actions, ...action.payload.actions]));
       } else {
         state.permissions.push(action.payload);
       }
     },
     removePermission(state, action: PayloadAction<string>) {
-      state.permissions = state.permissions.filter(
-        (p) => p.resource !== action.payload
-      );
+      state.permissions = state.permissions.filter((p) => p.resource !== action.payload);
     },
     clearPermissions(state) {
       state.permissions = [];
@@ -117,41 +111,33 @@ export default permissionsSlice.reducer;
 export const selectPermissions = (state: { permissions: PermissionsState }) =>
   state.permissions.permissions;
 
-export const selectRole = (state: { permissions: PermissionsState }) =>
-  state.permissions.role;
+export const selectRole = (state: { permissions: PermissionsState }) => state.permissions.role;
 
-export const selectPermissionsBootstrapStatus = (
-  state: { permissions: PermissionsState }
-) => state.permissions.bootstrapStatus;
+export const selectPermissionsBootstrapStatus = (state: { permissions: PermissionsState }) =>
+  state.permissions.bootstrapStatus;
 
-export const selectPermissionsBootstrapError = (
-  state: { permissions: PermissionsState }
-) => state.permissions.bootstrapError;
+export const selectPermissionsBootstrapError = (state: { permissions: PermissionsState }) =>
+  state.permissions.bootstrapError;
 
-export const selectPermissionsAreBootstrapped = (
-  state: { permissions: PermissionsState }
-) => state.permissions.bootstrapStatus === "ready";
+export const selectPermissionsAreBootstrapped = (state: { permissions: PermissionsState }) =>
+  state.permissions.bootstrapStatus === "ready";
 
 /**
  * Check if user has permission for a resource and action
  */
-export const selectCanAccessResource = (resource: string, action: string) => (
-  state: { permissions: PermissionsState }
-) => {
-  const permission = state.permissions.permissions.find(
-    (p) => p.resource === resource
-  );
-  return permission ? permission.actions.includes(action) : false;
-};
+export const selectCanAccessResource =
+  (resource: string, action: string) => (state: { permissions: PermissionsState }) => {
+    const permission = state.permissions.permissions.find((p) => p.resource === resource);
+    return permission ? permission.actions.includes(action) : false;
+  };
 
 /**
  * Check if user has any permission for a resource
  */
-export const selectHasAccessToResource = (resource: string) => (
-  state: { permissions: PermissionsState }
-) => {
-  return state.permissions.permissions.some((p) => p.resource === resource);
-};
+export const selectHasAccessToResource =
+  (resource: string) => (state: { permissions: PermissionsState }) => {
+    return state.permissions.permissions.some((p) => p.resource === resource);
+  };
 
 // Export types
 export type { Permission, PermissionsState };

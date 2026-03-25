@@ -5,12 +5,7 @@
  * Combines diff building with metadata resolution.
  */
 
-import type {
-  AuditEntry,
-  AuditOperation,
-  AuditSource,
-  MetaField,
-} from "@afenda/meta-types";
+import type { AuditEntry, AuditOperation, AuditSource, MetaField } from "@afenda/meta-types";
 import { buildDiff } from "./diffBuilder.js";
 
 let idCounter = 0;

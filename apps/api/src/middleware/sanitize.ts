@@ -53,11 +53,11 @@ function sanitizeXSS(value: unknown): unknown {
     }
     return clean;
   }
-  
+
   if (Array.isArray(value)) {
     return value.map(sanitizeXSS);
   }
-  
+
   if (value && typeof value === "object") {
     const cleaned: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
@@ -65,7 +65,7 @@ function sanitizeXSS(value: unknown): unknown {
     }
     return cleaned;
   }
-  
+
   return value;
 }
 
@@ -73,15 +73,15 @@ export function xssSanitizer(req: Request, _res: Response, next: NextFunction) {
   if (req.body) {
     req.body = sanitizeXSS(req.body);
   }
-  
+
   if (req.query) {
     req.query = sanitizeXSS(req.query) as typeof req.query;
   }
-  
+
   if (req.params) {
     req.params = sanitizeXSS(req.params) as typeof req.params;
   }
-  
+
   next();
 }
 
@@ -100,7 +100,7 @@ export function pathTraversalSanitizer(req: Request, res: Response, next: NextFu
         ip: req.ip,
         url: req.url,
       });
-      
+
       res.status(400).json({
         error: "Invalid request",
         message: "Path traversal detected",
@@ -108,7 +108,7 @@ export function pathTraversalSanitizer(req: Request, res: Response, next: NextFu
       return;
     }
   }
-  
+
   // Check query params
   for (const [key, value] of Object.entries(req.query)) {
     if (typeof value === "string" && PATH_TRAVERSAL_PATTERN.test(value)) {
@@ -117,7 +117,7 @@ export function pathTraversalSanitizer(req: Request, res: Response, next: NextFu
         ip: req.ip,
         url: req.url,
       });
-      
+
       res.status(400).json({
         error: "Invalid request",
         message: "Path traversal detected",
@@ -125,7 +125,7 @@ export function pathTraversalSanitizer(req: Request, res: Response, next: NextFu
       return;
     }
   }
-  
+
   next();
 }
 
@@ -140,14 +140,14 @@ export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
       next(err);
       return;
     }
-    
+
     // Then apply XSS sanitizer
     xssSanitizer(req, res, (xssErr: unknown) => {
       if (xssErr) {
         next(xssErr);
         return;
       }
-      
+
       // Finally apply path traversal sanitizer
       pathTraversalSanitizer(req, res, next);
     });

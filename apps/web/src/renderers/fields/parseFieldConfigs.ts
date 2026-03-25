@@ -157,8 +157,14 @@ function parseArrayFieldConfig(rawArray: Record<string, unknown>): FieldArrayCon
     })
     .parse(rawArray);
 
-  if (parsed.minItems !== undefined && parsed.maxItems !== undefined && parsed.minItems > parsed.maxItems) {
-    throw new Error(`Invalid array constraints for ${parsed.name}: minItems cannot be greater than maxItems.`);
+  if (
+    parsed.minItems !== undefined &&
+    parsed.maxItems !== undefined &&
+    parsed.minItems > parsed.maxItems
+  ) {
+    throw new Error(
+      `Invalid array constraints for ${parsed.name}: minItems cannot be greater than maxItems.`
+    );
   }
 
   return {
@@ -227,7 +233,9 @@ function parseFormLevelValidationRules(input: unknown): FormLevelValidationRule[
       return {
         rule: "custom",
         message: parsed.message,
-        customFn: parsed.customFn as ((values: Record<string, unknown>) => string | null) | undefined,
+        customFn: parsed.customFn as
+          | ((values: Record<string, unknown>) => string | null)
+          | undefined,
       };
     }
 

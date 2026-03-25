@@ -8,10 +8,7 @@
  */
 
 import { Command } from "commander";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-} from "../middleware/auth.js";
+import { generateAccessToken, generateRefreshToken } from "../middleware/auth.js";
 
 const program = new Command();
 

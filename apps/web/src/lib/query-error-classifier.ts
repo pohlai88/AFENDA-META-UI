@@ -77,13 +77,9 @@ export function classifyQueryError(
   const status = getErrorStatus(error);
   const message = error instanceof Error ? error.message : "Unknown error";
   const statusText =
-    isErrorWithStatus(error) && typeof error.statusText === "string"
-      ? error.statusText
-      : undefined;
+    isErrorWithStatus(error) && typeof error.statusText === "string" ? error.statusText : undefined;
   const errorName =
-    isErrorWithStatus(error) && typeof error.name === "string"
-      ? error.name
-      : undefined;
+    isErrorWithStatus(error) && typeof error.name === "string" ? error.name : undefined;
 
   if (errorName === "AbortError") {
     const presentation = applyPresentationOverride(

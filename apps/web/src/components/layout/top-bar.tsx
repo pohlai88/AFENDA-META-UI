@@ -2,7 +2,7 @@
  * Top Bar
  * ========
  * Application header with breadcrumb navigation, search, user menu, and theme toggle.
- * 
+ *
  * State Management:
  * - Sidebar state → Zustand (useSidebarStore)
  * - Notifications → Zustand (useNotificationStore)
@@ -14,7 +14,13 @@ import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { PanelLeft, PanelLeftClose, Search, Bell, User, ChevronRight } from "lucide-react";
 import { Button } from "@afenda/ui";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@afenda/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@afenda/ui";
 import { Moon, Sun } from "lucide-react";
 import { SHELL_IDS, SHELL_LABELS, SHELL_LAYOUT } from "./shell-config";
 import { useTheme } from "~/components/theme-provider";
@@ -51,7 +57,9 @@ function Breadcrumb() {
                   </span>
                 )}
                 {isLast ? (
-                  <span className="text-sm font-medium" aria-current="page">{label}</span>
+                  <span className="text-sm font-medium" aria-current="page">
+                    {label}
+                  </span>
                 ) : (
                   <Link
                     to={path}
@@ -81,11 +89,7 @@ function ThemeToggle() {
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
     >
-      {isDark ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </Button>
   );
 }
@@ -93,11 +97,11 @@ function ThemeToggle() {
 function UserMenu() {
   // Try to get user from Redux auth store, fallback to default
   const authUser = useAppSelector((state) => state.auth.user);
-  
+
   const defaultUser = {
     name: "Admin User",
     email: "admin@afenda.io",
-    role: "Administrator"
+    role: "Administrator",
   };
 
   const currentUser = authUser || defaultUser;
@@ -122,13 +126,9 @@ function UserMenu() {
           <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem>
-          Settings
-        </DropdownMenuItem>
+        <DropdownMenuItem>Settings</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive">
-          Log out
-        </DropdownMenuItem>
+        <DropdownMenuItem className="text-destructive">Log out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -152,11 +152,7 @@ export function TopBar() {
           aria-label={sidebarOpen ? SHELL_LABELS.sidebarClose : SHELL_LABELS.sidebarOpen}
           title={sidebarOpen ? SHELL_LABELS.sidebarClose : SHELL_LABELS.sidebarOpen}
         >
-          {sidebarOpen ? (
-            <PanelLeftClose className="h-4 w-4" />
-          ) : (
-            <PanelLeft className="h-4 w-4" />
-          )}
+          {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
         </Button>
 
         <Breadcrumb />
@@ -165,12 +161,7 @@ export function TopBar() {
       {/* Right Section */}
       <div className="flex items-center gap-2">
         {/* Search (future: open command palette) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Search"
-          title="Search (Cmd+K)"
-        >
+        <Button variant="ghost" size="icon" aria-label="Search" title="Search (Cmd+K)">
           <Search className="h-4 w-4" />
         </Button>
 
@@ -184,7 +175,10 @@ export function TopBar() {
         >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" aria-hidden="true" />
+            <span
+              className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full"
+              aria-hidden="true"
+            />
           )}
         </Button>
 

@@ -122,7 +122,7 @@ app.use(
         cb(null, true);
         return;
       }
-      
+
       if (config.allowedOrigins.includes(origin)) {
         cb(null, true);
       } else {
@@ -331,7 +331,7 @@ async function startServer() {
     const stats = await initTenantStore();
     logger.info(
       { tenants: stats.tenants, overrides: stats.overrides, templates: stats.templates },
-      "[Startup] Tenant store loaded from database",
+      "[Startup] Tenant store loaded from database"
     );
   } catch (err) {
     logger.error(

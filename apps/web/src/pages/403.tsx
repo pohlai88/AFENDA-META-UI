@@ -24,14 +24,12 @@ export default function ForbiddenPage() {
             </div>
           </div>
           <CardTitle className="text-4xl">403</CardTitle>
-          <CardDescription className="text-lg">
-            Access Forbidden
-          </CardDescription>
+          <CardDescription className="text-lg">Access Forbidden</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            You don't have permission to access this resource.
-            Please contact your administrator if you believe this is an error.
+            You don't have permission to access this resource. Please contact your administrator if
+            you believe this is an error.
           </p>
           {bootstrapError && (
             <p className="text-sm text-destructive" role="alert" aria-live="polite">

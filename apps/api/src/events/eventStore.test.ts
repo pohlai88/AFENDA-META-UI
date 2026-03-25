@@ -65,10 +65,16 @@ describe("eventStore — append & query", () => {
   });
 
   it("assigns metadata when provided", () => {
-    const e = appendEvent("order", "o1", "created", {}, {
-      actor: "u1",
-      source: "api",
-    });
+    const e = appendEvent(
+      "order",
+      "o1",
+      "created",
+      {},
+      {
+        actor: "u1",
+        source: "api",
+      }
+    );
     expect(e.metadata!.actor).toBe("u1");
     expect(e.metadata!.source).toBe("api");
   });
@@ -177,20 +183,10 @@ describe("eventStore — snapshots", () => {
     appendEvent("order", "o1", "order_confirmed", {});
 
     // Snapshot at version 2 (after 2 item_added events)
-    saveSnapshot<OrderState>(
-      "order",
-      "o1",
-      { status: "new", total: 30, items: ["A", "B"] },
-      2,
-    );
+    saveSnapshot<OrderState>("order", "o1", { status: "new", total: 30, items: ["A", "B"] }, 2);
 
     // Rebuild should apply only event at version 3 (order_confirmed) on top of snapshot
-    const state = rebuildFromSnapshot<OrderState>(
-      "order",
-      "o1",
-      orderReducer,
-      initialOrderState,
-    );
+    const state = rebuildFromSnapshot<OrderState>("order", "o1", orderReducer, initialOrderState);
 
     expect(state.status).toBe("confirmed");
     expect(state.total).toBe(30);

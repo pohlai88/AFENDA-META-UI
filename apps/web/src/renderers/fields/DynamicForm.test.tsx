@@ -268,13 +268,17 @@ describe("DynamicForm array fields", () => {
     renderWithProviders(<DynamicForm fields={fields} onSubmit={onSubmit} />);
 
     fireEvent.click(screen.getByRole("button", { name: /add department/i }));
-    fireEvent.change(screen.getByLabelText(/department name/i), { target: { value: "Engineering" } });
+    fireEvent.change(screen.getByLabelText(/department name/i), {
+      target: { value: "Engineering" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /add employee/i }));
     fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Alice" } });
 
     fireEvent.click(screen.getByRole("button", { name: /add contact/i }));
-    fireEvent.change(screen.getByLabelText(/contact value/i), { target: { value: "alice@example.com" } });
+    fireEvent.change(screen.getByLabelText(/contact value/i), {
+      target: { value: "alice@example.com" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /^submit$/i }));
 
@@ -349,7 +353,9 @@ describe("DynamicForm array fields", () => {
     renderWithProviders(<DynamicForm fields={fields} onSubmit={onSubmit} />);
 
     fireEvent.click(screen.getByRole("button", { name: /add department/i }));
-    fireEvent.change(screen.getByLabelText(/department name/i), { target: { value: "Engineering" } });
+    fireEvent.change(screen.getByLabelText(/department name/i), {
+      target: { value: "Engineering" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /add employee/i }));
     fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Alice" } });
@@ -392,15 +398,12 @@ describe("DynamicForm array fields", () => {
     ];
 
     renderWithProviders(
-      <DynamicForm
-        fields={fields}
-        initialValues={{}}
-        onSubmit={onSubmit}
-        validateOnMount
-      />
+      <DynamicForm fields={fields} initialValues={{}} onSubmit={onSubmit} validateOnMount />
     );
 
     expect(await screen.findByText("This field is required.")).toBeInTheDocument();
-    expect(await screen.findByText("Please fix the errors below before submitting.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Please fix the errors below before submitting.")
+    ).toBeInTheDocument();
   });
 });

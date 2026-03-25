@@ -13,7 +13,11 @@ export function RelationField({ field, value, onChange, readonly }: RendererFiel
   const valueField = rel?.value_field ?? "id";
   const displayField = rel?.display_field ?? "name";
 
-  const { data: records, isLoading, error } = useQuery({
+  const {
+    data: records,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["relation", rel?.model || "", debouncedSearch],
     queryFn: async () => {
       if (!rel?.model) return [];

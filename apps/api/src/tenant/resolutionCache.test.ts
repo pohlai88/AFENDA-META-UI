@@ -80,10 +80,7 @@ describe("Resolution Cache Service", () => {
   });
 
   it("stores and retrieves values with TTL", () => {
-    const key = cache.generateKey(
-      testContext.tenantId,
-      "finance.invoice"
-    );
+    const key = cache.generateKey(testContext.tenantId, "finance.invoice");
     const value = { amount: 5000 };
 
     cache.set(key, value, 5000);
@@ -93,10 +90,7 @@ describe("Resolution Cache Service", () => {
   });
 
   it("returns undefined for expired entries", async () => {
-    const key = cache.generateKey(
-      testContext.tenantId,
-      "finance.invoice"
-    );
+    const key = cache.generateKey(testContext.tenantId, "finance.invoice");
     const value = { amount: 5000 };
 
     cache.set(key, value, 100); // 100ms TTL
@@ -135,39 +129,20 @@ describe("Resolution Cache Service", () => {
   });
 
   it("invalidates cache by dependency (tenant/model)", () => {
-    const key1 = cache.generateKey(
-      testContext.tenantId,
-      "finance.invoice"
-    );
-    const key2 = cache.generateKey(
-      testContext.tenantId,
-      "finance.invoice"
-    );
+    const key1 = cache.generateKey(testContext.tenantId, "finance.invoice");
+    const key2 = cache.generateKey(testContext.tenantId, "finance.invoice");
 
-    cache.set(
-      key1,
-      { data: "invoice1" },
-      5000,
-      {
-        tenantId: testContext.tenantId,
-        model: "finance.invoice",
-      }
-    );
-    cache.set(
-      key2,
-      { data: "invoice2" },
-      5000,
-      {
-        tenantId: testContext.tenantId,
-        model: "finance.order",
-      }
-    );
+    cache.set(key1, { data: "invoice1" }, 5000, {
+      tenantId: testContext.tenantId,
+      model: "finance.invoice",
+    });
+    cache.set(key2, { data: "invoice2" }, 5000, {
+      tenantId: testContext.tenantId,
+      model: "finance.order",
+    });
 
     // Invalidate finance.invoice - should remove key1 only
-    const invalidated = cache.invalidateByDependency(
-      testContext.tenantId,
-      "finance.invoice"
-    );
+    const invalidated = cache.invalidateByDependency(testContext.tenantId, "finance.invoice");
 
     expect(invalidated).toBe(1);
     expect(cache.get(key1)).toBeUndefined();
@@ -522,7 +497,7 @@ describe("Caching Integration - 90% Cost Reduction", () => {
 ║  ✅ TARGETS ACHIEVED:                                                        ║
 ║     ✓ Cache hit rate > 90%: ${metrics.cacheHitRate > 0.9 ? "PASS" : "FAIL"}                          ║
 ║     ✓ Cost reduction > 50%: ${metrics.costReductionPercent > 50 ? "PASS" : "FAIL"}                          ║
-║     ✓ Scaled to 1000+ reqs:${("✓ Yes, tested " + iterations + " iterations")}       ║
+║     ✓ Scaled to 1000+ reqs:${"✓ Yes, tested " + iterations + " iterations"}       ║
 ║                                                                            ║
 ╚════════════════════════════════════════════════════════════════════════════╝
     `;

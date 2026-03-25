@@ -35,7 +35,11 @@ export function ImageField({ field, value, onChange, readonly }: RendererFieldPr
     return (
       <FieldWrapper field={field} htmlFor={controlId}>
         {previewSrc ? (
-          <img src={previewSrc} alt={field.label} className="h-24 w-24 rounded-md border object-cover" />
+          <img
+            src={previewSrc}
+            alt={field.label}
+            className="h-24 w-24 rounded-md border object-cover"
+          />
         ) : (
           <span className="text-sm text-muted-foreground">-</span>
         )}
@@ -59,7 +63,11 @@ export function ImageField({ field, value, onChange, readonly }: RendererFieldPr
         />
         {previewSrc && (
           <div className="space-y-2">
-            <img src={previewSrc} alt={field.label} className="h-24 w-24 rounded-md border object-cover" />
+            <img
+              src={previewSrc}
+              alt={field.label}
+              className="h-24 w-24 rounded-md border object-cover"
+            />
             <Button type="button" variant="ghost" size="sm" onClick={() => onChange?.(null)}>
               Clear
             </Button>

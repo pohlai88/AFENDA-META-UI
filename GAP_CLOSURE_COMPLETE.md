@@ -15,16 +15,19 @@ Validation against [ui-system.md](ui-system.md) identified 2 performance optimiz
 
 ### ✅ Gap 1: Virtual Scrolling for Large Sections
 
-**Requirement** (ui-system.md line 152):  
+**Requirement** (ui-system.md line 152):
+
 > "Virtualize long lists (render only visible +overscan)"
 
 **Implementation**:
+
 - Added `react-window` dependency (v2.2.7)
 - Integrated `List` component in `LayoutRenderer.tsx`
 - Threshold: Activates for sections with 100+ children
 - Configuration: Fixed 80px row height, 600px container
 
 **Files Modified**:
+
 - [apps/web/src/renderers/layout/LayoutRenderer.tsx](apps/web/src/renderers/layout/LayoutRenderer.tsx)
 - [apps/web/package.json](apps/web/package.json)
 
@@ -34,16 +37,19 @@ Validation against [ui-system.md](ui-system.md) identified 2 performance optimiz
 
 ### ✅ Gap 2: Cached Visibility Rule Results
 
-**Requirement** (ui-system.md line 159):  
+**Requirement** (ui-system.md line 159):
+
 > "Cache rule evaluation results"
 
 **Implementation**:
+
 - Map-based cache with `JSON.stringify` keys
 - Composite key: `{ rule, values }`
 - Time-to-Live (TTL): 1 second per entry (prevents memory leaks)
 - Automatic cleanup with `setTimeout`
 
 **Files Modified**:
+
 - [apps/web/src/renderers/layout/LayoutRenderer.tsx](apps/web/src/renderers/layout/LayoutRenderer.tsx)
 
 **Code Impact**: +28 lines (added visibilityCache Map + getCacheKey function + TTL logic)
@@ -53,17 +59,22 @@ Validation against [ui-system.md](ui-system.md) identified 2 performance optimiz
 ## Verification
 
 ### TypeScript Compilation
+
 ```bash
 cd apps/web
 npx tsc --noEmit
 ```
+
 **Result**: ✅ No errors
 
 ### Full Build
+
 ```bash
 npx turbo run build --force
 ```
+
 **Result**: ✅ 4/4 packages successful
+
 - `@afenda/meta-types` — ✅ Pass
 - `@afenda/ui` — ✅ Pass
 - `api` — ✅ Pass
@@ -72,11 +83,14 @@ npx turbo run build --force
 **Duration**: 18.6s
 
 ### Test Suite
+
 ```bash
 cd apps/api
 npx vitest run
 ```
+
 **Result**: ✅ 96/96 tests passing
+
 - Policy DSL: 14 tests
 - Policy Evaluator: 8 tests
 - Policy Registry: 6 tests
@@ -90,12 +104,15 @@ npx vitest run
 ## Performance Impact
 
 ### Virtual Scrolling
-**Before**: 
+
+**Before**:
+
 - Render all N children immediately
 - DOM nodes: N
 - Initial render time: O(N)
 
 **After**:
+
 - Render only visible rows (600px / 80px = ~8 rows)
 - DOM nodes: ~8 + overscan (typically 15-20)
 - Initial render time: O(1) constant
@@ -106,11 +123,14 @@ npx vitest run
 ---
 
 ### Rule Caching
+
 **Before**:
+
 - Every visibility check re-evaluates DSL expression
 - Repeated checks for same rule+values: O(complexity of DSL)
 
 **After**:
+
 - First check: Evaluate and cache
 - Subsequent checks (within 1s): O(1) hash lookup
 - Cache invalidation: Automatic after 1 second
@@ -121,13 +141,13 @@ npx vitest run
 
 ## Updated Validation Status
 
-| Component              | Coverage | Status                        |
-| ---------------------- | -------- | ----------------------------- |
-| Policy DSL Grammar     | 100%     | ✅ Complete                    |
-| Layout Rendering       | 100%     | ✅ Complete (gaps closed)      |
-| Metadata DB Schema     | 100%     | ✅ Complete                    |
-| Event-Sourcing         | 100%     | ✅ Complete (exceeds spec)     |
-| Rule Simulation Sandbox| 100%     | ✅ Complete                    |
+| Component               | Coverage | Status                     |
+| ----------------------- | -------- | -------------------------- |
+| Policy DSL Grammar      | 100%     | ✅ Complete                |
+| Layout Rendering        | 100%     | ✅ Complete (gaps closed)  |
+| Metadata DB Schema      | 100%     | ✅ Complete                |
+| Event-Sourcing          | 100%     | ✅ Complete (exceeds spec) |
+| Rule Simulation Sandbox | 100%     | ✅ Complete                |
 
 **Overall Spec Compliance**: 100%
 
@@ -138,12 +158,14 @@ npx vitest run
 The Business Truth Engine is now **production-ready** with full spec compliance.
 
 **Recommended actions**:
+
 1. ✅ Load test virtual scrolling with 1000+ field forms
 2. ✅ Monitor visibility cache hit rates in production
 3. ✅ Adjust TTL (currently 1s) based on real-world usage patterns if needed
 4. ✅ Consider adding cache size limits if memory becomes a concern
 
 **Optional enhancements** (not required by spec):
+
 - Configurable virtual scroll threshold (currently hardcoded at 100)
 - Dynamic row height calculation (currently fixed at 80px)
 - Visibility cache metrics/instrumentation

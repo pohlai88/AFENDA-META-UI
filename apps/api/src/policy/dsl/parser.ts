@@ -32,7 +32,7 @@ import type {
 export class ParseError extends Error {
   constructor(
     message: string,
-    public position: number,
+    public position: number
   ) {
     super(`Parse error at position ${position}: ${message}`);
     this.name = "ParseError";
@@ -51,10 +51,7 @@ export class Parser {
   parse(): AstNode {
     const node = this.parseIfThenBlock();
     if (this.peek().type !== "EOF") {
-      throw new ParseError(
-        `Unexpected token '${this.peek().value}'`,
-        this.peek().position,
-      );
+      throw new ParseError(`Unexpected token '${this.peek().value}'`, this.peek().position);
     }
     return node;
   }
@@ -74,10 +71,7 @@ export class Parser {
   private expect(type: TokenType, hint?: string): Token {
     const token = this.peek();
     if (token.type !== type) {
-      throw new ParseError(
-        `Expected ${hint ?? type} but got '${token.value}'`,
-        token.position,
-      );
+      throw new ParseError(`Expected ${hint ?? type} but got '${token.value}'`, token.position);
     }
     return this.advance();
   }
@@ -107,10 +101,7 @@ export class Parser {
   private parseLogical(): AstNode {
     let left = this.parseComparison();
 
-    while (
-      this.peek().type === "KEYWORD_AND" ||
-      this.peek().type === "KEYWORD_OR"
-    ) {
+    while (this.peek().type === "KEYWORD_AND" || this.peek().type === "KEYWORD_OR") {
       const op = this.advance();
       const right = this.parseComparison();
       left = {
@@ -154,7 +145,10 @@ export class Parser {
   private parseAddition(): AstNode {
     let left = this.parseMultiplication();
 
-    while (this.peek().type === "OPERATOR" && (this.peek().value === "+" || this.peek().value === "-")) {
+    while (
+      this.peek().type === "OPERATOR" &&
+      (this.peek().value === "+" || this.peek().value === "-")
+    ) {
       const op = this.advance();
       const right = this.parseMultiplication();
       left = { kind: "BinaryExpr", operator: op.value, left, right } satisfies BinaryExpr;
@@ -168,7 +162,10 @@ export class Parser {
   private parseMultiplication(): AstNode {
     let left = this.parseUnary();
 
-    while (this.peek().type === "OPERATOR" && (this.peek().value === "*" || this.peek().value === "/")) {
+    while (
+      this.peek().type === "OPERATOR" &&
+      (this.peek().value === "*" || this.peek().value === "/")
+    ) {
       const op = this.advance();
       const right = this.parseUnary();
       left = { kind: "BinaryExpr", operator: op.value, left, right } satisfies BinaryExpr;

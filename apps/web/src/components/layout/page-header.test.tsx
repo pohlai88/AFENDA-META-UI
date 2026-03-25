@@ -25,7 +25,9 @@ describe("PageHeader", () => {
 
     expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeInTheDocument();
     expect(screen.getByRole("list")).toBeInTheDocument();
-    expect(screen.getByText("Orders", { selector: "span[aria-current='page']" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Orders", { selector: "span[aria-current='page']" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
   });
 
@@ -85,7 +87,9 @@ describe("PageHeader", () => {
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "Sales" })).toHaveAttribute("href", "/sales");
-    expect(screen.getByText("Orders", { selector: "span[aria-current='page']" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Orders", { selector: "span[aria-current='page']" })
+    ).toBeInTheDocument();
   });
 
   it("uses manual breadcrumbs as override when provided", () => {
@@ -125,7 +129,9 @@ describe("PageHeader", () => {
     );
 
     expect(screen.getByRole("link", { name: "Manual" })).toHaveAttribute("href", "/manual");
-    expect(screen.getByText("Override", { selector: "span[aria-current='page']" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Override", { selector: "span[aria-current='page']" })
+    ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
   });
 });

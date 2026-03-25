@@ -13,10 +13,7 @@ const toastByVariant: Record<ToastVariant, typeof toast.info> = {
 };
 
 export function NotificationToastBridge() {
-  const dedupeWindowMs = React.useMemo(
-    () => getAppConfig().notificationToastDedupeMs,
-    []
-  );
+  const dedupeWindowMs = React.useMemo(() => getAppConfig().notificationToastDedupeMs, []);
   const notifications = useNotificationStore((state) => state.notifications);
   const seenIdsRef = React.useRef(
     new Set(useNotificationStore.getState().notifications.map((item) => item.id))

@@ -39,15 +39,11 @@ export function PageShell({
       role="region"
       aria-label="Page"
     >
-      {header && (
-        <header className="border-b border-border shrink-0">{header}</header>
-      )}
+      {header && <header className="border-b border-border shrink-0">{header}</header>}
       <ErrorBoundaryClass>
         <div className="flex-1">{children}</div>
       </ErrorBoundaryClass>
-      {footer && (
-        <footer className="border-t border-border shrink-0">{footer}</footer>
-      )}
+      {footer && <footer className="border-t border-border shrink-0">{footer}</footer>}
     </div>
   );
 }
@@ -90,7 +86,7 @@ export function PageContainer({
         "container mx-auto",
         spacingClasses[spacing],
         scrollable && "overflow-y-auto",
-        className,
+        className
       )}
     >
       {children}

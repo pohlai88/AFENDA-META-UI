@@ -35,14 +35,10 @@ import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
 export interface FormLifecycleHooks {
   onMetaLoaded?: (meta: ModelMeta) => void;
   beforeSave?: (
-    values: Record<string, unknown>,
+    values: Record<string, unknown>
   ) => Record<string, unknown> | false | Promise<Record<string, unknown> | false>;
   afterSave?: (record: Record<string, unknown>) => void;
-  onFieldChange?: (
-    name: string,
-    value: unknown,
-    allValues: Record<string, unknown>,
-  ) => void;
+  onFieldChange?: (name: string, value: unknown, allValues: Record<string, unknown>) => void;
   onValidationError?: (errors: Record<string, unknown>) => void;
 }
 
@@ -142,7 +138,7 @@ function generateZodSchema(fields: MetaField[]): z.ZodObject<Record<string, z.Zo
 
 function extractDirtyValues(
   dirtyFields: Record<string, boolean | Record<string, unknown>>,
-  allValues: Record<string, unknown>,
+  allValues: Record<string, unknown>
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const key of Object.keys(dirtyFields)) {
@@ -152,7 +148,7 @@ function extractDirtyValues(
     } else if (typeof dirty === "object" && dirty !== null) {
       result[key] = extractDirtyValues(
         dirty as Record<string, boolean | Record<string, unknown>>,
-        (allValues[key] ?? {}) as Record<string, unknown>,
+        (allValues[key] ?? {}) as Record<string, unknown>
       );
     }
   }
@@ -163,13 +159,7 @@ function extractDirtyValues(
 // Sub-Components
 // ---------------------------------------------------------------------------
 
-function GroupFields({
-  group,
-  fields,
-}: {
-  group: MetaGroup;
-  fields: MetaField[];
-}) {
+function GroupFields({ group, fields }: { group: MetaGroup; fields: MetaField[] }) {
   const fieldMap = new Map(fields.map((f) => [f.name, f]));
 
   return (
@@ -214,12 +204,15 @@ function FormGroups({ groups, fields }: { groups: MetaGroup[]; fields: MetaField
 
 function FormTabs({ group, fields }: { group: MetaGroup; fields: MetaField[] }) {
   const tabs = group.tabs ?? [];
-  
+
   return (
     <Card>
       <CardContent className="pt-6">
         <Tabs defaultValue={tabs[0]?.name}>
-          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+          <TabsList
+            className="grid w-full"
+            style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
+          >
             {tabs.map((tab) => (
               <TabsTrigger key={tab.name} value={tab.name}>
                 {tab.label ?? tab.name}
@@ -230,9 +223,7 @@ function FormTabs({ group, fields }: { group: MetaGroup; fields: MetaField[] }) 
             <TabsContent key={tab.name} value={tab.name} className="space-y-6 mt-6">
               {tab.groups.map((tGroup) => (
                 <div key={tGroup.name}>
-                  {tGroup.label && (
-                    <h3 className="text-lg font-semibold mb-4">{tGroup.label}</h3>
-                  )}
+                  {tGroup.label && <h3 className="text-lg font-semibold mb-4">{tGroup.label}</h3>}
                   <GroupFields group={tGroup} fields={fields} />
                 </div>
               ))}
@@ -262,17 +253,21 @@ function FormSkeleton() {
 // MetaForm
 // ---------------------------------------------------------------------------
 
-export function MetaFormV2({ 
-  model, 
-  recordId, 
-  meta: staticMeta, 
-  onSaved, 
+export function MetaFormV2({
+  model,
+  recordId,
+  meta: staticMeta,
+  onSaved,
   onCancel,
   embedded = false,
   lifecycle,
 }: MetaFormProps) {
-  const { data: metaResponse, isLoading: metaLoading, error: metaError } = useMeta(model, { 
-    skip: !!staticMeta 
+  const {
+    data: metaResponse,
+    isLoading: metaLoading,
+    error: metaError,
+  } = useMeta(model, {
+    skip: !!staticMeta,
   });
   const { data: record, isLoading: recordLoading } = useModel(model, recordId);
   const { createRecord, updateRecord, isMutating } = useModel(model);
@@ -328,62 +323,68 @@ export function MetaFormV2({
   }, [form, lifecycle]);
 
   // Lifecycle: forward validation errors
-  const onFormError = useCallback((errors: Record<string, unknown>) => {
-    lifecycle?.onValidationError?.(errors);
-  }, [lifecycle]);
+  const onFormError = useCallback(
+    (errors: Record<string, unknown>) => {
+      lifecycle?.onValidationError?.(errors);
+    },
+    [lifecycle]
+  );
 
   // Handle submit — dirty-diff for updates, full payload for creates
-  const onSubmit = useCallback(async (values: Record<string, unknown>) => {
-    // Validate dynamically-required fields (requiredIf)
-    let hasRequiredErrors = false;
-    for (const f of meta?.fields ?? []) {
-      const state = fieldStates.get(f.name);
-      if (state && state.visible && state.required) {
-        const v = values[f.name];
-        if (v == null || v === "") {
-          form.setError(f.name, { type: "required", message: `${f.label} is required` });
-          hasRequiredErrors = true;
+  const onSubmit = useCallback(
+    async (values: Record<string, unknown>) => {
+      // Validate dynamically-required fields (requiredIf)
+      let hasRequiredErrors = false;
+      for (const f of meta?.fields ?? []) {
+        const state = fieldStates.get(f.name);
+        if (state && state.visible && state.required) {
+          const v = values[f.name];
+          if (v == null || v === "") {
+            form.setError(f.name, { type: "required", message: `${f.label} is required` });
+            hasRequiredErrors = true;
+          }
         }
       }
-    }
-    if (hasRequiredErrors) return;
+      if (hasRequiredErrors) return;
 
-    try {
-      let payload = values;
+      try {
+        let payload = values;
 
-      // Lifecycle: beforeSave — may transform values or cancel
-      if (lifecycle?.beforeSave) {
-        const result = await lifecycle.beforeSave(payload);
-        if (result === false) return;
-        if (typeof result === "object" && result !== null) payload = result;
+        // Lifecycle: beforeSave — may transform values or cancel
+        if (lifecycle?.beforeSave) {
+          const result = await lifecycle.beforeSave(payload);
+          if (result === false) return;
+          if (typeof result === "object" && result !== null) payload = result;
+        }
+
+        let saved: Record<string, unknown>;
+
+        if (recordId) {
+          if (!updateRecord) throw new Error("Update operation unavailable");
+          // Dirty-diff: send only changed fields for PATCH
+          const dirtyPayload = extractDirtyValues(
+            form.formState.dirtyFields as Record<string, boolean | Record<string, unknown>>,
+            payload
+          );
+          saved = await updateRecord(recordId, dirtyPayload);
+          toast.success("Record updated successfully");
+        } else {
+          if (!createRecord) throw new Error("Create operation unavailable");
+          saved = await createRecord(payload);
+          toast.success("Record created successfully");
+        }
+
+        // Lifecycle: afterSave
+        lifecycle?.afterSave?.(saved);
+        onSaved?.(saved);
+      } catch (err) {
+        const error = err as Error;
+        toast.error(error.message || "Failed to save record");
+        console.error("Save failed:", err);
       }
-
-      let saved: Record<string, unknown>;
-      
-      if (recordId) {
-        if (!updateRecord) throw new Error("Update operation unavailable");
-        // Dirty-diff: send only changed fields for PATCH
-        const dirtyPayload = extractDirtyValues(
-          form.formState.dirtyFields as Record<string, boolean | Record<string, unknown>>,
-          payload,
-        );
-        saved = await updateRecord(recordId, dirtyPayload);
-        toast.success("Record updated successfully");
-      } else {
-        if (!createRecord) throw new Error("Create operation unavailable");
-        saved = await createRecord(payload);
-        toast.success("Record created successfully");
-      }
-
-      // Lifecycle: afterSave
-      lifecycle?.afterSave?.(saved);
-      onSaved?.(saved);
-    } catch (err) {
-      const error = err as Error;
-      toast.error(error.message || "Failed to save record");
-      console.error("Save failed:", err);
-    }
-  }, [recordId, updateRecord, createRecord, onSaved, meta?.fields, fieldStates, form, lifecycle]);
+    },
+    [recordId, updateRecord, createRecord, onSaved, meta?.fields, fieldStates, form, lifecycle]
+  );
 
   // Loading state
   if (metaLoading || recordLoading) {

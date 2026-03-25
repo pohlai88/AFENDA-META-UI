@@ -3,12 +3,7 @@ import { queryKeys } from "./query-keys";
 
 describe("queryKeys.models.list", () => {
   it("serializes empty options into a stable token", () => {
-    expect(queryKeys.models.list("sales_order")).toEqual([
-      "model",
-      "sales_order",
-      "list",
-      "{}",
-    ]);
+    expect(queryKeys.models.list("sales_order")).toEqual(["model", "sales_order", "list", "{}"]);
   });
 
   it("produces the same key when option property order differs", () => {

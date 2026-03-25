@@ -58,7 +58,7 @@ export function useActions(model: string) {
         // Build URL with context
         let url = action.url;
         if (context.recordId) {
-          const idValue = Array.isArray(context.recordId) 
+          const idValue = Array.isArray(context.recordId)
             ? context.recordId.join(",")
             : context.recordId;
           url = url.replace(":id", idValue);

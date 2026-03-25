@@ -72,10 +72,7 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
   const rows = listData?.data ?? [];
   const totalRecords = listData?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_LIMIT));
-  const pageRowIds = React.useMemo(
-    () => rows.map(readRowId).filter((id) => id.length > 0),
-    [rows]
-  );
+  const pageRowIds = React.useMemo(() => rows.map(readRowId).filter((id) => id.length > 0), [rows]);
 
   const queryHash = React.useMemo(() => createSelectionScopeHash(model, filters), [filters, model]);
 
@@ -115,12 +112,8 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
     // This should be configurable based on model metadata
     const statusField = meta?.fields.find((f) => f.name === "status");
     if (statusField && permissions?.can_update) {
-      actions.push(
-        createBulkUpdateAction(model, "status", "approved", "Set status: Approved")
-      );
-      actions.push(
-        createBulkUpdateAction(model, "status", "rejected", "Set status: Rejected")
-      );
+      actions.push(createBulkUpdateAction(model, "status", "approved", "Set status: Approved"));
+      actions.push(createBulkUpdateAction(model, "status", "rejected", "Set status: Rejected"));
     }
 
     // Bulk delete
@@ -227,9 +220,7 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
               <DropdownMenuContent align="start">
                 {bulkActions.map((action, index) => (
                   <React.Fragment key={action.id}>
-                    {index > 0 && action.variant === "destructive" && (
-                      <DropdownMenuSeparator />
-                    )}
+                    {index > 0 && action.variant === "destructive" && <DropdownMenuSeparator />}
                     <DropdownMenuItem
                       onClick={() => executeBulkAction(action)}
                       className={
@@ -269,7 +260,9 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
                   aria-checked={allPageSelected}
                   onClick={() => {
                     const nextChecked = !allPageSelected;
-                    setSelection((prev) => togglePageSelection(prev, pageRowIds, nextChecked, queryHash));
+                    setSelection((prev) =>
+                      togglePageSelection(prev, pageRowIds, nextChecked, queryHash)
+                    );
                   }}
                   className="rounded border px-2 py-1 text-xs"
                 >
@@ -314,7 +307,9 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
                             return;
                           }
 
-                          setSelection((prev) => toggleRowSelection(prev, rowId, !rowSelected, queryHash));
+                          setSelection((prev) =>
+                            toggleRowSelection(prev, rowId, !rowSelected, queryHash)
+                          );
                         }}
                         className="rounded border px-2 py-1 text-xs"
                       >
@@ -327,7 +322,7 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
                         {String(row[column] ?? "-")}
                       </td>
                     ))}
-                    
+
                     <td className="border-b p-2" onClick={(event) => event.stopPropagation()}>
                       <RowActionsMenu
                         model={model}
@@ -355,7 +350,9 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
           Prev
         </button>
 
-        <span className="text-sm">Page {page} / {totalPages}</span>
+        <span className="text-sm">
+          Page {page} / {totalPages}
+        </span>
 
         <button
           type="button"

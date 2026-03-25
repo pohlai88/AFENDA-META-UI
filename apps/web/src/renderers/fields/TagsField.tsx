@@ -2,7 +2,7 @@
  * Tags Field Component
  * ====================
  * Multi-value tag input with create/delete functionality.
- * 
+ *
  * Features:
  * - Add tags by typing and pressing Enter
  * - Remove tags by clicking X
@@ -21,7 +21,7 @@ import { FieldWrapper } from "./FieldWrapper";
 export function TagsField({ field, value, onChange, readonly }: RendererFieldProps) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   // Normalize value to array of strings
   const tags = React.useMemo(() => {
     if (Array.isArray(value)) {
@@ -32,7 +32,10 @@ export function TagsField({ field, value, onChange, readonly }: RendererFieldPro
         const parsed = JSON.parse(value);
         return Array.isArray(parsed) ? parsed : [];
       } catch {
-        return value.split(",").map((t) => t.trim()).filter(Boolean);
+        return value
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
       }
     }
     return [];
@@ -42,7 +45,7 @@ export function TagsField({ field, value, onChange, readonly }: RendererFieldPro
     (tag: string) => {
       const trimmed = tag.trim();
       if (!trimmed) return;
-      
+
       // Prevent duplicates
       if (tags.includes(trimmed)) {
         setInputValue("");
@@ -81,7 +84,7 @@ export function TagsField({ field, value, onChange, readonly }: RendererFieldPro
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
       const paste = e.clipboardData.getData("text");
-      
+
       // If paste contains commas, split and add multiple tags
       if (paste.includes(",")) {
         e.preventDefault();
@@ -89,7 +92,7 @@ export function TagsField({ field, value, onChange, readonly }: RendererFieldPro
           .split(",")
           .map((t) => t.trim())
           .filter((t) => t && !tags.includes(t));
-        
+
         if (newTags.length > 0) {
           onChange?.([...tags, ...newTags]);
         }
@@ -146,9 +149,7 @@ export function TagsField({ field, value, onChange, readonly }: RendererFieldPro
           className="flex-1 min-w-[120px] border-0 shadow-none focus-visible:ring-0 px-1 h-6"
         />
       </div>
-      <p className="text-xs text-muted-foreground mt-1">
-        Press Enter, Tab, or comma to add tags
-      </p>
+      <p className="text-xs text-muted-foreground mt-1">Press Enter, Tab, or comma to add tags</p>
     </FieldWrapper>
   );
 }

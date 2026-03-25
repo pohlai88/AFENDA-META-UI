@@ -8,7 +8,7 @@ declare module "filtrex" {
      * Additional functions to make available in expressions
      */
     extraFunctions?: Record<string, (...args: any[]) => any>;
-    
+
     /**
      * Custom property accessor for objects
      */
@@ -17,7 +17,7 @@ declare module "filtrex" {
 
   /**
    * Compile a safe expression that can be evaluated with context
-   * 
+   *
    * @param expression Expression string to compile
    * @param options Compilation options
    * @returns Function that evaluates the expression with provided context

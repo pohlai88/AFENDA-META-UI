@@ -249,11 +249,10 @@ export function SidebarNav() {
         </div>
       )}
 
-      {error && (
-        <p className="px-3 py-2 text-xs text-destructive">Failed to load navigation.</p>
-      )}
+      {error && <p className="px-3 py-2 text-xs text-destructive">Failed to load navigation.</p>}
 
-      {!isLoading && !error &&
+      {!isLoading &&
+        !error &&
         filteredMenus.map((menu) => {
           const isExpanded = expandedModules.includes(menu.module);
           const modulePath = `/${menu.module}`;
@@ -274,7 +273,9 @@ export function SidebarNav() {
                 )}
               >
                 <ModuleIcon className="w-4 h-4" />
-                <span className="flex-1 text-left">{renderHighlightedText(menu.label, debouncedQuery)}</span>
+                <span className="flex-1 text-left">
+                  {renderHighlightedText(menu.label, debouncedQuery)}
+                </span>
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4" />
                 ) : (
@@ -322,9 +323,15 @@ export function SidebarNav() {
         <p className="px-3 py-2 text-xs text-muted-foreground">No matching modules.</p>
       )}
 
-      {!isLoading && bootstrapStatus === "ready" && !error && !debouncedQuery.trim() && menus.length === 0 && (
-        <p className="px-3 py-2 text-xs text-muted-foreground">No modules available for your role.</p>
-      )}
+      {!isLoading &&
+        bootstrapStatus === "ready" &&
+        !error &&
+        !debouncedQuery.trim() &&
+        menus.length === 0 && (
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            No modules available for your role.
+          </p>
+        )}
     </nav>
   );
 }

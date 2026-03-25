@@ -76,9 +76,7 @@ export async function upsertSchema(
 
 /** List all registered model names. */
 export async function listModels(): Promise<string[]> {
-  const rows = await db
-    .select({ model: schemaRegistry.model })
-    .from(schemaRegistry);
+  const rows = await db.select({ model: schemaRegistry.model }).from(schemaRegistry);
   return rows.map((r) => r.model);
 }
 
@@ -89,9 +87,7 @@ export async function deleteSchema(model: string): Promise<void> {
 }
 
 /** Retrieve the full registry entry (includes version, timestamps). */
-export async function getRegistryEntry(
-  model: string
-): Promise<SchemaRegistryEntry | null> {
+export async function getRegistryEntry(model: string): Promise<SchemaRegistryEntry | null> {
   const rows = await db
     .select()
     .from(schemaRegistry)

@@ -29,18 +29,12 @@ export function useBulkAction(model: string) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async ({
-      action,
-      ids,
-    }: {
-      action: BulkAction;
-      ids: string[];
-    }) => {
+    mutationFn: async ({ action, ids }: { action: BulkAction; ids: string[] }) => {
       await action.execute(ids);
     },
     onSuccess: (_, variables) => {
       toast.success(`Bulk action completed: ${variables.action.label}`);
-      
+
       // Invalidate list query to refresh data
       queryClient.invalidateQueries({ queryKey: ["model", model, "list"] });
     },
@@ -71,9 +65,7 @@ export function useRowBulkAction(
       // Query-based selection: get all matching IDs
       // In a real implementation, this would fetch from API with the filter
       // For now, we'll use all row IDs as approximation
-      idsToUpdate = allRows
-        .map((row) => String(row.id))
-        .filter((id) => id && id !== "undefined");
+      idsToUpdate = allRows.map((row) => String(row.id)).filter((id) => id && id !== "undefined");
     } else {
       // Row-based selection: use selected IDs directly
       idsToUpdate = selection.ids;
@@ -87,10 +79,7 @@ export function useRowBulkAction(
     // Show confirmation if required
     if (action.confirmMessage) {
       const confirmed = window.confirm(
-        action.confirmMessage.replace(
-          "{count}",
-          String(idsToUpdate.length)
-        )
+        action.confirmMessage.replace("{count}", String(idsToUpdate.length))
       );
       if (!confirmed) {
         return;
@@ -143,7 +132,8 @@ export function createBulkDeleteAction(model: string): BulkAction {
     label: "Delete selected",
     requiresPermission: "delete",
     variant: "destructive",
-    confirmMessage: "Are you sure you want to delete {count} records? This action cannot be undone.",
+    confirmMessage:
+      "Are you sure you want to delete {count} records? This action cannot be undone.",
     execute: async (ids: string[]) => {
       const response = await fetch(`/api/meta/${model}/bulk-delete`, {
         method: "POST",

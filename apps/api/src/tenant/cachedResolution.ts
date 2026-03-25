@@ -12,9 +12,7 @@ export interface CacheMetrics {
   totalCacheMisses: number;
 }
 
-function cacheContextFromResolutionContext(
-  context: ResolutionContext,
-): Record<string, unknown> {
+function cacheContextFromResolutionContext(context: ResolutionContext): Record<string, unknown> {
   return {
     industry: context.industry ?? null,
     departmentId: context.departmentId ?? null,
@@ -30,17 +28,17 @@ export class CachedResolutionService {
     resolveMetadataFn: (
       model: string,
       globalMeta: Record<string, unknown>,
-      context: ResolutionContext,
+      context: ResolutionContext
     ) => Record<string, unknown>,
     model: string,
     globalMeta: Record<string, unknown>,
     context: ResolutionContext,
-    ttlMs = 60000,
+    ttlMs = 60000
   ): Record<string, unknown> {
     const cacheKey = ResolutionCacheService.generateKey(
       context.tenantId,
       model,
-      cacheContextFromResolutionContext(context),
+      cacheContextFromResolutionContext(context)
     );
     const requestId = randomUUID();
     const startedAt = performance.now();
@@ -120,8 +118,7 @@ export class CachedResolutionService {
     const avgCachedTimeMs =
       this.cachedDurations.length === 0
         ? 0
-        : this.cachedDurations.reduce((sum, value) => sum + value, 0) /
-          this.cachedDurations.length;
+        : this.cachedDurations.reduce((sum, value) => sum + value, 0) / this.cachedDurations.length;
     const avgUncachedTimeMs =
       this.uncachedDurations.length === 0
         ? 0

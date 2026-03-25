@@ -36,9 +36,7 @@ describe("query error overrides registry", () => {
     const overrides = getQueryErrorPresentationOverrides();
 
     expect(overrides.mutation?.server?.title).toBe("Save failed");
-    expect(overrides.mutation?.server?.message).toBe(
-      "Unable to save right now. Please try again."
-    );
+    expect(overrides.mutation?.server?.message).toBe("Unable to save right now. Please try again.");
     expect(overrides.query?.auth?.message).toBe("Query auth default");
   });
 

@@ -104,7 +104,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
       const resolved = resolveMetadata(
         "finance.invoice",
         globalMeta["finance.invoice"] as Record<string, unknown>,
-        ctx,
+        ctx
       );
 
       expect(resolved).toBeDefined();
@@ -124,11 +124,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
         ...industryOverrides,
       };
 
-      const resolved = resolveMetadata(
-        "finance.invoice",
-        baseMetadata,
-        ctx,
-      );
+      const resolved = resolveMetadata("finance.invoice", baseMetadata, ctx);
 
       expect(resolved).toBeDefined();
       // Industry-specific rules should be in the resolved metadata
@@ -149,11 +145,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
         ...tenantOverrides,
       };
 
-      const resolved = resolveMetadata(
-        "finance.invoice",
-        baseMetadata,
-        ctx,
-      );
+      const resolved = resolveMetadata("finance.invoice", baseMetadata, ctx);
 
       expect(resolved).toBeDefined();
       // Tenant overrides should be applied on top of industry
@@ -167,11 +159,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
         industry: "retail",
       };
 
-      const resolved = resolveMetadata(
-        "finance.invoice",
-        globalMeta,
-        levelCtx,
-      );
+      const resolved = resolveMetadata("finance.invoice", globalMeta, levelCtx);
 
       expect(resolved).toBeDefined();
       // Most specific (user) should win if defined
@@ -280,16 +268,8 @@ describe("Tenant-Aware Metadata Resolution", () => {
         industry: "manufacturing",
       };
 
-      const resolved1 = resolveMetadata(
-        "finance.invoice",
-        globalMeta,
-        tenant1Ctx,
-      );
-      const resolved2 = resolveMetadata(
-        "finance.invoice",
-        globalMeta,
-        tenant2Ctx,
-      );
+      const resolved1 = resolveMetadata("finance.invoice", globalMeta, tenant1Ctx);
+      const resolved2 = resolveMetadata("finance.invoice", globalMeta, tenant2Ctx);
 
       // Both should resolve independently
       expect(resolved1).toBeDefined();
@@ -303,11 +283,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
         industry: "retail",
       };
 
-      const resolved = resolveMetadata(
-        "finance.invoice",
-        globalMeta,
-        deptCtx,
-      );
+      const resolved = resolveMetadata("finance.invoice", globalMeta, deptCtx);
 
       expect(resolved).toBeDefined();
     });
@@ -320,11 +296,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
         industry: "retail",
       };
 
-      const resolved = resolveMetadata(
-        "finance.invoice",
-        globalMeta,
-        userCtx,
-      );
+      const resolved = resolveMetadata("finance.invoice", globalMeta, userCtx);
 
       expect(resolved).toBeDefined();
     });
@@ -337,11 +309,7 @@ describe("Tenant-Aware Metadata Resolution", () => {
         industry: undefined,
       };
 
-      const resolved = resolveMetadata(
-        "finance.invoice",
-        globalMeta,
-        ctx,
-      );
+      const resolved = resolveMetadata("finance.invoice", globalMeta, ctx);
 
       // Should fall back to global metadata
       expect(resolved).toBeDefined();

@@ -9,14 +9,18 @@ A complete, production-ready personalized suggestions system for graceful form v
 ## 🎯 Quick Overview
 
 ### Problem Solved
+
 Users get stuck when form validation fails and need to guess alternatives. This causes:
+
 - ❌ Frustration
 - ❌ Abandoned forms
 - ❌ Reduced conversion rates
 - ❌ Poor UX perception
 
 ### Solution Provided
+
 Personalized suggestions generated from:
+
 - ✅ Backend API responses (preferred)
 - ✅ Frontend generation using user context (fallback)
 - ✅ User's initials, location, year, preferences
@@ -27,6 +31,7 @@ Personalized suggestions generated from:
 ## 📂 Files Created
 
 ### Core Implementation
+
 1. **`suggestionGenerator.ts`** (450+ lines)
    - Main suggestion generation logic
    - Personalization strategies (initials, location, preferences, year, etc.)
@@ -48,6 +53,7 @@ Personalized suggestions generated from:
    - Cache key building
 
 ### Examples & Documentation
+
 5. **`EnhancedStringField.example.tsx`** (250+ lines)
    - Complete field implementation example
    - Basic and minimal examples
@@ -75,6 +81,7 @@ Personalized suggestions generated from:
    - Testing checklist
 
 ### Tests
+
 9. **`suggestionGenerator.test.ts`** (400+ lines)
    - 30+ test cases
    - Covers all personalization strategies
@@ -100,8 +107,8 @@ const formConfig = {
         url: "/api/check-username",
         method: "POST",
         debounceMs: 400,
-        enableSuggestions: true,        // <- Enable this
-        suggestionVariant: "compact",   // <- Choose variant
+        enableSuggestions: true, // <- Enable this
+        suggestionVariant: "compact", // <- Choose variant
       },
       required: true,
     },
@@ -109,12 +116,7 @@ const formConfig = {
 };
 
 export function MyForm() {
-  return (
-    <DynamicFormRHF 
-      fields={formConfig.fields} 
-      onSubmit={handleSubmit}
-    />
-  );
+  return <DynamicFormRHF fields={formConfig.fields} onSubmit={handleSubmit} />;
 }
 ```
 
@@ -156,19 +158,25 @@ OR Hybrid: alex2026jd, alex2026hcm
 ## 🎨 UI Variants
 
 ### Inline
+
 Minimal, comma-separated clickable links:
+
 ```
 Try one of these: alex123, alex_jd, alex_hcm
 ```
 
 ### Compact (Default)
+
 Color-coded pills showing personalization level:
+
 ```
 [generic: alex123]  [user-derived: alex_jd_2026]  [location: alex_hcm]
 ```
 
 ### Block (Full-width)
+
 Detailed cards with explanations:
+
 ```
 ┌─────────────────────────────────┐
 │ Suggested alternatives:         │
@@ -185,15 +193,15 @@ Detailed cards with explanations:
 
 ## 🔧 Personalization Strategies
 
-| Strategy | Example | Level | When |
-|-----------|---------|-------|------|
-| Numeric | `alex1`, `alex2` | Generic | Always available |
-| Year | `alex_2026`, `alex2026` | User-derived | Calendar context |
-| Initials | `alex_jd` (John Doe) | User-derived | Name available |
-| Location | `alex_hcm` (Ho Chi Minh) | Location-based | Location available |
-| Preference | `alex_warriors` | Preference-based | Favorite team/hobby |
-| Hybrid | `alex2026jd`, `alex_hcm_2026` | Mixed | Multiple data points |
-| Custom | Custom patterns | Flexible | Special requirements |
+| Strategy   | Example                       | Level            | When                 |
+| ---------- | ----------------------------- | ---------------- | -------------------- |
+| Numeric    | `alex1`, `alex2`              | Generic          | Always available     |
+| Year       | `alex_2026`, `alex2026`       | User-derived     | Calendar context     |
+| Initials   | `alex_jd` (John Doe)          | User-derived     | Name available       |
+| Location   | `alex_hcm` (Ho Chi Minh)      | Location-based   | Location available   |
+| Preference | `alex_warriors`               | Preference-based | Favorite team/hobby  |
+| Hybrid     | `alex2026jd`, `alex_hcm_2026` | Mixed            | Multiple data points |
+| Custom     | Custom patterns               | Flexible         | Special requirements |
 
 ---
 
@@ -230,11 +238,13 @@ User Clicks Suggestion
 ## 🧪 Testing
 
 ### Run Suggestion Tests
+
 ```bash
 npm test -- suggestionGenerator.test.ts
 ```
 
 ### Test Coverage
+
 - ✅ Basic numeric suggestions
 - ✅ Personalized with user context
 - ✅ Custom patterns
@@ -260,6 +270,7 @@ npm test -- suggestionGenerator.test.ts
 ## 🎓 Integration Examples
 
 ### Pattern 1: Simple Hook
+
 ```tsx
 const { suggestions, handleValidationFailure } = useSuggestions({
   userContext: { firstName: "John", lastName: "Doe" },
@@ -267,6 +278,7 @@ const { suggestions, handleValidationFailure } = useSuggestions({
 ```
 
 ### Pattern 2: Enhanced Field Component
+
 ```tsx
 <EnhancedStringFieldWithSuggestions
   control={control}
@@ -277,12 +289,9 @@ const { suggestions, handleValidationFailure } = useSuggestions({
 ```
 
 ### Pattern 3: Manual UI
+
 ```tsx
-<SuggestionPrompt
-  suggestions={suggestions}
-  onSuggestionClick={handleClick}
-  variant="compact"
-/>
+<SuggestionPrompt suggestions={suggestions} onSuggestionClick={handleClick} variant="compact" />
 ```
 
 ---
@@ -326,21 +335,13 @@ export {
   type PersonalizedSuggestion,
   type UserContext,
   type SuggestionConfig,
-}
+};
 
 // React hooks
-export {
-  useSuggestions,
-  useSuggestionsFromResponse,
-  type SuggestionsState,
-}
+export { useSuggestions, useSuggestionsFromResponse, type SuggestionsState };
 
 // UI components
-export {
-  SuggestionPrompt,
-  FieldWithSuggestions,
-  type SuggestionPromptProps,
-}
+export { SuggestionPrompt, FieldWithSuggestions, type SuggestionPromptProps };
 ```
 
 ---
@@ -365,6 +366,7 @@ export {
 **Before:** User types "alex", sees error "Username taken", gives up ❌
 
 **After:** User types "alex", sees error + suggestions:
+
 - alex_2026 (your year)
 - alex_jd (your initials)
 - alex_hcm (your location)
@@ -375,13 +377,13 @@ User clicks one, logs in successfully, high conversion ✅
 
 ## 📖 Documentation Files
 
-| File | Purpose |
-|------|---------|
-| `PERSONALIZED_SUGGESTIONS.md` | Complete guide (start here) |
-| `SUGGESTIONS_DEMO.ts` | 9 working examples with explanations |
-| `INTEGRATION_EXAMPLES.tsx` | Real-world integration patterns |
-| `suggestionGenerator.test.ts` | Test cases and scenarios |
-| `EnhancedStringField.example.tsx` | Field component example |
+| File                              | Purpose                              |
+| --------------------------------- | ------------------------------------ |
+| `PERSONALIZED_SUGGESTIONS.md`     | Complete guide (start here)          |
+| `SUGGESTIONS_DEMO.ts`             | 9 working examples with explanations |
+| `INTEGRATION_EXAMPLES.tsx`        | Real-world integration patterns      |
+| `suggestionGenerator.test.ts`     | Test cases and scenarios             |
+| `EnhancedStringField.example.tsx` | Field component example              |
 
 ---
 
@@ -419,5 +421,4 @@ A: System gracefully falls back to generic numeric suggestions
 **Status:** ✅ Complete and ready for production  
 **Test Coverage:** ✅ 30+ test cases  
 **Documentation:** ✅ Comprehensive guide + 4 example files  
-**Integration:** ✅ Works with DynamicFormRHF, React Hook Form, standalone  
-
+**Integration:** ✅ Works with DynamicFormRHF, React Hook Form, standalone

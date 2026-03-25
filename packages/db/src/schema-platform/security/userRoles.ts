@@ -76,11 +76,19 @@ export const userRoleAssignmentInsertSchema = createInsertSchema(userRoles, {
   if (data.expiresAt == null) return;
   const time = data.expiresAt.getTime();
   if (Number.isNaN(time)) {
-    ctx.addIssue({ code: "custom", message: "expiresAt must be a valid date", path: ["expiresAt"] });
+    ctx.addIssue({
+      code: "custom",
+      message: "expiresAt must be a valid date",
+      path: ["expiresAt"],
+    });
     return;
   }
   if (time <= Date.now()) {
-    ctx.addIssue({ code: "custom", message: "expiresAt must be in the future when set", path: ["expiresAt"] });
+    ctx.addIssue({
+      code: "custom",
+      message: "expiresAt must be in the future when set",
+      path: ["expiresAt"],
+    });
   }
 });
 
@@ -90,11 +98,19 @@ export const userRoleUpdateSchema = createUpdateSchema(userRoles, {
   if (data.expiresAt === undefined || data.expiresAt === null) return;
   const time = data.expiresAt.getTime();
   if (Number.isNaN(time)) {
-    ctx.addIssue({ code: "custom", message: "expiresAt must be a valid date", path: ["expiresAt"] });
+    ctx.addIssue({
+      code: "custom",
+      message: "expiresAt must be a valid date",
+      path: ["expiresAt"],
+    });
     return;
   }
   if (time <= Date.now()) {
-    ctx.addIssue({ code: "custom", message: "expiresAt must be in the future when set", path: ["expiresAt"] });
+    ctx.addIssue({
+      code: "custom",
+      message: "expiresAt must be in the future when set",
+      path: ["expiresAt"],
+    });
   }
 });
 

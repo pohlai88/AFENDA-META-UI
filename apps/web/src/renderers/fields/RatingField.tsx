@@ -22,7 +22,8 @@ export function RatingField({ field, value, onChange, readonly }: RendererFieldP
   const fieldId = React.useId();
   const controlId = `rating-${field.name}-${fieldId}`;
   const [hovered, setHovered] = useState<number | null>(null);
-  const current = typeof value === "number" ? Math.round(Math.min(MAX_STARS, Math.max(0, value))) : 0;
+  const current =
+    typeof value === "number" ? Math.round(Math.min(MAX_STARS, Math.max(0, value))) : 0;
 
   const displayRating = hovered ?? current;
 
@@ -76,9 +77,7 @@ export function RatingField({ field, value, onChange, readonly }: RendererFieldP
             <StarIcon
               className={cn(
                 "h-6 w-6 transition-colors",
-                displayRating >= star
-                  ? "text-yellow-400 fill-yellow-400"
-                  : "text-muted-foreground"
+                displayRating >= star ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
               )}
             />
           </button>

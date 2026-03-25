@@ -11,10 +11,7 @@ import {
   getMeshStats,
   clearMesh,
 } from "./index.js";
-import {
-  clearDecisionAuditLog,
-  queryDecisionAuditLog,
-} from "../audit/decisionAuditLogger.js";
+import { clearDecisionAuditLog, queryDecisionAuditLog } from "../audit/decisionAuditLogger.js";
 import type { MeshEvent } from "@afenda/meta-types";
 
 beforeEach(() => {
@@ -44,15 +41,11 @@ describe("mesh — topic matching", () => {
   });
 
   it("does not match different segment counts (no cross-segment wildcard)", () => {
-    expect(matchTopic("sales.order.created.extra", "sales.order.*")).toBe(
-      false,
-    );
+    expect(matchTopic("sales.order.created.extra", "sales.order.*")).toBe(false);
   });
 
   it("does not match different topic", () => {
-    expect(matchTopic("sales.order.created", "inventory.*.updated")).toBe(
-      false,
-    );
+    expect(matchTopic("sales.order.created", "inventory.*.updated")).toBe(false);
   });
 });
 
@@ -92,14 +85,17 @@ describe("mesh — publish/subscribe", () => {
       async (e) => {
         received.push(e);
       },
-      { tenantId: "tenant-a" },
+      { tenantId: "tenant-a" }
     );
 
     await publish("sales.order.created", {}, { tenantId: "tenant-a" });
     await publish("sales.order.created", {}, { tenantId: "tenant-b" });
 
     expect(received.length).toBe(1);
-    expect(received[0].metadata?.tenantId ?? (received[0] as MeshEvent<unknown> & { tenantId?: string }).tenantId).toBe("tenant-a");
+    expect(
+      received[0].metadata?.tenantId ??
+        (received[0] as MeshEvent<unknown> & { tenantId?: string }).tenantId
+    ).toBe("tenant-a");
   });
 
   it("does not deliver to an unsubscribed handler", async () => {
@@ -180,7 +176,7 @@ describe("mesh — stream processors", () => {
       id: "enrich-order",
       inputTopic: "raw.order.created",
       outputTopic: "enriched.order.created",
-      transform: async (e) => ({ ...e.payload as object, enriched: true }),
+      transform: async (e) => ({ ...(e.payload as object), enriched: true }),
     });
 
     await publish("raw.order.created", { orderId: "o1" });
@@ -247,7 +243,11 @@ describe("mesh — stats", () => {
 
 describe("mesh — decision audit hooks", () => {
   it("writes event_propagated audit entries when events are published", async () => {
-    await publish("audit.mesh.published", { payload: true }, { tenantId: "tenant-mesh", actor: "mesh-user" });
+    await publish(
+      "audit.mesh.published",
+      { payload: true },
+      { tenantId: "tenant-mesh", actor: "mesh-user" }
+    );
 
     const logs = queryDecisionAuditLog({
       tenantId: "tenant-mesh",

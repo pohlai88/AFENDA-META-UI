@@ -32,11 +32,7 @@ import {
   registerIndustryTemplate,
   getTenantStats,
 } from "../tenant/index.js";
-import type {
-  TenantDefinition,
-  MetadataOverride,
-  ResolutionContext,
-} from "@afenda/meta-types";
+import type { TenantDefinition, MetadataOverride, ResolutionContext } from "@afenda/meta-types";
 
 const router = Router();
 
@@ -85,9 +81,7 @@ router.put("/:tenantId", async (req: Request, res: Response) => {
   try {
     const tenant = req.body as TenantDefinition;
     if (tenant.id !== req.params.tenantId) {
-      return res
-        .status(400)
-        .json({ error: "Tenant ID must match URL parameter" });
+      return res.status(400).json({ error: "Tenant ID must match URL parameter" });
     }
     updateTenant(tenant);
     res.json({ message: "Tenant updated" });

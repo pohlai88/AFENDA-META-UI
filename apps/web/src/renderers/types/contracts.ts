@@ -14,7 +14,14 @@ export type RendererVersion = "v1" | "v2" | "v3";
 /**
  * Renderer type categories
  */
-export type RendererType = "list" | "form" | "dashboard" | "detail" | "grid" | "calendar" | "kanban";
+export type RendererType =
+  | "list"
+  | "form"
+  | "dashboard"
+  | "detail"
+  | "grid"
+  | "calendar"
+  | "kanban";
 
 /**
  * Renderer capabilities flags
@@ -23,34 +30,34 @@ export type RendererType = "list" | "form" | "dashboard" | "detail" | "grid" | "
 export interface RendererCapabilities {
   /** Supports bulk selection and actions */
   bulkActions?: boolean;
-  
+
   /** Supports inline editing of fields */
   inlineEdit?: boolean;
-  
+
   /** Uses virtualization for large datasets */
   virtualization?: boolean;
-  
+
   /** Supports real-time updates */
   realTimeSync?: boolean;
-  
+
   /** Supports drag-and-drop reordering */
   dragDrop?: boolean;
-  
+
   /** Supports responsive/mobile layout */
   responsive?: boolean;
-  
+
   /** Supports custom action buttons */
   customActions?: boolean;
-  
+
   /** Supports filtering */
   filtering?: boolean;
-  
+
   /** Supports sorting */
   sorting?: boolean;
-  
+
   /** Supports pagination */
   pagination?: boolean;
-  
+
   /** Supports export to CSV/Excel */
   export?: boolean;
 }
@@ -62,25 +69,25 @@ export interface RendererCapabilities {
 export interface RendererContract {
   /** Unique identifier for this renderer family */
   rendererId: string;
-  
+
   /** Semantic version (v1, v2, v3) */
   version: RendererVersion;
-  
+
   /** Renderer type category */
   type: RendererType;
-  
+
   /** Metadata schema versions this renderer supports */
   supportedMetaVersions: string[];
-  
+
   /** Declared capabilities */
   capabilities: RendererCapabilities;
-  
+
   /** Human-readable description */
   description?: string;
-  
+
   /** Minimum metadata fields required */
   requiredMetaFields?: string[];
-  
+
   /** Optional metadata fields this renderer can enhance */
   optionalMetaFields?: string[];
 }
@@ -92,13 +99,13 @@ export interface RendererContract {
 export interface RendererBaseProps {
   /** Model name (e.g., "contacts", "opportunities") */
   model: string;
-  
+
   /** Metadata definition for this model */
   meta?: any;
-  
+
   /** Embedded mode (no chrome/borders) */
   embedded?: boolean;
-  
+
   /** Custom CSS class for styling */
   className?: string;
 }
@@ -109,10 +116,10 @@ export interface RendererBaseProps {
 export interface ListRendererProps extends RendererBaseProps {
   /** Callback when a row is clicked */
   onRowClick?: (id: string, record: any) => void;
-  
+
   /** Callback when "New" button is clicked */
   onNew?: () => void;
-  
+
   /** Callback when selection state changes */
   onSelectionChange?: (selection: any) => void;
 }
@@ -123,10 +130,10 @@ export interface ListRendererProps extends RendererBaseProps {
 export interface FormRendererProps extends RendererBaseProps {
   /** Record ID for editing (undefined for create) */
   id?: string;
-  
+
   /** Callback when form is successfully saved */
   onSaved?: (record: any) => void;
-  
+
   /** Callback when cancel is clicked */
   onCancel?: () => void;
 }
@@ -137,7 +144,7 @@ export interface FormRendererProps extends RendererBaseProps {
 export interface DashboardRendererProps extends RendererBaseProps {
   /** Dashboard configuration */
   config?: any;
-  
+
   /** Refresh interval in seconds */
   refreshInterval?: number;
 }
@@ -161,10 +168,10 @@ export type RendererModule = {
 export interface RendererRegistration {
   /** Lazy loader function */
   loader: () => Promise<RendererModule>;
-  
+
   /** Contract (can be inline or from module) */
   contract: RendererContract;
-  
+
   /** Component export name (if not default) */
   exportName?: string;
 }

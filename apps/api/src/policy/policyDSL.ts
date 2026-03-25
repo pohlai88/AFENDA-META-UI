@@ -19,10 +19,7 @@
  * All evaluation is sandboxed — no access to globals, fs, etc.
  */
 
-import {
-  evaluate,
-  evaluateCondition as dslEvaluateCondition,
-} from "./dsl/index.js";
+import { evaluate, evaluateCondition as dslEvaluateCondition } from "./dsl/index.js";
 
 // Re-export the result type for backward compatibility
 export type { DslEvaluationResult } from "./dsl/index.js";
@@ -34,7 +31,7 @@ export type { DslEvaluationResult } from "./dsl/index.js";
  */
 export function evaluateExpression(
   expression: string,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): { value: unknown; error?: string } {
   return evaluate(expression, context);
 }
@@ -45,7 +42,7 @@ export function evaluateExpression(
  */
 export function evaluateCondition(
   expression: string,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): { result: boolean; error?: string } {
   return dslEvaluateCondition(expression, context);
 }

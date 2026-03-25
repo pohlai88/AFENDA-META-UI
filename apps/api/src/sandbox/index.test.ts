@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { simulateScenario, analyzeBlastRadius, simulateBatch } from "./index.js";
 import { registerPolicies, clearPolicies } from "../policy/policyRegistry.js";
-import type {
-  PolicyDefinition,
-  SimulationScenario,
-} from "@afenda/meta-types";
+import type { PolicyDefinition, SimulationScenario } from "@afenda/meta-types";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -38,9 +35,7 @@ const largeWarning: PolicyDefinition = {
   severity: "warning",
 };
 
-function makeScenario(
-  overrides: Partial<SimulationScenario> = {},
-): SimulationScenario {
+function makeScenario(overrides: Partial<SimulationScenario> = {}): SimulationScenario {
   return {
     id: "sim-1",
     name: "Test scenario",
@@ -185,7 +180,7 @@ describe("sandbox — analyzeBlastRadius", () => {
       id: "pol-multi",
       scope: "sales",
       name: "Active only",
-      when: 'active == true',
+      when: "active == true",
       validate: "total > 0",
       message: "Must be positive",
       severity: "error",

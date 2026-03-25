@@ -26,10 +26,7 @@ export function FieldWrapper({
   return (
     <div className={cn("mb-4", className)}>
       {!isBooleanField ? (
-        <label
-          htmlFor={htmlFor}
-          className="mb-1 block text-sm font-medium text-foreground"
-        >
+        <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-foreground">
           {field.label}
           {isRequired ? <span className="text-destructive"> *</span> : null}
         </label>

@@ -2,7 +2,7 @@
  * Stores Index
  * =============
  * Central export for all state management stores.
- * 
+ *
  * Organization:
  * - ui/        → Zustand stores (lightweight UI state)
  * - business/  → Redux stores (business logic, middleware)

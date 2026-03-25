@@ -39,7 +39,7 @@ export default function ModelFormPage() {
 
   return (
     <MetaFormV2
-      key={`${model}-${id ?? 'new'}`}
+      key={`${model}-${id ?? "new"}`}
       model={model}
       recordId={id}
       onSaved={handleSaved}

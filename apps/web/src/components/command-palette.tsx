@@ -13,7 +13,11 @@
  */
 
 import React, { useEffect } from "react";
-import { useGlobalSearch, COMMAND_PALETTE_COMMANDS, type SearchResult } from "~/hooks/useGlobalSearch";
+import {
+  useGlobalSearch,
+  COMMAND_PALETTE_COMMANDS,
+  type SearchResult,
+} from "~/hooks/useGlobalSearch";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 import { SearchIcon, CommandIcon, ArrowRightIcon } from "lucide-react";

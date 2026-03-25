@@ -12,6 +12,9 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,scss,md,yml,yaml}\"",
+    "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,md,yml,yaml}\"",
     "ci:contracts": "pnpm --filter @afenda/web run test:contracts",
     "ci:gate": "node tools/ci-gate/index.mjs",
     "ci:gate:fix": "node tools/ci-gate/index.mjs --fix",
@@ -35,7 +38,9 @@
     "db:introspect": "pnpm --filter api meta:introspect"
   },
   "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
     "glob": "^13.0.6",
+    "prettier": "^3.8.1",
     "turbo": "^1.13.4",
     "typescript": "^5.4.5"
   }

@@ -11,12 +11,32 @@ const erpErrorCatalog = [
   { code: 401, title: "Unauthorized", path: "/errors/401", note: "Session missing or expired" },
   { code: 403, title: "Forbidden", path: "/errors/403", note: "Permission denied" },
   { code: 404, title: "Not Found", path: "/404", note: "Resource or route missing" },
-  { code: 408, title: "Request Timeout", path: "/errors/408", note: "Long-running request timed out" },
+  {
+    code: 408,
+    title: "Request Timeout",
+    path: "/errors/408",
+    note: "Long-running request timed out",
+  },
   { code: 409, title: "Conflict", path: "/errors/409", note: "Concurrent update conflict" },
-  { code: 422, title: "Validation Error", path: "/errors/422", note: "Invalid payload or business rules" },
+  {
+    code: 422,
+    title: "Validation Error",
+    path: "/errors/422",
+    note: "Invalid payload or business rules",
+  },
   { code: 429, title: "Too Many Requests", path: "/errors/429", note: "Rate limit reached" },
-  { code: 500, title: "Server Error", path: "/errors/500", note: "Unhandled application exception" },
-  { code: 503, title: "Service Unavailable", path: "/errors/503", note: "Maintenance or dependency outage" },
+  {
+    code: 500,
+    title: "Server Error",
+    path: "/errors/500",
+    note: "Unhandled application exception",
+  },
+  {
+    code: 503,
+    title: "Service Unavailable",
+    path: "/errors/503",
+    note: "Maintenance or dependency outage",
+  },
 ] as const;
 
 const erpErrorActionMatrix = [

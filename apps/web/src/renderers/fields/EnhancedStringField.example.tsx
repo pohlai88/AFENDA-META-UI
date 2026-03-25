@@ -115,11 +115,7 @@ export function EnhancedStringFieldWithSuggestions<T extends FieldValues>({
         const errorMessage = (data.message as string) || "Value is invalid";
         const backendSuggestions = data.suggestions as string[] | undefined;
 
-        handleValidationFailure(
-          field.value as string,
-          errorMessage,
-          backendSuggestions
-        );
+        handleValidationFailure(field.value as string, errorMessage, backendSuggestions);
       } else {
         clearSuggestions();
       }
@@ -183,9 +179,7 @@ export function StringFieldWithSuggestionsPopup<T extends FieldValues>({
 
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-900 mb-1">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-900 mb-1">{label}</label>
 
       <input
         type="text"
@@ -196,9 +190,7 @@ export function StringFieldWithSuggestionsPopup<T extends FieldValues>({
         }`}
       />
 
-      {fieldState.error && (
-        <p className="mt-1 text-sm text-red-600">{fieldState.error.message}</p>
-      )}
+      {fieldState.error && <p className="mt-1 text-sm text-red-600">{fieldState.error.message}</p>}
 
       {suggestions.length > 0 && (
         <SuggestionPrompt

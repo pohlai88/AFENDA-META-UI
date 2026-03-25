@@ -135,9 +135,7 @@ export async function pruneR2UploadsOlderThan(olderThanMs: number): Promise<numb
       }
     }
 
-    continuationToken = listResponse.IsTruncated
-      ? listResponse.NextContinuationToken
-      : undefined;
+    continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
   } while (continuationToken);
 
   if (staleKeys.length === 0) {

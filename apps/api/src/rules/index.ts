@@ -22,9 +22,7 @@
  *   5. Return transformed/computed result
  */
 
-import type {
-  ResolutionContext,
-} from "@afenda/meta-types";
+import type { ResolutionContext } from "@afenda/meta-types";
 import { evaluateExpression } from "../policy/policyDSL.js";
 import { buildPolicyContext } from "../policy/policyContextBuilder.js";
 import { CachedResolution, resolveMetadata } from "../tenant/index.js";
@@ -135,7 +133,7 @@ export function getRulesForScope(scope: string): RuleDefinition[] {
  */
 export function getRulesForCategory(
   scope: string,
-  category: RuleDefinition["category"],
+  category: RuleDefinition["category"]
 ): RuleDefinition[] {
   return getRulesForScope(scope).filter((r) => r.category === category);
 }
@@ -164,7 +162,7 @@ export function getRulesByTag(tag: string): RuleDefinition[] {
 export function evaluateRule(
   rule: RuleDefinition,
   context: RuleExecutionContext,
-  globalMetadata: Record<string, unknown> = {},
+  globalMetadata: Record<string, unknown> = {}
 ): RuleExecutionResult {
   const startTime = performance.now();
   const evaluationId = randomUUID();
@@ -185,7 +183,7 @@ export function evaluateRule(
       resolveMetadata,
       rule.scope.split(".")[0],
       globalMetadata,
-      context.tenantContext,
+      context.tenantContext
     );
     Object.assign(flatContext, {
       tenant: context.tenantContext,
@@ -413,12 +411,10 @@ export function evaluateRulesForCategory(
   scope: string,
   category: RuleDefinition["category"],
   context: RuleExecutionContext,
-  globalMetadata: Record<string, unknown> = {},
+  globalMetadata: Record<string, unknown> = {}
 ): RuleExecutionResult[] {
   const rules = getRulesForCategory(scope, category);
-  return rules.map((rule) =>
-    evaluateRule(rule, context, globalMetadata),
-  );
+  return rules.map((rule) => evaluateRule(rule, context, globalMetadata));
 }
 
 /**
@@ -429,7 +425,7 @@ export function computeFieldValue(
   fieldId: string,
   scope: string,
   context: RuleExecutionContext,
-  globalMetadata: Record<string, unknown> = {},
+  globalMetadata: Record<string, unknown> = {}
 ): unknown {
   const ruleScope = `${scope}.compute.${fieldId}`;
   const rules = getRulesForScope(ruleScope);
@@ -455,7 +451,7 @@ export function isFieldVisible(
   scope: string,
   context: RuleExecutionContext,
   globalMetadata: Record<string, unknown> = {},
-  defaultVisible: boolean = true,
+  defaultVisible: boolean = true
 ): boolean {
   const ruleScope = `${scope}.visibility.${fieldId}`;
   const rules = getRulesForScope(ruleScope);

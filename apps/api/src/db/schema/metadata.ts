@@ -32,17 +32,9 @@ import type {
 
 // ── Enums ────────────────────────────────────────────────────────────────────
 
-export const policySeverityEnum = pgEnum("policy_severity", [
-  "error",
-  "warning",
-  "info",
-]);
+export const policySeverityEnum = pgEnum("policy_severity", ["error", "warning", "info"]);
 
-export const auditOperationEnum = pgEnum("audit_operation", [
-  "create",
-  "update",
-  "delete",
-]);
+export const auditOperationEnum = pgEnum("audit_operation", ["create", "update", "delete"]);
 
 export const auditSourceEnum = pgEnum("audit_source", [
   "ui",
@@ -99,7 +91,7 @@ export const fields = pgTable(
   },
   (t) => ({
     entityIdx: index("fields_entity_idx").on(t.entityId),
-  }),
+  })
 );
 
 // ── Layouts ──────────────────────────────────────────────────────────────────
@@ -123,7 +115,7 @@ export const layouts = pgTable(
   },
   (t) => ({
     entityIdx: index("layouts_entity_idx").on(t.entityId),
-  }),
+  })
 );
 
 // ── Policies ─────────────────────────────────────────────────────────────────
@@ -147,7 +139,7 @@ export const policies = pgTable(
   },
   (t) => ({
     scopeIdx: index("policies_scope_idx").on(t.scopeEntity),
-  }),
+  })
 );
 
 // ── Audit Logs ───────────────────────────────────────────────────────────────
@@ -171,7 +163,7 @@ export const auditLogs = pgTable(
     entityRecordIdx: index("audit_entity_record_idx").on(t.entity, t.recordId),
     actorIdx: index("audit_actor_idx").on(t.actor),
     timestampIdx: index("audit_timestamp_idx").on(t.timestamp),
-  }),
+  })
 );
 
 // ── Event Store ──────────────────────────────────────────────────────────────
@@ -192,5 +184,5 @@ export const events = pgTable(
     aggregateIdx: index("events_aggregate_idx").on(t.aggregateType, t.aggregateId),
     typeIdx: index("events_type_idx").on(t.eventType),
     timestampIdx: index("events_timestamp_idx").on(t.timestamp),
-  }),
+  })
 );

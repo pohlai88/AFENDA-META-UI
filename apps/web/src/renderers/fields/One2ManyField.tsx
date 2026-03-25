@@ -1,7 +1,7 @@
 /**
  * One2Many Field Editor
  * ======================
- * 
+ *
  * Manages one-to-many relationships with embedded editing:
  * • Compact table view of related records
  * • Add button → Dialog with MetaForm
@@ -13,7 +13,7 @@
 import React, { useState } from "react";
 import type { RendererFieldProps } from "./index.js";
 import { FieldWrapper } from "./FieldWrapper.js";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -31,14 +31,7 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import { Button } from "@afenda/ui";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@afenda/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@afenda/ui";
 import { Badge } from "@afenda/ui";
 import { PlusIcon, PencilIcon, TrashIcon } from "lucide-react";
 import { useMeta } from "~/hooks/useMeta";
@@ -105,11 +98,7 @@ function formatCellValue(value: unknown, field: MetaField): React.ReactNode {
 
   switch (field.type) {
     case "boolean":
-      return value ? (
-        <Badge variant="secondary">Yes</Badge>
-      ) : (
-        <Badge variant="outline">No</Badge>
-      );
+      return value ? <Badge variant="secondary">Yes</Badge> : <Badge variant="outline">No</Badge>;
     case "date":
       if (typeof value === "string") {
         return new Date(value).toLocaleDateString();
@@ -178,9 +167,7 @@ function RecordFormDialog({
   }
 
   // Get writable fields (exclude readonly and id)
-  const writableFields = meta.fields.filter(
-    (f: MetaField) => !f.readonly && f.name !== "id"
-  );
+  const writableFields = meta.fields.filter((f: MetaField) => !f.readonly && f.name !== "id");
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -193,10 +180,7 @@ function RecordFormDialog({
           <form onSubmit={methods.handleSubmit(handleSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {writableFields.map((field: MetaField) => (
-                <div
-                  key={field.name}
-                  className={field.type === "text" ? "col-span-2" : ""}
-                >
+                <div key={field.name} className={field.type === "text" ? "col-span-2" : ""}>
                   <FormFieldRenderer field={field} />
                 </div>
               ))}
@@ -219,13 +203,19 @@ function RecordFormDialog({
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function One2ManyField({ field, value, onChange, readonly, embedded = false }: RendererFieldProps & { embedded?: boolean }) {
+export function One2ManyField({
+  field,
+  value,
+  onChange,
+  readonly,
+  embedded = false,
+}: RendererFieldProps & { embedded?: boolean }) {
   // ============================================================================
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY (Rules of Hooks)
   // ============================================================================
   const rel = field.relation;
   const records = Array.isArray(value) ? value : [];
-  
+
   // Always call hooks (even if rel is undefined)
   const { data: relatedMetaResponse } = useMeta(rel?.model || "");
   const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -238,9 +228,7 @@ export function One2ManyField({ field, value, onChange, readonly, embedded = fal
   // Get display columns (first 3-4 fields)
   const displayFields = React.useMemo(() => {
     if (!relatedMeta?.fields) return [];
-    return relatedMeta.fields
-      .filter((f: MetaField) => !["id"].includes(f.name))
-      .slice(0, 4);
+    return relatedMeta.fields.filter((f: MetaField) => !["id"].includes(f.name)).slice(0, 4);
   }, [relatedMeta]);
 
   // Unused but keeping structure for future field rendering
@@ -256,7 +244,11 @@ export function One2ManyField({ field, value, onChange, readonly, embedded = fal
     const missingRelationContent = (
       <p className="text-sm text-destructive">Missing relation config</p>
     );
-    return embedded ? missingRelationContent : <FieldWrapper field={field}>{missingRelationContent}</FieldWrapper>;
+    return embedded ? (
+      missingRelationContent
+    ) : (
+      <FieldWrapper field={field}>{missingRelationContent}</FieldWrapper>
+    );
   }
 
   const handleAdd = () => {
@@ -272,9 +264,7 @@ export function One2ManyField({ field, value, onChange, readonly, embedded = fal
   const handleSave = (record: RelatedRecord) => {
     if (editingRecord) {
       // Update existing record
-      const updatedRecords = records.map((r: RelatedRecord) =>
-        r === editingRecord ? record : r
-      );
+      const updatedRecords = records.map((r: RelatedRecord) => (r === editingRecord ? record : r));
       onChange?.(updatedRecords);
     } else {
       // Add new record
@@ -307,12 +297,7 @@ export function One2ManyField({ field, value, onChange, readonly, embedded = fal
             {records.length} {records.length === 1 ? "record" : "records"}
           </span>
           {!readonly && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleAdd}
-            >
+            <Button type="button" size="sm" variant="outline" onClick={handleAdd}>
               <PlusIcon className="h-4 w-4 mr-1" />
               Add {relatedMeta?.label || rel.model}
             </Button>
@@ -404,9 +389,7 @@ export function One2ManyField({ field, value, onChange, readonly, embedded = fal
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -415,4 +398,3 @@ export function One2ManyField({ field, value, onChange, readonly, embedded = fal
 
   return embedded ? content : <FieldWrapper field={field}>{content}</FieldWrapper>;
 }
-

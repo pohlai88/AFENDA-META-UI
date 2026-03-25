@@ -26,11 +26,7 @@ export const orderStatusEnum = pgEnum("order_status", [
   "cancelled",
 ]);
 
-export const partnerTypeEnum = pgEnum("partner_type", [
-  "customer",
-  "vendor",
-  "both",
-]);
+export const partnerTypeEnum = pgEnum("partner_type", ["customer", "vendor", "both"]);
 
 // ── Partners (customers / vendors) ───────────────────────────────────────────
 
@@ -69,7 +65,7 @@ export const products = pgTable("products", {
 
 export const salesOrders = pgTable("sales_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),            // e.g. SO-0001
+  name: text("name").notNull(), // e.g. SO-0001
   partnerId: uuid("partner_id")
     .notNull()
     .references(() => partners.id),

@@ -62,12 +62,7 @@ export interface LayoutCustom {
 }
 
 /** Recursive layout tree node */
-export type LayoutNode =
-  | LayoutSection
-  | LayoutGrid
-  | LayoutTabs
-  | LayoutField
-  | LayoutCustom;
+export type LayoutNode = LayoutSection | LayoutGrid | LayoutTabs | LayoutField | LayoutCustom;
 
 // ---------------------------------------------------------------------------
 // Layout Definition — stored/served alongside ModelMeta

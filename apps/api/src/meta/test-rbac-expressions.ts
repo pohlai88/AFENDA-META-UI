@@ -22,7 +22,7 @@ const testModel: ModelMeta = {
       method: "POST",
       url: "/api/test_model/:id/approve",
       allowed_roles: ["admin", "manager"],
-      visible_when: "hasRole(\"admin\") or hasRole(\"manager\")",
+      visible_when: 'hasRole("admin") or hasRole("manager")',
     },
     {
       id: "delete",
@@ -30,7 +30,7 @@ const testModel: ModelMeta = {
       method: "DELETE",
       url: "/api/test_model/:id",
       allowed_roles: ["admin"],
-      visible_when: "hasRole(\"admin\")",
+      visible_when: 'hasRole("admin")',
     },
     {
       id: "edit",
@@ -44,7 +44,7 @@ const testModel: ModelMeta = {
       label: "Archive",
       method: "POST",
       url: "/api/test_model/:id/archive",
-      visible_when: "hasRole(\"admin\") or hasRole(\"manager\")",
+      visible_when: 'hasRole("admin") or hasRole("manager")',
     },
   ],
   views: {
@@ -85,7 +85,7 @@ const scenarios = [
 ];
 
 console.log("🧪 Testing RBAC Expression Evaluator\n");
-console.log("=" .repeat(60));
+console.log("=".repeat(60));
 
 let passed = 0;
 let failed = 0;

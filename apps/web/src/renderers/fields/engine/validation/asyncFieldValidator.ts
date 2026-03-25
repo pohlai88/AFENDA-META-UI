@@ -49,27 +49,29 @@ export async function runAsyncValidation(
   const requestShape = rule.asyncValidate.requestShape ?? "legacy";
 
   try {
-    const requestUrl = method === "GET"
-      ? appendQueryParam(
-          appendQueryParam(
-            appendQueryParam(rule.asyncValidate.url, "value", valueAsString),
-            "scope",
-            cacheScope
-          ),
-          "field",
-          path
-        )
-      : rule.asyncValidate.url;
+    const requestUrl =
+      method === "GET"
+        ? appendQueryParam(
+            appendQueryParam(
+              appendQueryParam(rule.asyncValidate.url, "value", valueAsString),
+              "scope",
+              cacheScope
+            ),
+            "field",
+            path
+          )
+        : rule.asyncValidate.url;
 
-    const requestBody = method === "POST"
-      ? requestShape === "contract-v1"
-        ? JSON.stringify({
-            scope: cacheScope,
-            field: path,
-            value,
-          })
-        : JSON.stringify({ value })
-      : undefined;
+    const requestBody =
+      method === "POST"
+        ? requestShape === "contract-v1"
+          ? JSON.stringify({
+              scope: cacheScope,
+              field: path,
+              value,
+            })
+          : JSON.stringify({ value })
+        : undefined;
 
     const response = await fetch(requestUrl, {
       method,
@@ -82,9 +84,10 @@ export async function runAsyncValidation(
       body: requestBody,
     });
 
-    const data = await response
-      .json()
-      .catch(() => ({} as Record<string, unknown>)) as Record<string, unknown>;
+    const data = (await response.json().catch(() => ({}) as Record<string, unknown>)) as Record<
+      string,
+      unknown
+    >;
 
     const valid = typeof data.valid === "boolean" ? data.valid : response.ok;
     const responseMessage = typeof data.message === "string" ? data.message : undefined;
@@ -110,7 +113,10 @@ export async function runAsyncValidation(
   }
 }
 
-export function collectAsyncFieldRules(fields: FieldConfig[], pathSegments: string[] = []): AsyncFieldRule[] {
+export function collectAsyncFieldRules(
+  fields: FieldConfig[],
+  pathSegments: string[] = []
+): AsyncFieldRule[] {
   const rules: AsyncFieldRule[] = [];
 
   fields.forEach((field) => {

@@ -46,7 +46,7 @@ function makeOverride(
   scope: MetadataOverride["scope"],
   model: string,
   patch: Record<string, unknown>,
-  extras?: Partial<MetadataOverride>,
+  extras?: Partial<MetadataOverride>
 ): MetadataOverride {
   return {
     id,
@@ -100,9 +100,15 @@ describe("tenant — registry", () => {
   it("removeTenant removes tenant and its overrides", () => {
     registerTenant(makeTenant("rm-tenant"));
     registerOverride(
-      makeOverride("ovr-rm", "tenant", "Order", { field: "x" }, {
-        tenantId: "rm-tenant",
-      }),
+      makeOverride(
+        "ovr-rm",
+        "tenant",
+        "Order",
+        { field: "x" },
+        {
+          tenantId: "rm-tenant",
+        }
+      )
     );
 
     removeTenant("rm-tenant");
@@ -143,9 +149,15 @@ describe("tenant — overrides", () => {
   it("overrides are sorted by scope priority (global before tenant)", () => {
     registerTenant(makeTenant("ta"));
     registerOverride(
-      makeOverride("o-tenant", "tenant", "Order", { priority: 2 }, {
-        tenantId: "ta",
-      }),
+      makeOverride(
+        "o-tenant",
+        "tenant",
+        "Order",
+        { priority: 2 },
+        {
+          tenantId: "ta",
+        }
+      )
     );
     registerOverride(makeOverride("o-global", "global", "Order", { priority: 1 }));
 
@@ -174,22 +186,24 @@ describe("tenant — resolution", () => {
   });
 
   it("global override merges into base", () => {
-    registerOverride(
-      makeOverride("g1", "global", "Order", { showFooter: true }),
-    );
+    registerOverride(makeOverride("g1", "global", "Order", { showFooter: true }));
     const result = resolveMetadata("Order", base, { tenantId: "corp" });
     expect(result.showFooter).toBe(true);
     expect(result.label).toBe("Order");
   });
 
   it("tenant override supersedes global override", () => {
+    registerOverride(makeOverride("g1", "global", "Order", { label: "Global Order" }));
     registerOverride(
-      makeOverride("g1", "global", "Order", { label: "Global Order" }),
-    );
-    registerOverride(
-      makeOverride("t1", "tenant", "Order", { label: "Corp Order" }, {
-        tenantId: "corp",
-      }),
+      makeOverride(
+        "t1",
+        "tenant",
+        "Order",
+        { label: "Corp Order" },
+        {
+          tenantId: "corp",
+        }
+      )
     );
 
     const result = resolveMetadata("Order", base, { tenantId: "corp" });
@@ -198,15 +212,27 @@ describe("tenant — resolution", () => {
 
   it("department override supersedes tenant override", () => {
     registerOverride(
-      makeOverride("t1", "tenant", "Order", { label: "Tenant" }, {
-        tenantId: "corp",
-      }),
+      makeOverride(
+        "t1",
+        "tenant",
+        "Order",
+        { label: "Tenant" },
+        {
+          tenantId: "corp",
+        }
+      )
     );
     registerOverride(
-      makeOverride("d1", "department", "Order", { label: "Dept" }, {
-        tenantId: "corp",
-        departmentId: "sales",
-      }),
+      makeOverride(
+        "d1",
+        "department",
+        "Order",
+        { label: "Dept" },
+        {
+          tenantId: "corp",
+          departmentId: "sales",
+        }
+      )
     );
 
     const result = resolveMetadata("Order", base, {
@@ -218,16 +244,28 @@ describe("tenant — resolution", () => {
 
   it("user override supersedes department override", () => {
     registerOverride(
-      makeOverride("d1", "department", "Order", { label: "Dept" }, {
-        tenantId: "corp",
-        departmentId: "sales",
-      }),
+      makeOverride(
+        "d1",
+        "department",
+        "Order",
+        { label: "Dept" },
+        {
+          tenantId: "corp",
+          departmentId: "sales",
+        }
+      )
     );
     registerOverride(
-      makeOverride("u1", "user", "Order", { label: "User" }, {
-        tenantId: "corp",
-        userId: "alice",
-      }),
+      makeOverride(
+        "u1",
+        "user",
+        "Order",
+        { label: "User" },
+        {
+          tenantId: "corp",
+          userId: "alice",
+        }
+      )
     );
 
     const result = resolveMetadata("Order", base, {
@@ -240,9 +278,15 @@ describe("tenant — resolution", () => {
 
   it("tenant override does not apply to a different tenant", () => {
     registerOverride(
-      makeOverride("t1", "tenant", "Order", { label: "Corp Only" }, {
-        tenantId: "corp",
-      }),
+      makeOverride(
+        "t1",
+        "tenant",
+        "Order",
+        { label: "Corp Only" },
+        {
+          tenantId: "corp",
+        }
+      )
     );
 
     const result = resolveMetadata("Order", base, { tenantId: "other-tenant" });
@@ -254,9 +298,15 @@ describe("tenant — resolution", () => {
 
     registerOverride(makeOverride("g1", "global", "Order", { label: "Global" }));
     registerOverride(
-      makeOverride("t1", "tenant", "Order", { label: "Corp" }, {
-        tenantId: "corp",
-      }),
+      makeOverride(
+        "t1",
+        "tenant",
+        "Order",
+        { label: "Corp" },
+        {
+          tenantId: "corp",
+        }
+      )
     );
 
     const result = resolveMetadata("Order", base, {
@@ -274,74 +324,80 @@ describe("tenant — resolution", () => {
 
 describe("tenant — governance", () => {
   it("returns no violations for a valid global override", () => {
-    const violations = validateOverride(
-      makeOverride("v1", "global", "Order", { label: "test" }),
-    );
+    const violations = validateOverride(makeOverride("v1", "global", "Order", { label: "test" }));
     expect(violations.filter((v) => v.severity === "error").length).toBe(0);
   });
 
   it("reports error when patch is empty", () => {
-    const violations = validateOverride(
-      makeOverride("v-empty", "global", "Order", {}),
-    );
+    const violations = validateOverride(makeOverride("v-empty", "global", "Order", {}));
     expect(violations.some((v) => v.rule === "patch_not_empty")).toBe(true);
     expect(violations.some((v) => v.severity === "error")).toBe(true);
   });
 
   it("reports error when tenant-scoped override references unknown tenant", () => {
     const violations = validateOverride(
-      makeOverride("v-noTenant", "tenant", "Order", { x: 1 }, {
-        tenantId: "ghost-tenant",
-      }),
+      makeOverride(
+        "v-noTenant",
+        "tenant",
+        "Order",
+        { x: 1 },
+        {
+          tenantId: "ghost-tenant",
+        }
+      )
     );
     expect(violations.some((v) => v.rule === "tenant_must_exist")).toBe(true);
   });
 
   it("reports error for user-scoped override without userId", () => {
     const violations = validateOverride(
-      makeOverride("v-noUser", "user", "Order", { x: 1 }, {
-        tenantId: null,
-        userId: null,
-      }),
+      makeOverride(
+        "v-noUser",
+        "user",
+        "Order",
+        { x: 1 },
+        {
+          tenantId: null,
+          userId: null,
+        }
+      )
     );
-    expect(
-      violations.some((v) => v.rule === "user_scope_requires_user_id"),
-    ).toBe(true);
+    expect(violations.some((v) => v.rule === "user_scope_requires_user_id")).toBe(true);
   });
 
   it("reports error for department-scoped override without departmentId", () => {
     const violations = validateOverride(
-      makeOverride("v-noDept", "department", "Order", { x: 1 }, {
-        tenantId: null,
-        departmentId: null,
-      }),
+      makeOverride(
+        "v-noDept",
+        "department",
+        "Order",
+        { x: 1 },
+        {
+          tenantId: null,
+          departmentId: null,
+        }
+      )
     );
-    expect(
-      violations.some((v) => v.rule === "dept_scope_requires_dept_id"),
-    ).toBe(true);
+    expect(violations.some((v) => v.rule === "dept_scope_requires_dept_id")).toBe(true);
   });
 
   it("reports warning for overriding structural keys", () => {
     const violations = validateOverride(
-      makeOverride("v-struct", "global", "Order", { id: "override-id" }),
+      makeOverride("v-struct", "global", "Order", { id: "override-id" })
     );
     expect(
-      violations.some(
-        (v) => v.severity === "warning" && v.rule === "no_structural_override",
-      ),
+      violations.some((v) => v.severity === "warning" && v.rule === "no_structural_override")
     ).toBe(true);
   });
 
   it("safeRegisterOverride throws on error-level violations", () => {
-    expect(() =>
-      safeRegisterOverride(makeOverride("v-throw", "global", "Order", {})),
-    ).toThrow();
+    expect(() => safeRegisterOverride(makeOverride("v-throw", "global", "Order", {}))).toThrow();
   });
 
   it("safeRegisterOverride registers on valid override with warnings only", () => {
     registerTenant(makeTenant("safe-t"));
     const warnings = safeRegisterOverride(
-      makeOverride("v-warn", "global", "Order", { id: "override-id" }),
+      makeOverride("v-warn", "global", "Order", { id: "override-id" })
     );
     // Warning about structural key, but no errors — should still register
     expect(warnings.some((v) => v.severity === "warning")).toBe(true);
@@ -362,16 +418,13 @@ describe("tenant — deepMerge", () => {
   it("deep merges nested objects", () => {
     const result = deepMerge(
       { config: { color: "red", size: "sm" } },
-      { config: { size: "lg", bold: true } },
+      { config: { size: "lg", bold: true } }
     );
     expect(result.config).toEqual({ color: "red", size: "lg", bold: true });
   });
 
   it("replaces arrays rather than concatinating", () => {
-    const result = deepMerge(
-      { tags: ["a", "b"] },
-      { tags: ["c"] },
-    );
+    const result = deepMerge({ tags: ["a", "b"] }, { tags: ["c"] });
     expect(result.tags).toEqual(["c"]);
   });
 

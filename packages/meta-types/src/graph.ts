@@ -48,15 +48,15 @@ export interface GraphNode<TData = Record<string, unknown>> {
 // ---------------------------------------------------------------------------
 
 export type GraphEdgeType =
-  | "PLACED"         // customer → order
-  | "RESERVES"       // order → inventory
-  | "APPROVED_BY"    // document → employee
-  | "BELONGS_TO"     // record → tenant
-  | "GOVERNED_BY"    // scope → policy
-  | "EMPLOYS"        // tenant → employee
-  | "OWNS"           // entity → asset
-  | "SUPPLIED_BY"    // order → vendor
-  | "COVERED_BY";    // entity → contract
+  | "PLACED" // customer → order
+  | "RESERVES" // order → inventory
+  | "APPROVED_BY" // document → employee
+  | "BELONGS_TO" // record → tenant
+  | "GOVERNED_BY" // scope → policy
+  | "EMPLOYS" // tenant → employee
+  | "OWNS" // entity → asset
+  | "SUPPLIED_BY" // order → vendor
+  | "COVERED_BY"; // entity → contract
 
 export interface GraphEdge {
   /** Unique edge ID */

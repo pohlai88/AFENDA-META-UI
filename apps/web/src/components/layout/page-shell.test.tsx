@@ -6,10 +6,7 @@ import { PageContainer, PageShell } from "./page-shell";
 describe("PageShell", () => {
   it("renders optional header and footer slots semantically", () => {
     renderWithProviders(
-      <PageShell
-        header={<div>Header Slot</div>}
-        footer={<div>Footer Slot</div>}
-      >
+      <PageShell header={<div>Header Slot</div>} footer={<div>Footer Slot</div>}>
         <div>Body Content</div>
       </PageShell>
     );

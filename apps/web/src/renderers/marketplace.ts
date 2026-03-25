@@ -95,14 +95,14 @@ export function calculatePreferredScore(
   preferred?: Partial<RendererCapabilities>
 ): number {
   if (!preferred) return 100;
-  
+
   const preferredKeys = Object.entries(preferred).filter(([_, value]) => value);
   if (preferredKeys.length === 0) return 100;
-  
-  const metCount = preferredKeys.filter(([key]) => 
-    capabilities[key as keyof RendererCapabilities]
+
+  const metCount = preferredKeys.filter(
+    ([key]) => capabilities[key as keyof RendererCapabilities]
   ).length;
-  
+
   return (metCount / preferredKeys.length) * 100;
 }
 
@@ -114,7 +114,7 @@ export function calculatePerformanceScore(
   requirements: MetadataRequirements
 ): number {
   let score = 100;
-  
+
   // Check row capacity
   if (requirements.performance?.maxRows) {
     const rowRatio = performance.maxRows / requirements.performance.maxRows;
@@ -124,37 +124,37 @@ export function calculatePerformanceScore(
       score -= 20; // Minor penalty for tight capacity
     }
   }
-  
+
   // Check complexity
   if (requirements.performance?.maxComplexity) {
     const complexityMap = { low: 1, medium: 2, high: 3 };
     const requiredComplexity = complexityMap[requirements.performance.maxComplexity];
     const rendererComplexity = complexityMap[performance.complexity];
-    
+
     if (rendererComplexity > requiredComplexity) {
       score -= 30; // Penalty for using complex renderer when simple one would work
     }
   }
-  
+
   // Check realtime capability
   if (requirements.performance?.realtimeRequired && !performance.realtimeCapable) {
     return 0; // Hard requirement
   }
-  
+
   // Bonus for fast init
   if (performance.initSpeed === "fast") {
     score += 10;
   } else if (performance.initSpeed === "slow") {
     score -= 10;
   }
-  
+
   // Bonus for small memory
   if (performance.memory === "small") {
     score += 5;
   } else if (performance.memory === "large") {
     score -= 5;
   }
-  
+
   return Math.max(0, Math.min(100, score));
 }
 
@@ -162,48 +162,43 @@ export function calculatePerformanceScore(
  * Resolve best renderer for metadata requirements
  */
 export function resolveRenderer(
-  candidates: Array<{ declaration: CapabilityDeclaration; rendererId: string; version: RendererVersion }>,
+  candidates: Array<{
+    declaration: CapabilityDeclaration;
+    rendererId: string;
+    version: RendererVersion;
+  }>,
   requirements: MetadataRequirements
 ): RendererMatch | null {
   const matches: RendererMatch[] = [];
-  
+
   for (const candidate of candidates) {
     const { declaration, rendererId, version } = candidate;
-    
+
     // Check required capabilities
-    const satisfiesRequired = satisfiesRequirements(
-      declaration.supports,
-      requirements.required
-    );
-    
+    const satisfiesRequired = satisfiesRequirements(declaration.supports, requirements.required);
+
     if (!satisfiesRequired) {
       continue; // Skip renderers that don't meet requirements
     }
-    
+
     // Calculate scores
     const satisfiesPreferred = calculatePreferredScore(
       declaration.supports,
       requirements.preferred
     );
-    
-    const performanceScore = calculatePerformanceScore(
-      declaration.performance,
-      requirements
-    );
-    
+
+    const performanceScore = calculatePerformanceScore(declaration.performance, requirements);
+
     const costScore = 100 - declaration.costScore; // Invert cost (lower cost = higher score)
-    
+
     // Check cost constraint
     if (requirements.maxCost && declaration.costScore > requirements.maxCost) {
       continue; // Skip renderers that exceed cost budget
     }
-    
+
     // Weighted total score
-    const score = 
-      satisfiesPreferred * 0.4 +
-      performanceScore * 0.4 +
-      costScore * 0.2;
-    
+    const score = satisfiesPreferred * 0.4 + performanceScore * 0.4 + costScore * 0.2;
+
     matches.push({
       rendererId,
       type: declaration.type,
@@ -220,10 +215,10 @@ export function resolveRenderer(
       ],
     });
   }
-  
+
   // Sort by score descending
   matches.sort((a, b) => b.score - a.score);
-  
+
   return matches[0] || null;
 }
 
@@ -232,15 +227,17 @@ export function resolveRenderer(
  */
 class RendererMarketplace {
   private declarations = new Map<string, CapabilityDeclaration>();
-  
+
   /**
    * Register a renderer in the marketplace
    */
   register(rendererId: string, declaration: CapabilityDeclaration): void {
     this.declarations.set(rendererId, declaration);
-    console.log(`[Marketplace] Registered renderer: ${rendererId} (${declaration.type}@${declaration.version})`);
+    console.log(
+      `[Marketplace] Registered renderer: ${rendererId} (${declaration.type}@${declaration.version})`
+    );
   }
-  
+
   /**
    * Get all renderers of a specific type
    */
@@ -249,7 +246,7 @@ class RendererMarketplace {
       .filter(([_, decl]) => decl.type === type)
       .map(([rendererId, declaration]) => ({ rendererId, declaration }));
   }
-  
+
   /**
    * Find best renderer for requirements
    */
@@ -259,17 +256,17 @@ class RendererMarketplace {
       declaration,
       version: this.extractVersion(declaration.version),
     }));
-    
+
     return resolveRenderer(candidates, requirements);
   }
-  
+
   /**
    * Get capability declaration for a renderer
    */
   getDeclaration(rendererId: string): CapabilityDeclaration | undefined {
     return this.declarations.get(rendererId);
   }
-  
+
   /**
    * List all registered renderers
    */
@@ -279,7 +276,7 @@ class RendererMarketplace {
       declaration,
     }));
   }
-  
+
   private extractVersion(semver: string): RendererVersion {
     const major = semver.split(".")[0];
     return `v${major}` as RendererVersion;
@@ -291,10 +288,7 @@ export const marketplace = new RendererMarketplace();
 /**
  * Convenience: Register renderer from existing registry
  */
-export function registerFromRegistry(
-  rendererId: string,
-  declaration: CapabilityDeclaration
-): void {
+export function registerFromRegistry(rendererId: string, declaration: CapabilityDeclaration): void {
   marketplace.register(rendererId, declaration);
 }
 

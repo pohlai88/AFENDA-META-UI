@@ -68,10 +68,7 @@ export function logDecisionAuditBatch(entries: DecisionAuditEntry[]): void {
  * linkToChain(rootId, entry3);  // Policy enforcement
  * const chain = getDecisionChain(rootId);
  */
-export function linkToChain(
-  chainId: string,
-  entry: DecisionAuditEntry,
-): void {
+export function linkToChain(chainId: string, entry: DecisionAuditEntry): void {
   logDecisionAudit(entry);
 
   if (!chains.has(chainId)) {
@@ -103,9 +100,7 @@ export function linkToChain(
  * Query decision audit logs by filters
  * Returns newest entries first
  */
-export function queryDecisionAuditLog(
-  query: DecisionAuditQuery,
-): DecisionAuditEntry[] {
+export function queryDecisionAuditLog(query: DecisionAuditQuery): DecisionAuditEntry[] {
   let results = [...store];
 
   // Filter by tenant (required)
@@ -161,11 +156,9 @@ export function getDecisionChain(chainId: string): DecisionAuditChain | null {
 export function getDecisionsForScope(
   tenantId: string,
   scope: string,
-  eventType?: string,
+  eventType?: string
 ): DecisionAuditEntry[] {
-  let results = store.filter(
-    (e) => e.tenantId === tenantId && e.scope.startsWith(scope),
-  );
+  let results = store.filter((e) => e.tenantId === tenantId && e.scope.startsWith(scope));
 
   if (eventType) {
     results = results.filter((e) => e.eventType === eventType);
@@ -177,10 +170,7 @@ export function getDecisionsForScope(
 /**
  * Get most recent decision for a scope
  */
-export function getLatestDecision(
-  tenantId: string,
-  scope: string,
-): DecisionAuditEntry | null {
+export function getLatestDecision(tenantId: string, scope: string): DecisionAuditEntry | null {
   const entries = getDecisionsForScope(tenantId, scope);
   return entries[0] || null;
 }
@@ -196,7 +186,7 @@ export function getLatestDecision(
 export function getDecisionStats(
   tenantId: string,
   eventType: string,
-  timeWindowMs: number = 3600000, // 1 hour default
+  timeWindowMs: number = 3600000 // 1 hour default
 ): {
   count: number;
   avgDurationMs: number;
@@ -208,10 +198,7 @@ export function getDecisionStats(
   const cutoff = new Date(now.getTime() - timeWindowMs).toISOString();
 
   const entries = store.filter(
-    (e) =>
-      e.tenantId === tenantId &&
-      e.eventType === eventType &&
-      e.timestamp >= cutoff,
+    (e) => e.tenantId === tenantId && e.eventType === eventType && e.timestamp >= cutoff
   );
 
   if (entries.length === 0) {
@@ -229,8 +216,7 @@ export function getDecisionStats(
 
   return {
     count: entries.length,
-    avgDurationMs:
-      durations.reduce((a, b) => a + b, 0) / durations.length,
+    avgDurationMs: durations.reduce((a, b) => a + b, 0) / durations.length,
     minDurationMs: Math.min(...durations),
     maxDurationMs: Math.max(...durations),
     errorRate: errors.length / entries.length,
@@ -244,12 +230,10 @@ export function getDecisionStats(
 export function getSlowDecisions(
   tenantId: string,
   thresholdMs: number,
-  limit: number = 10,
+  limit: number = 10
 ): DecisionAuditEntry[] {
   return store
-    .filter(
-      (e) => e.tenantId === tenantId && e.durationMs > thresholdMs,
-    )
+    .filter((e) => e.tenantId === tenantId && e.durationMs > thresholdMs)
     .sort((a, b) => b.durationMs - a.durationMs)
     .slice(0, limit);
 }
@@ -257,16 +241,12 @@ export function getSlowDecisions(
 /**
  * Get audit decision events that resulted in violations or errors
  */
-export function getAuditFailures(
-  tenantId: string,
-  limit: number = 50,
-): DecisionAuditEntry[] {
+export function getAuditFailures(tenantId: string, limit: number = 50): DecisionAuditEntry[] {
   return store
     .filter(
       (e) =>
         e.tenantId === tenantId &&
-        (e.status === "error" ||
-          (e.decision.violations && e.decision.violations.length > 0)),
+        (e.status === "error" || (e.decision.violations && e.decision.violations.length > 0))
     )
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .slice(0, limit);
@@ -284,14 +264,13 @@ export function getAuditFailures(
  */
 export function getDecisionChainForRequest(
   requestId: string,
-  tenantId: string,
+  tenantId: string
 ): DecisionAuditEntry[] {
   const entries = store.filter(
     (e) =>
       e.tenantId === tenantId &&
       e.context &&
-      (e.context.eventId === requestId ||
-        e.id.startsWith(requestId)),
+      (e.context.eventId === requestId || e.id.startsWith(requestId))
   );
   return entries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
@@ -306,15 +285,13 @@ export function getDecisionChainForRequest(
  */
 export function verifyDecisionCompliance(
   entry: DecisionAuditEntry,
-  expectedLayers: string[],
+  expectedLayers: string[]
 ): boolean {
   if (!entry.decision.appliedLayers) {
     return false;
   }
 
-  return expectedLayers.every((layer) =>
-    entry.decision.appliedLayers!.includes(layer),
-  );
+  return expectedLayers.every((layer) => entry.decision.appliedLayers!.includes(layer));
 }
 
 /**
@@ -324,7 +301,7 @@ export function verifyDecisionCompliance(
 export function getUserAuditTrail(
   tenantId: string,
   userId: string,
-  limit: number = 100,
+  limit: number = 100
 ): DecisionAuditEntry[] {
   return store
     .filter((e) => e.tenantId === tenantId && e.userId === userId)
@@ -369,7 +346,10 @@ export function pruneOldDecisions(olderThanMs: number): number {
   const cutoff = new Date(Date.now() - olderThanMs).toISOString();
   const before = store.length;
 
-  store.splice(0, store.findIndex((e) => e.timestamp > cutoff));
+  store.splice(
+    0,
+    store.findIndex((e) => e.timestamp > cutoff)
+  );
 
   // Also prune chains that no longer have entries
   for (const [id, chain] of chains) {

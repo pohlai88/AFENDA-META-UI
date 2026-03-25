@@ -87,10 +87,7 @@ function evaluateSinglePolicy(
  * @param scope   - Optional scope override. Defaults to `context.model`.
  * @returns Structured result with errors, warnings, info, and timing.
  */
-export function evaluatePolicies(
-  context: PolicyContext,
-  scope?: string
-): PolicyEvaluationResult {
+export function evaluatePolicies(context: PolicyContext, scope?: string): PolicyEvaluationResult {
   const startTime = performance.now();
   const effectiveScope = scope ?? context.model;
   const policies = getPoliciesForScope(effectiveScope);
@@ -146,7 +143,7 @@ export function evaluatePoliciesWithTenantContext(
   context: PolicyContext,
   tenantCtx: ResolutionContext,
   globalMeta: Record<string, unknown>,
-  scope?: string,
+  scope?: string
 ): PolicyEvaluationResult {
   const startTime = performance.now();
   const policyEvaluationId = randomUUID();
@@ -160,14 +157,13 @@ export function evaluatePoliciesWithTenantContext(
 
   for (const basePolicy of basePolicies) {
     // Resolve the policy to apply tenant overrides
-    const resolvedPolicyMeta = resolveMetadata(
-      context.model,
-      globalMeta,
-      tenantCtx,
-    );
+    const resolvedPolicyMeta = resolveMetadata(context.model, globalMeta, tenantCtx);
 
     // Apply resolved metadata to the policy (e.g., override validate condition)
-    const resolvedPolicies = (resolvedPolicyMeta.policies || {}) as Record<string, Partial<PolicyDefinition>>;
+    const resolvedPolicies = (resolvedPolicyMeta.policies || {}) as Record<
+      string,
+      Partial<PolicyDefinition>
+    >;
     const policy: PolicyDefinition = {
       ...basePolicy,
       // If tenant-specific overrides exist, apply them
@@ -231,13 +227,9 @@ export function evaluatePoliciesWithTenantContext(
           : `Policy '${policy.id}' passed`,
         appliedLayers: [
           "global",
-          ...Object.keys(resolvedPolicyMeta)
-            .filter(
-              (k) =>
-                k.startsWith("tenant") ||
-                k.startsWith("department") ||
-                k.startsWith("industry"),
-            ),
+          ...Object.keys(resolvedPolicyMeta).filter(
+            (k) => k.startsWith("tenant") || k.startsWith("department") || k.startsWith("industry")
+          ),
         ],
         ...(violations.length > 0 && { violations }),
       },
@@ -247,7 +239,7 @@ export function evaluatePoliciesWithTenantContext(
   }
 
   const totalDurationMs = performance.now() - startTime;
-  
+
   return {
     passed: errors.length === 0,
     errors,

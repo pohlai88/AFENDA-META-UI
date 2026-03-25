@@ -38,10 +38,7 @@ describe("policyRegistry", () => {
     });
 
     it("clears all policies", () => {
-      registerPolicies([
-        samplePolicy,
-        { ...samplePolicy, id: "policy2", scope: "hr" },
-      ]);
+      registerPolicies([samplePolicy, { ...samplePolicy, id: "policy2", scope: "hr" }]);
       expect(getAllPolicies()).toHaveLength(2);
       clearPolicies();
       expect(getAllPolicies()).toHaveLength(0);

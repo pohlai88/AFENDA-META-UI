@@ -65,10 +65,7 @@ const workflowSlice = createSlice({
       state.error = null;
     },
 
-    loadInstancesSuccess(
-      state,
-      action: PayloadAction<{ instances: WorkflowInstance[] }>
-    ) {
+    loadInstancesSuccess(state, action: PayloadAction<{ instances: WorkflowInstance[] }>) {
       state.instances = new Map(action.payload.instances.map((i) => [i.id, i]));
       state.isLoading = false;
       state.lastUpdatedAt = new Date().toISOString();
@@ -140,18 +137,14 @@ const workflowSlice = createSlice({
 
     addApprovalTask(state, action: PayloadAction<ApprovalTask>) {
       // Avoid duplicates
-      const exists = state.approvalTasks.some(
-        (t) => t.instanceId === action.payload.instanceId
-      );
+      const exists = state.approvalTasks.some((t) => t.instanceId === action.payload.instanceId);
       if (!exists) {
         state.approvalTasks.push(action.payload);
       }
     },
 
     removeApprovalTask(state, action: PayloadAction<string>) {
-      state.approvalTasks = state.approvalTasks.filter(
-        (t) => t.instanceId !== action.payload
-      );
+      state.approvalTasks = state.approvalTasks.filter((t) => t.instanceId !== action.payload);
     },
 
     updateApprovalTask(state, action: PayloadAction<ApprovalTask>) {
@@ -181,18 +174,16 @@ const workflowSlice = createSlice({
 // Selectors
 // ────────────────────────────────────────────────────────────────────────
 
-export const selectWorkflowInstance =
-  (instanceId: string) => (state: RootState) =>
-    instanceId && state.workflow.instances.has(instanceId)
-      ? state.workflow.instances.get(instanceId)
-      : undefined;
+export const selectWorkflowInstance = (instanceId: string) => (state: RootState) =>
+  instanceId && state.workflow.instances.has(instanceId)
+    ? state.workflow.instances.get(instanceId)
+    : undefined;
 
 export const selectAllInstances = (state: RootState) =>
   Array.from(state.workflow.instances.values());
 
-export const selectInstancesByStatus =
-  (status: WorkflowStatus) => (state: RootState) =>
-    Array.from(state.workflow.instances.values()).filter((i) => i.status === status);
+export const selectInstancesByStatus = (status: WorkflowStatus) => (state: RootState) =>
+  Array.from(state.workflow.instances.values()).filter((i) => i.status === status);
 
 export const selectPendingInstances = (state: RootState) =>
   Array.from(state.workflow.instances.values()).filter(
@@ -205,32 +196,24 @@ export const selectPendingInstances = (state: RootState) =>
 
 export const selectCompletedInstances = (state: RootState) =>
   Array.from(state.workflow.instances.values()).filter(
-    (i) =>
-      i.status === "completed" ||
-      i.status === "rejected" ||
-      i.status === "failed"
+    (i) => i.status === "completed" || i.status === "rejected" || i.status === "failed"
   );
 
-export const selectPendingApprovals = (state: RootState) =>
-  state.workflow.approvalTasks;
+export const selectPendingApprovals = (state: RootState) => state.workflow.approvalTasks;
 
-export const selectApprovalTask =
-  (instanceId: string) => (state: RootState) =>
-    state.workflow.approvalTasks.find((t) => t.instanceId === instanceId);
+export const selectApprovalTask = (instanceId: string) => (state: RootState) =>
+  state.workflow.approvalTasks.find((t) => t.instanceId === instanceId);
 
 export const selectActiveInstance = (state: RootState) => {
   if (state.workflow.activeInstanceId === null) return undefined;
   return state.workflow.instances.get(state.workflow.activeInstanceId);
 };
 
-export const selectWorkflowIsLoading = (state: RootState) =>
-  state.workflow.isLoading;
+export const selectWorkflowIsLoading = (state: RootState) => state.workflow.isLoading;
 
-export const selectWorkflowError = (state: RootState) =>
-  state.workflow.error;
+export const selectWorkflowError = (state: RootState) => state.workflow.error;
 
-export const selectWorkflowLastUpdatedAt = (state: RootState) =>
-  state.workflow.lastUpdatedAt;
+export const selectWorkflowLastUpdatedAt = (state: RootState) => state.workflow.lastUpdatedAt;
 
 // ────────────────────────────────────────────────────────────────────────
 // Exports

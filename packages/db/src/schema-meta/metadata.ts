@@ -23,7 +23,13 @@ export const policySeverityEnum = pgEnum("policy_severity", ["error", "warning",
 
 export const auditOperationEnum = pgEnum("audit_operation", ["create", "update", "delete"]);
 
-export const auditSourceEnum = pgEnum("audit_source", ["ui", "api", "import", "system", "migration"]);
+export const auditSourceEnum = pgEnum("audit_source", [
+  "ui",
+  "api",
+  "import",
+  "system",
+  "migration",
+]);
 
 export const layoutViewTypeEnum = pgEnum("layout_view_type", [
   "form",

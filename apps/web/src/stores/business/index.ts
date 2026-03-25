@@ -2,7 +2,7 @@
  * Business Stores
  * ================
  * Central export for Redux Toolkit business logic stores.
- * 
+ *
  * These stores manage complex business logic that requires
  * middleware (logging, audit, analytics, etc.).
  */

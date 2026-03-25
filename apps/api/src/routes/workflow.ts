@@ -91,9 +91,7 @@ router.put("/:id", async (req: Request, res: Response) => {
   try {
     const def = req.body as WorkflowDefinition;
     if (def.id !== req.params.id) {
-      return res
-        .status(400)
-        .json({ error: "Workflow ID must match URL parameter" });
+      return res.status(400).json({ error: "Workflow ID must match URL parameter" });
     }
     updateWorkflow(def);
     res.json({ message: "Workflow updated" });
@@ -148,9 +146,7 @@ router.post("/trigger", async (req: Request, res: Response) => {
 router.get("/instances", async (req: Request, res: Response) => {
   try {
     const workflowId = (req.query.workflowId as string) || undefined;
-    const status = (
-      req.query.status as any
-    ) || undefined;
+    const status = (req.query.status as any) || undefined;
     const instances = listInstances({
       workflowId,
       status,
@@ -208,9 +204,7 @@ router.post("/instances/:instanceId/approve", async (req: Request, res: Response
       reason?: string;
     };
     if (!decision || !actor) {
-      return res
-        .status(400)
-        .json({ error: "Decision and actor are required" });
+      return res.status(400).json({ error: "Decision and actor are required" });
     }
     const instance = await submitApproval(instanceId, decision, actor, reason);
     res.json(instance);

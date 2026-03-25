@@ -9,7 +9,15 @@
 
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@afenda/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@afenda/ui";
 import { ArrowRight } from "lucide-react";
 import { PageContainer, PageHeader } from "~/components/layout";
 import { toTitle } from "~/lib/breadcrumb-utils";
@@ -70,8 +78,8 @@ export default function ModuleLandingPage() {
           <CardHeader>
             <CardTitle>Module Ready</CardTitle>
             <CardDescription>
-              This module does not have custom shortcuts yet. Open a model route directly,
-              for example /{module}/your_model.
+              This module does not have custom shortcuts yet. Open a model route directly, for
+              example /{module}/your_model.
             </CardDescription>
           </CardHeader>
         </Card>

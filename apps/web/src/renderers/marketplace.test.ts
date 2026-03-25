@@ -77,7 +77,12 @@ describe("Renderer Capability Marketplace", () => {
     });
 
     it("returns 100% when all preferred capabilities met", () => {
-      const capabilities = { bulkActions: true, inlineEdit: true, virtualization: true, realTimeSync: true };
+      const capabilities = {
+        bulkActions: true,
+        inlineEdit: true,
+        virtualization: true,
+        realTimeSync: true,
+      };
       const preferred = { bulkActions: true, inlineEdit: true };
 
       const score = calculatePreferredScore(capabilities, preferred);

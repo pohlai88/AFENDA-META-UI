@@ -57,11 +57,7 @@ describe("diffBuilder", () => {
   });
 
   it("respects sensitivity from MetaField.audit", () => {
-    const diff = buildDiff(
-      { email: "old@a.com" },
-      { email: "new@b.com" },
-      fields
-    );
+    const diff = buildDiff({ email: "old@a.com" }, { email: "new@b.com" }, fields);
     expect(diff[0].sensitivity).toBe("high");
   });
 
@@ -71,30 +67,18 @@ describe("diffBuilder", () => {
   });
 
   it("compares arrays deeply", () => {
-    const arrFields: MetaField[] = [
-      { name: "tags", type: "string", label: "Tags" },
-    ];
-    const diff = buildDiff(
-      { tags: [1, 2, 3] },
-      { tags: [1, 2, 4] },
-      arrFields
-    );
+    const arrFields: MetaField[] = [{ name: "tags", type: "string", label: "Tags" }];
+    const diff = buildDiff({ tags: [1, 2, 3] }, { tags: [1, 2, 4] }, arrFields);
     expect(diff).toHaveLength(1);
   });
 
   it("treats identical arrays as no change", () => {
-    const arrFields: MetaField[] = [
-      { name: "tags", type: "string", label: "Tags" },
-    ];
-    expect(
-      buildDiff({ tags: [1, 2, 3] }, { tags: [1, 2, 3] }, arrFields)
-    ).toHaveLength(0);
+    const arrFields: MetaField[] = [{ name: "tags", type: "string", label: "Tags" }];
+    expect(buildDiff({ tags: [1, 2, 3] }, { tags: [1, 2, 3] }, arrFields)).toHaveLength(0);
   });
 
   it("compares Date objects by time value", () => {
-    const dateFields: MetaField[] = [
-      { name: "createdAt", type: "string", label: "Created" },
-    ];
+    const dateFields: MetaField[] = [{ name: "createdAt", type: "string", label: "Created" }];
     const d = new Date("2024-01-01");
     expect(
       buildDiff({ createdAt: d }, { createdAt: new Date(d.getTime()) }, dateFields)

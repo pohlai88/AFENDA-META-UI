@@ -5,6 +5,7 @@ Shared UI component library for AFENDA Meta UI.
 ## Overview
 
 This package provides a collection of React components built with:
+
 - **shadcn/ui** - Quality component patterns
 - **Radix UI** - Accessible primitives
 - **Tailwind CSS** - Utility-first styling
@@ -13,6 +14,7 @@ This package provides a collection of React components built with:
 ## Components
 
 ### Form Components
+
 - `Button` - Primary action buttons with variants
 - `Input` - Text input with validation states
 - `Textarea` - Multi-line text input
@@ -22,6 +24,7 @@ This package provides a collection of React components built with:
 - `Form` - react-hook-form integration
 
 ### Layout Components
+
 - `Card` - Content containers
 - `Separator` - Visual dividers
 - `Tabs` - Tabbed interfaces
@@ -31,6 +34,7 @@ This package provides a collection of React components built with:
 - `Popover` - Floating content
 
 ### Data Display
+
 - `Table` - Data tables
 - `Badge` - Status indicators
 - `Avatar` - User avatars
@@ -38,6 +42,7 @@ This package provides a collection of React components built with:
 - `Tooltip` - Contextual help
 
 ### Feedback
+
 - `Sonner` - Toast notifications
 - `Command` - Command palette
 - `DropdownMenu` - Context menus
@@ -45,7 +50,7 @@ This package provides a collection of React components built with:
 ## Usage
 
 ```tsx
-import { Button, Input, Card } from '@afenda/ui';
+import { Button, Input, Card } from "@afenda/ui";
 
 function MyComponent() {
   return (
@@ -62,7 +67,7 @@ function MyComponent() {
 Import the styles in your app:
 
 ```tsx
-import '@afenda/ui/styles.css';
+import "@afenda/ui/styles.css";
 ```
 
 ## Development
@@ -81,6 +86,7 @@ pnpm dev
 ## Dependencies
 
 This package has peer dependencies that must be installed in the consuming application:
+
 - react
 - react-dom
 - lucide-react

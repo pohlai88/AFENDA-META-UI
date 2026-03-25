@@ -239,7 +239,9 @@ function generateFromPatterns(
 /**
  * Main function to generate personalized suggestions
  */
-export function generatePersonalizedSuggestions(config: SuggestionConfig): PersonalizedSuggestion[] {
+export function generatePersonalizedSuggestions(
+  config: SuggestionConfig
+): PersonalizedSuggestion[] {
   const base = sanitize(config.baseValue);
 
   if (base.length === 0) {
@@ -283,10 +285,9 @@ export function generatePersonalizedSuggestions(config: SuggestionConfig): Perso
   const unique = new Map<string, PersonalizedSuggestion>();
   for (const suggestion of suggestions) {
     // Trim suggestion to 30 chars if needed
-    const trimmedValue = suggestion.value.length > 30 
-      ? suggestion.value.slice(0, 30)
-      : suggestion.value;
-    
+    const trimmedValue =
+      suggestion.value.length > 30 ? suggestion.value.slice(0, 30) : suggestion.value;
+
     const trimmedSuggestion = {
       ...suggestion,
       value: trimmedValue,

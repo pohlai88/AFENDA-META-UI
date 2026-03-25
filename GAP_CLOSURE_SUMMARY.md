@@ -53,9 +53,10 @@ Successfully implemented **routing and navigation infrastructure** to make the A
    - Redirects to list on save/cancel
 
 9-11. **Error Pages**
-   - `apps/web/src/pages/404.tsx` - Page not found
-   - `apps/web/src/pages/403.tsx` - Forbidden/access denied
-   - `apps/web/src/pages/500.tsx` - Server error
+
+- `apps/web/src/pages/404.tsx` - Page not found
+- `apps/web/src/pages/403.tsx` - Forbidden/access denied
+- `apps/web/src/pages/500.tsx` - Server error
 
 ### Files Modified (2 files)
 
@@ -152,15 +153,15 @@ Successfully implemented **routing and navigation infrastructure** to make the A
 
 ## 📊 Updated Progress (vs Plan)
 
-| Phase | Before | After | Change |
-|-------|--------|-------|--------|
-| **Phase 6** - Frontend Architecture | 0% | 60% | **+60%** |
-| - 6.1 Routing & Navigation | ❌ 0% | ✅ 100% | +100% |
-| - 6.2 App Shell | ❌ 0% | ✅ 100% | +100% |
-| - 6.3 Global Search | ❌ 0% | ❌ 0% | 0% |
-| - 6.4 State Management | 🟡 50% | 🟡 50% | 0% |
-| - 6.5 i18n | ❌ 0% |❌ 0% | 0% |
-| - 6.6 Error Boundaries | ❌ 0% | ✅ 100% | +100% |
+| Phase                               | Before | After   | Change   |
+| ----------------------------------- | ------ | ------- | -------- |
+| **Phase 6** - Frontend Architecture | 0%     | 60%     | **+60%** |
+| - 6.1 Routing & Navigation          | ❌ 0%  | ✅ 100% | +100%    |
+| - 6.2 App Shell                     | ❌ 0%  | ✅ 100% | +100%    |
+| - 6.3 Global Search                 | ❌ 0%  | ❌ 0%   | 0%       |
+| - 6.4 State Management              | 🟡 50% | 🟡 50%  | 0%       |
+| - 6.5 i18n                          | ❌ 0%  | ❌ 0%   | 0%       |
+| - 6.6 Error Boundaries              | ❌ 0%  | ✅ 100% | +100%    |
 
 **Overall Project Progress:** 64% → **76%** (+12%)
 
@@ -171,6 +172,7 @@ Successfully implemented **routing and navigation infrastructure** to make the A
 ### Manual Testing Steps
 
 1. **Start Dev Servers**
+
    ```powershell
    # Terminal 1 - API
    cd apps/api
@@ -292,6 +294,7 @@ Now that routing is complete, the **next critical gaps** are:
 **The AFENDA Meta-UI platform is now NAVIGABLE end-to-end! 🚀**
 
 Users can:
+
 - Navigate via sidebar (modules → models)
 - View lists with sorting/pagination (MetaListV2)
 - Create/edit records with validation (MetaFormV2)

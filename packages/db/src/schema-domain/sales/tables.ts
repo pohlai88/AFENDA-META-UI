@@ -27,11 +27,7 @@ export const orderStatusEnum = pgEnum("order_status", [
   "cancelled",
 ]);
 
-export const partnerTypeEnum = pgEnum("partner_type", [
-  "customer",
-  "vendor",
-  "both",
-]);
+export const partnerTypeEnum = pgEnum("partner_type", ["customer", "vendor", "both"]);
 
 // ── Partners (customers / vendors) ─────────────────────────────────────────
 

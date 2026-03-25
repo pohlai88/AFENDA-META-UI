@@ -19,9 +19,7 @@ export default function ServerErrorPage() {
             </div>
           </div>
           <CardTitle className="text-4xl">500</CardTitle>
-          <CardDescription className="text-lg">
-            Internal Server Error
-          </CardDescription>
+          <CardDescription className="text-lg">Internal Server Error</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">

@@ -1,14 +1,14 @@
 /**
  * API Filter Test Examples
  * ========================
- * 
+ *
  * Manual test examples for the quer builder and filtering API.
- * 
+ *
  * Prerequisites:
  * 1. Start the API server: cd apps/api && pnpm dev
  * 2. Generate an auth token: pnpm auth:token --userId admin --roles admin
  * 3. Use the token in the Authorization header
- * 
+ *
  * Test with curl or a REST client like Thunder Client, Postman, or HTTPie.
  */
 

@@ -88,12 +88,26 @@ export function MetaList({ model, onRowClick, onNew }: MetaListProps) {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1rem",
+        }}
+      >
         <h2>{meta.label_plural ?? meta.label}</h2>
         {canCreate && onNew && (
           <button
             onClick={onNew}
-            style={{ padding: "0.4rem 1rem", background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}
+            style={{
+              padding: "0.4rem 1rem",
+              background: "#3b5bdb",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
           >
             + New
           </button>
@@ -121,7 +135,9 @@ export function MetaList({ model, onRowClick, onNew }: MetaListProps) {
                     }}
                   >
                     {field?.label ?? col}
-                    {isSorted && <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "↑" : "↓"}</span>}
+                    {isSorted && (
+                      <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "↑" : "↓"}</span>
+                    )}
                   </th>
                 );
               })}
@@ -130,7 +146,10 @@ export function MetaList({ model, onRowClick, onNew }: MetaListProps) {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+                <td
+                  colSpan={columns.length}
+                  style={{ textAlign: "center", padding: "2rem", color: "#888" }}
+                >
                   No records found.
                 </td>
               </tr>
@@ -147,7 +166,10 @@ export function MetaList({ model, onRowClick, onNew }: MetaListProps) {
                 {columns.map((col) => {
                   const field = fieldMap.get(col);
                   return (
-                    <td key={col} style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #eee" }}>
+                    <td
+                      key={col}
+                      style={{ padding: "0.5rem 0.75rem", borderBottom: "1px solid #eee" }}
+                    >
                       {field ? formatCell(row[col], field) : String(row[col] ?? "—")}
                     </td>
                   );
@@ -163,8 +185,13 @@ export function MetaList({ model, onRowClick, onNew }: MetaListProps) {
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
             ← Prev
           </button>
-          <span>Page {page} / {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+          <span>
+            Page {page} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
             Next →
           </button>
         </div>

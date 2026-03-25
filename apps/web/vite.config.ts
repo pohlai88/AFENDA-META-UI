@@ -21,21 +21,19 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       react(),
       // Bundle analyzer for production builds
-      isAnalyze && visualizer({
-        filename: 'dist/stats.html',
-        open: true,
-        gzipSize: true,
-        brotliSize: true,
-        template: 'treemap', // Options: 'treemap', 'sunburst', 'network'
-      }),
+      isAnalyze &&
+        visualizer({
+          filename: "dist/stats.html",
+          open: true,
+          gzipSize: true,
+          brotliSize: true,
+          template: "treemap", // Options: 'treemap', 'sunburst', 'network'
+        }),
     ].filter(Boolean),
 
     resolve: {
       alias: {
-        "@afenda/meta-types": path.resolve(
-          __dirname,
-          "../../packages/meta-types/src/index.ts",
-        ),
+        "@afenda/meta-types": path.resolve(__dirname, "../../packages/meta-types/src/index.ts"),
         "~": path.resolve(__dirname, "./src"),
       },
       // Prevent duplicate copies of shared deps in monorepo
@@ -91,13 +89,7 @@ export default defineConfig(({ command, mode }) => {
 
     // Speed up cold starts by pre-bundling heavy dependencies
     config.optimizeDeps = {
-      include: [
-        "react",
-        "react-dom",
-        "react-router-dom",
-        "@tanstack/react-query",
-        "lucide-react",
-      ],
+      include: ["react", "react-dom", "react-router-dom", "@tanstack/react-query", "lucide-react"],
     };
   }
 

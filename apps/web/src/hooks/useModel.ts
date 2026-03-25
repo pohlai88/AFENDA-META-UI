@@ -15,7 +15,19 @@ import { queryKeys } from "~/lib/query-keys";
 
 export interface FilterCondition {
   field: string;
-  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "in" | "between" | "is_null" | "is_not_null";
+  op:
+    | "eq"
+    | "neq"
+    | "gt"
+    | "gte"
+    | "lt"
+    | "lte"
+    | "like"
+    | "ilike"
+    | "in"
+    | "between"
+    | "is_null"
+    | "is_not_null";
   value?: unknown;
 }
 
@@ -161,10 +173,10 @@ export function useModel<T = Record<string, unknown>>(
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.models.detail(model, id) });
       const previous = queryClient.getQueryData(queryKeys.models.detail(model, id));
-      queryClient.setQueryData(
-        queryKeys.models.detail(model, id),
-        (old: T | undefined) => ({ ...old, ...data })
-      );
+      queryClient.setQueryData(queryKeys.models.detail(model, id), (old: T | undefined) => ({
+        ...old,
+        ...data,
+      }));
       return { previous, id };
     },
     onError: (_err, variables, context) => {
@@ -194,10 +206,7 @@ export function useModel<T = Record<string, unknown>>(
   });
 
   // Stable function references to avoid downstream re-renders
-  const createRecord = useCallback(
-    (data: T) => createMutation.mutateAsync(data),
-    [createMutation]
-  );
+  const createRecord = useCallback((data: T) => createMutation.mutateAsync(data), [createMutation]);
 
   const updateRecord = useCallback(
     (id: string, data: Partial<T>) => updateMutation.mutateAsync({ id, data }),

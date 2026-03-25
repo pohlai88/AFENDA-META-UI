@@ -1,4 +1,5 @@
 # Testing Strategy - Enterprise Configuration
+
 **AFENDA Meta UI - Comprehensive Testing Setup**
 
 ## 📋 Overview
@@ -11,18 +12,21 @@ This repository implements **enterprise-grade testing** with two complementary f
 ## 🎯 Testing Philosophy
 
 ### Deterministic Testing
+
 - Tests run reliably in any environment
 - Controlled parallelism prevents race conditions
 - Retry strategies handle transient failures in CI
 - Isolated test environments prevent cross-contamination
 
 ### Scalability
+
 - Multi-project configuration for test organization
 - Sharding support for distributed execution
 - Optimized worker pools for CI/CD pipelines
 - Incremental coverage tracking
 
 ### Maintainability
+
 - Clear test organization with tags
 - Comprehensive reporting for debugging
 - Reusable fixtures and utilities
@@ -90,12 +94,14 @@ test('visual regression', { tags: ['@skip-ci'] }, () => {
 ### Coverage Strategy
 
 **Global Thresholds:**
+
 - Lines: 75%
 - Functions: 75%
 - Branches: 70%
 - Statements: 75%
 
 **Critical Path Requirements:**
+
 - `src/lib/utils.ts`: 100% coverage
 - `src/lib/**`: 90% functions, 85% branches
 - `src/hooks/**`: 85% functions, 80% branches
@@ -105,6 +111,7 @@ test('visual regression', { tags: ['@skip-ci'] }, () => {
 ### CI/CD Optimization
 
 **On CI (detected via `process.env.CI`):**
+
 - Limit workers to 2 for stability
 - Enable 2 retries for flaky tests
 - Bail after 10 failures to save resources
@@ -113,6 +120,7 @@ test('visual regression', { tags: ['@skip-ci'] }, () => {
 - Log heap usage for profiling
 
 **Locally:**
+
 - Use all available CPU cores
 - No retries (fail fast for debugging)
 - HTML coverage report
@@ -161,27 +169,32 @@ apps/web/
 **Fully Parallel:** All tests run concurrently across browser instances.
 
 **Worker Configuration:**
+
 - CI: 50% of available CPU cores
 - Local: Unlimited workers
 
 ### Retry Strategy
 
 **CI Environment:**
+
 - Retry failed tests 2 times
 - Fail on flaky tests
 - Bail after 10 failures
 
 **Local Environment:**
+
 - No retries (fail fast for debugging)
 
 ### Trace Collection
 
 **On CI:**
+
 - Collect trace on first retry
 - Screenshots on failure only
 - Videos on failure only
 
 **Locally:**
+
 - Trace on failure
 - Screenshots on failure
 - Videos on first retry
@@ -189,11 +202,13 @@ apps/web/
 ### Global Setup/Teardown
 
 **Global Setup (`e2e/global.setup.ts`):**
+
 1. **Authentication**: Login once, save state to `e2e/auth.json`
 2. **Database Seeding**: Create test data via API
 3. **Service Health Checks**: Verify services are running
 
 **Global Teardown (`e2e/global.teardown.ts`):**
+
 1. **Cleanup Auth**: Delete auth state file
 2. **Cleanup Data**: Remove test data via API
 3. **Generate Summary**: Custom reporting
@@ -202,12 +217,12 @@ apps/web/
 
 ```typescript
 projects: [
-  { name: 'setup', testMatch: /global\.setup\.ts/, teardown: 'cleanup' },
-  { name: 'cleanup', testMatch: /global\.teardown\.ts/ },
-  { name: 'chromium', dependencies: ['setup'] },  // Runs after setup
-  { name: 'firefox', dependencies: ['setup'] },
-  { name: 'webkit', dependencies: ['setup'] },
-]
+  { name: "setup", testMatch: /global\.setup\.ts/, teardown: "cleanup" },
+  { name: "cleanup", testMatch: /global\.teardown\.ts/ },
+  { name: "chromium", dependencies: ["setup"] }, // Runs after setup
+  { name: "firefox", dependencies: ["setup"] },
+  { name: "webkit", dependencies: ["setup"] },
+];
 ```
 
 Tests run only after setup completes, cleanup runs after all tests finish.
@@ -236,7 +251,7 @@ jobs:
       - uses: codecov/codecov-action@v4
         with:
           files: ./apps/web/coverage/lcov.info
-  
+
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
@@ -278,19 +293,23 @@ pnpm e2e --shard=3/3
 ### Vitest Reports
 
 **Local Development:**
+
 - `test-results/index.html`: Interactive HTML report
 - `coverage/html/index.html`: Coverage report
 
 **CI Pipeline:**
+
 - `test-results/junit.xml`: JUnit format for CI integration
 - `test-results/results.json`: JSON format for custom processing
 
 ### Playwright Reports
 
 **Local Development:**
+
 - `playwright-report/index.html`: HTML report (opens on failure)
 
 **CI Pipeline:**
+
 - `test-results/e2e-junit.xml`: JUnit format
 - `test-results/e2e-results.json`: JSON format
 - `test-results/playwright-output/`: Screenshots, videos, traces
@@ -309,12 +328,14 @@ pnpm e2e --shard=3/3
 ### Test Isolation
 
 ✅ **DO:**
+
 - Create fresh fixtures for each test
 - Use `beforeEach` for setup
 - Clean up after tests with `afterEach`
 - Use unique data for parallel tests
 
 ❌ **DON'T:**
+
 - Share mutable state between tests
 - Depend on test execution order
 - Leave side effects after tests
@@ -323,11 +344,13 @@ pnpm e2e --shard=3/3
 ### Flaky Test Handling
 
 **Identify:**
+
 - Tests that pass/fail inconsistently
 - Race conditions in async code
 - Timing-dependent assertions
 
 **Fix:**
+
 - Use proper waiters (`waitFor`, `waitForLoadState`)
 - Avoid `sleep()` or fixed timeouts
 - Use retry strategies as last resort
@@ -336,12 +359,14 @@ pnpm e2e --shard=3/3
 ### Performance
 
 **Vitest:**
+
 - Use `test.concurrent` for independent tests
 - Avoid heavy setup in `describe` blocks
 - Mock external dependencies
 - Use coverage thresholds to prevent bloat
 
 **Playwright:**
+
 - Reuse authentication state
 - Run tests in parallel when possible
 - Use selective test execution (`--grep`)
@@ -370,16 +395,19 @@ pnpm e2e --shard=3/3
 ## 🎓 Learning Resources
 
 ### Vitest
+
 - [Official Documentation](https://vitest.dev)
 - [API Reference](https://vitest.dev/api/)
 - [Configuration](https://vitest.dev/config/)
 
 ### Playwright
+
 - [Official Documentation](https://playwright.dev)
 - [Best Practices](https://playwright.dev/docs/best-practices)
 - [API Reference](https://playwright.dev/docs/api/class-playwright)
 
 ### Testing Library
+
 - [React Testing Library](https://testing-library.com/react)
 - [User Event](https://testing-library.com/docs/user-event/intro/)
 - [Jest-DOM Matchers](https://github.com/testing-library/jest-dom)
@@ -391,12 +419,14 @@ pnpm e2e --shard=3/3
 ### Vitest Issues
 
 **"Cannot find module"**
+
 ```bash
 # Check path aliases in vitest.config.ts
 # Ensure tsconfig.json paths match
 ```
 
 **"Segmentation fault"**
+
 ```bash
 # Reduce worker count
 # Disable file parallelism
@@ -407,18 +437,21 @@ fileParallelism: false
 ### Playwright Issues
 
 **"Browser not installed"**
+
 ```bash
 npx playwright install
 npx playwright install --with-deps  # Install system dependencies
 ```
 
 **"Timeout waiting for page"**
+
 ```typescript
 // Increase timeout in config
-timeout: 60000  // 60 seconds
+timeout: 60000; // 60 seconds
 ```
 
 **"Test failed on CI but passes locally"**
+
 ```bash
 # Enable trace collection
 trace: 'on'
@@ -432,6 +465,7 @@ pnpm e2e --workers=2
 ## 📞 Support
 
 For questions or issues:
+
 1. Check this documentation
 2. Review example tests in `src/` and `e2e/`
 3. Consult official framework documentation

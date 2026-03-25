@@ -8,9 +8,9 @@ import type { SessionContext, ResolutionContext } from "@afenda/meta-types";
 //   • Nested relation fetching
 //   • Internal metadata introspection pipeline
 // Security: session context + tenant context injected from middleware upstream.
-export const yoga = createYoga<{ 
-  req: Request; 
-  res: Response; 
+export const yoga = createYoga<{
+  req: Request;
+  res: Response;
   session: SessionContext;
   tenantContext: ResolutionContext;
 }>({

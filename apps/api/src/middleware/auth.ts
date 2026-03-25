@@ -32,9 +32,7 @@ interface AfendaClaims extends JWTPayload {
 
 // In production, store API keys in database with hashing
 // For now, allow configuration via env var
-const VALID_API_KEYS = new Set(
-  (process.env.API_KEYS ?? "").split(",").filter(Boolean)
-);
+const VALID_API_KEYS = new Set((process.env.API_KEYS ?? "").split(",").filter(Boolean));
 
 // ---------------------------------------------------------------------------
 // JWT Verification
@@ -131,11 +129,11 @@ export async function authMiddleware(
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const session = (req as Request & { session: SessionContext }).session;
-  
+
   if (!session || session.uid === "anonymous") {
     throw new UnauthorizedError("Authentication required");
   }
-  
+
   next();
 }
 
@@ -150,19 +148,17 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 export function requireRole(...allowedRoles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     const session = (req as Request & { session: SessionContext }).session;
-    
+
     if (!session || session.uid === "anonymous") {
       throw new UnauthorizedError("Authentication required");
     }
-    
+
     const hasRole = allowedRoles.some((role) => session.roles.includes(role));
-    
+
     if (!hasRole) {
-      throw new UnauthorizedError(
-        `Forbidden: requires one of [${allowedRoles.join(", ")}]`
-      );
+      throw new UnauthorizedError(`Forbidden: requires one of [${allowedRoles.join(", ")}]`);
     }
-    
+
     next();
   };
 }

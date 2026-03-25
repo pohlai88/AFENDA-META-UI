@@ -223,7 +223,7 @@ jobs:
             const test = "${{ needs.test.result }}" === "success" ? "✅" : "❌";
             const build = "${{ needs.build.result }}" === "success" ? "✅" : "❌";
             const e2e = "${{ needs.e2e.result }}" === "success" ? "✅" : "❌";
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

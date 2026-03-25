@@ -15,9 +15,7 @@ describe("registerAppQueryErrorOverrides", () => {
 
     const overrides = getQueryErrorPresentationOverrides();
 
-    expect(overrides.query?.auth?.message).toBe(
-      "You do not have permission to view this data."
-    );
+    expect(overrides.query?.auth?.message).toBe("You do not have permission to view this data.");
     expect(overrides.mutation?.auth?.message).toBe(
       "You do not have permission to make this change."
     );

@@ -72,10 +72,7 @@ class AnalyticsClient {
     }
 
     if (control.immediate || this.config.batchSize <= 1) {
-      await this.dispatchWithRetry(
-        [normalizedEvent],
-        control.flush ? "metadata" : "manual"
-      );
+      await this.dispatchWithRetry([normalizedEvent], control.flush ? "metadata" : "manual");
       return;
     }
 

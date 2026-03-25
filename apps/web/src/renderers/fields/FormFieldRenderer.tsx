@@ -21,20 +21,34 @@ import {
 import { Input } from "@afenda/ui";
 import { Textarea } from "@afenda/ui";
 import { Checkbox } from "@afenda/ui";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@afenda/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@afenda/ui";
 import { Calendar } from "@afenda/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@afenda/ui";
 import { Button } from "@afenda/ui";
 import { Badge } from "@afenda/ui";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "~/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "~/components/ui/command";
 import { One2ManyField } from "./One2ManyField";
-import { CalendarIcon, StarIcon, X, BoldIcon, ItalicIcon, ListIcon, ListOrderedIcon, LinkIcon, Undo2Icon, Redo2Icon, CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  StarIcon,
+  X,
+  BoldIcon,
+  ItalicIcon,
+  ListIcon,
+  ListOrderedIcon,
+  LinkIcon,
+  Undo2Icon,
+  Redo2Icon,
+  CheckIcon,
+  ChevronsUpDownIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "~/lib/utils";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -71,7 +85,10 @@ function FormFieldRendererComponent({ field: rawField }: FormFieldRendererProps)
       name={field.name}
       render={({ field: formField, fieldState }) => (
         <FormItem>
-          <FormLabel htmlFor={controlId} className={field.type === "boolean" ? "sr-only" : undefined}>
+          <FormLabel
+            htmlFor={controlId}
+            className={field.type === "boolean" ? "sr-only" : undefined}
+          >
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
           </FormLabel>
@@ -101,15 +118,15 @@ export const FormFieldRenderer = memo(FormFieldRendererComponent, (prev, next) =
 
 // DO NOT memoize FieldInput - it's inside a Controller render prop that already
 // optimizes re-renders, and it receives a ref from react-hook-form via {...formField}
-function FieldInput({ 
-  field, 
+function FieldInput({
+  field,
   formField,
   controlId,
   helpTextId,
   errorId,
   hasError,
-}: { 
-  field: MetaField; 
+}: {
+  field: MetaField;
   formField: ControllerRenderProps;
   controlId: string;
   helpTextId?: string;
@@ -393,7 +410,9 @@ function FieldInput({
     case "enum":
       return (
         <Select
-          value={formField.value == null || formField.value === "" ? undefined : String(formField.value)}
+          value={
+            formField.value == null || formField.value === "" ? undefined : String(formField.value)
+          }
           onValueChange={(value) => {
             formField.onChange(value === OPTIONAL_ENUM_CLEAR_VALUE ? null : value);
           }}
@@ -439,11 +458,7 @@ function FieldInput({
               aria-invalid={hasError || undefined}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {parsedValueDate ? (
-                format(parsedValueDate, "PPP")
-              ) : (
-                <span>Pick a date</span>
-              )}
+              {parsedValueDate ? format(parsedValueDate, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -610,7 +625,10 @@ function RichTextInput({
     return (
       <div
         id={id}
-        className={cn("prose prose-sm max-w-none p-3 rounded-md bg-muted min-h-[4rem]", hasError && "border border-destructive")}
+        className={cn(
+          "prose prose-sm max-w-none p-3 rounded-md bg-muted min-h-[4rem]",
+          hasError && "border border-destructive"
+        )}
         dangerouslySetInnerHTML={{ __html: value ?? "" }}
         aria-describedby={describedBy}
         aria-readonly="true"
@@ -618,10 +636,18 @@ function RichTextInput({
     );
   }
 
-  const btn = (onClick: () => void, title: string, active: boolean | undefined, icon: React.ReactNode) => (
+  const btn = (
+    onClick: () => void,
+    title: string,
+    active: boolean | undefined,
+    icon: React.ReactNode
+  ) => (
     <button
       type="button"
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
       title={title}
       aria-pressed={active}
       className={cn(
@@ -635,21 +661,54 @@ function RichTextInput({
 
   return (
     <div
-      className={cn("rounded-md border focus-within:ring-2 focus-within:ring-ring overflow-hidden", hasError && "border-destructive")}
+      className={cn(
+        "rounded-md border focus-within:ring-2 focus-within:ring-ring overflow-hidden",
+        hasError && "border-destructive"
+      )}
       aria-describedby={describedBy}
       aria-invalid={hasError || undefined}
     >
       <div className="flex items-center gap-0.5 p-1 border-b bg-muted/30">
-        {btn(() => editor?.chain().focus().toggleBold().run(), "Bold", editor?.isActive("bold"), <BoldIcon className="h-4 w-4" />)}
-        {btn(() => editor?.chain().focus().toggleItalic().run(), "Italic", editor?.isActive("italic"), <ItalicIcon className="h-4 w-4" />)}
+        {btn(
+          () => editor?.chain().focus().toggleBold().run(),
+          "Bold",
+          editor?.isActive("bold"),
+          <BoldIcon className="h-4 w-4" />
+        )}
+        {btn(
+          () => editor?.chain().focus().toggleItalic().run(),
+          "Italic",
+          editor?.isActive("italic"),
+          <ItalicIcon className="h-4 w-4" />
+        )}
         <div className="w-px h-4 bg-border mx-1" />
-        {btn(() => editor?.chain().focus().toggleBulletList().run(), "Bullet List", editor?.isActive("bulletList"), <ListIcon className="h-4 w-4" />)}
-        {btn(() => editor?.chain().focus().toggleOrderedList().run(), "Numbered List", editor?.isActive("orderedList"), <ListOrderedIcon className="h-4 w-4" />)}
+        {btn(
+          () => editor?.chain().focus().toggleBulletList().run(),
+          "Bullet List",
+          editor?.isActive("bulletList"),
+          <ListIcon className="h-4 w-4" />
+        )}
+        {btn(
+          () => editor?.chain().focus().toggleOrderedList().run(),
+          "Numbered List",
+          editor?.isActive("orderedList"),
+          <ListOrderedIcon className="h-4 w-4" />
+        )}
         <div className="w-px h-4 bg-border mx-1" />
         {btn(addLink, "Insert Link", editor?.isActive("link"), <LinkIcon className="h-4 w-4" />)}
         <div className="flex-1" />
-        {btn(() => editor?.chain().focus().undo().run(), "Undo", false, <Undo2Icon className="h-4 w-4" />)}
-        {btn(() => editor?.chain().focus().redo().run(), "Redo", false, <Redo2Icon className="h-4 w-4" />)}
+        {btn(
+          () => editor?.chain().focus().undo().run(),
+          "Undo",
+          false,
+          <Undo2Icon className="h-4 w-4" />
+        )}
+        {btn(
+          () => editor?.chain().focus().redo().run(),
+          "Redo",
+          false,
+          <Redo2Icon className="h-4 w-4" />
+        )}
       </div>
       <EditorContent
         id={id}
@@ -680,7 +739,7 @@ function CurrencyInput({
   const [focused, setFocused] = React.useState(false);
   const numericValue = typeof value === "number" ? value : null;
   const displayValue = focused
-    ? numericValue?.toString() ?? ""
+    ? (numericValue?.toString() ?? "")
     : numericValue != null
       ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(numericValue)
       : "";
@@ -727,14 +786,24 @@ function TagsInput({
   const tags: string[] = React.useMemo(() => {
     if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
     if (typeof value === "string" && value) {
-      try { return JSON.parse(value) as string[]; } catch { return value.split(",").map((t) => t.trim()).filter(Boolean); }
+      try {
+        return JSON.parse(value) as string[];
+      } catch {
+        return value
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+      }
     }
     return [];
   }, [value]);
 
   const addTag = (tag: string) => {
     const t = tag.trim();
-    if (!t || tags.includes(t)) { setInputValue(""); return; }
+    if (!t || tags.includes(t)) {
+      setInputValue("");
+      return;
+    }
     onChange([...tags, t]);
     setInputValue("");
   };
@@ -743,10 +812,21 @@ function TagsInput({
 
   if (disabled) {
     return (
-      <div id={id} className="flex flex-wrap gap-1.5 py-2" aria-required={required || undefined} aria-describedby={describedBy}>
-        {tags.length === 0
-          ? <span className="text-sm text-muted-foreground">—</span>
-          : tags.map((t, i) => <Badge key={`${t}-${i}`} variant="secondary">{t}</Badge>)}
+      <div
+        id={id}
+        className="flex flex-wrap gap-1.5 py-2"
+        aria-required={required || undefined}
+        aria-describedby={describedBy}
+      >
+        {tags.length === 0 ? (
+          <span className="text-sm text-muted-foreground">—</span>
+        ) : (
+          tags.map((t, i) => (
+            <Badge key={`${t}-${i}`} variant="secondary">
+              {t}
+            </Badge>
+          ))
+        )}
       </div>
     );
   }
@@ -762,7 +842,11 @@ function TagsInput({
         {tags.map((t, i) => (
           <Badge key={`${t}-${i}`} variant="secondary" className="gap-1">
             {t}
-            <button type="button" onClick={() => removeTag(t)} className="hover:bg-muted rounded-sm">
+            <button
+              type="button"
+              onClick={() => removeTag(t)}
+              className="hover:bg-muted rounded-sm"
+            >
               <X className="h-3 w-3" />
             </button>
           </Badge>
@@ -774,14 +858,20 @@ function TagsInput({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === "," || e.key === "Tab") { e.preventDefault(); addTag(inputValue); }
-            else if (e.key === "Backspace" && inputValue === "" && tags.length > 0) removeTag(tags[tags.length - 1]!);
+            if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
+              e.preventDefault();
+              addTag(inputValue);
+            } else if (e.key === "Backspace" && inputValue === "" && tags.length > 0)
+              removeTag(tags[tags.length - 1]!);
           }}
           onPaste={(e) => {
             const paste = e.clipboardData.getData("text");
             if (paste.includes(",")) {
               e.preventDefault();
-              const newTags = paste.split(",").map((t) => t.trim()).filter((t) => t && !tags.includes(t));
+              const newTags = paste
+                .split(",")
+                .map((t) => t.trim())
+                .filter((t) => t && !tags.includes(t));
               if (newTags.length > 0) onChange([...tags, ...newTags]);
               setInputValue("");
             }
@@ -813,13 +903,21 @@ function JsonInput({
   hasError?: boolean;
 }) {
   const [rawText, setRawText] = React.useState(() => {
-    try { return value != null ? JSON.stringify(value, null, 2) : ""; } catch { return ""; }
+    try {
+      return value != null ? JSON.stringify(value, null, 2) : "";
+    } catch {
+      return "";
+    }
   });
   const [parseError, setParseError] = React.useState<string | null>(null);
 
   const handleChange = (text: string) => {
     setRawText(text);
-    if (text.trim() === "") { setParseError(null); onChange(null); return; }
+    if (text.trim() === "") {
+      setParseError(null);
+      onChange(null);
+      return;
+    }
     try {
       const parsed = JSON.parse(text);
       setParseError(null);
@@ -835,7 +933,7 @@ function JsonInput({
         id={id}
         value={rawText}
         onChange={(e) => handleChange(e.target.value)}
-        placeholder='{}'
+        placeholder="{}"
         disabled={disabled}
         rows={5}
         className={cn("font-mono text-sm", parseError && "border-destructive")}
@@ -843,7 +941,7 @@ function JsonInput({
         aria-required={required || undefined}
         aria-readonly={disabled || undefined}
         aria-describedby={describedBy}
-        aria-invalid={(hasError || !!parseError) || undefined}
+        aria-invalid={hasError || !!parseError || undefined}
       />
       {parseError && <p className="text-xs text-destructive mt-1">{parseError}</p>}
     </div>
@@ -910,7 +1008,13 @@ function RatingInput({
   const max = 5;
   const current = typeof value === "number" ? value : 0;
   return (
-    <div id={id} className="flex gap-1" role="radiogroup" aria-required={required || undefined} aria-describedby={describedBy}>
+    <div
+      id={id}
+      className="flex gap-1"
+      role="radiogroup"
+      aria-required={required || undefined}
+      aria-describedby={describedBy}
+    >
       {Array.from({ length: max }, (_, i) => i + 1).map((star) => (
         <button
           key={star}
@@ -926,7 +1030,10 @@ function RatingInput({
           )}
         >
           <StarIcon
-            className={cn("h-6 w-6", current >= star ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")}
+            className={cn(
+              "h-6 w-6",
+              current >= star ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
+            )}
           />
         </button>
       ))}
@@ -942,8 +1049,9 @@ function useRelationOptions(field: MetaField, search: string, rawValue?: unknown
   const debouncedSearch = useDebounce(search, 250);
   const currentValues = React.useMemo(() => {
     if (Array.isArray(rawValue)) {
-      return rawValue
-        .filter((item): item is string | number => typeof item === "string" || typeof item === "number");
+      return rawValue.filter(
+        (item): item is string | number => typeof item === "string" || typeof item === "number"
+      );
     }
     if (typeof rawValue === "string" || typeof rawValue === "number") {
       return [rawValue];
@@ -1017,7 +1125,11 @@ function useRelationOptions(field: MetaField, search: string, rawValue?: unknown
   };
 }
 
-function getRelationRecordLabel(field: MetaField, record: RelationRecord | undefined, fallback?: unknown) {
+function getRelationRecordLabel(
+  field: MetaField,
+  record: RelationRecord | undefined,
+  fallback?: unknown
+) {
   if (!record) {
     return fallback == null || fallback === "" ? "" : String(fallback);
   }
@@ -1065,7 +1177,10 @@ function ManyToOneInput({
     return (
       <div
         id={id}
-        className={cn("min-h-10 rounded-md border bg-muted px-3 py-2 text-sm", hasError && "border-destructive")}
+        className={cn(
+          "min-h-10 rounded-md border bg-muted px-3 py-2 text-sm",
+          hasError && "border-destructive"
+        )}
         aria-describedby={describedBy}
         aria-readonly="true"
       >
@@ -1091,7 +1206,9 @@ function ManyToOneInput({
           aria-describedby={describedBy}
           aria-invalid={hasError || undefined}
         >
-          <span className="truncate">{selectedLabel || `Select ${field.label.toLowerCase()}...`}</span>
+          <span className="truncate">
+            {selectedLabel || `Select ${field.label.toLowerCase()}...`}
+          </span>
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -1167,14 +1284,18 @@ function ManyToManyInput({
   const relation = field.relation;
   const valueField = relation?.value_field ?? "id";
   const selectedValues = React.useMemo(
-    () => (Array.isArray(value) ? value : []).filter((item): item is string | number => typeof item === "string" || typeof item === "number"),
+    () =>
+      (Array.isArray(value) ? value : []).filter(
+        (item): item is string | number => typeof item === "string" || typeof item === "number"
+      ),
     [value]
   );
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const { options, isLoading } = useRelationOptions(field, search, selectedValues);
   const selectedRecords = React.useMemo(
-    () => options.filter((record) => selectedValues.includes(record[valueField] as string | number)),
+    () =>
+      options.filter((record) => selectedValues.includes(record[valueField] as string | number)),
     [options, selectedValues, valueField]
   );
 
@@ -1187,7 +1308,9 @@ function ManyToManyInput({
       return;
     }
     const exists = selectedValues.includes(nextValue);
-    onChange(exists ? selectedValues.filter((item) => item !== nextValue) : [...selectedValues, nextValue]);
+    onChange(
+      exists ? selectedValues.filter((item) => item !== nextValue) : [...selectedValues, nextValue]
+    );
   };
 
   return (
@@ -1210,7 +1333,9 @@ function ManyToManyInput({
             aria-invalid={hasError || undefined}
           >
             <span className="truncate">
-              {selectedValues.length > 0 ? `${selectedValues.length} selected` : `Select ${field.label.toLowerCase()}...`}
+              {selectedValues.length > 0
+                ? `${selectedValues.length} selected`
+                : `Select ${field.label.toLowerCase()}...`}
             </span>
             <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -1250,7 +1375,9 @@ function ManyToManyInput({
       {selectedValues.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selectedValues.map((selectedValue) => {
-            const selectedRecord = selectedRecords.find((record) => record[valueField] === selectedValue);
+            const selectedRecord = selectedRecords.find(
+              (record) => record[valueField] === selectedValue
+            );
             const label = getRelationRecordLabel(field, selectedRecord, selectedValue);
             return (
               <Badge key={String(selectedValue)} variant="secondary" className="gap-1">

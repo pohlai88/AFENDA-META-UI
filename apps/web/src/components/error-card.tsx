@@ -112,7 +112,7 @@ export function ErrorCard({
           {details}
           {actions !== undefined ? (
             <div className="flex gap-3">{actions}</div>
-          ) : (resolvedPrimaryAction || resolvedSecondaryAction) ? (
+          ) : resolvedPrimaryAction || resolvedSecondaryAction ? (
             <div className="flex gap-3">
               {resolvedPrimaryAction}
               {resolvedSecondaryAction}

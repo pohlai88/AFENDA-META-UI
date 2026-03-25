@@ -88,9 +88,7 @@ export function matchTopic(topic: string, pattern: string): boolean {
 
   if (topicParts.length !== patternParts.length) return false;
 
-  return patternParts.every(
-    (part, i) => part === "*" || part === topicParts[i],
-  );
+  return patternParts.every((part, i) => part === "*" || part === topicParts[i]);
 }
 
 // ---------------------------------------------------------------------------
@@ -110,7 +108,7 @@ export async function publish<TPayload = Record<string, unknown>>(
     tenantId?: string;
     actor?: string;
     metadata?: MeshEvent["metadata"];
-  } = {},
+  } = {}
 ): Promise<MeshEvent<TPayload>> {
   eventCounter += 1;
 
@@ -185,7 +183,7 @@ async function dispatchToSubscribers(event: MeshEvent): Promise<void> {
           },
         });
       }
-    }),
+    })
   );
 }
 
@@ -244,7 +242,7 @@ async function runStreamProcessors(event: MeshEvent): Promise<void> {
 export function subscribe(
   topic: string,
   handler: MeshEventHandler,
-  options: { tenantId?: string | null } = {},
+  options: { tenantId?: string | null } = {}
 ): string {
   subCounter += 1;
   const id = `sub_${subCounter}`;

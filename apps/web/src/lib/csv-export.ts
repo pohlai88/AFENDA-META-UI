@@ -11,14 +11,14 @@ import type { MetaField } from "@afenda/meta-types";
  */
 function escapeCsvCell(value: unknown): string {
   if (value == null) return "";
-  
+
   const str = String(value);
-  
+
   // If contains comma, quote, or newline, wrap in quotes and escape internal quotes
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
-  
+
   return str;
 }
 
@@ -31,19 +31,19 @@ function formatCsvValue(value: unknown, field: MetaField): string {
   switch (field.type) {
     case "boolean":
       return value ? "Yes" : "No";
-    
+
     case "date":
       if (typeof value === "string" || value instanceof Date) {
         return new Date(value).toLocaleDateString();
       }
       break;
-    
+
     case "datetime":
       if (typeof value === "string" || value instanceof Date) {
         return new Date(value).toLocaleString();
       }
       break;
-    
+
     case "currency":
       if (typeof value === "number") {
         return new Intl.NumberFormat("en-US", {
@@ -52,7 +52,7 @@ function formatCsvValue(value: unknown, field: MetaField): string {
         }).format(value);
       }
       break;
-    
+
     case "float":
       if (typeof value === "number") {
         return value.toFixed(2);

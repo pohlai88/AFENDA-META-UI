@@ -86,10 +86,9 @@ describe("analytics client", () => {
   });
 
   it("respects provider routing on the event payload", async () => {
-    await trackAnalyticsEvent(
-      createEvent({ event: "skip", providers: ["posthog"] }),
-      { immediate: true }
-    );
+    await trackAnalyticsEvent(createEvent({ event: "skip", providers: ["posthog"] }), {
+      immediate: true,
+    });
 
     expect(tracked).toEqual([]);
   });

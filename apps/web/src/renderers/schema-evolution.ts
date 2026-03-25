@@ -110,50 +110,53 @@ export function getMigrationPath(from: SchemaVersion, to: SchemaVersion): Schema
   const versions: SchemaVersion[] = ["1.0", "1.1", "2.0", "2.1", "2.2"];
   const fromIndex = versions.indexOf(from);
   const toIndex = versions.indexOf(to);
-  
+
   if (fromIndex === -1 || toIndex === -1 || fromIndex >= toIndex) {
     return [];
   }
-  
+
   return versions.slice(fromIndex + 1, toIndex + 1);
 }
 
 /**
  * Run migrations to upgrade metadata
  */
-export function runMigrations(meta: BaseMetadata, targetVersion: SchemaVersion = "2.2"): BaseMetadata {
+export function runMigrations(
+  meta: BaseMetadata,
+  targetVersion: SchemaVersion = "2.2"
+): BaseMetadata {
   const currentVersion = meta.schemaVersion || "1.0";
-  
+
   if (currentVersion === targetVersion) {
     return meta;
   }
-  
+
   const path = getMigrationPath(currentVersion, targetVersion);
-  
+
   if (path.length === 0) {
     console.warn(`[Schema] No migration path from ${currentVersion} to ${targetVersion}`);
     return meta;
   }
-  
+
   let migrated = meta;
   let currentStep = currentVersion;
-  
+
   for (const nextVersion of path) {
     const key = `${currentStep}→${nextVersion}`;
     const migrator = migrations.get(key);
-    
+
     if (!migrator) {
       console.error(`[Schema] Missing migration: ${key}`);
       throw new Error(`Migration not found: ${key}`);
     }
-    
+
     migrated = migrator(migrated);
     migrated.schemaVersion = nextVersion;
     currentStep = nextVersion;
-    
+
     console.log(`[Schema] Migrated: ${key}`);
   }
-  
+
   return migrated;
 }
 
@@ -173,30 +176,30 @@ export function checkDeprecation(version: SchemaVersion): {
   error?: string;
 } {
   const schema = SchemaRegistry[version];
-  
+
   if (!schema) {
     return {
       stage: "sunset",
       error: `Unknown schema version: ${version}`,
     };
   }
-  
+
   switch (schema.stage) {
     case "active":
       return { stage: "active" };
-    
+
     case "deprecated":
       return {
         stage: "deprecated",
         warning: `Schema ${version} is deprecated. Consider upgrading to 2.2.`,
       };
-    
+
     case "legacy":
       return {
         stage: "legacy",
         warning: `Schema ${version} is in legacy mode. Automatic migration will be applied.`,
       };
-    
+
     case "sunset":
       return {
         stage: "sunset",

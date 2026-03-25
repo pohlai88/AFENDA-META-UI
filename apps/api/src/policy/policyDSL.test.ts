@@ -49,10 +49,10 @@ describe("policyDSL", () => {
     });
 
     it("supports logical operators", () => {
-      const result = evaluateExpression(
-        'status == "active" and balance > 0',
-        { status: "active", balance: 100 }
-      );
+      const result = evaluateExpression('status == "active" and balance > 0', {
+        status: "active",
+        balance: 100,
+      });
       expect(result.value).toBeTruthy();
     });
   });

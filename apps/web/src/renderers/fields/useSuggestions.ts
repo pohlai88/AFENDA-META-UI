@@ -7,7 +7,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { PersonalizedSuggestion, UserContext } from "./suggestionGenerator";
-import { extractSuggestionsFromResponse, generatePersonalizedSuggestions } from "./suggestionGenerator";
+import {
+  extractSuggestionsFromResponse,
+  generatePersonalizedSuggestions,
+} from "./suggestionGenerator";
 
 export interface SuggestionsState {
   fieldValue: string;
@@ -123,11 +126,10 @@ export function useSuggestionsFromResponse(
       return [];
     }
 
-    return extractSuggestionsFromResponse(
-      response,
-      fieldValue,
-      options.userContext
-    ).slice(0, options.maxSuggestions ?? 3);
+    return extractSuggestionsFromResponse(response, fieldValue, options.userContext).slice(
+      0,
+      options.maxSuggestions ?? 3
+    );
   }, [response, fieldValue, options]);
 
   return {

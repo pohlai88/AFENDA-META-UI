@@ -10,9 +10,7 @@ import {
   Skeleton,
 } from "@afenda/ui";
 import { cn } from "~/lib/utils";
-import {
-  type PermissionAction,
-} from "~/stores/business";
+import { type PermissionAction } from "~/stores/business";
 import { usePermissions } from "~/bootstrap/permissions-context";
 
 interface PermissionGatedActionProps {
@@ -85,8 +83,7 @@ export function PermissionGatedAction({
 
   const isPermissionGranted = !resource || !action ? true : hasPermission(resource, action);
 
-  const hasRoleAccess =
-    !allowedRoles || (role ? allowedRoles.includes(role) : false);
+  const hasRoleAccess = !allowedRoles || (role ? allowedRoles.includes(role) : false);
 
   if (!isPermissionGranted || !hasRoleAccess) {
     return <>{fallback}</>;
@@ -135,7 +132,9 @@ export function DataCard({
               {description && <CardDescription id={descriptionId}>{description}</CardDescription>}
             </div>
             {actions && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {actions}
+              </div>
             )}
           </div>
         </CardHeader>

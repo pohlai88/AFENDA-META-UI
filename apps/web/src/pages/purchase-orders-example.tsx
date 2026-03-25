@@ -16,17 +16,16 @@ export default function PurchaseOrdersExamplePage() {
       }
     >
       <PageContainer>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <DataCard
-          title="Purchase Orders Table"
-          description="Live data with query + mutation-driven workflow actions"
-          className="md:col-span-2 xl:col-span-3"
-        >
-          <PurchaseOrdersTable />
-        </DataCard>
-      </div>
-    </PageContainer>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <DataCard
+            title="Purchase Orders Table"
+            description="Live data with query + mutation-driven workflow actions"
+            className="md:col-span-2 xl:col-span-3"
+          >
+            <PurchaseOrdersTable />
+          </DataCard>
+        </div>
+      </PageContainer>
     </PageShell>
   );
 }

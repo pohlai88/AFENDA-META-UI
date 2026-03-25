@@ -53,14 +53,15 @@ Core function that resolves metadata for a given model/tenant context:
 function resolveMetadata(
   model: string,
   globalMeta: Record<string, unknown>,
-  ctx: ResolutionContext,
-): Record<string, unknown>
+  ctx: ResolutionContext
+): Record<string, unknown>;
 ```
 
 **Resolution Hierarchy (lowest = most specific):**
+
 1. **Global** — Base metadata (always applied)
 2. **Industry** — e.g., "retail", "manufacturing" overrides
-3. **Tenant** — e.g., "acme-corp" overrides  
+3. **Tenant** — e.g., "acme-corp" overrides
 4. **Department** — e.g., "sales" overrides
 5. **User** — e.g., "user-alice" overrides
 
@@ -75,11 +76,12 @@ function resolveMetadata(
 Attaches `ResolutionContext` to every request after authentication:
 
 ```typescript
-app.use(authMiddleware);           // SessionContext
-app.use(tenantContextMiddleware);  // ResolutionContext
+app.use(authMiddleware); // SessionContext
+app.use(tenantContextMiddleware); // ResolutionContext
 ```
 
 **Pipeline:**
+
 1. Extract `SessionContext` from JWT (auth middleware)
 2. Build `ResolutionContext` (tenant middleware)
 3. Make available as `req.tenantContext` throughout request
@@ -103,10 +105,11 @@ interface TenantAwareLayoutResolutionContext {
   tenantContext: ResolutionContext;
 }
 
-function resolveLayoutWithContext(ctx): ResolvedLayout | null
+function resolveLayoutWithContext(ctx): ResolvedLayout | null;
 ```
 
 **Priority (tenants see different layouts based on scope):**
+
 1. User-specific layout (highest)
 2. Department-specific layout
 3. Industry-specific layout
@@ -128,11 +131,12 @@ function evaluatePoliciesWithTenantContext(
   context: PolicyContext,
   tenantCtx: ResolutionContext,
   globalMeta: Record<string, unknown>,
-  scope?: string,
-): PolicyEvaluationResult
+  scope?: string
+): PolicyEvaluationResult;
 ```
 
 **Behavior:**
+
 1. Collect policies for scope
 2. Resolve each policy via `resolveMetadata()`
 3. Tenant overrides can tighten/loosen validation rules
@@ -148,6 +152,7 @@ function evaluatePoliciesWithTenantContext(
 Comprehensive dynamic logic engine supporting:
 
 **Categories:**
+
 - **compute** — Calculate field values
 - **validate** — Validate records
 - **visibility** — Control field visibility
@@ -155,13 +160,14 @@ Comprehensive dynamic logic engine supporting:
 - **workflow** — Manage state transitions
 
 **Rule Definition:**
+
 ```typescript
 interface RuleDefinition {
   id: string;
-  scope: string;  // e.g., "finance.invoice.compute.tax_amount"
+  scope: string; // e.g., "finance.invoice.compute.tax_amount"
   category: "compute" | "validate" | "visibility" | "transform" | "workflow";
-  when?: ConditionExpression;  // Precondition
-  expression: string;          // DSL expression
+  when?: ConditionExpression; // Precondition
+  expression: string; // DSL expression
   priority?: number;
   enabled?: boolean;
 }
@@ -170,6 +176,7 @@ interface RuleDefinition {
 **Scope Format:** `model.field.action` or `model.action.field`
 
 **Functions:**
+
 - `registerRule()` / `getRulesForScope()` — Registry management
 - `evaluateRule()` — Evaluate single rule
 - `evaluateRulesForCategory()` — Evaluate all rules in category
@@ -181,20 +188,22 @@ interface RuleDefinition {
 ### 7. Expression Engine API
 
 **Files:**
+
 - `apps/api/src/routes/rules.ts` — HTTP handlers
 - `apps/api/src/routes/expEngine.ts` — Express router
 
 **Endpoints:**
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/rules/evaluate` | Evaluate a specific rule |
-| POST | `/api/rules/compute` | Compute field value |
-| POST | `/api/rules/visibility` | Check field visibility |
-| POST | `/api/rules/validate` | Validate record |
-| POST | `/api/expressions/test` | Test DSL expression |
+| Method | Path                    | Purpose                  |
+| ------ | ----------------------- | ------------------------ |
+| POST   | `/api/rules/evaluate`   | Evaluate a specific rule |
+| POST   | `/api/rules/compute`    | Compute field value      |
+| POST   | `/api/rules/visibility` | Check field visibility   |
+| POST   | `/api/rules/validate`   | Validate record          |
+| POST   | `/api/expressions/test` | Test DSL expression      |
 
 **Request Example:**
+
 ```json
 {
   "ruleId": "compute-tax",
@@ -213,6 +222,7 @@ interface RuleDefinition {
 ## Integration Points
 
 ### GraphQL Context
+
 ```typescript
 context: {
   session: SessionContext,
@@ -221,14 +231,16 @@ context: {
 ```
 
 ### Route Handlers
+
 ```typescript
 // tenantContext available on req
 app.use((req, res) => {
-  const ctx = req.tenantContext;  // ResolutionContext
+  const ctx = req.tenantContext; // ResolutionContext
 });
 ```
 
 ### Policy/Rule Evaluation
+
 ```typescript
 // All functions accept tenantContext
 evaluatePoliciesWithTenantContext(ctx, tenantContext, globalMeta);
@@ -250,16 +262,16 @@ Department: sales
 Metadata Resolution:
 1. Start with global rules:
    - amount > 0 (required)
-   
+
 2. Apply retail industry overrides:
    - discount_rate <= 0.2 (retail specific)
-   
+
 3. Apply acme-corp tenant overrides:
    - po_number must match purchase_order_id (acme policy)
-   
+
 4. Apply sales dept overrides:
    - approval_required = true (sales policy)
-   
+
 5. Apply user-alice overrides:
    - (if exists) personal rules
 
@@ -271,6 +283,7 @@ Final Result: Resolved validation rules for alice's invoice
 ## Files Created/Modified
 
 ### New Files
+
 ```
 apps/api/src/middleware/tenantContext.ts          ← Tenant middleware
 apps/api/src/rules/index.ts                       ← Rule engine
@@ -281,6 +294,7 @@ apps/api/src/tenant/tenant-aware-e2e.test.ts     ← E2E tests
 ```
 
 ### Modified Files
+
 ```
 packages/meta-types/src/rbac.ts                   ← ResolutionContext type
 packages/meta-types/src/schema.ts                 ← (may need updates for reverse)
@@ -305,16 +319,11 @@ const ruleContext: RuleExecutionContext = {
   tenantContext: {
     tenantId: "retail-store-1",
     industry: "retail",
-    departmentId: "finance"
-  }
+    departmentId: "finance",
+  },
 };
 
-const taxAmount = computeFieldValue(
-  "tax_amount",
-  "finance.invoice",
-  ruleContext,
-  globalMetadata
-);
+const taxAmount = computeFieldValue("tax_amount", "finance.invoice", ruleContext, globalMetadata);
 // Result: 150 (computed via rule: amount * tax_rate)
 ```
 
@@ -323,7 +332,7 @@ const taxAmount = computeFieldValue(
 ```typescript
 const ctx: RuleExecutionContext = {
   record: { discount: 0.15 },
-  tenantContext: { industry: "retail" }
+  tenantContext: { industry: "retail" },
 };
 
 const visible = isFieldVisible(
@@ -331,7 +340,7 @@ const visible = isFieldVisible(
   "finance.invoice",
   ctx,
   globalMetadata,
-  true  // defaultVisible
+  true // defaultVisible
 );
 // Result: true (if industry is retail, discount field is visible)
 ```
@@ -364,9 +373,11 @@ const req = {
 ## Testing
 
 ### Integration Tests
+
 **File:** `apps/api/src/tenant/tenant-aware-resolution.test.ts`
 
 Covers:
+
 - ✅ Metadata resolution without overrides
 - ✅ Industry-specific overrides
 - ✅ Tenant-specific overrides
@@ -378,9 +389,11 @@ Covers:
 - ✅ Edge cases (missing tenant, circular refs, null fields)
 
 ### E2E Tests
+
 **File:** `apps/api/src/tenant/tenant-aware-e2e.test.ts`
 
 Covers:
+
 - ✅ HTTP flows for all endpoints
 - ✅ Layout resolution per tenant
 - ✅ Policy evaluation with overrides

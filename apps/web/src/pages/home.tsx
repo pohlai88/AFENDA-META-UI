@@ -34,17 +34,14 @@ export default function HomePage() {
   };
 
   const searchConfigs: SearchConfig[] = [
-    { model: "partner",      module: "sales", label: "Partners",     placeholder: "Search partners…" },
-    { model: "sales_order",  module: "sales", label: "Sales Orders", placeholder: "Search orders…" },
-    { model: "product",      module: "sales", label: "Products",     placeholder: "Search products…" },
+    { model: "partner", module: "sales", label: "Partners", placeholder: "Search partners…" },
+    { model: "sales_order", module: "sales", label: "Sales Orders", placeholder: "Search orders…" },
+    { model: "product", module: "sales", label: "Products", placeholder: "Search products…" },
   ];
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Dashboard"
-        description="Welcome to AFENDA Meta-UI Platform"
-      />
+      <PageHeader title="Dashboard" description="Welcome to AFENDA Meta-UI Platform" />
 
       {/* Stats Overview */}
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 mb-8">
@@ -159,9 +156,7 @@ export default function HomePage() {
                 {isStatsLoading ? "..." : resolvedStats.salesOrders}
               </Badge>
             </div>
-            <CardDescription>
-              Track and manage customer orders and quotations
-            </CardDescription>
+            <CardDescription>Track and manage customer orders and quotations</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-2">
             <Button asChild className="flex-1">
@@ -187,9 +182,7 @@ export default function HomePage() {
               </CardTitle>
               <Badge variant="secondary">{isStatsLoading ? "..." : resolvedStats.products}</Badge>
             </div>
-            <CardDescription>
-              Manage product catalog, pricing, and inventory
-            </CardDescription>
+            <CardDescription>Manage product catalog, pricing, and inventory</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-2">
             <Button asChild className="flex-1">

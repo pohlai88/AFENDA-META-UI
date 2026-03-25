@@ -30,19 +30,16 @@ function erpAction<P = void>(type: string, analyticsMeta: AnalyticsMetaConfig) {
 // ─── Purchase Order Workflow ──────────────────────────────────────────────────
 
 /** Clerk submitted a draft purchase order to the approval queue. */
-export const purchaseOrderSubmitted = erpAction<{ id: string }>(
-  "erp/purchaseOrder.submitted",
-  {
-    event: "purchase_order.submitted",
-    domain: "erp",
-    module: "procurement",
-    feature: "purchaseOrder",
-    operation: "submit",
-    category: "workflow",
-    outcome: "success",
-    tags: ["purchase-order", "workflow"],
-  }
-);
+export const purchaseOrderSubmitted = erpAction<{ id: string }>("erp/purchaseOrder.submitted", {
+  event: "purchase_order.submitted",
+  domain: "erp",
+  module: "procurement",
+  feature: "purchaseOrder",
+  operation: "submit",
+  category: "workflow",
+  outcome: "success",
+  tags: ["purchase-order", "workflow"],
+});
 
 /** Purchase order submission failed (API error or permission denied). */
 export const purchaseOrderSubmitFailed = erpAction<{ id: string; reason?: string }>(
@@ -63,20 +60,17 @@ export const purchaseOrderSubmitFailed = erpAction<{ id: string; reason?: string
  * Manager approved a submitted purchase order.
  * `immediate: true` — flushed right away because this is a high-audit-value event.
  */
-export const purchaseOrderApproved = erpAction<{ id: string }>(
-  "erp/purchaseOrder.approved",
-  {
-    event: "purchase_order.approved",
-    domain: "erp",
-    module: "procurement",
-    feature: "purchaseOrder",
-    operation: "approve",
-    category: "workflow",
-    outcome: "success",
-    tags: ["purchase-order", "workflow", "approval"],
-    immediate: true,
-  }
-);
+export const purchaseOrderApproved = erpAction<{ id: string }>("erp/purchaseOrder.approved", {
+  event: "purchase_order.approved",
+  domain: "erp",
+  module: "procurement",
+  feature: "purchaseOrder",
+  operation: "approve",
+  category: "workflow",
+  outcome: "success",
+  tags: ["purchase-order", "workflow", "approval"],
+  immediate: true,
+});
 
 /** Purchase order approval call failed. */
 export const purchaseOrderApproveFailed = erpAction<{ id: string; reason?: string }>(

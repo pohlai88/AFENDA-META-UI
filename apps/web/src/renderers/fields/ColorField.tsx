@@ -40,10 +40,7 @@ export function ColorField({ field, value, onChange, readonly }: RendererFieldPr
       <div className="flex items-center gap-2">
         <label
           htmlFor={controlId}
-          className={cn(
-            "w-10 h-10 rounded border cursor-pointer",
-            "overflow-hidden block"
-          )}
+          className={cn("w-10 h-10 rounded border cursor-pointer", "overflow-hidden block")}
           style={{ backgroundColor: hexValue }}
           aria-label="Open color picker"
         >

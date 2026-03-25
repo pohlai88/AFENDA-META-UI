@@ -7,10 +7,7 @@
  * Framework-agnostic — no React dependencies.
  */
 
-import type {
-  FieldShowIfCondition,
-  LeafFieldConfig,
-} from "../../index.js";
+import type { FieldShowIfCondition, LeafFieldConfig } from "../../index.js";
 import type { DynamicFormValues } from "../types.js";
 import { joinPath, getValueByPath } from "../path/pathToolkit.js";
 

@@ -43,15 +43,12 @@ export interface LayoutRenderContext {
 /** Registry for custom component renderers */
 export type CustomComponentRenderer = (
   props: Record<string, unknown>,
-  ctx: LayoutRenderContext,
+  ctx: LayoutRenderContext
 ) => React.ReactNode;
 
 const customComponentRegistry = new Map<string, CustomComponentRenderer>();
 
-export function registerCustomComponent(
-  name: string,
-  renderer: CustomComponentRenderer,
-): void {
+export function registerCustomComponent(name: string, renderer: CustomComponentRenderer): void {
   customComponentRegistry.set(name, renderer);
 }
 
@@ -66,16 +63,13 @@ export function clearCustomComponents(): void {
 // Cache for evaluated visibility rules to prevent repeated DSL evaluations
 const visibilityCache = new Map<string, boolean>();
 
-function getCacheKey(
-  rule: ConditionExpression,
-  values: Record<string, unknown>,
-): string {
+function getCacheKey(rule: ConditionExpression, values: Record<string, unknown>): string {
   return JSON.stringify({ rule, values });
 }
 
 function isVisible(
   visibleIf: ConditionExpression | undefined,
-  values: Record<string, unknown>,
+  values: Record<string, unknown>
 ): boolean {
   if (!visibleIf) return true;
 
@@ -112,12 +106,7 @@ const VirtualRowComponent = ({
   style: React.CSSProperties;
   node: LayoutNode;
   ctx: LayoutRenderContext;
-}) =>
-  React.createElement(
-    "div",
-    { style },
-    React.createElement(LayoutNodeRenderer, { node, ctx }),
-  );
+}) => React.createElement("div", { style }, React.createElement(LayoutNodeRenderer, { node, ctx }));
 
 const SectionRenderer = React.memo(function SectionRenderer({
   node,
@@ -141,9 +130,9 @@ const SectionRenderer = React.memo(function SectionRenderer({
         React.createElement(LayoutNodeRenderer, {
           node: node.children[index],
           ctx,
-        }),
+        })
       ),
-    [node.children, ctx],
+    [node.children, ctx]
   );
 
   return React.createElement(
@@ -157,14 +146,12 @@ const SectionRenderer = React.memo(function SectionRenderer({
         "legend",
         {
           className: "layout-section-title",
-          onClick: node.collapsible
-            ? () => setCollapsed((c) => !c)
-            : undefined,
+          onClick: node.collapsible ? () => setCollapsed((c) => !c) : undefined,
           style: node.collapsible ? { cursor: "pointer" } : undefined,
         },
         node.title,
         node.collapsible &&
-          React.createElement("span", { className: "collapse-indicator" }, collapsed ? " ▸" : " ▾"),
+          React.createElement("span", { className: "collapse-indicator" }, collapsed ? " ▸" : " ▾")
       ),
     !collapsed &&
       (useVirtualScrolling
@@ -178,16 +165,16 @@ const SectionRenderer = React.memo(function SectionRenderer({
               rowHeight: 80,
               rowProps: {},
               defaultHeight: 600,
-            }),
+            })
           )
         : // Standard rendering for normal sections
           React.createElement(
             "div",
             { className: "layout-section-content" },
             node.children.map((child, i) =>
-              React.createElement(LayoutNodeRenderer, { key: i, node: child, ctx }),
-            ),
-          )),
+              React.createElement(LayoutNodeRenderer, { key: i, node: child, ctx })
+            )
+          ))
   );
 });
 
@@ -213,8 +200,8 @@ const GridRenderer = React.memo(function GridRenderer({
       },
     },
     node.children.map((child, i) =>
-      React.createElement(LayoutNodeRenderer, { key: i, node: child, ctx }),
-    ),
+      React.createElement(LayoutNodeRenderer, { key: i, node: child, ctx })
+    )
   );
 });
 
@@ -230,29 +217,23 @@ const TabsRenderer = React.memo(function TabsRenderer({
   ctx: LayoutRenderContext;
 }) {
   const visibleTabs = useMemo(
-    () =>
-      node.tabs.filter((tab) => isVisible(tab.visibleIf, ctx.values)),
-    [node.tabs, ctx.values],
+    () => node.tabs.filter((tab) => isVisible(tab.visibleIf, ctx.values)),
+    [node.tabs, ctx.values]
   );
 
   const [activeIndex, setActiveIndex] = useState(0);
   // Track which tabs have been mounted (for mount-on-demand)
-  const [mountedTabs, setMountedTabs] = useState<Set<number>>(
-    () => new Set([0]),
-  );
+  const [mountedTabs, setMountedTabs] = useState<Set<number>>(() => new Set([0]));
 
-  const handleTabClick = useCallback(
-    (index: number) => {
-      setActiveIndex(index);
-      setMountedTabs((prev) => {
-        if (prev.has(index)) return prev;
-        const next = new Set(prev);
-        next.add(index);
-        return next;
-      });
-    },
-    [],
-  );
+  const handleTabClick = useCallback((index: number) => {
+    setActiveIndex(index);
+    setMountedTabs((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
 
   if (visibleTabs.length === 0) return null;
 
@@ -274,9 +255,9 @@ const TabsRenderer = React.memo(function TabsRenderer({
             onClick: () => handleTabClick(i),
           },
           tab.icon && React.createElement("span", { className: "tab-icon" }, tab.icon),
-          tab.label,
-        ),
-      ),
+          tab.label
+        )
+      )
     ),
     // Tab panels (mount-on-demand: render only tabs that have been visited)
     visibleTabs.map((tab, i) =>
@@ -294,11 +275,11 @@ const TabsRenderer = React.memo(function TabsRenderer({
                 key: j,
                 node: child,
                 ctx,
-              }),
-            ),
+              })
+            )
           )
-        : null,
-    ),
+        : null
+    )
   );
 });
 
@@ -319,7 +300,7 @@ const FieldNodeRenderer = React.memo(function FieldNodeRenderer({
       className: "layout-field",
       style: node.span ? { gridColumn: `span ${node.span}` } : undefined,
     },
-    ctx.renderField(node.fieldId, node.span),
+    ctx.renderField(node.fieldId, node.span)
   );
 });
 
@@ -327,19 +308,13 @@ const FieldNodeRenderer = React.memo(function FieldNodeRenderer({
 // Custom Component Renderer
 // ---------------------------------------------------------------------------
 
-function CustomRenderer({
-  node,
-  ctx,
-}: {
-  node: LayoutCustom;
-  ctx: LayoutRenderContext;
-}) {
+function CustomRenderer({ node, ctx }: { node: LayoutCustom; ctx: LayoutRenderContext }) {
   const renderer = customComponentRegistry.get(node.component);
   if (!renderer) {
     return React.createElement(
       "div",
       { className: "layout-custom-missing" },
-      `Unknown component: ${node.component}`,
+      `Unknown component: ${node.component}`
     );
   }
   return React.createElement(React.Fragment, null, renderer(node.props ?? {}, ctx));
@@ -390,6 +365,6 @@ export function LayoutRenderer({
   return React.createElement(
     "div",
     { className: className ?? "layout-root" },
-    React.createElement(LayoutNodeRenderer, { node: root, ctx: context }),
+    React.createElement(LayoutNodeRenderer, { node: root, ctx: context })
   );
 }

@@ -2,10 +2,7 @@ import React from "react";
 import { Link, useMatches } from "react-router-dom";
 import { cn } from "~/lib/utils";
 import { ChevronRight } from "lucide-react";
-import {
-  type BreadcrumbItem,
-  getAutoBreadcrumbsFromMatches,
-} from "~/lib/breadcrumb-utils";
+import { type BreadcrumbItem, getAutoBreadcrumbsFromMatches } from "~/lib/breadcrumb-utils";
 
 interface PageHeaderProps {
   title: React.ReactNode;
@@ -35,10 +32,7 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   const matches = useSafeMatches();
-  const autoBreadcrumbs = React.useMemo(
-    () => getAutoBreadcrumbsFromMatches(matches),
-    [matches]
-  );
+  const autoBreadcrumbs = React.useMemo(() => getAutoBreadcrumbsFromMatches(matches), [matches]);
   const resolvedBreadcrumbs = breadcrumbs ?? autoBreadcrumbs;
 
   return (
@@ -51,7 +45,9 @@ export function PageHeader({
 
               return (
                 <li key={`${crumb.label}-${index}`} className="flex items-center gap-2">
-                  {index > 0 && <ChevronRight className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />}
+                  {index > 0 && (
+                    <ChevronRight className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+                  )}
                   {crumb.href ? (
                     isExternalHref(crumb.href) ? (
                       <a
@@ -86,12 +82,8 @@ export function PageHeader({
       )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {title}
-          </h1>
-          {description && (
-            <p className="max-w-prose text-muted-foreground">{description}</p>
-          )}
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+          {description && <p className="max-w-prose text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>

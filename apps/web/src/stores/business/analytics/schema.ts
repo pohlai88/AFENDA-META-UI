@@ -2,17 +2,17 @@ export const ANALYTICS_PROVIDER_IDS = ["console", "posthog", "mixpanel", "datado
 
 export type AnalyticsProviderId = (typeof ANALYTICS_PROVIDER_IDS)[number];
 
-export type AnalyticsDomain =
-  | "auth"
-  | "ui"
-  | "erp"
-  | "system"
-  | "permissions"
-  | "custom";
+export type AnalyticsDomain = "auth" | "ui" | "erp" | "system" | "permissions" | "custom";
 
 export type AnalyticsOutcome = "success" | "error" | "unknown";
 
-export type AnalyticsFlushReason = "size" | "interval" | "manual" | "metadata" | "pagehide" | "retry";
+export type AnalyticsFlushReason =
+  | "size"
+  | "interval"
+  | "manual"
+  | "metadata"
+  | "pagehide"
+  | "retry";
 
 export interface AnalyticsMetaConfig {
   enabled?: boolean;

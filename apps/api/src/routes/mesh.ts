@@ -10,12 +10,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import {
-  publish,
-  getDeadLetters,
-  retryDeadLetter,
-  getMeshStats,
-} from "../mesh/index.js";
+import { publish, getDeadLetters, retryDeadLetter, getMeshStats } from "../mesh/index.js";
 
 const router = Router();
 

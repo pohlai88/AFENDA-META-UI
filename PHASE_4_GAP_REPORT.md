@@ -6,18 +6,19 @@ Scope: Verified against actual code, tests, and routes in this repository.
 
 ## Status Summary
 
-| Pillar | Status | Notes |
-|---|---|---|
-| Audit Fabric | Partial+ | Decision audit types, logger, routes, and capture hooks are implemented for metadata, rules, policy, workflow, and event mesh. Still in-memory and not yet DB-backed. |
-| Resolution Caching Layer | Partial | Cache engine and cached resolution service exist, with tests. Mainline usage still needs full rollout confirmation across all metadata resolution call sites. |
-| Admin Control Plane | Missing | No admin API/UI surface for tenant override editing, workflow/rule authoring, or control-plane operations. |
-| GraphQL Surface Layer | Partial | GraphQL server/schema exists, but roadmap-level business-domain resolvers and audit-aware resolution surface are incomplete. |
+| Pillar                   | Status   | Notes                                                                                                                                                                 |
+| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audit Fabric             | Partial+ | Decision audit types, logger, routes, and capture hooks are implemented for metadata, rules, policy, workflow, and event mesh. Still in-memory and not yet DB-backed. |
+| Resolution Caching Layer | Partial  | Cache engine and cached resolution service exist, with tests. Mainline usage still needs full rollout confirmation across all metadata resolution call sites.         |
+| Admin Control Plane      | Missing  | No admin API/UI surface for tenant override editing, workflow/rule authoring, or control-plane operations.                                                            |
+| GraphQL Surface Layer    | Partial  | GraphQL server/schema exists, but roadmap-level business-domain resolvers and audit-aware resolution surface are incomplete.                                          |
 
 ## Verified Evidence
 
 ### 1) Audit Fabric
 
 Implemented:
+
 - Types: packages/meta-types/src/audit.ts
 - Logger: apps/api/src/audit/decisionAuditLogger.ts
 - Routes: apps/api/src/routes/audit.ts
@@ -28,31 +29,37 @@ Implemented:
 - Event mesh hook: apps/api/src/mesh/index.ts
 
 Current limitation:
+
 - Persistence is in-memory only (development-grade retention, not production-grade storage).
 
 ### 2) Resolution Caching Layer
 
 Implemented:
+
 - Cache type/engine: packages/meta-types/src/resolutionCache.ts
 - Cached resolution service: apps/api/src/tenant/cachedResolution.ts
 - Tests: apps/api/src/tenant/resolutionCache.test.ts, apps/api/src/tenant/decisionChainIntegration.test.ts
 
 Current limitation:
+
 - Needs strict rollout verification so all production metadata resolution paths use cache consistently.
 
 ### 3) Admin Control Plane
 
 Missing:
+
 - No admin route/controller set aligned with roadmap control-plane endpoints.
 - No web admin UI for tenant metadata overrides, workflow definitions, or rule control.
 
 ### 4) GraphQL Surface Layer
 
 Implemented baseline:
+
 - Server: apps/api/src/graphql/server.ts
 - Schema bootstrap: apps/api/src/graphql/schema.ts
 
 Current limitation:
+
 - Missing roadmap-targeted domain surface (tenant-aware resolved metadata, workflow-centric operations, and audit-chain exposure).
 
 ## Additional Implemented Work This Pass

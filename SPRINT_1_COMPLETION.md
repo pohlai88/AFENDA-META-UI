@@ -10,6 +10,7 @@
 ## Executive Summary
 
 Sprint 1 focused on implementing critical P1 security and UX features:
+
 1. **Expression Evaluator** - Secure RBAC field visibility and action filtering
 2. **API Search & Filter** - Full-featured data filtering with 12 operators
 3. **Filter UI** - User-friendly filter interface in MetaListV2
@@ -17,7 +18,7 @@ Sprint 1 focused on implementing critical P1 security and UX features:
 ### Key Achievements ✅
 
 - **Security Gap Closed**: Safe expression evaluator using filtrex (passed 4/4 tests)
-- **Filter System Complete**: API + UI implementation with comprehensive operator support  
+- **Filter System Complete**: API + UI implementation with comprehensive operator support
 - **Build Passing**: No errors, production build succeeds in 2.10s
 - **Progress**: 76% → 82% (+6%)
 
@@ -28,23 +29,29 @@ Sprint 1 focused on implementing critical P1 security and UX features:
 ### 1. Expression Evaluator (SECURITY CRITICAL) ✅
 
 **Files Modified:**
+
 - `apps/api/src/meta/rbac.ts` (148 lines, evalVisibility function)
 
 **Implementation:**
+
 ```typescript
 function evalVisibility(expression: string | undefined, session: SessionContext): boolean {
   if (!expression) return true;
-  
+
   try {
-    const context = { role: session.roles[0] ?? "viewer", uid: session.uid, lang: session.lang ?? "en" };
-    
+    const context = {
+      role: session.roles[0] ?? "viewer",
+      uid: session.uid,
+      lang: session.lang ?? "en",
+    };
+
     const compiledExpr = compileExpression(expression, {
       extraFunctions: {
         hasRole: (roleName: string) => session.roles.includes(roleName),
         hasAllRoles: (...roleNames: string[]) => roleNames.every((r) => session.roles.includes(r)),
       },
     });
-    
+
     return Boolean(compiledExpr(context));
   } catch (error) {
     console.error(`[RBAC] Expression evaluation failed: ${expression}`, error);
@@ -54,12 +61,14 @@ function evalVisibility(expression: string | undefined, session: SessionContext)
 ```
 
 **Features:**
+
 - Safe sandbox via filtrex (no eval, no globals)
 - Helper functions: `hasRole()`, `hasAllRoles()`
 - Expression syntax: `"role = 'admin'"`, `"hasRole('manager') or hasRole('admin')"`
 - Fail-safe to hidden on error (security-first approach)
 
 **Testing:**
+
 - Test file: `apps/api/src/meta/test-rbac-expressions.ts`
 - Results: **4/4 scenarios passed**
   - Admin user → 4 actions visible
@@ -68,6 +77,7 @@ function evalVisibility(expression: string | undefined, session: SessionContext)
   - Multi-role user → 3 actions visible
 
 **Security Impact:**
+
 - **BEFORE**: All visibility expressions returned true (security bypass)
 - **AFTER**: Expressions evaluated safely, unauthorized actions hidden
 
@@ -76,27 +86,29 @@ function evalVisibility(expression: string | undefined, session: SessionContext)
 ### 2. API Query Builder (FEATURE COMPLETE) ✅
 
 **Files:**
+
 - `apps/api/src/utils/queryBuilder.ts` (NEW, 260 lines)
 - `apps/api/src/routes/api.ts` (MODIFIED, integrated filters)
 
 **Supported Operators:**
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `eq` | Equals | `{"field":"status","op":"eq","value":"draft"}` |
-| `neq` | Not equals | `{"field":"status","op":"neq","value":"closed"}` |
-| `gt` | Greater than | `{"field":"amount","op":"gt","value":1000}` |
-| `gte` | Greater than or equal | `{"field":"amount","op":"gte","value":1000}` |
-| `lt` | Less than | `{"field":"amount","op":"lt","value":100}` |
-| `lte` | Less than or equal | `{"field":"amount","op":"lte","value":100}` |
-| `like` | SQL LIKE | `{"field":"name","op":"like","value":"%acme%"}` |
-| `ilike` | Case-insensitive LIKE | `{"field":"email","op":"ilike","value":"%@example.com"}` |
-| `in` | Value in array | `{"field":"status","op":"in","value":["draft","open"]}` |
-| `between` | Between two values | `{"field":"amount","op":"between","value":[100,1000]}` |
-| `is_null` | Field is NULL | `{"field":"deleted_at","op":"is_null"}` |
-| `is_not_null` | Field is NOT NULL | `{"field":"approved_at","op":"is_not_null"}` |
+| Operator      | Description           | Example                                                  |
+| ------------- | --------------------- | -------------------------------------------------------- |
+| `eq`          | Equals                | `{"field":"status","op":"eq","value":"draft"}`           |
+| `neq`         | Not equals            | `{"field":"status","op":"neq","value":"closed"}`         |
+| `gt`          | Greater than          | `{"field":"amount","op":"gt","value":1000}`              |
+| `gte`         | Greater than or equal | `{"field":"amount","op":"gte","value":1000}`             |
+| `lt`          | Less than             | `{"field":"amount","op":"lt","value":100}`               |
+| `lte`         | Less than or equal    | `{"field":"amount","op":"lte","value":100}`              |
+| `like`        | SQL LIKE              | `{"field":"name","op":"like","value":"%acme%"}`          |
+| `ilike`       | Case-insensitive LIKE | `{"field":"email","op":"ilike","value":"%@example.com"}` |
+| `in`          | Value in array        | `{"field":"status","op":"in","value":["draft","open"]}`  |
+| `between`     | Between two values    | `{"field":"amount","op":"between","value":[100,1000]}`   |
+| `is_null`     | Field is NULL         | `{"field":"deleted_at","op":"is_null"}`                  |
+| `is_not_null` | Field is NOT NULL     | `{"field":"approved_at","op":"is_not_null"}`             |
 
 **API Usage:**
+
 ```bash
 # Single filter
 GET /api/sales_order?filters=[{"field":"status","op":"eq","value":"draft"}]
@@ -109,6 +121,7 @@ GET /api/sales_order?filters={"logic":"or","conditions":[{"field":"status","op":
 ```
 
 **Implementation Highlights:**
+
 - Zod schema validation for filter params
 - Drizzle ORM query builder integration
 - Error handling with helpful messages
@@ -119,13 +132,16 @@ GET /api/sales_order?filters={"logic":"or","conditions":[{"field":"status","op":
 ### 3. Filter UI Component (UX) ✅
 
 **Files Created:**
+
 - `apps/web/src/components/filters/DataTableFilter.tsx` (NEW, 300 lines)
 
 **Files Modified:**
+
 - `apps/web/src/hooks/useModel.ts` (added FilterGroup types + filters param)
 - `apps/web/src/renderers/MetaListV2.tsx` (integrated DataTableFilter component)
 
 **Features:**
+
 - Popover-based filter UI (clean, non-intrusive)
 - Field selector (dropdown with all fields)
 - Operator selector (context-aware based on field type)
@@ -137,14 +153,15 @@ GET /api/sales_order?filters={"logic":"or","conditions":[{"field":"status","op":
 
 **Field Type Support:**
 
-| Field Type | Operators | Value Input |
-|------------|-----------|-------------|
-| String | eq, neq, like, ilike, is_null, is_not_null | Text input |
-| Number | eq, neq, gt, gte, lt, lte, is_null, is_not_null | Number input |
-| Boolean | eq | Yes/No select |
-| Enum | eq, neq, in | Dropdown (single) or text (multi) |
+| Field Type | Operators                                       | Value Input                       |
+| ---------- | ----------------------------------------------- | --------------------------------- |
+| String     | eq, neq, like, ilike, is_null, is_not_null      | Text input                        |
+| Number     | eq, neq, gt, gte, lt, lte, is_null, is_not_null | Number input                      |
+| Boolean    | eq                                              | Yes/No select                     |
+| Enum       | eq, neq, in                                     | Dropdown (single) or text (multi) |
 
 **UI Screenshots (Conceptual):**
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ [Filter ▼ 2]  [Columns ▼]   127 records     [+ New]   │
@@ -166,22 +183,22 @@ GET /api/sales_order?filters={"logic":"or","conditions":[{"field":"status","op":
 
 ### New Files (1 file, ~300 lines)
 
-1. **`apps/web/src/components/filters/DataTableFilter.tsx`**  
+1. **`apps/web/src/components/filters/DataTableFilter.tsx`**
    - Reusable filter component
    - Supports 12 operators
    - Context-aware UI based on field types
 
 ### Modified Files (4 files)
 
-2. **`apps/api/src/middleware/rateLimiter.ts`**  
+2. **`apps/api/src/middleware/rateLimiter.ts`**
    - Fixed TypeScript error (ipKeyGenerator usage)
 
-3. **`apps/web/src/hooks/useModel.ts`**  
+3. **`apps/web/src/hooks/useModel.ts`**
    - Added FilterCondition, FilterGroup types
    - Extended ListOptions with filters param
    - Added filters to API query params
 
-4. **`apps/web/src/renderers/MetaListV2.tsx`**  
+4. **`apps/web/src/renderers/MetaListV2.tsx`**
    - Added filter state management
    - Integrated DataTableFilter component
    - Auto-reset pagination on filter change
@@ -203,9 +220,11 @@ GET /api/sales_order?filters={"logic":"or","conditions":[{"field":"status","op":
 ### Unit Tests ✅
 
 **RBAC Expression Evaluator:**
+
 ```bash
 pnpm exec tsx apps/api/src/meta/test-rbac-expressions.ts
 ```
+
 - ✅ Admin user: 4/4 actions visible
 - ✅ Manager user: 3/3 actions visible
 - ✅ Viewer user: 1/1 actions visible
@@ -214,9 +233,11 @@ pnpm exec tsx apps/api/src/meta/test-rbac-expressions.ts
 ### Build Tests ✅
 
 **Production Build:**
+
 ```bash
 pnpm build
 ```
+
 - ✅ TypeScript compilation: 0 errors
 - ✅ Vite build: 2.10s
 - ✅ Bundle size: 74.09 KB gzipped (index)
@@ -225,6 +246,7 @@ pnpm build
 ### Manual Testing (Recommended)
 
 1. **Start Servers:**
+
    ```powershell
    # Terminal 1 - API
    cd apps/api
@@ -253,15 +275,15 @@ pnpm build
 
 ## Metrics & Impact
 
-| Metric | Before Sprint 1 | After Sprint 1 | Change |
-|--------|-----------------|----------------|--------|
-| **Overall Progress** | 76% | 82% | **+6%** |
-| **Phase 4 (API Hardening)** | 95% (1 P1 gap) | 100% | **+5%** (CLOSED) |
-| **Phase 2 (Renderer Upgrades)** | 50% | 60% | **+10%** (filter UI added) |
-| **P1 Critical Gaps** | 5 gaps | 3 gaps | **-2 gaps** |
-| **Security Issues** | 1 (CRITICAL) | 0 | **RESOLVED ✅** |
-| **Build Time** | 11.1s | 11.1s | Stable |
-| **Bundle Size (gzipped)** | 72.97 KB | 74.09 KB | +1.12 KB (filter UI) |
+| Metric                          | Before Sprint 1 | After Sprint 1 | Change                     |
+| ------------------------------- | --------------- | -------------- | -------------------------- |
+| **Overall Progress**            | 76%             | 82%            | **+6%**                    |
+| **Phase 4 (API Hardening)**     | 95% (1 P1 gap)  | 100%           | **+5%** (CLOSED)           |
+| **Phase 2 (Renderer Upgrades)** | 50%             | 60%            | **+10%** (filter UI added) |
+| **P1 Critical Gaps**            | 5 gaps          | 3 gaps         | **-2 gaps**                |
+| **Security Issues**             | 1 (CRITICAL)    | 0              | **RESOLVED ✅**            |
+| **Build Time**                  | 11.1s           | 11.1s          | Stable                     |
+| **Bundle Size (gzipped)**       | 72.97 KB        | 74.09 KB       | +1.12 KB (filter UI)       |
 
 ### Business Impact
 
@@ -279,6 +301,7 @@ pnpm build
 **Goal**: Users can edit One2Many relationships
 
 **Tasks:**
+
 1. Implement One2ManyField component (6 hours)
    - Embed MetaListV2 in compact mode
    - Dialog with MetaFormV2 for add/edit
@@ -288,7 +311,7 @@ pnpm build
 ### Remaining P1 Gaps (In Priority Order)
 
 1. **One2Many Field Implementation** (6-8 hours) → Sprint 2
-2. **MetaList Enhancements** (8-10 hours) → Sprint 3  
+2. **MetaList Enhancements** (8-10 hours) → Sprint 3
    - Faceted filters (advanced UI)
    - Row selection + bulk actions
    - CSV export

@@ -3,15 +3,7 @@
 // This IS the metadata platform's backbone.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import {
-  pgTable,
-  text,
-  integer,
-  jsonb,
-  timestamp,
-  primaryKey,
-  unique,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, integer, jsonb, timestamp, primaryKey, unique } from "drizzle-orm/pg-core";
 import type { ModelMeta, MetaPermissions, MetaFieldPermission } from "@afenda/meta-types";
 
 export const schemaRegistry = pgTable(
@@ -22,9 +14,7 @@ export const schemaRegistry = pgTable(
     version: integer("version").notNull().default(1),
     meta: jsonb("meta").$type<ModelMeta>().notNull(),
     permissions: jsonb("permissions").$type<MetaPermissions>().notNull().default({}),
-    fieldPermissions: jsonb("field_permissions")
-      .$type<MetaFieldPermission[]>()
-      .default([]),
+    fieldPermissions: jsonb("field_permissions").$type<MetaFieldPermission[]>().default([]),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

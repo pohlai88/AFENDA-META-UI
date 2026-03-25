@@ -43,7 +43,7 @@ let instanceCounter = 0;
 
 function resolveWorkflowTenantId(
   def: WorkflowDefinition,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): string {
   const fromContext = context.tenantId;
   if (typeof fromContext === "string" && fromContext.trim().length > 0) {
@@ -145,9 +145,7 @@ export function listWorkflows(opts?: {
     all = all.filter((d) => d.enabled);
   }
   if (opts?.tenantId !== undefined) {
-    all = all.filter(
-      (d) => d.tenantId === opts.tenantId || d.tenantId === null,
-    );
+    all = all.filter((d) => d.tenantId === opts.tenantId || d.tenantId === null);
   }
   return all;
 }
@@ -164,10 +162,10 @@ export function listWorkflows(opts?: {
  */
 export async function triggerWorkflows(
   eventTopic: string,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): Promise<WorkflowInstance[]> {
   const matching = Array.from(definitions.values()).filter(
-    (d) => d.enabled && matchTopic(eventTopic, d.trigger),
+    (d) => d.enabled && matchTopic(eventTopic, d.trigger)
   );
 
   const started: WorkflowInstance[] = [];
@@ -194,16 +192,10 @@ export async function triggerWorkflows(
  * Uses Function constructor — sandboxed (no globals) via with(ctx).
  * For full safety, plug in the policy DSL evaluator.
  */
-function evaluateConditionExpression(
-  expr: string,
-  context: Record<string, unknown>,
-): boolean {
+function evaluateConditionExpression(expr: string, context: Record<string, unknown>): boolean {
   try {
     // eslint-disable-next-line no-new-func
-    const fn = new Function(
-      ...Object.keys(context),
-      `"use strict"; return !!(${expr});`,
-    );
+    const fn = new Function(...Object.keys(context), `"use strict"; return !!(${expr});`);
     return Boolean(fn(...Object.values(context)));
   } catch {
     return false;
@@ -216,7 +208,7 @@ function evaluateConditionExpression(
 
 function startInstance(
   def: WorkflowDefinition,
-  context: Record<string, unknown>,
+  context: Record<string, unknown>
 ): WorkflowInstance {
   instanceCounter += 1;
   const instance: WorkflowInstance = {
@@ -251,11 +243,15 @@ function startInstance(
  */
 export async function advanceInstance(
   instanceId: string,
-  opts: { actor?: string; stepInput?: Record<string, unknown> } = {},
+  opts: { actor?: string; stepInput?: Record<string, unknown> } = {}
 ): Promise<WorkflowInstance> {
   const instance = instances.get(instanceId);
   if (!instance) throw new Error(`Workflow instance "${instanceId}" not found.`);
-  if (instance.status === "completed" || instance.status === "rejected" || instance.status === "failed") {
+  if (
+    instance.status === "completed" ||
+    instance.status === "rejected" ||
+    instance.status === "failed"
+  ) {
     return instance;
   }
 
@@ -368,8 +364,7 @@ export async function advanceInstance(
     }
 
     // Determine next step
-    const nextId =
-      execution.result === "rejected" ? step.elseStepId : step.nextStepId;
+    const nextId = execution.result === "rejected" ? step.elseStepId : step.nextStepId;
 
     if (!nextId) {
       const fromStatus = instance.status;
@@ -402,7 +397,7 @@ export async function advanceInstance(
 async function executeStep(
   step: WorkflowStep,
   instance: WorkflowInstance,
-  opts: { actor?: string; stepInput?: Record<string, unknown> },
+  opts: { actor?: string; stepInput?: Record<string, unknown> }
 ): Promise<WorkflowStepExecution> {
   const base: WorkflowStepExecution = {
     stepId: step.id,
@@ -460,7 +455,7 @@ export async function submitApproval(
   instanceId: string,
   decision: "approved" | "rejected",
   actor: string,
-  reason?: string,
+  reason?: string
 ): Promise<WorkflowInstance> {
   const instance = instances.get(instanceId);
   if (!instance) throw new Error(`Workflow instance "${instanceId}" not found.`);
@@ -557,7 +552,10 @@ export function getWorkflowStats(): {
   return {
     definitions: definitions.size,
     instances: instances.size,
-    running: all.filter((i) => i.status === "running" || i.status === "waiting_approval" || i.status === "waiting_timer").length,
+    running: all.filter(
+      (i) =>
+        i.status === "running" || i.status === "waiting_approval" || i.status === "waiting_timer"
+    ).length,
     completed: all.filter((i) => i.status === "completed").length,
     failed: all.filter((i) => i.status === "failed" || i.status === "rejected").length,
   };

@@ -113,10 +113,7 @@ const BUILTINS: Record<string, DslFunction> = {
 // Resolver: resolve dotted identifier paths from a flat or nested context
 // ---------------------------------------------------------------------------
 
-function resolveIdentifier(
-  name: string,
-  context: Record<string, unknown>,
-): unknown {
+function resolveIdentifier(name: string, context: Record<string, unknown>): unknown {
   // Try flat lookup first (pre-flattened by context builder)
   if (name in context) return context[name];
 
@@ -144,16 +141,14 @@ export function interpret(
   node: AstNode,
   context: Record<string, unknown>,
   customFunctions?: Record<string, DslFunction>,
-  depth = 0,
+  depth = 0
 ): unknown {
   if (depth > MAX_DEPTH) {
     throw new InterpreterError("Maximum expression depth exceeded");
   }
 
   const recurse = (n: AstNode) => interpret(n, context, customFunctions, depth + 1);
-  const allFunctions = customFunctions
-    ? { ...BUILTINS, ...customFunctions }
-    : BUILTINS;
+  const allFunctions = customFunctions ? { ...BUILTINS, ...customFunctions } : BUILTINS;
 
   switch (node.kind) {
     // ── Literals ──────────────────────────────────────────────────────
@@ -233,9 +228,12 @@ export function interpret(
 function evaluateBinary(op: string, left: unknown, right: unknown): unknown {
   switch (op) {
     // Arithmetic
-    case "+": return Number(left) + Number(right);
-    case "-": return Number(left) - Number(right);
-    case "*": return Number(left) * Number(right);
+    case "+":
+      return Number(left) + Number(right);
+    case "-":
+      return Number(left) - Number(right);
+    case "*":
+      return Number(left) * Number(right);
     case "/": {
       const divisor = Number(right);
       if (divisor === 0) throw new InterpreterError("Division by zero");
@@ -243,12 +241,18 @@ function evaluateBinary(op: string, left: unknown, right: unknown): unknown {
     }
 
     // Comparison — loose equality for cross-type comparison
-    case "==": return left == right;  // eslint-disable-line eqeqeq
-    case "!=": return left != right;  // eslint-disable-line eqeqeq
-    case ">":  return Number(left) > Number(right);
-    case "<":  return Number(left) < Number(right);
-    case ">=": return Number(left) >= Number(right);
-    case "<=": return Number(left) <= Number(right);
+    case "==":
+      return left == right; // eslint-disable-line eqeqeq
+    case "!=":
+      return left != right; // eslint-disable-line eqeqeq
+    case ">":
+      return Number(left) > Number(right);
+    case "<":
+      return Number(left) < Number(right);
+    case ">=":
+      return Number(left) >= Number(right);
+    case "<=":
+      return Number(left) <= Number(right);
 
     default:
       throw new InterpreterError(`Unknown operator: ${op}`);

@@ -47,7 +47,7 @@ function scenarioToContext(scenario: SimulationScenario): PolicyContext {
 
 function simulateSinglePolicy(
   policy: PolicyDefinition,
-  flatContext: Record<string, unknown>,
+  flatContext: Record<string, unknown>
 ): PolicySimulationResult {
   const start = performance.now();
 
@@ -127,15 +127,14 @@ function simulateSinglePolicy(
  */
 export function simulateScenario(
   scenario: SimulationScenario,
-  policies?: PolicyDefinition[],
+  policies?: PolicyDefinition[]
 ): SimulationReport {
   const start = performance.now();
   const context = scenarioToContext(scenario);
   const flatContext = buildPolicyContext(context);
 
   // Use provided policies or look up by scope
-  const activePolicies =
-    policies ?? getPoliciesForScope(scenario.entity);
+  const activePolicies = policies ?? getPoliciesForScope(scenario.entity);
 
   // Simulate each policy individually
   const results: PolicySimulationResult[] = activePolicies
@@ -171,7 +170,7 @@ export function simulateScenario(
  */
 export function analyzeBlastRadius(
   policy: PolicyDefinition,
-  records: Record<string, Array<{ id: string } & Record<string, unknown>>>,
+  records: Record<string, Array<{ id: string } & Record<string, unknown>>>
 ): BlastRadiusResult {
   let totalAffected = 0;
   const affectedEntities: BlastRadiusResult["affectedEntities"] = [];
@@ -185,9 +184,7 @@ export function analyzeBlastRadius(
       const flatContext: Record<string, unknown> = { ...row };
 
       // Check if the when-guard applies (or if there's no guard, all records match)
-      const applies = policy.when
-        ? evaluateCondition(policy.when, flatContext).result
-        : true;
+      const applies = policy.when ? evaluateCondition(policy.when, flatContext).result : true;
 
       if (applies) {
         entityCount++;
@@ -223,7 +220,7 @@ export function analyzeBlastRadius(
  */
 export function simulateBatch(
   scenarios: SimulationScenario[],
-  policies?: PolicyDefinition[],
+  policies?: PolicyDefinition[]
 ): SimulationReport[] {
   return scenarios.map((scenario) => simulateScenario(scenario, policies));
 }

@@ -51,7 +51,7 @@ export interface EventMetadata {
  */
 export type EventReducer<TState = Record<string, unknown>> = (
   state: TState,
-  event: DomainEvent,
+  event: DomainEvent
 ) => TState;
 
 // ---------------------------------------------------------------------------
