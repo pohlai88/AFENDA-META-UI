@@ -223,7 +223,7 @@ The database schema becomes the machine that emits truth contracts.
 - [x] Root scripts added
 - [x] Dependabot config created
 - [x] CI workflow updated
-- [ ] Governance policy finalized
+- [x] Governance policy finalized
 
 ---
 

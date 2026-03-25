@@ -279,3 +279,79 @@ Following this policy ensures:
 - Long-term maintainability
 - Clean architectural boundaries
 - Enterprise-grade reliability
+
+---
+
+## Appendix A — Workspace Override Catalog
+
+The root `package.json` `pnpm.overrides` field is the single source of truth for critical package versions. These versions are enforced across all workspace members.
+
+| Package | Pinned Version | Reason |
+|---------|----------------|--------|
+| `drizzle-orm` | `1.0.0-beta.19` | Exact pin — beta API surface |
+| `drizzle-kit` | `1.0.0-beta.19` | Must match drizzle-orm exactly |
+| `zod` | `^4.3.6` | Shared validation layer |
+| `vitest` | `^4.1.1` | Test framework alignment |
+| `tsx` | `^4.21.0` | Script runner alignment |
+| `pg` | `^8.20.0` | DB driver alignment |
+| `@types/pg` | `^8.20.0` | Driver types alignment |
+| `@types/node` | `^22.0.0` | Node 22 LTS target |
+| `typescript` | `^5.9.0` | Cross-workspace type system alignment |
+| `flatted` | `^3.4.2` | Circular serialisation alignment |
+
+> When updating a pinned version, change it here first. All dependent `package.json` files must align to the override. Run `pnpm install` to validate.
+
+---
+
+## Appendix B — Enforcement Commands
+
+The CI gate enforces governance rules automatically. Run these commands during development and in CI.
+
+```bash
+# Full dependency gate (audit + outdated + version alignment + anti-patterns)
+pnpm ci:deps
+
+# Security audit only (fails on high/critical)
+pnpm ci:deps:audit
+
+# Outdated check (informational, does not fail)
+pnpm ci:deps:outdated
+
+# Dependency governance rule check (version alignment, server-client boundary)
+pnpm ci:gate:dependencies
+
+# Verbose output for debugging violations
+pnpm ci:gate:verbose
+```
+
+The gate validates:
+1. Critical packages (`drizzle-orm`, `drizzle-kit`, `zod`, `vitest`) are version-aligned across workspace
+2. Server-only packages (`express`, `pg`, `drizzle-orm`, `jose`, etc.) do not appear in frontend bundles
+3. Internal packages use `workspace:*` protocol
+4. No `file:` references in non-root packages
+
+---
+
+## Appendix C — Upgrade Wave Schedule
+
+Major dependency upgrades are planned in waves to isolate risk. The following schedule reflects the current backlog.
+
+### Wave 2 — Planned (next quarter)
+
+| Package | Current | Target | Effort | Notes |
+|---------|---------|--------|--------|-------|
+| React | 18 | 19 | High | RSC assessment required, hook migration |
+| Express | 4 | 5 | Medium | Middleware signature changes, async error handling |
+| Turbo | 1 | 2 | Medium | `pipeline` → `tasks` config migration |
+| Redux + Zustand | dual | unified | High | Architecture refactor — separate risk domain |
+| 11 duplicate table defs | — | unified | High | Data layer consolidation — high blast radius |
+
+### Wave 3 — Future
+
+| Package | Current | Target | Effort | Notes |
+|---------|---------|--------|--------|-------|
+| TypeScript | 5 | 6 | High | New resolution semantics |
+| `@rjsf` | v5 | v6 | High | Form engine rewrite risk |
+| `date-fns` | 2 | 4 | Medium | Tree-shaking import changes |
+
+No Wave 3 item may be pulled forward without a formal architecture review.
