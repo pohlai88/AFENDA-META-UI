@@ -99,11 +99,11 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Run ESLint
-        run: pnpm lint
+        run: pnpm lint ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         continue-on-error: true
 
       - name: TypeScript strict check
-        run: pnpm typecheck
+        run: pnpm typecheck ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         continue-on-error: true
 
   test:
@@ -149,7 +149,7 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Run Vitest
-        run: pnpm test
+        run: pnpm test ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         continue-on-error: true
 
       - name: Upload coverage
@@ -203,7 +203,7 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Build all packages
-        run: turbo run build
+        run: turbo run build ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         env:
           CI: true
 
