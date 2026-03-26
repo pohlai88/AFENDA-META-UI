@@ -6,9 +6,8 @@
  */
 
 import type { JsonValue, JsonObject } from "@afenda/meta-types";
-import { logger } from '../lib/logger';
-const log = logger.child({ module: 'rule-engine' });
-
+import { logger } from "../lib/logger";
+const log = logger.child({ module: "rule-engine" });
 
 /**
  * Rule context - unified business graph
@@ -138,7 +137,7 @@ class RuleEngine {
       description: `DSL rule: ${dsl.when}`,
       when: dsl.when,
       if: (ctx) => evaluateExpression(dsl.if, ctx),
-      then: async (ctx) => {
+      then: async (_ctx) => {
         // Execute actions from DSL
         for (const action of dsl.then) {
           if (action === "block") {

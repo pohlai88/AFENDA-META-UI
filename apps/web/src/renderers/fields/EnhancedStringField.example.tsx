@@ -10,7 +10,7 @@
 
 import React from "react";
 import { useController, type FieldValues, type UseControllerProps } from "react-hook-form";
-import type { PersonalizedSuggestion, UserContext } from "./suggestionGenerator";
+import type { UserContext } from "./suggestionGenerator";
 import { useSuggestions } from "./useSuggestions";
 import { SuggestionPrompt, FieldWithSuggestions } from "./SuggestionPrompt";
 import type { AsyncFieldValidationConfig } from "./index";
@@ -168,7 +168,7 @@ export function StringFieldWithSuggestionsPopup<T extends FieldValues>({
   ...controllerProps
 }: EnhancedStringFieldProps<T>) {
   const { field, fieldState } = useController(controllerProps);
-  const { suggestions, handleValidationFailure } = useSuggestions({
+  const { suggestions } = useSuggestions({
     userContext,
     enableFrontendGeneration: true,
   });

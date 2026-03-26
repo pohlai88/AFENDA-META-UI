@@ -9,7 +9,6 @@ import {
   generatePersonalizedSuggestions,
   extractSuggestionsFromResponse,
   type UserContext,
-  type SuggestionConfig,
 } from "./suggestionGenerator";
 
 describe("generatePersonalizedSuggestions", () => {

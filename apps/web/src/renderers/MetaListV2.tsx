@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@afenda/ui";
-import { DownloadIcon, ChevronDownIcon, TrashIcon } from "lucide-react";
+import { DownloadIcon, ChevronDownIcon } from "lucide-react";
 
 interface MetaListV2Props {
   model: string;
@@ -69,7 +69,7 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
   const permissions = metaResponse?.permissions;
   const listView = meta?.views?.list as MetaListView | undefined;
 
-  const rows = listData?.data ?? [];
+  const rows = React.useMemo(() => listData?.data ?? [], [listData?.data]);
   const totalRecords = listData?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_LIMIT));
   const pageRowIds = React.useMemo(() => rows.map(readRowId).filter((id) => id.length > 0), [rows]);
@@ -95,7 +95,7 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
     snapshot.selectedCount > 0 &&
     totalRecords > snapshot.selectedCount;
 
-  const columns = listView?.columns ?? [];
+  const columns = React.useMemo(() => listView?.columns ?? [], [listView?.columns]);
   const fieldByName = new Map((meta?.fields ?? []).map((field) => [field.name, field] as const));
 
   // Bulk actions
@@ -129,19 +129,14 @@ export function MetaListV2({ model, onRowClick, onNew, onSelectionChange }: Meta
       return;
     }
 
-    let recordsToExport: Record<string, unknown>[] = [];
-
-    if (snapshot.mode === "query") {
-      // Query-based: export all rows (in real implementation, fetch from API)
-      recordsToExport = rows;
-    } else {
-      // Row-based: export selected rows only
-      const selectedSet = new Set(snapshot.ids);
-      recordsToExport = rows.filter((row) => {
-        const id = readRowId(row);
-        return id && selectedSet.has(id);
-      });
-    }
+    const selectedSet = new Set(snapshot.ids);
+    const recordsToExport: Record<string, unknown>[] =
+      snapshot.mode === "query"
+        ? rows
+        : rows.filter((row) => {
+            const id = readRowId(row);
+            return id && selectedSet.has(id);
+          });
 
     const timestamp = new Date().toISOString().split("T")[0];
     const filename = `${model}-export-${timestamp}.csv`;

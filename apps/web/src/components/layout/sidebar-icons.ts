@@ -21,6 +21,7 @@ const iconRegistry = new Map<string, LucideIcon>([
   ["ListOrdered", ListOrdered],
 ]);
 
+// TypeScript function overloads
 export function registerSidebarIcon(moduleName: string, name: string, icon: LucideIcon): void;
 export function registerSidebarIcon(name: string, icon: LucideIcon): void;
 export function registerSidebarIcon(arg1: string, arg2: string | LucideIcon, arg3?: LucideIcon) {
@@ -32,6 +33,7 @@ export function registerSidebarIcon(arg1: string, arg2: string | LucideIcon, arg
   iconRegistry.set(arg1, arg2 as LucideIcon);
 }
 
+// TypeScript function overloads
 export function getSidebarIcon(moduleName: string, iconName?: string): LucideIcon;
 export function getSidebarIcon(iconName?: string): LucideIcon;
 export function getSidebarIcon(arg1?: string, arg2?: string) {

@@ -14,7 +14,8 @@ interface PersistedCache<T> {
   entries: Record<string, CacheEntry<T>>;
 }
 
-export interface AsyncValidationCacheOptions<T> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Type parameter T is used in createAsyncValidationCache
+export interface AsyncValidationCacheOptions<T = unknown> {
   storageKey: string;
   defaultTtlMs: number;
   maxEntries: number;

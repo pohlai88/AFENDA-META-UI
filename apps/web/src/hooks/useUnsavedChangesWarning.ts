@@ -35,9 +35,14 @@ export interface UseUnsavedChangesWarningOptions {
   enabled?: boolean;
 }
 
+interface PathLocation {
+  pathname: string;
+}
+
 /**
  * Hook to warn users about unsaved changes
  */
+// TypeScript function overloads
 export function useUnsavedChangesWarning(isDirty: boolean, message?: string): void;
 export function useUnsavedChangesWarning(options: UseUnsavedChangesWarningOptions): void;
 export function useUnsavedChangesWarning(
@@ -85,7 +90,13 @@ export function useUnsavedChangesWarning(
 
   const blocker = useBlocker(
     useCallback(
-      ({ currentLocation, nextLocation }: { currentLocation: any; nextLocation: any }) => {
+      ({
+        currentLocation,
+        nextLocation,
+      }: {
+        currentLocation: PathLocation;
+        nextLocation: PathLocation;
+      }) => {
         // Only block if:
         // 1. shouldBlock is true (form is dirty)
         // 2. Navigation is to a different path

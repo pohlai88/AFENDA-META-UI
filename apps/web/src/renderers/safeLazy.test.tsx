@@ -4,10 +4,11 @@
  * Validates that the safe lazy loader handles all failure modes correctly.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React, { Suspense } from "react";
 import { safeLazy } from "./safeLazy";
+import type { RendererModule } from "./types/contracts";
 
 describe("safeLazy", () => {
   describe("Successful Loading", () => {
@@ -45,7 +46,9 @@ describe("safeLazy", () => {
 
   describe("Failure Handling", () => {
     it("shows fallback when module is null", async () => {
-      const LazyComponent = safeLazy(async () => null as any, { rendererId: "test-null" });
+      const LazyComponent = safeLazy(async () => null as unknown as RendererModule, {
+        rendererId: "test-null",
+      });
 
       render(
         <Suspense fallback={<div>Loading...</div>}>
@@ -89,9 +92,12 @@ describe("safeLazy", () => {
     });
 
     it("shows fallback when export is not a function", async () => {
-      const LazyComponent = safeLazy(async () => ({ default: "not a function" as any }), {
-        rendererId: "test-not-function",
-      });
+      const LazyComponent = safeLazy(
+        async () => ({ default: "not a function" }) as unknown as RendererModule,
+        {
+          rendererId: "test-not-function",
+        }
+      );
 
       render(
         <Suspense fallback={<div>Loading...</div>}>
@@ -124,7 +130,9 @@ describe("safeLazy", () => {
 
   describe("Fallback UI", () => {
     it("displays renderer ID in fallback", async () => {
-      const LazyComponent = safeLazy(async () => null as any, { rendererId: "my-test-renderer" });
+      const LazyComponent = safeLazy(async () => null as unknown as RendererModule, {
+        rendererId: "my-test-renderer",
+      });
 
       render(
         <Suspense fallback={<div>Loading...</div>}>
@@ -153,7 +161,9 @@ describe("safeLazy", () => {
     });
 
     it("shows common causes and fix suggestions", async () => {
-      const LazyComponent = safeLazy(async () => null as any, { rendererId: "test" });
+      const LazyComponent = safeLazy(async () => null as unknown as RendererModule, {
+        rendererId: "test",
+      });
 
       render(
         <Suspense fallback={<div>Loading...</div>}>
@@ -170,7 +180,7 @@ describe("safeLazy", () => {
     it("uses custom fallback component when provided", async () => {
       const CustomFallback = () => <div>Custom Error UI</div>;
 
-      const LazyComponent = safeLazy(async () => null as any, {
+      const LazyComponent = safeLazy(async () => null as unknown as RendererModule, {
         fallback: CustomFallback,
         rendererId: "test",
       });

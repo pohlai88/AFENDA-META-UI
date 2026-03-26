@@ -151,7 +151,8 @@ function RecordFormDialog({
     return generateZodSchema(meta.fields);
   }, [meta]);
 
-  const methods = useForm({
+  const methods = useForm<Record<string, unknown>>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form v5 compatibility
     resolver: zodResolver(schema as any),
     defaultValues: initialValues || {},
   });

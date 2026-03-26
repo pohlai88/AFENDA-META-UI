@@ -1,27 +1,29 @@
 # Sales Domain Expansion Plan
 
-**Status**: Phase 0 ✅ Complete | Phase 1 ✅ Complete | Phase 2 ✅ Complete | Phase 3 ✅ Complete | Phase 4 ✅ Complete | Phase 5 ✅ Complete | Phase 6 ✅ Complete | Phase 7 ✅ Complete | Phase 8 ✅ Complete  
-**Progress**: 41/53 tables deployed (77.4%) | 9/10 phases complete  
-**Target**: Expand from 5 tables → 53 tables (45 sales + 8 platform)  
-**Philosophy**: Schema-first, business logic second, metadata-driven UI generation  
-**Last Updated**: March 26, 2026
+**Status**: Phase 0 ✅ Complete | Phase 1 ✅ Complete | Phase 2 ✅ Complete | Phase 3 ✅ Complete | Phase 4 ✅ Complete | Phase 5 ✅ Complete | Phase 6 ✅ Complete | Phase 7 ✅ Complete | Phase 8 ✅ Complete | Phase 9 ✅ Complete | Phase 10 ✅ Complete
+**Progress**: 46/53 tables deployed (86.8%) | 10/10 phases complete
+**Target**: Expand from 5 tables → 53 tables (45 sales + 8 platform)
+**Philosophy**: Schema-first, business logic second, metadata-driven UI generation
+**Last Updated**: March 26, 2026 (Phase 10 revalidated)
 
 ---
 
 ## Current State
 
 ### Existing Sales Tables (5)
-| Table | Schema | Status | Enterprise Grade |
-|-------|--------|--------|------------------|
-| `partners` | `sales` | ✅ Deployed | Partial - missing addresses, credit limits, fiscal positions |
-| `products` | `sales` | ✅ Deployed | Weak - no template/variant split, no UoM, no tracking |
-| `productCategories` | `sales` | ✅ Deployed | Partial - missing account mappings, costing method |
-| `salesOrders` | `sales` | ✅ Deployed | Weak - no currency, pricelist, payment terms, fiscal position |
-| `salesOrderLines` | `sales` | ✅ Deployed | Weak - no tax M2M, no UoM, no delivered/invoiced tracking |
+
+| Table               | Schema  | Status      | Enterprise Grade                                              |
+| ------------------- | ------- | ----------- | ------------------------------------------------------------- |
+| `partners`          | `sales` | ✅ Deployed | Partial - missing addresses, credit limits, fiscal positions  |
+| `products`          | `sales` | ✅ Deployed | Weak - no template/variant split, no UoM, no tracking         |
+| `productCategories` | `sales` | ✅ Deployed | Partial - missing account mappings, costing method            |
+| `salesOrders`       | `sales` | ✅ Deployed | Weak - no currency, pricelist, payment terms, fiscal position |
+| `salesOrderLines`   | `sales` | ✅ Deployed | Weak - no tax M2M, no UoM, no delivered/invoiced tracking     |
 
 ### Critical Gaps Status
 
 **Phase 0 Complete ✅**:
+
 - ✅ Reference data layer (currencies, countries, UoMs) — **DEPLOYED**
 - ✅ Document attachments & approval logs — **DEPLOYED**
 - ✅ Sequence generation logic — **DEPLOYED**
@@ -29,6 +31,7 @@
 - ✅ Unit of measure conversion logic — **DEPLOYED**
 
 **Remaining (Phases 8-10)**:
+
 - ✅ Partner enhancement (addresses, credit limits, fiscal positions) — Phase 1 **COMPLETE**
 - ✅ Tax computation engine — Phase 2 **COMPLETE**
 - ✅ Payment terms — Phase 3 **COMPLETE**
@@ -38,8 +41,8 @@
 - ✅ Sales order enhancement (full state machine) — Phase 6 **COMPLETE**
 - ✅ Consignment workflow — Phase 7 **COMPLETE**
 - ✅ Returns/RMA process — Phase 8 **COMPLETE**
-- ⏳ Subscription/recurring revenue — Phase 9
-- ⏳ Commission tracking — Phase 10
+- ✅ Subscription/recurring revenue — Phase 9 **COMPLETE**
+- ✅ Commission tracking — Phase 10 **COMPLETE**
 
 ---
 
@@ -48,52 +51,55 @@
 Each phase is dependency-ordered and independently deliverable.
 
 ### Phase 0: Platform Reference Data ✅ **COMPLETE**
-**Layer**: `schema-platform/reference/`  
-**Purpose**: Cross-domain foundation consumed by all modules  
-**Dependencies**: None (unblocks everything)  
+
+**Layer**: `schema-platform/reference/`
+**Purpose**: Cross-domain foundation consumed by all modules
+**Dependencies**: None (unblocks everything)
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
 #### Core Tables (8/8) ✅
 
-| # | Table | Status | Location | Key Columns |
-|---|-------|--------|----------|-------------|
-| 1 | `countries` | ✅ Deployed | `reference.countries` | `code` (ISO 3166-1), `name`, `phone_code`, `vat_label` |
-| 2 | `states` | ✅ Deployed | `reference.states` | `country_id` FK, `code`, `name` |
-| 3 | `currencies` | ✅ Deployed | `reference.currencies` | `code` (ISO 4217), `name`, `symbol`, `decimal_places`, `rounding` |
-| 4 | `currency_rates` | ✅ Deployed | `reference.currency_rates` | `currency_id` FK, `rate`, `inverse_rate`, `effective_date` |
-| 5 | `banks` | ✅ Deployed | `reference.banks` | `name`, `bic`, `country_id` FK |
-| 6 | `sequences` | ✅ Deployed | `reference.sequences` | `tenant_id`, `code`, `prefix`, `suffix`, `next_number`, `reset_period` |
-| 7 | `uom_categories` | ✅ Deployed | `reference.uom_categories` | `name` (Weight, Volume, Length, Unit, Time) |
-| 8 | `units_of_measure` | ✅ Deployed | `reference.units_of_measure` | `category_id` FK, `name`, `factor`, `uom_type`, `rounding` |
+| #   | Table              | Status      | Location                     | Key Columns                                                            |
+| --- | ------------------ | ----------- | ---------------------------- | ---------------------------------------------------------------------- |
+| 1   | `countries`        | ✅ Deployed | `reference.countries`        | `code` (ISO 3166-1), `name`, `phone_code`, `vat_label`                 |
+| 2   | `states`           | ✅ Deployed | `reference.states`           | `country_id` FK, `code`, `name`                                        |
+| 3   | `currencies`       | ✅ Deployed | `reference.currencies`       | `code` (ISO 4217), `name`, `symbol`, `decimal_places`, `rounding`      |
+| 4   | `currency_rates`   | ✅ Deployed | `reference.currency_rates`   | `currency_id` FK, `rate`, `inverse_rate`, `effective_date`             |
+| 5   | `banks`            | ✅ Deployed | `reference.banks`            | `name`, `bic`, `country_id` FK                                         |
+| 6   | `sequences`        | ✅ Deployed | `reference.sequences`        | `tenant_id`, `code`, `prefix`, `suffix`, `next_number`, `reset_period` |
+| 7   | `uom_categories`   | ✅ Deployed | `reference.uom_categories`   | `name` (Weight, Volume, Length, Unit, Time)                            |
+| 8   | `units_of_measure` | ✅ Deployed | `reference.units_of_measure` | `category_id` FK, `name`, `factor`, `uom_type`, `rounding`             |
 
 #### Bonus Tables (Gap Closure) (2/2) ✅
 
-| # | Table | Status | Purpose |
-|---|-------|--------|---------|
-| 9 | `document_attachments` | ✅ Deployed | Polymorphic file attachments for sales orders, returns, subscriptions, partners |
-| 10 | `approval_logs` | ✅ Deployed | Audit trail for approval workflows (orders, returns, consignments) |
+| #   | Table                  | Status      | Purpose                                                                         |
+| --- | ---------------------- | ----------- | ------------------------------------------------------------------------------- |
+| 9   | `document_attachments` | ✅ Deployed | Polymorphic file attachments for sales orders, returns, subscriptions, partners |
+| 10  | `approval_logs`        | ✅ Deployed | Audit trail for approval workflows (orders, returns, consignments)              |
 
 #### Logic Module ✅
 
 **Location**: `apps/api/src/modules/reference/logic/reference-data.ts`
 
 **Functions**:
-- ✅ `nextVal(context)` → atomic sequence increment  
+
+- ✅ `nextVal(context)` → atomic sequence increment
   - Supports prefix, suffix, padding, custom step
   - Format: `{prefix}{padded-number}{suffix}`
   - Example: `SO-000042/2026`
-  
-- ✅ `convert(context, quantity)` → unit conversion  
+
+- ✅ `convert(context, quantity)` → unit conversion
   - Cross-category validation
   - Factor-based conversion with precision rounding
   - Example: `5 kg → 0.005 tons`
-  
-- ✅ `getRate(context, date)` → exchange rate lookup  
+
+- ✅ `getRate(context, date)` → exchange rate lookup
   - Exact match or most recent rate before date
   - Date format: YYYY-MM-DD
   - Example: `getRate(EUR, "2026-03-26") → 1.090000`
 
 **Test Coverage**: 27/27 tests passing ✅
+
 - `nextVal`: 4 tests (sequence generation, padding, step, overflow)
 - `formatSequenceWithDate`: 3 tests (yearly, monthly, never)
 - `shouldResetSequence`: 6 tests (year/month change detection)
@@ -104,6 +110,7 @@ Each phase is dependency-ordered and independently deliverable.
 #### Seeds ✅
 
 **Coverage**: Complete demo data for all tables
+
 - Countries: US, GB, MY
 - States: CA, NY, KUL
 - Currencies: USD (base), EUR, MYR
@@ -129,18 +136,22 @@ pnpm --filter @afenda/api test -- reference-data  # ✅ 27/27 tests
 #### Files Created/Modified
 
 **Schema**:
+
 - `packages/db/src/schema-platform/reference/tables.ts` (500+ lines)
 - `packages/db/src/schema-platform/reference/index.ts`
 
 **Logic**:
+
 - `apps/api/src/modules/reference/logic/reference-data.ts` (250+ lines)
 - `apps/api/src/modules/reference/logic/reference-data.test.ts` (27 tests)
 - `apps/api/src/modules/reference/index.ts` (exports)
 
 **Tests**:
+
 - `packages/db/src/__tests__/platform-schema-contracts.test.ts`
 
 **Seeds**:
+
 - `packages/db/src/_seeds/index.ts` (seedReferenceData function)
 
 #### Production Readiness ✅
@@ -157,43 +168,49 @@ pnpm --filter @afenda/api test -- reference-data  # ✅ 27/27 tests
 ---
 
 ### Phase 1: Partner Enhancement ✅ **COMPLETE**
-**Layer**: `schema-domain/sales/`  
-**Purpose**: Transform partners from basic contact records to enterprise-ready B2B entities with hierarchy, localization, credit management, and CRM capabilities  
-**Dependencies**: Phase 0 (countries, states, banks)  
+
+**Layer**: `schema-domain/sales/`
+**Purpose**: Transform partners from basic contact records to enterprise-ready B2B entities with hierarchy, localization, credit management, and CRM capabilities
+**Dependencies**: Phase 0 (countries, states, banks)
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
 #### Core Tables (5/5) ✅
 
-| # | Table | Status | Location | Key Columns |
-|---|-------|--------|----------|-------------|
-| 9 | `partners` (ENHANCE) | ✅ Enhanced | `sales.partners` | `+is_company`, `+parent_id`, `+vat`, `+country_id`, `+state_id`, `+credit_limit`, `+default_payment_term_id`, `+default_pricelist_id`, `+default_fiscal_position_id`, `+property_account_receivable_id`, `+property_account_payable_id` |
-| 10 | `partner_addresses` | ✅ Deployed | `sales.partner_addresses` | `partner_id` FK, `type` enum (invoice/delivery/contact), `street`, `city`, `state_id` FK, `country_id` FK, `zip`, `is_default` |
-| 11 | `partner_bank_accounts` | ✅ Deployed | `sales.partner_bank_accounts` | `partner_id` FK, `bank_id` FK (reference.banks), `acc_number`, `acc_holder_name`, `is_default` |
-| 12 | `partner_tags` | ✅ Deployed | `sales.partner_tags` | `name`, `color` |
-| 13 | `partner_tag_assignments` | ✅ Deployed | `sales.partner_tag_assignments` | `partner_id` FK, `tag_id` FK |
+| #   | Table                     | Status      | Location                        | Key Columns                                                                                                                                                                                                                             |
+| --- | ------------------------- | ----------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9   | `partners` (ENHANCE)      | ✅ Enhanced | `sales.partners`                | `+is_company`, `+parent_id`, `+vat`, `+country_id`, `+state_id`, `+credit_limit`, `+default_payment_term_id`, `+default_pricelist_id`, `+default_fiscal_position_id`, `+property_account_receivable_id`, `+property_account_payable_id` |
+| 10  | `partner_addresses`       | ✅ Deployed | `sales.partner_addresses`       | `partner_id` FK, `type` enum (invoice/delivery/contact), `street`, `city`, `state_id` FK, `country_id` FK, `zip`, `is_default`                                                                                                          |
+| 11  | `partner_bank_accounts`   | ✅ Deployed | `sales.partner_bank_accounts`   | `partner_id` FK, `bank_id` FK (reference.banks), `acc_number`, `acc_holder_name`, `is_default`                                                                                                                                          |
+| 12  | `partner_tags`            | ✅ Deployed | `sales.partner_tags`            | `name`, `color`                                                                                                                                                                                                                         |
+| 13  | `partner_tag_assignments` | ✅ Deployed | `sales.partner_tag_assignments` | `partner_id` FK, `tag_id` FK                                                                                                                                                                                                            |
 
 #### Schema Enhancements ✅
 
 **Company Hierarchies**:
+
 - `is_company`: boolean - distinguishes companies (B2B) from contacts (B2C)
 - `parent_id`: Self-referential FK for corporate hierarchies (headquarters → subsidiaries)
 
 **Localization & Compliance**:
+
 - `vat`: VAT/Tax ID number for fiscal compliance
 - `country_id`: FK to reference.countries
 - `state_id`: FK to reference.states (province/region)
 
 **Credit Management**:
+
 - `credit_limit`: numeric(14,2).notNull().default("0") - "0" = unlimited credit
 - `total_due`: numeric(14,2).notNull().default("0") - outstanding receivables
 - **Business Rule**: checkCreditLimit() prevents orders exceeding available credit
 
 **Sales Defaults**:
+
 - `default_payment_term_id`: FK to payment_terms (N30, N60, etc.)
 - `default_pricelist_id`: FK to pricelists (discount tiers)
 - `default_fiscal_position_id`: FK to fiscal_positions (tax mapping rules)
 
 **Accounting Integration**:
+
 - `property_account_receivable_id`: FK to chart of accounts (AR)
 - `property_account_payable_id`: FK to chart of accounts (AP)
 
@@ -202,38 +219,40 @@ pnpm --filter @afenda/api test -- reference-data  # ✅ 27/27 tests
 **Location**: `apps/api/src/modules/sales/logic/partner-engine.ts` (302 lines)
 
 **Functions**:
-1. ✅ **`checkCreditLimit(context, orderTotal)`** → CreditCheckResult  
+
+1. ✅ **`checkCreditLimit(context, orderTotal)`** → CreditCheckResult
    - Validates order against available credit
    - Returns: approved (boolean), creditLimit, totalDue, orderTotal, availableCredit, message
    - Business Rule: `creditLimit === "0"` → unlimited credit
    - Example: Partner with $10k limit, $3k due → $7k available
 
-2. ✅ **`getInvoiceAddress(context)`** → PartnerAddress  
+2. ✅ **`getInvoiceAddress(context)`** → PartnerAddress
    - Resolution strategy: Default invoice → First invoice → Error
    - Required for billing documents
    - Throws: "No invoice address found" if missing
 
-3. ✅ **`getDeliveryAddress(context)`** → PartnerAddress  
+3. ✅ **`getDeliveryAddress(context)`** → PartnerAddress
    - Fallback chain: Default delivery → First delivery → Default invoice → First invoice → First contact → Error
    - Used for shipping/logistics
    - Supports "ship to billing address" fallback
 
-4. ✅ **`canDeletePartner(partner)`** → boolean  
+4. ✅ **`canDeletePartner(partner)`** → boolean
    - Validates deletion safety (no outstanding debts)
    - Business Rule: Prevents deletion if totalDue > 0
    - Returns: false if totalDue !== "0"
 
-5. ✅ **`calculateCreditUtilization(partner)`** → Decimal | null  
+5. ✅ **`calculateCreditUtilization(partner)`** → Decimal | null
    - Credit usage percentage: (totalDue / creditLimit) × 100
    - Returns: null for unlimited credit (creditLimit === "0")
    - Example: $7k due / $10k limit = 70%
 
-6. ✅ **`shouldIncreaseCreditLimit(partner)`** → boolean  
+6. ✅ **`shouldIncreaseCreditLimit(partner)`** → boolean
    - Recommendation engine for credit limit increases
    - Threshold: 80% utilization
    - Returns: false for unlimited credit
 
 **Test Coverage**: 32/32 tests passing ✅
+
 - `checkCreditLimit`: 7 tests (unlimited, within limit, exceeded, exact, decimals)
 - `getInvoiceAddress`: 4 tests (default, first, error cases)
 - `getDeliveryAddress`: 6 tests (default, first, fallback cascade)
@@ -247,26 +266,28 @@ pnpm --filter @afenda/api test -- reference-data  # ✅ 27/27 tests
 **Coverage**: Complete demo data with realistic scenarios
 
 **Partners (4)**:
+
 1. **Acme Corp** (is_company: true)
    - VAT: US123456789
    - Credit: $100,000
    - Country: US, State: CA
    - Pricelist: Wholesale
-   
+
 2. **Beta Industries** (is_company: true, parent: Acme)
    - VAT: US987654321
    - Credit: $50,000
    - Subsidiary relationship
-   
+
 3. **Charlie Logistics** (is_company: true)
    - Credit: $0 (unlimited)
    - Payment term: Net 30
-   
+
 4. **Dana Consumer** (is_company: false)
    - Personal contact (B2C)
    - No credit limit
 
 **Addresses (5)**:
+
 - Acme HQ (invoice, default)
 - Acme Warehouse (delivery, default)
 - Beta Office (invoice, default)
@@ -274,11 +295,13 @@ pnpm --filter @afenda/api test -- reference-data  # ✅ 27/27 tests
 - Dana Home (contact, default)
 
 **Bank Accounts (3)**:
+
 - Acme Corp: Chase Bank (US), acc 1234567890
 - Beta Industries: Chase Bank (US), acc 0987654321
 - Charlie Logistics: HSBC (UK), acc GB29NWBK60161331926819
 
 **Tags (4)**:
+
 - VIP (blue) → Assigned to Acme Corp
 - Wholesale (green) → Assigned to Acme, Beta
 - Retail (yellow) → Assigned to Dana
@@ -303,6 +326,7 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing (4 benchmarks skippe
 ```
 
 **Test Results Summary** (March 26, 2026):
+
 - ✅ All 347 functional tests passing
 - ✅ 4 performance benchmark tests intentionally skipped (not run in normal suite)
 - ✅ Zero test failures
@@ -313,27 +337,31 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing (4 benchmarks skippe
 #### Files Created/Modified
 
 **Schema**:
+
 - `packages/db/src/schema-domain/sales/tables.ts` (partners enhanced + 4 new tables)
 
 **Logic**:
+
 - `apps/api/src/modules/sales/logic/partner-engine.ts` (302 lines, 6 functions) [NEW]
 - `apps/api/src/modules/sales/logic/partner-engine.test.ts` (464 lines, 32 tests) [NEW]
 - `apps/api/src/modules/sales/index.ts` (added partner-engine exports)
 
 **Tests**:
+
 - `packages/db/src/__tests__/domain-schema-contracts.test.ts` (added 4 Phase 1 tests)
 
 **Seeds**:
+
 - `packages/db/src/_seeds/index.ts` (enhanced seedPartners function)
 
 #### Production Readiness ✅
 
 - ✅ **Type Safety**: Full TypeScript + Zod validation with createInsertSchema/createSelectSchema
-- ✅ **Constraints**: 
+- ✅ **Constraints**:
   - CHECK: `credit_limit >= 0`, `total_due >= 0`
   - UNIQUE: `(partner_id, bank_id)` on partner_bank_accounts
   - FK: Enforced relationships to reference.countries, reference.states, reference.banks
-- ✅ **Indexes**: 
+- ✅ **Indexes**:
   - `partner_id` on addresses, bank_accounts, tag_assignments
   - `country_id`, `state_id` on partners
   - `parent_id` for hierarchy queries
@@ -347,23 +375,27 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing (4 benchmarks skippe
 #### Business Capabilities Unlocked
 
 **🏢 Enterprise B2B Sales**:
+
 - Corporate hierarchies (parent-subsidiary relationships)
 - Multi-address support (separate billing/shipping, warehouse networks)
 - Credit limits with utilization tracking
 - Banking details for electronic payments
 
 **🌍 Global Operations**:
+
 - Multi-country partner base with localization
 - VAT/Tax ID compliance (per-country regulations)
 - State/province-level address granularity
 
 **💰 Credit Risk Management**:
+
 - Real-time credit limit enforcement
 - Utilization monitoring (80% threshold alerts)
 - Prevention of order placement when over-limit
 - Safe deletion checks (no write-offs)
 
 **🎯 CRM & Segmentation**:
+
 - Tagging system for customer segmentation (VIP, Wholesale, Retail, Enterprise)
 - Pricelist assignment (volume discounts)
 - Payment term defaults (N30, N60, COD)
@@ -372,24 +404,26 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing (4 benchmarks skippe
 ---
 
 ### Phase 2: Tax Engine ✅ **COMPLETE**
-**Schema**: `sales`  
+
+**Schema**: `sales`
 **Dependencies**: Phase 0 (countries)
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
-| # | Table | Purpose | Key Columns |
-|---|-------|---------|-------------|
-| 14 | `tax_groups` | Tax grouping | `name`, `sequence`, `country_id` FK |
-| 15 | `tax_rates` | Tax definitions | `name`, `type_tax_use` enum, `amount_type` enum, `amount`, `tax_group_id` FK, `price_include`, `country_id` FK |
-| 16 | `tax_rate_children` | Composite taxes | `parent_tax_id` FK, `child_tax_id` FK (e.g., GST = CGST + SGST) |
-| 17 | `fiscal_positions` | Tax mapping rules | `name`, `country_id` FK, `auto_apply`, `vat_required` |
-| 18 | `fiscal_position_tax_maps` | Tax substitution | `fiscal_position_id` FK, `tax_src_id` FK, `tax_dest_id` FK (nullable = exempt) |
-| 19 | `fiscal_position_account_maps` | Account mapping | `fiscal_position_id` FK, `account_src_id`, `account_dest_id` |
+| #   | Table                          | Purpose           | Key Columns                                                                                                    |
+| --- | ------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| 14  | `tax_groups`                   | Tax grouping      | `name`, `sequence`, `country_id` FK                                                                            |
+| 15  | `tax_rates`                    | Tax definitions   | `name`, `type_tax_use` enum, `amount_type` enum, `amount`, `tax_group_id` FK, `price_include`, `country_id` FK |
+| 16  | `tax_rate_children`            | Composite taxes   | `parent_tax_id` FK, `child_tax_id` FK (e.g., GST = CGST + SGST)                                                |
+| 17  | `fiscal_positions`             | Tax mapping rules | `name`, `country_id` FK, `auto_apply`, `vat_required`                                                          |
+| 18  | `fiscal_position_tax_maps`     | Tax substitution  | `fiscal_position_id` FK, `tax_src_id` FK, `tax_dest_id` FK (nullable = exempt)                                 |
+| 19  | `fiscal_position_account_maps` | Account mapping   | `fiscal_position_id` FK, `account_src_id`, `account_dest_id`                                                   |
 
 #### Logic Module ✅
 
 **Location**: `apps/api/src/modules/sales/logic/tax-engine.ts`
 
 **Core Functions**:
+
 - ✅ `computeLineTaxes()`
 - ✅ `computeOrderTaxes()`
 - ✅ `detectFiscalPosition()`
@@ -409,6 +443,7 @@ pnpm --filter @afenda/db test:db -- domain-schema-contracts  # ✅ includes Phas
 ```
 
 **Phase 2 Contract Coverage**:
+
 - ✅ `tax_groups`
 - ✅ `tax_rates`
 - ✅ `tax_rate_children`
@@ -427,26 +462,29 @@ pnpm --filter @afenda/db test:db -- domain-schema-contracts  # ✅ includes Phas
 ---
 
 ### Phase 3: Payment Terms ✅ **COMPLETE**
-**Schema**: `sales`  
-**Dependencies**: None (parallel with 1, 2)  
+
+**Schema**: `sales`
+**Dependencies**: None (parallel with 1, 2)
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
 #### Core Tables (2/2) ✅
 
-| # | Table | Status | Key Columns |
-|---|-------|--------|-------------|
-| 20 | `payment_terms` | ✅ Deployed | `name`, `note`, `is_active`, RLS, soft-delete |
-| 21 | `payment_term_lines` | ✅ Deployed | `payment_term_id` FK, `value_type` enum (balance/percent/fixed), `value`, `days`, `day_of_month`, `end_of_month`, `sequence` |
+| #   | Table                | Status      | Key Columns                                                                                                                  |
+| --- | -------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 20  | `payment_terms`      | ✅ Deployed | `name`, `note`, `is_active`, RLS, soft-delete                                                                                |
+| 21  | `payment_term_lines` | ✅ Deployed | `payment_term_id` FK, `value_type` enum (balance/percent/fixed), `value`, `days`, `day_of_month`, `end_of_month`, `sequence` |
 
 #### Logic Module ✅
 
 **Location**: `apps/api/src/modules/sales/logic/payment-terms.ts`
 
 **Core Functions**:
+
 - ✅ `computeDueDates(invoiceDate, term, total)` → `DueDateInstallment[]`
 - ✅ `validatePaymentTerm(term)` → `{ valid, errors }`
 
 **Supported Term Patterns**:
+
 - **Immediate**: 100% balance, 0 days
 - **Net 30**: 100% balance, 30 days
 - **2/10 Net 30**: 98% in 10 days (discount), balance at 30
@@ -475,30 +513,35 @@ pnpm --filter @afenda/api test                              # ✅ 405/405 (zero 
 #### Files Created/Modified
 
 **Logic** (new):
+
 - `apps/api/src/modules/sales/logic/payment-terms.ts` — `computeDueDates`, `validatePaymentTerm`
 - `apps/api/src/modules/sales/logic/payment-terms.test.ts` — 31 tests
 
 **Wired**:
+
 - `apps/api/src/modules/sales/index.ts` — added `payment-terms` export
 
 **Tests extended**:
+
 - `packages/db/src/__tests__/domain-schema-contracts.test.ts` — 3 new Phase 3 contract tests
 
 ---
 
 ### Phase 4: Pricing Engine ✅ **COMPLETE**
-**Schema**: `sales`  
-**Dependencies**: Phase 0 (currencies), Phase 5 (products)  
+
+**Schema**: `sales`
+**Dependencies**: Phase 0 (currencies), Phase 5 (products)
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
-| # | Table | Purpose | Key Columns |
-|---|-------|---------|-------------|
-| 22 | `pricelists` | Price lists | `name`, `currency_id` FK, `discount_policy` enum, `is_active` |
-| 23 | `pricelist_items` | Price rules | `pricelist_id` FK, `applied_on` enum (global/category/template/variant), `product_tmpl_id` FK, `product_id` FK, `categ_id` FK, `min_quantity`, `date_start`, `date_end`, `compute_price` enum (fixed/percentage/formula), `fixed_price`, `percent_price`, `base` enum, `base_pricelist_id` FK, `price_surcharge`, `price_discount`, `price_round`, `price_min_margin`, `price_max_margin` |
+| #   | Table             | Purpose     | Key Columns                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ----------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 22  | `pricelists`      | Price lists | `name`, `currency_id` FK, `discount_policy` enum, `is_active`                                                                                                                                                                                                                                                                                                                             |
+| 23  | `pricelist_items` | Price rules | `pricelist_id` FK, `applied_on` enum (global/category/template/variant), `product_tmpl_id` FK, `product_id` FK, `categ_id` FK, `min_quantity`, `date_start`, `date_end`, `compute_price` enum (fixed/percentage/formula), `fixed_price`, `percent_price`, `base` enum, `base_pricelist_id` FK, `price_surcharge`, `price_discount`, `price_round`, `price_min_margin`, `price_max_margin` |
 
 **Logic Module**: `apps/api/src/modules/sales/logic/pricing-engine.ts` ✅
 
 **Exported Functions**:
+
 ```typescript
 resolvePrice(context: PriceResolutionContext): PriceResult
 filterItemsForProduct(items, product, quantity, date): PricelistItem[]
@@ -507,6 +550,7 @@ getBasePrice(item, product, resolvePricelist, depth): Decimal
 ```
 
 **Resolution Algorithm** (implemented):
+
 1. Walk rules by specificity: product_variant (4) > product_template (3) > product_category (2) > global (1)
 2. Filter by isActive, date range, and minQuantity
 3. Within same tier: sort by sequence ascending (lower = first)
@@ -517,6 +561,7 @@ getBasePrice(item, product, resolvePricelist, depth): Decimal
 8. Floor at zero — price cannot go negative
 
 **Test Coverage**: 44/44 tests passing ✅
+
 - No matching rule (2): empty pricelist, all inactive
 - Global formula (4): pass-through, discount, surcharge, combined
 - Fixed price (2): static price, zero price
@@ -534,11 +579,13 @@ getBasePrice(item, product, resolvePricelist, depth): Decimal
 - getBasePrice (3): list_price, standard_price, max depth guard
 
 **Contract Tests**: 3 Phase 4 tests added to `domain-schema-contracts.test.ts` (total: 31/31 ✅)
+
 - `phase 4: pricelists defines price catalog with currency and discount policy`
 - `phase 4: pricelist_items defines price rules with computed price type and scope`
 - `phase 4: pricelist_items has financial precision for price fields` (asserts PgNumeric)
 
 **Verification** (March 26, 2026):
+
 ```bash
 pnpm --filter @afenda/api test -- pricing-engine  # ✅ 44/44
 pnpm --filter @afenda/db test:db -- domain-schema-contracts  # ✅ 31/31
@@ -546,50 +593,53 @@ pnpm --filter @afenda/api test  # ✅ 449/449 (zero regressions, up from 405)
 ```
 
 ### Phase 5: Product Configuration ✅ **COMPLETE**
-**Layer**: `schema-domain/sales/`  
-**Purpose**: Transform flat products table into enterprise-grade template/variant architecture supporting configurable products with attributes  
-**Dependencies**: Phase 0 (UoMs)  
+
+**Layer**: `schema-domain/sales/`
+**Purpose**: Transform flat products table into enterprise-grade template/variant architecture supporting configurable products with attributes
+**Dependencies**: Phase 0 (UoMs)
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
 #### Core Tables (7/7) ✅
 
-| # | Table | Status | Location | Key Columns |
-|---|-------|--------|----------|-------------|
-| 24 | `product_templates` | ✅ Deployed | `sales.product_templates` | `name`, `type` enum (consumable/storable/service), `can_be_sold`, `can_be_purchased`, `uom_id` FK, `uom_po_id` FK, `list_price`, `standard_price`, `weight`, `volume`, `barcode`, `internal_reference`, `tracking` enum (none/lot/serial), `invoice_policy` enum (ordered/delivered), `sequence`, `sales_description`, `category_id` FK |
-| 25 | `product_attributes` | ✅ Deployed | `sales.product_attributes` | `name`, `display_type` enum (radio/select/color/pills), `create_variant_policy` enum (always/dynamic/no_variant), `sequence` |
-| 26 | `product_attribute_values` | ✅ Deployed | `sales.product_attribute_values` | `attribute_id` FK, `name`, `html_color`, `sequence`, `is_custom` |
-| 27 | `product_template_attribute_lines` | ✅ Deployed | `sales.product_template_attribute_lines` | `template_id` FK, `attribute_id` FK, `sequence` |
-| 28 | `product_template_attribute_values` | ✅ Deployed | `sales.product_template_attribute_values` | `template_attribute_line_id` FK, `attribute_value_id` FK, `price_extra`, `is_active` |
-| 29 | `product_variants` | ✅ Deployed | `sales.product_variants` | `template_id` FK, `combination_indices` (canonical UUID CSV), `is_active`, `barcode`, `internal_reference`, `weight`, `volume` |
-| 30 | `product_packaging` | ✅ Deployed | `sales.product_packaging` | `variant_id` FK, `name`, `qty`, `barcode`, `sequence` |
+| #   | Table                               | Status      | Location                                  | Key Columns                                                                                                                                                                                                                                                                                                                             |
+| --- | ----------------------------------- | ----------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 24  | `product_templates`                 | ✅ Deployed | `sales.product_templates`                 | `name`, `type` enum (consumable/storable/service), `can_be_sold`, `can_be_purchased`, `uom_id` FK, `uom_po_id` FK, `list_price`, `standard_price`, `weight`, `volume`, `barcode`, `internal_reference`, `tracking` enum (none/lot/serial), `invoice_policy` enum (ordered/delivered), `sequence`, `sales_description`, `category_id` FK |
+| 25  | `product_attributes`                | ✅ Deployed | `sales.product_attributes`                | `name`, `display_type` enum (radio/select/color/pills), `create_variant_policy` enum (always/dynamic/no_variant), `sequence`                                                                                                                                                                                                            |
+| 26  | `product_attribute_values`          | ✅ Deployed | `sales.product_attribute_values`          | `attribute_id` FK, `name`, `html_color`, `sequence`, `is_custom`                                                                                                                                                                                                                                                                        |
+| 27  | `product_template_attribute_lines`  | ✅ Deployed | `sales.product_template_attribute_lines`  | `template_id` FK, `attribute_id` FK, `sequence`                                                                                                                                                                                                                                                                                         |
+| 28  | `product_template_attribute_values` | ✅ Deployed | `sales.product_template_attribute_values` | `template_attribute_line_id` FK, `attribute_value_id` FK, `price_extra`, `is_active`                                                                                                                                                                                                                                                    |
+| 29  | `product_variants`                  | ✅ Deployed | `sales.product_variants`                  | `template_id` FK, `combination_indices` (canonical UUID CSV), `is_active`, `barcode`, `internal_reference`, `weight`, `volume`                                                                                                                                                                                                          |
+| 30  | `product_packaging`                 | ✅ Deployed | `sales.product_packaging`                 | `variant_id` FK, `name`, `qty`, `barcode`, `sequence`                                                                                                                                                                                                                                                                                   |
 
 #### Logic Module ✅
 
 **Location**: `apps/api/src/modules/sales/logic/product-configurator.ts` (170 lines)
 
 **Functions**:
-1. ✅ **`generateVariantMatrix(attributeLines)`** → VariantCombination[]  
+
+1. ✅ **`generateVariantMatrix(attributeLines)`** → VariantCombination[]
    - Cartesian product expansion of all attribute values
    - Deterministic ordering via sequence sorting
    - Accumulates price_extra across combinations
    - Returns empty combination for non-configurable products
 
-2. ✅ **`getVariantPrice(templateListPrice, priceExtras)`** → Decimal  
+2. ✅ **`getVariantPrice(templateListPrice, priceExtras)`** → Decimal
    - Calculation: `base + Σ(price_extra)`
    - Decimal.js precision for financial accuracy
    - Accepts Decimal | string | number inputs
 
-3. ✅ **`buildCombinationIndices(attributeValueIds)`** → string  
+3. ✅ **`buildCombinationIndices(attributeValueIds)`** → string
    - Canonical sorted UUID CSV format
    - Matches `product_variants.combination_indices`
    - Lexicographic ordering for uniqueness
 
-4. ✅ **`validateVariantCombination(attributeLines, selectedValueIds)`** → ValidationResult  
+4. ✅ **`validateVariantCombination(attributeLines, selectedValueIds)`** → ValidationResult
    - Rule 1: All values must belong to template attribute lines
    - Rule 2: No duplicate attribute selections
    - Rule 3: All attribute lines must be covered (complete combination)
 
 **Test Coverage**: 34/34 tests passing ✅
+
 - `generateVariantMatrix`: 10 tests (Cartesian product, sequencing, price accumulation)
 - `getVariantPrice`: 7 tests (precision, multiple extras, large amounts)
 - `buildCombinationIndices`: 4 tests (sorting, determinism)
@@ -601,6 +651,7 @@ pnpm --filter @afenda/api test  # ✅ 449/449 (zero regressions, up from 405)
 **Coverage**: Complete demo data with T-Shirt configurable product
 
 **Templates (2)**:
+
 1. **Classic T-Shirt** (configurable)
    - Type: consumable, tracking: none
    - Base price: $29.99, cost: $8.00
@@ -612,12 +663,13 @@ pnpm --filter @afenda/api test  # ✅ 449/449 (zero regressions, up from 405)
    - Base price: $1,299.99, cost: $850.00
    - (Attributes to be expanded in future seeds)
 
-**Attributes (2)**: Size, Color  
-**Attribute Values (5)**: S, M, L, Red, Blue  
-**Variants (6)**: T-Shirt (Red/S), (Red/M), (Red/L), (Blue/S), (Blue/M), (Blue/L)  
+**Attributes (2)**: Size, Color
+**Attribute Values (5)**: S, M, L, Red, Blue
+**Variants (6)**: T-Shirt (Red/S), (Red/M), (Red/L), (Blue/S), (Blue/M), (Blue/L)
 **Packaging (2)**: Individual box, Bulk box (12 units)
 
 **Pricing Logic**:
+
 - Base: $29.99
 - Size L: +$2.00
 - Color Blue: +$1.00
@@ -642,6 +694,7 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing
 ```
 
 **Test Results Summary** (March 26, 2026):
+
 - ✅ All 34 product-configurator tests passing
 - ✅ Cartesian product generation: 10/10 tests
 - ✅ Variant pricing: 7/7 tests
@@ -653,27 +706,31 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing
 #### Files Created/Modified ✅
 
 **Schema**:
+
 - `packages/db/src/schema-domain/sales/tables.ts` (7 new tables: product_templates, product_attributes, product_attribute_values, product_template_attribute_lines, product_template_attribute_values, product_variants, product_packaging)
 
 **Logic**:
+
 - `apps/api/src/modules/sales/logic/product-configurator.ts` (170 lines, 4 functions) ✅
 - `apps/api/src/modules/sales/logic/product-configurator.test.ts` (34 tests) ✅
 - `apps/api/src/modules/sales/index.ts` (added product-configurator exports)
 
 **Tests**:
+
 - `packages/db/src/__tests__/domain-schema-contracts.test.ts` (added 3 Phase 5 tests)
 
 **Seeds**:
+
 - `packages/db/src/_seeds/domains/product/index.ts` (seedProductConfiguration function, 400+ lines)
 
 #### Production Readiness ✅
 
 - ✅ **Type Safety**: Full TypeScript + Zod validation with createInsertSchema/createSelectSchema
-- ✅ **Constraints**: 
+- ✅ **Constraints**:
   - CHECK: `list_price >= 0`, `standard_price >= 0`
   - UNIQUE: Barcode per tenant (when not null)
   - FK: Template → Category, UoM, UoM PO
-- ✅ **Indexes**: 
+- ✅ **Indexes**:
   - `template_id` for variant queries
   - `barcode` for fast lookup (partial index, non-null only)
   - `tenant_id` for RLS enforcement
@@ -687,36 +744,41 @@ pnpm --filter @afenda/api test  # ✅ 347/347 tests passing
 #### Business Capabilities Unlocked ✅
 
 **🎨 Configurable Products**:
+
 - Template/variant architecture (industry-standard Odoo/SAP pattern)
 - Multi-dimensional product matrix (size × color × material × ...)
 - Deterministic variant generation (Cartesian product)
 - Price surcharges per attribute value (e.g., "Large" +$2, "Blue" +$1)
 
 **📦 Advanced Inventory**:
+
 - Product tracking modes: None, Lot/Batch, Serial Number
 - Unit of Measure support (sell by unit, purchase by case)
 - Product packaging definitions (individual, bulk, pallet)
 - Weight and volume tracking for logistics
 
 **💰 Flexible Pricing**:
+
 - Base price at template level
 - Surcharges at variant level
 - Invoice policy: Order-based or Delivery-based
 - Support for storable, consumable, and service product types
 
 **🔍 Variant Management**:
+
 - Canonical combination indices for uniqueness
 - Complete combination validation (no missing attributes)
 - Duplicate detection (no overlapping variants)
 - Barcode and SKU per variant
 
 **Example: T-Shirt Product**:
+
 ```
 Template: "Classic T-Shirt" ($29.99)
   └─ Attributes:
       ├─ Size: S, M, L (L = +$2.00)
       └─ Color: Red, Blue (Blue = +$1.00)
-  
+
   Generated Variants (6):
   1. T-Shirt (Red, S)    = $29.99
   2. T-Shirt (Red, M)    = $29.99
@@ -729,14 +791,16 @@ Template: "Classic T-Shirt" ($29.99)
 ---
 
 ### Phase 6: Sales Order Enhancement ✅ **COMPLETE**
-**Layer**: `schema-domain/sales/`  
-**Purpose**: Complete order-to-cash pipeline with full state machine, financial accuracy, and delivery/invoice tracking  
-**Dependencies**: ALL of Phases 0-5 (reference data, partners, taxes, payment terms, pricing, products)  
+
+**Layer**: `schema-domain/sales/`
+**Purpose**: Complete order-to-cash pipeline with full state machine, financial accuracy, and delivery/invoice tracking
+**Dependencies**: ALL of Phases 0-5 (reference data, partners, taxes, payment terms, pricing, products)
 **Status**: ✅ Core implementation complete (March 26, 2026)
 
 #### Overview
 
 Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an enterprise-grade order management system with:
+
 - Full state machine (draft → quotation → confirmed → delivered → invoiced → done)
 - Credit limit validation at order confirmation
 - Multi-currency support with exchange rate locking
@@ -749,18 +813,19 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 
 #### Core Tables (4/4)
 
-| # | Table | Status | Key Changes | Purpose |
-|---|-------|--------|-------------|---------|
-| 31 | `salesOrders` (ENHANCE) | ✅ Enhanced | Add 20 enterprise fields | Full state machine with financial tracking |
-| 32 | `salesOrderLines` (ENHANCE) | ✅ Enhanced | Add 12 fields | Line-level delivery/invoice tracking |
-| 33 | `sale_order_line_taxes` | ✅ Created | M2M junction table | Many-to-many tax assignment |
-| 34 | `sale_order_option_lines` | ✅ Created | Optional items for quotations | Optional add-ons |
+| #   | Table                       | Status      | Key Changes                   | Purpose                                    |
+| --- | --------------------------- | ----------- | ----------------------------- | ------------------------------------------ |
+| 31  | `salesOrders` (ENHANCE)     | ✅ Enhanced | Add 20 enterprise fields      | Full state machine with financial tracking |
+| 32  | `salesOrderLines` (ENHANCE) | ✅ Enhanced | Add 12 fields                 | Line-level delivery/invoice tracking       |
+| 33  | `sale_order_line_taxes`     | ✅ Created  | M2M junction table            | Many-to-many tax assignment                |
+| 34  | `sale_order_option_lines`   | ✅ Created  | Optional items for quotations | Optional add-ons                           |
 
 #### Enhanced salesOrders Schema
 
 **New Fields (20)**:
 
 **Document Management**:
+
 - `sequence_number`: varchar(32).unique() — Auto-generated (SO-000042/2026)
 - `quotation_date`: timestamp.notNull() — When quotation was created
 - `validity_date`: timestamp.nullable() — Quote expiration date
@@ -771,6 +836,7 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 - `origin`: varchar(255).nullable() — Source document (RFQ-1234)
 
 **Financial Integration**:
+
 - `currency_id`: uuid.notNull().references('reference.currencies.id')
 - `pricelist_id`: uuid.nullable().references('sales.pricelists.id')
 - `payment_term_id`: uuid.nullable().references('sales.payment_terms.id')
@@ -778,19 +844,23 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 - `company_currency_rate`: numeric(12,6).notNull().default(1.000000) — Exchange rate locked at confirmation
 
 **Address Management**:
+
 - `invoice_address_id`: uuid.nullable().references('sales.partner_addresses.id')
 - `delivery_address_id`: uuid.nullable().references('sales.partner_addresses.id')
 - `warehouse_id`: uuid.nullable() — Future inventory integration
 
 **Status Tracking**:
+
 - `invoice_status`: enum('no', 'to_invoice', 'invoiced').notNull().default('no')
 - `delivery_status`: enum('no', 'partial', 'full').notNull().default('no')
 
 **Team Management**:
+
 - `team_id`: uuid.nullable().references('sales.sales_teams.id') — Phase 10 integration
 - `user_id`: uuid.nullable() — Salesperson (FK to users table)
 
 **Computed Amounts** (existing, kept):
+
 - `amount_untaxed`: numeric(14,2).notNull().default(0)
 - `amount_tax`: numeric(14,2).notNull().default(0)
 - `amount_total`: numeric(14,2).notNull().default(0)
@@ -800,24 +870,29 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 **New Fields (12)**:
 
 **Product Integration**:
+
 - `product_template_id`: uuid.nullable().references('sales.product_templates.id') — Template reference
 - `product_uom_id`: uuid.notNull().references('reference.units_of_measure.id') — Selling UoM
 
 **Financial Computation**:
+
 - `price_subtotal`: numeric(14,2).notNull().default(0) — qty × price_unit × (1 - discount/100)
 - `price_tax`: numeric(14,2).notNull().default(0) — Tax amount on subtotal
 - `price_total`: numeric(14,2).notNull().default(0) — Subtotal + tax
 
 **Delivery Tracking**:
+
 - `qty_delivered`: numeric(12,3).notNull().default(0) — Quantity delivered (inventory integration)
 - `customer_lead`: integer.notNull().default(0) — Lead time in days
 
 **Invoice Tracking**:
+
 - `qty_to_invoice`: numeric(12,3).notNull().default(0) — Computed: ordered - invoiced
 - `qty_invoiced`: numeric(12,3).notNull().default(0) — Quantity already invoiced
 - `invoice_status`: enum('no', 'to_invoice', 'invoiced').notNull().default('no')
 
 **Display Formatting**:
+
 - `display_type`: enum('product', 'line_section', 'line_note').notNull().default('product')
 - **line_section**: Bold header row (e.g., "--- Hardware ---")
 - **line_note**: Italic description row (e.g., "Includes free installation")
@@ -828,23 +903,25 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 **Purpose**: Many-to-many relationship between order lines and tax rates
 
 **Schema**:
+
 ```typescript
 {
   id: uuid.primaryKey(),
   tenant_id: uuid.notNull(),
   order_line_id: uuid.notNull().references('sales.sales_order_lines.id', { onDelete: 'cascade' }),
   tax_id: uuid.notNull().references('sales.tax_rates.id'),
-  
+
   // Audit
   created_at: timestamp.defaultNow(),
   created_by: uuid.nullable(),
-  
+
   // Constraints
   unique: ['tenant_id', 'order_line_id', 'tax_id']
 }
 ```
 
 **Indexes**:
+
 - `idx_line_taxes_order_line_id` on `order_line_id`
 - `idx_line_taxes_tax_id` on `tax_id`
 - `idx_line_taxes_tenant` on `tenant_id`
@@ -854,6 +931,7 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 **Purpose**: Optional add-on items displayed in quotation but not included in order total until accepted
 
 **Schema**:
+
 ```typescript
 {
   id: uuid.primaryKey(),
@@ -866,13 +944,13 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
   discount: numeric(5,2).notNull().default(0), // 0.00 to 100.00
   uom_id: uuid.notNull().references('reference.units_of_measure.id'),
   sequence: integer.notNull().default(10),
-  
+
   // Audit
   created_at: timestamp.defaultNow(),
   created_by: uuid.nullable(),
   updated_at: timestamp.defaultNow(),
   updated_by: uuid.nullable(),
-  
+
   // Constraints
   check: 'discount >= 0 AND discount <= 100',
   check: 'quantity > 0',
@@ -881,12 +959,13 @@ Phase 6 transforms the basic `salesOrders` and `salesOrderLines` tables into an 
 ```
 
 **Use Case**:
+
 ```
 Quotation for "Laptop Pro":
   [x] Laptop Pro - $1,299.99 (included)
   [ ] Extended Warranty - $199.99 (optional)
   [ ] Laptop Bag - $49.99 (optional)
-  
+
 Total: $1,299.99
 Optional Total: $249.98
 Grand Total if all accepted: $1,549.97
@@ -913,6 +992,7 @@ Grand Total if all accepted: $1,549.97
 ```
 
 **State Transitions**:
+
 1. **draft**: Initial creation, price discovery, partner selection
 2. **sent**: Quotation sent to customer (locked for reference, still editable)
 3. **sale**: Order confirmed (credit validated, sequence generated, prices locked)
@@ -935,7 +1015,7 @@ Grand Total if all accepted: $1,549.97
  * - Validates: order has lines, partner is set
  * - Updates: status = 'sent', quotation_date = now
  */
-export function sendQuotation(context: SendQuotationContext): Promise<void>
+export function sendQuotation(context: SendQuotationContext): Promise<void>;
 
 /**
  * Confirm order (draft|sent → sale)
@@ -945,7 +1025,7 @@ export function sendQuotation(context: SendQuotationContext): Promise<void>
  * - Updates: status = 'sale', confirmation_date = now
  * - Triggers: inventory reservation (future), commission recording (Phase 10)
  */
-export function confirmOrder(context: ConfirmOrderContext): Promise<ConfirmResult>
+export function confirmOrder(context: ConfirmOrderContext): Promise<ConfirmResult>;
 
 /**
  * Cancel order (any → cancel)
@@ -953,14 +1033,14 @@ export function confirmOrder(context: ConfirmOrderContext): Promise<ConfirmResul
  * - Reverses: inventory reservations, commissions
  * - Updates: status = 'cancel', deleted_at = now (soft delete)
  */
-export function cancelOrder(context: CancelOrderContext): Promise<void>
+export function cancelOrder(context: CancelOrderContext): Promise<void>;
 
 /**
  * Mark order as done (sale → done)
  * - Validates: delivery_status = 'full', invoice_status = 'invoiced'
  * - Updates: status = 'done'
  */
-export function markDone(context: MarkDoneContext): Promise<void>
+export function markDone(context: MarkDoneContext): Promise<void>;
 
 // ============================================================================
 // FINANCIAL COMPUTATION
@@ -969,7 +1049,7 @@ export function markDone(context: MarkDoneContext): Promise<void>
 /**
  * Compute order amounts from lines
  * Returns: { amount_untaxed, amount_tax, amount_total }
- * 
+ *
  * Algorithm:
  * 1. For each non-section/note line:
  *    - line.price_subtotal = qty × price_unit × (1 - discount/100)
@@ -979,7 +1059,7 @@ export function markDone(context: MarkDoneContext): Promise<void>
  * 3. order.amount_tax = sum(lines.price_tax)
  * 4. order.amount_total = amount_untaxed + amount_tax
  */
-export function computeOrderAmounts(context: ComputeOrderAmountsContext): Promise<OrderAmounts>
+export function computeOrderAmounts(context: ComputeOrderAmountsContext): Promise<OrderAmounts>;
 
 /**
  * Recompute line amounts when product changes
@@ -987,21 +1067,21 @@ export function computeOrderAmounts(context: ComputeOrderAmountsContext): Promis
  * - Updates: price_unit, tax_ids, uom_id, name
  * - Triggers: computeOrderAmounts()
  */
-export function onChangeProduct(context: ChangeProductContext): Promise<void>
+export function onChangeProduct(context: ChangeProductContext): Promise<void>;
 
 /**
  * Recompute all line prices when pricelist changes
  * - For each line: resolvePrice(product, pricelist, qty) → new price_unit
  * - Triggers: computeOrderAmounts()
  */
-export function onChangePricelist(context: ChangePricelistContext): Promise<void>
+export function onChangePricelist(context: ChangePricelistContext): Promise<void>;
 
 /**
  * Remap taxes when fiscal position changes
  * - For each line: mapTax(original_tax_ids, fiscal_position) → new tax_ids
  * - Triggers: computeOrderAmounts()
  */
-export function onChangeFiscalPosition(context: ChangeFiscalPositionContext): Promise<void>
+export function onChangeFiscalPosition(context: ChangeFiscalPositionContext): Promise<void>;
 
 // ============================================================================
 // DELIVERY & INVOICE TRACKING
@@ -1013,7 +1093,7 @@ export function onChangeFiscalPosition(context: ChangeFiscalPositionContext): Pr
  * - Returns: 'no' (all 0), 'partial' (some delivered), 'full' (all delivered)
  * - Updates: order.delivery_status
  */
-export function checkDeliveryStatus(context: CheckDeliveryStatusContext): Promise<DeliveryStatus>
+export function checkDeliveryStatus(context: CheckDeliveryStatusContext): Promise<DeliveryStatus>;
 
 /**
  * Update invoice status from line-level quantities
@@ -1021,7 +1101,7 @@ export function checkDeliveryStatus(context: CheckDeliveryStatusContext): Promis
  * - Returns: 'no' (all 0), 'to_invoice' (some invoiced), 'invoiced' (all invoiced)
  * - Updates: order.invoice_status, line.invoice_status, line.qty_to_invoice
  */
-export function checkInvoiceStatus(context: CheckInvoiceStatusContext): Promise<InvoiceStatus>
+export function checkInvoiceStatus(context: CheckInvoiceStatusContext): Promise<InvoiceStatus>;
 
 /**
  * Generate invoice from uninvoiced order lines
@@ -1030,7 +1110,7 @@ export function checkInvoiceStatus(context: CheckInvoiceStatusContext): Promise<
  * - Updates: line.qty_invoiced += invoice_line.quantity
  * - Triggers: checkInvoiceStatus()
  */
-export function createInvoice(context: CreateInvoiceContext): Promise<Invoice>
+export function createInvoice(context: CreateInvoiceContext): Promise<Invoice>;
 
 // ============================================================================
 // VALIDATION
@@ -1043,23 +1123,26 @@ export function createInvoice(context: CreateInvoiceContext): Promise<Invoice>
  * - Checks: fiscal position matches partner country (if auto_apply)
  * - Returns: { valid: boolean, errors: string[] }
  */
-export function validateOrder(context: ValidateOrderContext): Promise<ValidationResult>
+export function validateOrder(context: ValidateOrderContext): Promise<ValidationResult>;
 ```
 
 #### Financial Invariants
 
 **INV-1: Line Subtotal Derivation**
+
 ```typescript
 line.price_subtotal = line.quantity × line.price_unit × (1 - line.discount / 100)
 ```
 
 **INV-2: Line Tax Computation**
+
 ```typescript
-line.price_tax = computeLineTaxes(line.price_subtotal, line.tax_ids, order.fiscal_position_id)
-line.price_total = line.price_subtotal + line.price_tax
+line.price_tax = computeLineTaxes(line.price_subtotal, line.tax_ids, order.fiscal_position_id);
+line.price_total = line.price_subtotal + line.price_tax;
 ```
 
 **INV-3: Order Totals**
+
 ```typescript
 order.amount_untaxed = sum(lines.price_subtotal where display_type = 'product')
 order.amount_tax = sum(lines.price_tax where display_type = 'product')
@@ -1067,22 +1150,25 @@ order.amount_total = order.amount_untaxed + order.amount_tax
 ```
 
 **INV-4: Invoice Status**
+
 ```typescript
-order.invoice_status = deriveFromLines(lines.invoice_status)
+order.invoice_status = deriveFromLines(lines.invoice_status);
 // 'no': all lines.qty_invoiced == 0
 // 'to_invoice': any line.qty_invoiced < line.quantity
 // 'invoiced': all lines.qty_invoiced == line.quantity
 ```
 
 **INV-5: Delivery Status**
+
 ```typescript
-order.delivery_status = deriveFromLines(lines.qty_delivered)
+order.delivery_status = deriveFromLines(lines.qty_delivered);
 // 'no': all lines.qty_delivered == 0
 // 'partial': any line.qty_delivered < line.quantity
 // 'full': all lines.qty_delivered >= line.quantity
 ```
 
 **INV-6: Currency Conversion**
+
 ```typescript
 // At confirmation: lock company_currency_rate
 order.company_currency_rate = getRate(order.currency_id, order.confirmation_date)
@@ -1095,6 +1181,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 **Test Coverage Target**: 50+ tests across 8 categories
 
 **1. State Transitions (8 tests)**:
+
 - ✅ Draft → Sent (valid quotation)
 - ✅ Draft → Sent (fails: no lines)
 - ✅ Sent → Sale (confirms with credit check)
@@ -1105,6 +1192,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 - ✅ Cancel → Done (fails: cannot reactivate cancelled order)
 
 **2. Financial Computation (12 tests)**:
+
 - ✅ Single line: subtotal = qty × price × (1 - discount%)
 - ✅ Single line with discount: 10% off
 - ✅ Multiple lines: sum subtotals correctly
@@ -1119,6 +1207,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 - ✅ Over-100% discount rejected
 
 **3. Credit Limit Validation (5 tests)**:
+
 - ✅ Order within credit limit (approved)
 - ✅ Order exceeds credit limit (rejected)
 - ✅ Unlimited credit (creditLimit = 0, always approved)
@@ -1126,6 +1215,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 - ✅ Cancelled orders don't count toward credit
 
 **4. Pricelist Integration (6 tests)**:
+
 - ✅ onChangeProduct: fetches price from pricelist
 - ✅ onChangePricelist: recalculates all line prices
 - ✅ Fixed price rule
@@ -1134,12 +1224,14 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 - ✅ Date-based pricing (seasonal discount)
 
 **5. Fiscal Position Integration (4 tests)**:
+
 - ✅ onChangeFiscalPosition: remaps line tax_ids
 - ✅ Domestic (10% VAT) → Export (0% exempt)
 - ✅ Compound tax mapping (GST → CGST + SGST)
 - ✅ Auto-apply fiscal position based on partner country
 
 **6. Delivery Tracking (5 tests)**:
+
 - ✅ No delivery: delivery_status = 'no'
 - ✅ Partial delivery: delivery_status = 'partial'
 - ✅ Full delivery: delivery_status = 'full'
@@ -1147,6 +1239,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 - ✅ checkDeliveryStatus recomputes after delivery update
 
 **7. Invoice Tracking (6 tests)**:
+
 - ✅ No invoice: invoice_status = 'no', qty_to_invoice = qty
 - ✅ Partial invoice: invoice_status = 'to_invoice'
 - ✅ Full invoice: invoice_status = 'invoiced', qty_to_invoice = 0
@@ -1155,6 +1248,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 - ✅ Over-invoicing rejected (qty_invoiced > ordered)
 
 **8. Integration Workflows (6 tests)**:
+
 - ✅ Full order-to-cash: create → confirm → deliver → invoice → done
 - ✅ Quotation workflow: create → send → customer accepts → confirm
 - ✅ Multi-currency: EUR order converted to USD at confirmation
@@ -1169,6 +1263,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
 **Seed Data Coverage**:
 
 **Sales Orders (4)**:
+
 1. **Draft Order** (Acme Corp):
    - Status: draft
    - Partner: Acme Corp
@@ -1182,7 +1277,7 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
    - Pricelist: Wholesale (15% off)
    - Tax: 10% VAT
    - Total: $277.20 (before tax)
-   
+
 3. **Quotation with Options** (Charlie Logistics):
    - Status: sent
    - Lines: Laptop Pro
@@ -1196,12 +1291,14 @@ amount_in_company_currency = order.amount_total × order.company_currency_rate
    - Line: T-Shirt (Blue, M) × 1
 
 **Order Lines (8)**:
+
 - Mixed display_types (product, line_section, line_note)
 - Various discounts (0%, 10%, 15%)
 - Different UoMs (Unit, Dozen)
 - Tax assignments (domestic VAT, export exempt)
 
 **Optional Lines (2)**:
+
 - Extended Warranty: $199.99
 - Laptop Bag: $49.99
 
@@ -1232,6 +1329,7 @@ pnpm ci:gate  # Must pass before completion
 #### Files to Create/Modify
 
 **Schema** (modify):
+
 - `packages/db/src/schema-domain/sales/tables.ts`
   - Enhance `salesOrders` (add 20 fields)
   - Enhance `salesOrderLines` (add 12 fields)
@@ -1239,31 +1337,36 @@ pnpm ci:gate  # Must pass before completion
   - Create `saleOrderOptionLines` (optional items)
 
 **Logic** (new):
+
 - `apps/api/src/modules/sales/logic/sales-order-engine.ts` (500+ lines, 12 functions)
 - `apps/api/src/modules/sales/logic/sales-order-engine.test.ts` (50+ tests)
 
 **Logic** (modify):
+
 - `apps/api/src/modules/sales/index.ts` (add sales-order-engine exports)
 
 **Tests** (modify):
+
 - `packages/db/src/__tests__/domain-schema-contracts.test.ts` (add 4 Phase 6 tests)
 
 **Seeds** (new):
+
 - `packages/db/src/_seeds/domains/sales-order/index.ts` (seedSalesOrders function, 300+ lines)
 
 **Seeds** (modify):
+
 - `packages/db/src/_seeds/index.ts` (wire up seedSalesOrders)
 
 #### Production Readiness Checklist
 
 - [ ] **Type Safety**: Full TypeScript + Zod validation with createInsertSchema/createSelectSchema
-- [ ] **Constraints**: 
+- [ ] **Constraints**:
   - [ ] CHECK: `discount >= 0 AND discount <= 100`
   - [ ] CHECK: `quantity > 0`
   - [ ] CHECK: `qty_delivered >= 0`, `qty_invoiced >= 0`
   - [ ] UNIQUE: `sequence_number` per tenant
   - [ ] FK: All Phase 0-5 references enforced
-- [ ] **Indexes**: 
+- [ ] **Indexes**:
   - [ ] `sequence_number` for fast lookup
   - [ ] `partner_id` for partner order history
   - [ ] `status` for workflow queries
@@ -1281,29 +1384,34 @@ pnpm ci:gate  # Must pass before completion
 #### Business Capabilities Unlocked
 
 **📋 Complete Order-to-Cash**:
+
 - Draft → Quotation → Confirmed Order → Delivery → Invoice → Done
 - Multi-stage approval workflows
 - Order cancellation with validation
 
 **💰 Financial Accuracy**:
+
 - Multi-currency support with locked exchange rates
 - Pricelist integration (volume discounts, seasonal pricing)
 - Fiscal position tax mapping (domestic vs. export)
 - Decimal.js precision (no floating-point errors)
 
 **📦 Delivery Management**:
+
 - Line-level delivery tracking (qty_delivered)
 - Partial delivery support
 - Delivery status aggregation (no/partial/full)
 - Customer lead time tracking
 
 **🧾 Invoice Management**:
+
 - Line-level invoice tracking (qty_invoiced, qty_to_invoice)
 - Partial invoicing support
 - Invoice status aggregation (no/to_invoice/invoiced)
 - Invoice generation from order lines
 
 **🎯 Sales Features**:
+
 - Optional items for quotations (upsell opportunities)
 - Section/note lines for formatting (professional quotations)
 - Quotation validity dates (time-limited offers)
@@ -1311,6 +1419,7 @@ pnpm ci:gate  # Must pass before completion
 - E-signature support (signed_by, signed_on)
 
 **🔒 Business Rules**:
+
 - Credit limit enforcement at confirmation
 - Product availability validation
 - Tax compliance (fiscal position auto-apply)
@@ -1394,6 +1503,7 @@ pnpm ci:gate  # Must pass before completion
 #### Implementation Status Update (March 26, 2026) ✅
 
 **Delivered in codebase**:
+
 - ✅ `apps/api/src/modules/sales/logic/sales-order-engine.ts` rebuilt as pure-function engine (no direct DB access)
 - ✅ 12 core Phase 6 logic functions implemented (state machine, pricing/tax/fiscal handlers, delivery/invoice tracking, validation)
 - ✅ `apps/api/src/modules/sales/logic/sales-order-engine.test.ts` implemented with full target coverage
@@ -1401,26 +1511,29 @@ pnpm ci:gate  # Must pass before completion
 - ✅ API package typecheck passes after Phase 6 rebuild
 
 **CI note**:
+
 - ⚠️ Full ci-gate still reports failures in unrelated/pre-existing CI tooling and web contract checks
 - ✅ Phase 6 logic/typecheck scope is green and ready for downstream phases
 
 ---
 
 ### Phase 7: Consignment ✅ **COMPLETE**
-**Schema**: `sales`  
-**Dependencies**: Phase 6  
+
+**Schema**: `sales`
+**Dependencies**: Phase 6
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
 Consignment workflow: goods held at customer location, invoiced only when sold.
 
-| # | Table | Purpose | Key Columns |
-|---|-------|---------|-------------|
-| 35 | `consignment_agreements` | Consignment contracts | `partner_id` FK, `start_date`, `end_date`, `status` enum (draft/active/expired/terminated), `payment_term_id` FK, `review_period_days` |
-| 36 | `consignment_agreement_lines` | Product terms | `agreement_id` FK, `product_id` FK, `max_quantity`, `unit_price`, `min_report_period` enum (weekly/monthly) |
-| 37 | `consignment_stock_reports` | Periodic reports | `agreement_id` FK, `report_date`, `status` enum (draft/confirmed/invoiced) |
-| 38 | `consignment_stock_report_lines` | Stock movements | `report_id` FK, `product_id` FK, `opening_qty`, `received_qty`, `sold_qty`, `returned_qty`, `closing_qty`, `unit_price`, `line_total` |
+| #   | Table                            | Purpose               | Key Columns                                                                                                                            |
+| --- | -------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 35  | `consignment_agreements`         | Consignment contracts | `partner_id` FK, `start_date`, `end_date`, `status` enum (draft/active/expired/terminated), `payment_term_id` FK, `review_period_days` |
+| 36  | `consignment_agreement_lines`    | Product terms         | `agreement_id` FK, `product_id` FK, `max_quantity`, `unit_price`, `min_report_period` enum (weekly/monthly)                            |
+| 37  | `consignment_stock_reports`      | Periodic reports      | `agreement_id` FK, `report_date`, `status` enum (draft/confirmed/invoiced)                                                             |
+| 38  | `consignment_stock_report_lines` | Stock movements       | `report_id` FK, `product_id` FK, `opening_qty`, `received_qty`, `sold_qty`, `returned_qty`, `closing_qty`, `unit_price`, `line_total`  |
 
 **Logic Module**: `logic/consignment-engine.ts`
+
 ```typescript
 generateInvoiceFromReport(reportId): Invoice
 checkAgreementExpiry(): void // Cron job
@@ -1428,12 +1541,14 @@ validateStockReport(reportId): boolean // opening + received - sold - returned =
 ```
 
 **Invariant**:
+
 ```typescript
 // CONSIGN-1: Stock balance
-line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === line.closing_qty
+line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === line.closing_qty;
 ```
 
 **Workflow**:
+
 ```
 1. Create agreement with customer (products, max qty, pricing)
 2. Send stock to customer location (inventory out)
@@ -1511,6 +1626,7 @@ line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === lin
   - Future: Add unique constraint on persisted invoices table when implemented
 
 **Maturity Gains:**
+
 - Invariants are now first-class queryable domain assets
 - Validation outcomes persist for compliance and debugging
 - State transitions are explicit and centrally governed
@@ -1518,6 +1634,7 @@ line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === lin
 - Policy injection seam enables tenant-specific behavior
 
 **Next Steps to Level 5:**
+
 - Add DB CHECK constraints mirroring engine invariants
 - Implement full event sourcing with replay capability
 - Add simulation engine for what-if scenarios
@@ -1534,6 +1651,7 @@ line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === lin
 8. ✅ Prepare Phase 8 transition with explicit dependency handoff from consignment billing outputs.
 
 **Completion Verification (March 26, 2026)**:
+
 - ✅ All 4 consignment tables deployed with RLS, indexes, and constraints
 - ✅ Consignment engine: 17/17 tests passing
 - ✅ Consignment service: 5/5 tests passing
@@ -1550,31 +1668,37 @@ line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === lin
 **What Phase 8 Receives from Phase 7:**
 
 **1. Invoice Data Structures**
+
 - Invoices generated from consignment stock reports serve as `source_order_id` potential reference for returns
 - Invoice line items (product, quantity, unit_price, customer) provide foundation for return validation
 - Note: Consignment invoices are different from standard sales orders - returns may reference either
 
 **2. Partner & Agreement Context**
+
 - Partner data (credit limits, addresses, payment terms) from Phase 1+7 used for return credit note generation
 - Consignment agreement terms may influence return policies (e.g., restocking fees, authorized return periods)
 - Partner banking details used for refund processing
 
 **3. Product & Pricing Data**
+
 - Product master data (from Phase 5) used to validate returnable items
 - Unit prices from consignment invoice lines used to calculate credit amounts
 - Product categories determine restock policies (hardware vs software vs services)
 
 **4. Audit & Compliance Foundation**
+
 - `domain_event_logs` and `domain_invariant_logs` pattern (from Phase 7 Truth Engine) extended to returns workflow
 - Approval logs mechanism (from Phase 0) reused for return approval tracking
 - State machine framework (from Phase 7) applied to return order lifecycle
 
 **5. Financial Integration Patterns**
+
 - Credit note generation logic mirrors invoice generation from Phase 7
 - Accounting integration (AR/AP accounts) established in Phase 1 reused for return credits
 - Tax reversal patterns follow fiscal position logic from Phase 2
 
 **Phase 8 Implementation Prerequisites:**
+
 - ✅ Phase 0: Reference data (sequences for RMA numbers, approval logs)
 - ✅ Phase 1: Partner master data with account mappings
 - ✅ Phase 2: Tax engine for credit note tax calculations
@@ -1583,42 +1707,47 @@ line.opening_qty + line.received_qty - line.sold_qty - line.returned_qty === lin
 - ✅ Phase 7: Invoice generation patterns, state machine framework, audit logging
 
 **Key Differences from Standard Returns:**
+
 - Consignment returns may involve inventory that was never invoiced (damaged before sale)
 - Return authorization requires both partner consent and agreement review
 - Restocking to consignment inventory requires agreement still active/not expired
 
 **Operational Runbook Cross-Reference:**
+
 - Phase 7 runbook: `docs/consignment-operations.md`
 - Phase 8 runbook: TBD - `docs/returns-operations.md` (to be created in Phase 8)
 
 ---
 
 ### Phase 8: Returns & RMA ✅ **COMPLETE**
-**Schema**: `sales`  
-**Dependencies**: Phase 6  
+
+**Schema**: `sales`
+**Dependencies**: Phase 6
 **Status**: ✅ Fully Implemented (March 26, 2026)
 
 Returns Management Approval (RMA) workflow for handling product returns.
 
 #### Core Tables (3/3) ✅
 
-| # | Table | Status | Key Columns |
-|---|-------|--------|-------------|
-| 39 | `return_reason_codes` | ✅ Deployed | `code`, `name`, `requires_inspection`, `restock_policy` enum (restock/scrap/refurbish) |
-| 40 | `return_orders` | ✅ Deployed | `source_order_id` FK, `partner_id` FK, `status` enum (draft/approved/received/inspected/credited/cancelled), `reason_code_id` FK, `approved_by`, `approved_date` |
-| 41 | `return_order_lines` | ✅ Deployed | `return_order_id` FK, `source_line_id` FK, `product_id` FK, `quantity`, `condition` enum (new/used/damaged/defective), `unit_price`, `credit_amount` |
+| #   | Table                 | Status      | Key Columns                                                                                                                                                      |
+| --- | --------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 39  | `return_reason_codes` | ✅ Deployed | `code`, `name`, `requires_inspection`, `restock_policy` enum (restock/scrap/refurbish)                                                                           |
+| 40  | `return_orders`       | ✅ Deployed | `source_order_id` FK, `partner_id` FK, `status` enum (draft/approved/received/inspected/credited/cancelled), `reason_code_id` FK, `approved_by`, `approved_date` |
+| 41  | `return_order_lines`  | ✅ Deployed | `return_order_id` FK, `source_line_id` FK, `product_id` FK, `quantity`, `condition` enum (new/used/damaged/defective), `unit_price`, `credit_amount`             |
 
 #### Logic Module ✅
 
 **Location**: `apps/api/src/modules/sales/logic/returns-engine.ts` (400+ lines)
 
 **Core Functions**:
+
 - ✅ `returnOrderStateMachine` — 6-state workflow with guard-based transitions
 - ✅ `validateReturnQuantities()` — 5 invariants (RTRN-1 through RTRN-5)
 - ✅ `generateCreditNote()` — Reverse invoice generation with tax policy support
 - ✅ `inspectReturn()` — Condition updates during QA inspection
 
 **Test Coverage**: 36/36 tests passing ✅
+
 - validateReturnQuantities: 11 tests (qty bounds, credit validation, numeric precision)
 - generateCreditNote: 8 tests (valid generation, tax policy, state enforcement)
 - inspectReturn: 4 tests (condition updates, state validation)
@@ -1629,6 +1758,7 @@ Returns Management Approval (RMA) workflow for handling product returns.
 **Location**: `apps/api/src/modules/sales/returns-service.ts` (500+ lines)
 
 **Core Functions**:
+
 - ✅ `validateReturnOrder()` — Validation with audit trail
 - ✅ `approveReturn()` — draft → approved with state machine guard
 - ✅ `receiveReturn()` — approved → received transition
@@ -1652,6 +1782,7 @@ Returns Management Approval (RMA) workflow for handling product returns.
 **Location**: `packages/db/src/_seeds/domains/returns/index.ts`
 
 **Coverage**: 6 lifecycle scenarios
+
 1. Draft return (pending approval) — RMA-2024-0001
 2. Approved return (awaiting receipt) — RMA-2024-0002
 3. Received return (awaiting inspection) — RMA-2024-0003
@@ -1678,19 +1809,23 @@ pnpm ci:gate  # ✅ All 9 gates passing
 #### Files Created
 
 **Logic** (new):
+
 - `apps/api/src/modules/sales/logic/returns-engine.ts` (400+ lines)
 - `apps/api/src/modules/sales/logic/returns-engine.test.ts` (36 tests)
 - `apps/api/src/modules/sales/returns-service.ts` (500+ lines)
 - `apps/api/src/modules/sales/returns-service.test.ts` (13 tests)
 
 **API** (modified):
+
 - `apps/api/src/routes/sales.ts` — Added 10 returns endpoints
 
 **Seeds** (modified):
+
 - `packages/db/src/_seeds/seed-ids.ts` — Added 13 Phase 8 IDs
 - `packages/db/src/_seeds/domains/returns/index.ts` — Comprehensive 6-scenario coverage
 
 **Tests** (extended):
+
 - `packages/db/src/__tests__/domain-schema-contracts.test.ts` — Added 3 Phase 8 contract tests
 
 #### Production Readiness ✅
@@ -1704,13 +1839,15 @@ pnpm ci:gate  # ✅ All 9 gates passing
 - ✅ **CI Gates**: All 9 gates passing
 
 **State Machine**:
+
 ```
 draft → approved → received → inspected → credited
-  ↓                                           
+  ↓
 cancelled
 ```
 
 **Business Capabilities Unlocked**:
+
 - RMA workflow with approval gates
 - QA inspection with condition tracking
 - Credit note generation (reverse invoices)
@@ -1719,21 +1856,24 @@ cancelled
 
 ---
 
-### Phase 9: Subscriptions & Recurring Revenue
-**Schema**: `sales`  
+### Phase 9: Subscriptions & Recurring Revenue ✅ **COMPLETE**
+
+**Schema**: `sales`
 **Dependencies**: Phase 6
+**Status**: ✅ Fully Implemented and Validated (March 26, 2026)
 
 Subscription management for recurring billing.
 
-| # | Table | Purpose | Key Columns |
-|---|-------|---------|-------------|
-| 42 | `subscription_templates` | Subscription plans | `name`, `billing_period` enum (daily/weekly/monthly/quarterly/yearly), `billing_day`, `auto_renew`, `renewal_period`, `payment_term_id` FK, `pricelist_id` FK |
-| 43 | `subscriptions` | Customer subscriptions | `partner_id` FK, `template_id` FK, `status` enum (draft/active/paused/past_due/cancelled/expired), `date_start`, `date_end`, `next_invoice_date`, `recurring_total`, `mrr`, `arr`, `close_reason_id` FK |
-| 44 | `subscription_lines` | Line items | `subscription_id` FK, `product_id` FK, `quantity`, `price_unit`, `discount`, `subtotal`, `uom_id` FK |
-| 45 | `subscription_logs` | MRR/ARR tracking | `subscription_id` FK, `event_type` enum (created/renewed/upsell/downsell/paused/cancelled/churned/payment_failed), `old_mrr`, `new_mrr`, `change_reason` |
-| 46 | `subscription_close_reasons` | Cancellation reasons | `name`, `is_churn` (true = churn, false = normal cancellation) |
+| #   | Table                        | Purpose                | Key Columns                                                                                                                                                                                             |
+| --- | ---------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 42  | `subscription_templates`     | Subscription plans     | `name`, `billing_period` enum (daily/weekly/monthly/quarterly/yearly), `billing_day`, `auto_renew`, `renewal_period`, `payment_term_id` FK, `pricelist_id` FK                                           |
+| 43  | `subscriptions`              | Customer subscriptions | `partner_id` FK, `template_id` FK, `status` enum (draft/active/paused/past_due/cancelled/expired), `date_start`, `date_end`, `next_invoice_date`, `recurring_total`, `mrr`, `arr`, `close_reason_id` FK |
+| 44  | `subscription_lines`         | Line items             | `subscription_id` FK, `product_id` FK, `quantity`, `price_unit`, `discount`, `subtotal`, `uom_id` FK                                                                                                    |
+| 45  | `subscription_logs`          | MRR/ARR tracking       | `subscription_id` FK, `event_type` enum (created/renewed/upsell/downsell/paused/cancelled/churned/payment_failed), `old_mrr`, `new_mrr`, `change_reason`                                                |
+| 46  | `subscription_close_reasons` | Cancellation reasons   | `name`, `is_churn` (true = churn, false = normal cancellation)                                                                                                                                          |
 
 **Logic Module**: `logic/subscription-engine.ts`
+
 ```typescript
 // MRR/ARR computation
 computeMRR(subscription): Decimal // Normalize all lines to monthly
@@ -1754,6 +1894,7 @@ computeChurnMetrics(tenantId, period): { churnRate, retentionRate, mrr, arr }
 ```
 
 **Workflow**:
+
 ```
 1. Create subscription from template (monthly/yearly/etc.)
 2. Cron job runs daily:
@@ -1766,6 +1907,7 @@ computeChurnMetrics(tenantId, period): { churnRate, retentionRate, mrr, arr }
 ```
 
 **MRR/ARR Example**:
+
 ```
 Subscription: 3 products
 - Product A: $30/month × 1qty = $30
@@ -1776,25 +1918,60 @@ MRR = $30 + $10 + $240 = $280
 ARR = $280 × 12 = $3,360
 ```
 
+#### Implementation Status Update (March 26, 2026) ✅
+
+**Delivered in codebase**:
+
+- ✅ Schema coverage for all 5 Phase 9 tables (42-46) is present and contract-tested
+- ✅ Engine layer implemented in `apps/api/src/modules/sales/logic/subscription-engine.ts`
+- ✅ Service orchestration implemented in `apps/api/src/modules/sales/subscription-service.ts`
+- ✅ API integration implemented in `apps/api/src/routes/sales.ts` with validate/activate/pause/resume/cancel/renew endpoints
+- ✅ Sales module metadata/actions wired in `apps/api/src/modules/sales/index.ts`
+- ✅ Seed + invariant validation wired in `packages/db/src/_seeds/domains/subscriptions/index.ts` and `packages/db/src/_seeds/index.ts`
+
+**Verification**:
+
+```bash
+pnpm --filter @afenda/api test -- src/modules/sales/logic/subscription-engine.test.ts src/modules/sales/subscription-service.test.ts  # ✅ 25/25 tests
+pnpm --filter @afenda/db test:db -- domain-schema-contracts  # ✅ includes subscription table contracts
+pnpm ci:gate  # ✅ 9/9 checks passing
+```
+
+**Quality outcome**:
+
+- ✅ No open functional gaps identified for Phase 9 scope in schema, logic, routes, seeds, or contracts
+- ✅ Phase 9 can be treated as closed for implementation tracking
+
+#### Next Dev Handoff (Phase 11 Focus)
+
+1. Start Phase 11 document infrastructure tables with the same schema-first + contract-test approach used in earlier phases.
+2. Reuse existing domain-event and invariant logging patterns to back status history and approval workflows.
+3. Introduce route/service surfaces incrementally (status history, approvals, attachments) with deterministic validation boundaries.
+4. Keep schema contract assertions as the source of truth before service orchestration is expanded.
+5. Run completion gate in order: targeted tests → API/DB typecheck → `pnpm ci:gate`.
+
 ---
 
-### Phase 10: Commissions & Sales Teams
-**Schema**: `sales`  
+### Phase 10: Commissions & Sales Teams ✅ **COMPLETE**
+
+**Schema**: `sales`
 **Dependencies**: Phase 6
+**Status**: ✅ Fully Implemented and Validated (March 26, 2026)
 
 Sales team organization and commission tracking.
 
-| # | Table | Purpose | Key Columns |
-|---|-------|---------|-------------|
-| 47 | `sales_teams` | Team structure | `name`, `team_leader_id` FK, `default_pricelist_id` FK, `active`, `color`, `email_alias` |
-| 48 | `sales_team_members` | Team membership | `team_id` FK, `user_id` FK, `role` enum (leader/member), `active_from`, `active_to` |
-| 49 | `territories` | Sales territories | `name`, `code`, `parent_id` (hierarchical), `default_salesperson_id` FK, `team_id` FK |
-| 50 | `territory_rules` | Territory assignment | `territory_id` FK, `country_id` FK, `state_id` FK, `zip_from`, `zip_to`, `priority` |
-| 51 | `commission_plans` | Commission structures | `name`, `type` enum (percentage/tiered/flat), `base` enum (revenue/profit/margin), `is_active` |
-| 52 | `commission_plan_tiers` | Tiered rates | `plan_id` FK, `min_amount`, `max_amount`, `rate`, `sequence` |
-| 53 | `commission_entries` | Commission records | `order_id` FK, `salesperson_id` FK, `plan_id` FK, `base_amount`, `commission_amount`, `status` enum (draft/approved/paid), `paid_date`, `period_start`, `period_end` |
+| #   | Table                   | Purpose               | Key Columns                                                                                                                                                          |
+| --- | ----------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 47  | `sales_teams`           | Team structure        | `name`, `team_leader_id` FK, `default_pricelist_id` FK, `active`, `color`, `email_alias`                                                                             |
+| 48  | `sales_team_members`    | Team membership       | `team_id` FK, `user_id` FK, `role` enum (leader/member), `active_from`, `active_to`                                                                                  |
+| 49  | `territories`           | Sales territories     | `name`, `code`, `parent_id` (hierarchical), `default_salesperson_id` FK, `team_id` FK                                                                                |
+| 50  | `territory_rules`       | Territory assignment  | `territory_id` FK, `country_id` FK, `state_id` FK, `zip_from`, `zip_to`, `priority`                                                                                  |
+| 51  | `commission_plans`      | Commission structures | `name`, `type` enum (percentage/tiered/flat), `base` enum (revenue/profit/margin), `is_active`                                                                       |
+| 52  | `commission_plan_tiers` | Tiered rates          | `plan_id` FK, `min_amount`, `max_amount`, `rate`, `sequence`                                                                                                         |
+| 53  | `commission_entries`    | Commission records    | `order_id` FK, `salesperson_id` FK, `plan_id` FK, `base_amount`, `commission_amount`, `status` enum (draft/approved/paid), `paid_date`, `period_start`, `period_end` |
 
 **Logic Module**: `logic/commission-engine.ts`
+
 ```typescript
 // Territory
 assignTerritory(partner): Territory // Match partner address to territory rules
@@ -1806,14 +1983,16 @@ getCommissionReport(salesperson, dateRange): CommissionEntry[]
 ```
 
 **Commission Types**:
+
 - **Percentage**: 5% of order revenue
-- **Tiered**: 
+- **Tiered**:
   - $0-$10k: 3%
   - $10k-$50k: 5%
   - $50k+: 7%
 - **Flat**: $100 per order
 
 **Workflow**:
+
 ```
 1. Sales order confirmed → trigger commission computation
 2. Compute commission based on plan (revenue/profit/margin as base)
@@ -1822,45 +2001,118 @@ getCommissionReport(salesperson, dateRange): CommissionEntry[]
 5. Approved commissions → paid (trigger payroll/expense posting)
 ```
 
+#### Implementation Status Update (March 26, 2026) ✅
+
+**Implemented and verified**:
+
+- ✅ Schema contract coverage for all Phase 10 tables (47-53)
+- ✅ Seed + invariant validation wired for teams, territories, plans, tiers, and entries
+- ✅ Commission engine implemented (`calculateCommission`, transitions, summary helpers)
+- ✅ Commission service implemented for order-based commission generation/regeneration
+- ✅ Commission generation API route and sales module action/menus wired
+- ✅ Commission lifecycle API/service surface wired: approve, pay, report
+- ✅ Territory resolution layer integrated into commission generation with deterministic priority matching and conflict protection
+- ✅ Tests passing:
+  - API commission tests: 35/35 across engine, service, and route scopes
+  - Domain schema contracts: 38/38 (includes Phase 10 assertions)
+  - API and DB typecheck: passing
+  - Full ci-gate: 9/9 checks passing
+
+**Quality outcome**:
+
+- ✅ No open functional gaps identified for Phase 10 scope in schema, territory assignment, lifecycle service APIs, routes/actions, tests, seeds, and invariants
+- ✅ Phase 10 is closed for implementation tracking
+
+#### Revalidation Snapshot (March 26, 2026) ✅
+
+**Fresh verification run completed**:
+
+- ✅ Phase 10 focused API tests passed:
+  - `commission-engine.test.ts`: 12/12
+  - `commission-service.test.ts`: 8/8
+  - `sales.route.test.ts`: 23/23
+  - Aggregate focused result: 43/43 tests passing
+- ✅ DB contracts passed: `domain-schema-contracts.test.ts` 39/39
+- ✅ Type safety passed:
+  - `pnpm --filter @afenda/api typecheck`
+  - `pnpm --filter @afenda/db typecheck`
+- ✅ CI gate passed: `pnpm ci:gate:fast` (9/9 gates green)
+
+**Command log used for revalidation**:
+
+```bash
+pnpm --filter @afenda/api test -- src/modules/sales/logic/commission-engine.test.ts src/modules/sales/commission-service.test.ts src/routes/sales.route.test.ts
+pnpm --filter @afenda/api typecheck
+pnpm --filter @afenda/db typecheck
+pnpm --filter @afenda/db test:db -- domain-schema-contracts
+pnpm ci:gate:fast
+```
+
 ---
 
 ### Phase 11: Document Infrastructure (Cross-Cutting)
-**Schema**: `sales` (polymorphic, applies to all document types)  
-**Dependencies**: Phase 6 (needs document types to exist)  
+
+**Schema**: `sales` (polymorphic, applies to all document types)
+**Dependencies**: Phase 6 (needs document types to exist)
 **Priority**: Critical for enterprise compliance and auditability
 
+#### Implementation Status Update (March 26, 2026) ✅
+
+**Delivered in codebase**:
+
+- ✅ Added all 6 Phase 11 sales tables to Drizzle domain schema:
+  - `document_status_history`
+  - `document_approvals`
+  - `document_attachments` (sales schema)
+  - `line_item_discounts`
+  - `accounting_postings`
+  - `rounding_policies`
+- ✅ Added branded Phase 11 ID schemas in `schema-domain/sales/_zodShared.ts`
+- ✅ Added select + insert zod schemas for all Phase 11 tables
+- ✅ Extended domain schema contracts with Phase 11 coverage
+
+**Verification**:
+
+```bash
+pnpm --filter @afenda/db typecheck  # ✅
+pnpm --filter @afenda/db test:db -- domain-schema-contracts  # ✅ 39/39 tests
+```
+
 #### Table 54: `document_status_history`
+
 ```typescript
 {
   id: uuid().primaryKey().defaultRandom(),
   tenantId: integer().notNull().references(() => tenants.id),
-  
+
   // Polymorphic document reference
   documentType: text().notNull(), // 'sales_order', 'return_order', 'consignment_agreement', etc.
   documentId: uuid().notNull(),
-  
+
   // Status tracking
   fromStatus: text(), // null for initial status
   toStatus: text().notNull(),
   transitionedAt: timestamp().notNull().defaultNow(),
   transitionedBy: uuid().notNull().references(() => users.id),
-  
+
   // Context
   reason: text(), // Required for cancellations, rejections
   notes: text(),
-  
+
   ...timestampColumns,
   ...auditColumns,
 }
 ```
 
 **Composite Index**:
+
 ```sql
-CREATE INDEX idx_doc_status_history_lookup 
+CREATE INDEX idx_doc_status_history_lookup
   ON sales.document_status_history (tenant_id, document_type, document_id, transitioned_at DESC);
 ```
 
 **Use Cases**:
+
 - Audit: When did order status change from draft → sale? Who did it?
 - Compliance: Cancellation reason tracking
 - Analytics: Average time in each status (sales cycle metrics)
@@ -1869,49 +2121,52 @@ CREATE INDEX idx_doc_status_history_lookup
 ---
 
 #### Table 55: `document_approvals`
+
 ```typescript
 {
   id: uuid().primaryKey().defaultRandom(),
   tenantId: integer().notNull().references(() => tenants.id),
-  
+
   // Polymorphic document reference
   documentType: text().notNull(),
   documentId: uuid().notNull(),
-  
+
   // Approval workflow
   approvalLevel: integer().notNull(), // 1, 2, 3... for multi-tier approval
   approverUserId: uuid().notNull().references(() => users.id),
   approverRole: text(), // 'sales_manager', 'finance_director', 'ceo'
-  
+
   // Status
   status: text().notNull(), // 'pending', 'approved', 'rejected'
   approvedAt: timestamp(),
   rejectedAt: timestamp(),
-  
+
   // Decision context
   comments: text(),
-  
+
   // Financial snapshot (for audit - what was the value when approved?)
   documentAmount: numeric(14, 2),
-  
+
   ...timestampColumns,
   ...auditColumns,
 }
 ```
 
 **Indexes**:
+
 ```sql
 -- Pending approvals dashboard
-CREATE INDEX idx_pending_approvals 
+CREATE INDEX idx_pending_approvals
   ON sales.document_approvals (tenant_id, approver_user_id, status)
   WHERE status = 'pending';
 
 -- Document approval history
-CREATE INDEX idx_doc_approval_history 
+CREATE INDEX idx_doc_approval_history
   ON sales.document_approvals (tenant_id, document_type, document_id, approval_level);
 ```
 
 **Use Cases**:
+
 - Workflow: Orders > $50k require VP approval
 - Audit: Who approved this 30% discount? When?
 - Compliance: Financial authority limits (manager: $10k, director: $100k, CEO: unlimited)
@@ -1920,32 +2175,33 @@ CREATE INDEX idx_doc_approval_history
 ---
 
 #### Table 56: `document_attachments`
+
 ```typescript
 {
   id: uuid().primaryKey().defaultRandom(),
   tenantId: integer().notNull().references(() => tenants.id),
-  
+
   // Polymorphic document reference
   documentType: text().notNull(),
   documentId: uuid().notNull(),
-  
+
   // File metadata
   fileName: text().notNull(),
   fileSize: integer().notNull(), // bytes
   mimeType: text().notNull(),
-  
+
   // Storage
   storageProvider: text().notNull(), // 's3', 'azure_blob', 'cloudflare_r2', 'local'
   storagePath: text().notNull(), // Object key or file path
   storageUrl: text(), // Signed URL or CDN URL
-  
+
   // Classification
   attachmentType: text(), // 'contract', 'specification', 'photo', 'invoice_pdf', 'other'
   description: text(),
-  
+
   // Security
   isPublic: boolean().notNull().default(false),
-  
+
   ...timestampColumns,
   ...auditColumns,
   ...softDeleteColumns,
@@ -1953,14 +2209,16 @@ CREATE INDEX idx_doc_approval_history
 ```
 
 **Indexes**:
+
 ```sql
 -- Document attachments listing
-CREATE INDEX idx_doc_attachments 
+CREATE INDEX idx_doc_attachments
   ON sales.document_attachments (tenant_id, document_type, document_id, created_at DESC)
   WHERE deleted_at IS NULL;
 ```
 
 **Use Cases**:
+
 - Sales Order: Attach signed contract PDF
 - Product: Attach specification sheet, photos
 - Return Order: Attach photos of damaged goods
@@ -1969,55 +2227,59 @@ CREATE INDEX idx_doc_attachments
 ---
 
 #### Table 57: `line_item_discounts`
+
 ```typescript
 {
   id: uuid().primaryKey().defaultRandom(),
   tenantId: integer().notNull().references(() => tenants.id),
-  
+
   // Polymorphic line reference
   documentType: text().notNull(), // 'sales_order_line', 'subscription_line', etc.
   lineId: uuid().notNull(),
-  
+
   // Discount details
   discountType: text().notNull(), // 'volume', 'promotional', 'manual', 'pricelist', 'loyalty'
   discountSource: text(), // 'pricelist_item:uuid', 'promotion:uuid', 'manual'
   discountPercent: numeric(5, 2), // Nullable if fixed amount
   discountAmount: numeric(14, 2), // Nullable if percentage
-  
+
   // Authorization (required for manual discounts)
   authorizedBy: uuid().references(() => users.id),
   authorizedAt: timestamp(),
   maxDiscountAllowed: numeric(5, 2), // Policy limit at time of authorization
-  
+
   // Reasoning
   reason: text(),
-  
+
   // Sequence (multiple discounts can stack)
   sequence: integer().notNull().default(1),
-  
+
   ...timestampColumns,
   ...auditColumns,
 }
 ```
 
 **Check Constraints**:
+
 ```sql
 CHECK (discount_percent IS NOT NULL OR discount_amount IS NOT NULL) -- At least one required
 CHECK (discount_type != 'manual' OR authorized_by IS NOT NULL) -- Manual requires approval
 ```
 
 **Indexes**:
+
 ```sql
 -- Line discount audit
-CREATE INDEX idx_line_discounts_audit 
+CREATE INDEX idx_line_discounts_audit
   ON sales.line_item_discounts (tenant_id, discount_type, authorized_by, authorized_at DESC);
 
 -- Line discount lookup
-CREATE INDEX idx_line_discounts_line 
+CREATE INDEX idx_line_discounts_line
   ON sales.line_item_discounts (tenant_id, document_type, line_id, sequence);
 ```
 
 **Use Cases**:
+
 - Audit: Why 25% discount? Who authorized?
 - Analytics: Discount impact on margin by type
 - Compliance: Discount authority enforcement
@@ -2026,42 +2288,44 @@ CREATE INDEX idx_line_discounts_line
 ---
 
 #### Table 58: `accounting_postings`
+
 ```typescript
 {
   id: uuid().primaryKey().defaultRandom(),
   tenantId: integer().notNull().references(() => tenants.id),
-  
+
   // Source document (bridge to accounting domain)
   sourceDocumentType: text().notNull(), // 'sales_order', 'invoice', 'payment', 'return_order'
   sourceDocumentId: uuid().notNull(),
-  
+
   // Accounting impact (Phase 2 will populate journal_entry_id)
   journalEntryId: uuid(), // FK to accounting.journal_entries (optional until Phase 2)
   postingDate: timestamp().notNull(),
-  
+
   // Financial summary (denormalized for fast reporting)
   debitAccountCode: text(),
   creditAccountCode: text(),
   amount: numeric(14, 2).notNull(),
   currencyCode: text().notNull(),
-  
+
   // Status
   postingStatus: text().notNull(), // 'draft', 'posted', 'reversed'
   postedBy: uuid().references(() => users.id),
   postedAt: timestamp(),
-  
+
   // Reversal tracking
   reversedAt: timestamp(),
   reversedBy: uuid().references(() => users.id),
   reversalReason: text(),
   reversalEntryId: uuid().references(() => accountingPostings.id), // Link to reversal entry
-  
+
   ...timestampColumns,
   ...auditColumns,
 }
 ```
 
 **Check Constraints**:
+
 ```sql
 CHECK (posting_status != 'posted' OR (posted_by IS NOT NULL AND posted_at IS NOT NULL))
 CHECK (posting_status != 'reversed' OR (reversed_by IS NOT NULL AND reversed_at IS NOT NULL))
@@ -2069,17 +2333,19 @@ CHECK (amount >= 0)
 ```
 
 **Indexes**:
+
 ```sql
 -- Financial report queries
-CREATE INDEX idx_accounting_postings_date 
+CREATE INDEX idx_accounting_postings_date
   ON sales.accounting_postings (tenant_id, posting_date DESC, posting_status);
 
 -- Document posting status
-CREATE INDEX idx_accounting_postings_source 
+CREATE INDEX idx_accounting_postings_source
   ON sales.accounting_postings (tenant_id, source_document_type, source_document_id);
 ```
 
 **Use Cases**:
+
 - Bridge to accounting: Sales order confirmed → accounting_postings record created → Phase 2 generates journal entry
 - Audit: Which sales orders haven't been posted to accounting yet?
 - Reconciliation: Match sales revenue to journal entries
@@ -2088,47 +2354,51 @@ CREATE INDEX idx_accounting_postings_source
 ---
 
 #### Table 59: `rounding_policies`
+
 ```typescript
 {
   id: uuid().primaryKey().defaultRandom(),
   tenantId: integer().notNull().references(() => tenants.id),
-  
+
   // Policy scope
   policyName: text().notNull(), // 'line_subtotal', 'line_tax', 'order_total', 'payment'
   policyKey: text().notNull(), // Unique identifier for code lookup
-  
+
   // Rounding rules
   roundingMethod: text().notNull(), // 'round' (half-up), 'ceil', 'floor', 'truncate'
   roundingPrecision: integer().notNull(), // 2 for cents, 0 for dollars, 3 for 1/10 cent
   roundingUnit: numeric(), // 0.05 for nickel rounding, 0.01 for penny, null for precision-based
-  
+
   // Applicability
   appliesTo: text().notNull(), // 'sales', 'purchasing', 'inventory', 'payroll'
   currencyCode: text(), // null = all currencies, 'CAD' = Canada only (nickel rounding)
-  
+
   // Status
   isActive: boolean().notNull().default(true),
   effectiveFrom: timestamp().notNull().defaultNow(),
   effectiveTo: timestamp(),
-  
+
   ...timestampColumns,
   ...auditColumns,
 }
 ```
 
 **Unique Constraint**:
+
 ```sql
-UNIQUE (tenant_id, policy_key, currency_code, effective_from) 
+UNIQUE (tenant_id, policy_key, currency_code, effective_from)
   WHERE deleted_at IS NULL AND is_active = true
 ```
 
 **Use Cases**:
+
 - Financial precision: All line subtotals use same rounding method
 - Multi-currency: Canadian cash transactions round to $0.05 (no pennies since 2013)
 - Tax calculation: Some jurisdictions require specific tax rounding rules
 - Audit: Which rounding policy was in effect when this order was created?
 
 **Example Policies**:
+
 ```typescript
 // US Sales - standard penny rounding
 { policyKey: 'us_sales_line', roundingMethod: 'round', roundingPrecision: 2, currencyCode: 'USD' }
@@ -2143,6 +2413,7 @@ UNIQUE (tenant_id, policy_key, currency_code, effective_from)
 ---
 
 **Logic Module**: `logic/document-infrastructure.ts`
+
 ```typescript
 // Status history
 recordStatusChange(docType, docId, fromStatus, toStatus, userId, reason?): void
@@ -2178,17 +2449,18 @@ applyRounding(amount, policy): Decimal
 
 ## Summary Counts
 
-| Metric | Current | Target | Delta |
-|--------|---------|--------|-------|
-| **Sales Domain Tables** | 5 | 53 | +48 |
-| **Platform Reference Tables** | 0 | 9 | +9 |
-| **Total Tables** | 5 | 62 | +57 |
-| **Enums** | 2 | 32 | +30 |
-| **Business Logic Modules** | 0 | 10 | +10 |
-| **Drizzle Schema Files** | 2 | 14 | +12 |
-| **Supporting Infrastructure** | 0 | 6 | +6 |
+| Metric                        | Current | Target | Delta |
+| ----------------------------- | ------- | ------ | ----- |
+| **Sales Domain Tables**       | 5       | 53     | +48   |
+| **Platform Reference Tables** | 0       | 9      | +9    |
+| **Total Tables**              | 5       | 62     | +57   |
+| **Enums**                     | 2       | 32     | +30   |
+| **Business Logic Modules**    | 0       | 10     | +10   |
+| **Drizzle Schema Files**      | 2       | 14     | +12   |
+| **Supporting Infrastructure** | 0       | 6      | +6    |
 
 **Infrastructure Tables** (Phase 11):
+
 - `document_status_history` - Status change audit trail
 - `document_approvals` - Multi-tier approval workflow
 - `document_attachments` - Polymorphic file attachments
@@ -2230,6 +2502,7 @@ Phase 0: Reference Data (platform)
 ## Indexing Strategy
 
 ### Indexing Principles
+
 1. **All foreign keys indexed** (automatic query optimization)
 2. **Tenant isolation indexes** (tenant_id first column in composite indexes)
 3. **Soft delete aware** (WHERE deleted_at IS NULL in partial indexes)
@@ -2237,149 +2510,156 @@ Phase 0: Reference Data (platform)
 5. **Covering indexes for hot paths** (include commonly queried columns)
 
 ### Phase 0: Reference Data
+
 ```sql
 -- currency_rates: Fast rate lookup by date
-CREATE INDEX idx_currency_rates_lookup 
+CREATE INDEX idx_currency_rates_lookup
   ON platform.currency_rates (currency_id, effective_date DESC);
 
 -- sequences: Atomic increment (unique constraint serves as index)
-CREATE UNIQUE INDEX idx_sequences_tenant_code 
+CREATE UNIQUE INDEX idx_sequences_tenant_code
   ON platform.sequences (tenant_id, code);
 
 -- units_of_measure: Conversion lookup
-CREATE INDEX idx_uom_conversion 
+CREATE INDEX idx_uom_conversion
   ON platform.units_of_measure (category_id, uom_type, factor);
 ```
 
 ### Phase 1: Partners
+
 ```sql
 -- Multi-column search (name, email, vat)
-CREATE INDEX idx_partners_search 
-  ON sales.partners (tenant_id, name) 
+CREATE INDEX idx_partners_search
+  ON sales.partners (tenant_id, name)
   WHERE deleted_at IS NULL;
 
-CREATE INDEX idx_partners_email 
-  ON sales.partners (tenant_id, email) 
+CREATE INDEX idx_partners_email
+  ON sales.partners (tenant_id, email)
   WHERE deleted_at IS NULL AND email IS NOT NULL;
 
-CREATE INDEX idx_partners_vat 
-  ON sales.partners (tenant_id, vat) 
+CREATE INDEX idx_partners_vat
+  ON sales.partners (tenant_id, vat)
   WHERE deleted_at IS NULL AND vat IS NOT NULL;
 
 -- Partner addresses: Default address fast lookup
-CREATE INDEX idx_partner_addresses_default 
+CREATE INDEX idx_partner_addresses_default
   ON sales.partner_addresses (partner_id, type, is_default)
   WHERE deleted_at IS NULL;
 
 -- Partner tags: Tag filtering
-CREATE INDEX idx_partner_tag_assignments 
+CREATE INDEX idx_partner_tag_assignments
   ON sales.partner_tag_assignments (tenant_id, tag_id, partner_id);
 ```
 
 ### Phase 2: Tax Engine
+
 ```sql
 -- Tax rates by country (common filter)
-CREATE INDEX idx_tax_rates_country 
+CREATE INDEX idx_tax_rates_country
   ON sales.tax_rates (tenant_id, country_id, is_active)
   WHERE deleted_at IS NULL;
 
 -- Fiscal position auto-detection
-CREATE INDEX idx_fiscal_positions_country 
+CREATE INDEX idx_fiscal_positions_country
   ON sales.fiscal_positions (tenant_id, country_id, auto_apply)
   WHERE deleted_at IS NULL;
 
 -- Tax mapping lookup
-CREATE INDEX idx_fiscal_position_tax_maps 
+CREATE INDEX idx_fiscal_position_tax_maps
   ON sales.fiscal_position_tax_maps (fiscal_position_id, tax_src_id);
 ```
 
 ### Phase 4: Pricing Engine
+
 ```sql
 -- Pricelist item resolution (product + date + quantity)
-CREATE INDEX idx_pricelist_items_product 
+CREATE INDEX idx_pricelist_items_product
   ON sales.pricelist_items (pricelist_id, product_id, min_quantity, date_start, date_end)
   WHERE is_active = true;
 
 -- Category-level pricing
-CREATE INDEX idx_pricelist_items_category 
+CREATE INDEX idx_pricelist_items_category
   ON sales.pricelist_items (pricelist_id, categ_id, applied_on)
   WHERE is_active = true AND categ_id IS NOT NULL;
 ```
 
 ### Phase 5: Product Configuration
+
 ```sql
 -- Variant lookup by template
-CREATE INDEX idx_product_variants_template 
+CREATE INDEX idx_product_variants_template
   ON sales.product_variants (template_id, active)
   WHERE deleted_at IS NULL;
 
 -- Barcode search (frequent)
-CREATE INDEX idx_product_variants_barcode 
+CREATE INDEX idx_product_variants_barcode
   ON sales.product_variants (tenant_id, barcode)
   WHERE deleted_at IS NULL AND barcode IS NOT NULL;
 ```
 
 ### Phase 6: Sales Orders (CRITICAL - Hot Path)
+
 ```sql
 -- Dashboard: Orders by status and date
-CREATE INDEX idx_sales_orders_dashboard 
-  ON sales.sales_orders (tenant_id, status, order_date DESC) 
+CREATE INDEX idx_sales_orders_dashboard
+  ON sales.sales_orders (tenant_id, status, order_date DESC)
   WHERE deleted_at IS NULL;
 
 -- Partner order history
-CREATE INDEX idx_sales_orders_partner 
+CREATE INDEX idx_sales_orders_partner
   ON sales.sales_orders (partner_id, order_date DESC)
   WHERE deleted_at IS NULL;
 
 -- Order search by sequence number
-CREATE INDEX idx_sales_orders_sequence 
+CREATE INDEX idx_sales_orders_sequence
   ON sales.sales_orders (tenant_id, sequence_number)
   WHERE deleted_at IS NULL;
 
 -- Uninvoiced orders
-CREATE INDEX idx_sales_orders_invoice_status 
+CREATE INDEX idx_sales_orders_invoice_status
   ON sales.sales_orders (tenant_id, invoice_status)
   WHERE deleted_at IS NULL AND invoice_status != 'invoiced';
 
 -- Order lines: Detail page
-CREATE INDEX idx_sales_order_lines_order 
+CREATE INDEX idx_sales_order_lines_order
   ON sales.sales_order_lines (order_id, sequence);
 
 -- Product sales history
-CREATE INDEX idx_sales_order_lines_product 
+CREATE INDEX idx_sales_order_lines_product
   ON sales.sales_order_lines (tenant_id, product_id, created_at DESC);
 
 -- Tax reporting
-CREATE INDEX idx_sale_order_line_taxes 
+CREATE INDEX idx_sale_order_line_taxes
   ON sales.sale_order_line_taxes (tenant_id, tax_id, created_at DESC);
 ```
 
 ### Phase 11: Document Infrastructure
+
 ```sql
 -- Status history timeline
-CREATE INDEX idx_doc_status_history_lookup 
+CREATE INDEX idx_doc_status_history_lookup
   ON sales.document_status_history (tenant_id, document_type, document_id, transitioned_at DESC);
 
 -- Pending approvals dashboard
-CREATE INDEX idx_pending_approvals 
+CREATE INDEX idx_pending_approvals
   ON sales.document_approvals (tenant_id, approver_user_id, status, created_at)
   WHERE status = 'pending';
 
 -- Attachment listing
-CREATE INDEX idx_doc_attachments 
+CREATE INDEX idx_doc_attachments
   ON sales.document_attachments (tenant_id, document_type, document_id, created_at DESC)
   WHERE deleted_at IS NULL;
 
 -- Discount audit
-CREATE INDEX idx_line_discounts_audit 
+CREATE INDEX idx_line_discounts_audit
   ON sales.line_item_discounts (tenant_id, authorized_by, authorized_at DESC)
   WHERE discount_type = 'manual';
 
 -- Accounting posting queries
-CREATE INDEX idx_accounting_postings_date 
+CREATE INDEX idx_accounting_postings_date
   ON sales.accounting_postings (tenant_id, posting_date DESC, posting_status);
 
-CREATE INDEX idx_accounting_postings_unposted 
+CREATE INDEX idx_accounting_postings_unposted
   ON sales.accounting_postings (tenant_id, source_document_type, source_document_id)
   WHERE posting_status = 'draft';
 ```
@@ -2391,6 +2671,7 @@ CREATE INDEX idx_accounting_postings_unposted
 ### Data Lifecycle Tiers
 
 **Hot Data** (SSD, fast queries):
+
 - Sales orders: Last 2 fiscal years
 - Active subscriptions
 - Open returns
@@ -2398,12 +2679,14 @@ CREATE INDEX idx_accounting_postings_unposted
 - **Target response time**: < 100ms
 
 **Warm Data** (standard storage, acceptable latency):
+
 - Sales orders: 2-7 years ago
 - Closed returns: > 6 months
 - Paid invoices: > 1 year
 - **Target response time**: < 500ms
 
 **Cold Data** (archival storage, slow retrieval OK):
+
 - Sales orders: > 7 years (legal retention)
 - Fully reconciled accounting postings: > 7 years
 - **Target response time**: < 5 seconds
@@ -2411,6 +2694,7 @@ CREATE INDEX idx_accounting_postings_unposted
 ### Partitioning Implementation
 
 #### Sales Orders (High Volume)
+
 ```sql
 -- Partition by fiscal year
 CREATE TABLE sales.sales_orders (
@@ -2421,25 +2705,26 @@ CREATE TABLE sales.sales_orders (
 ) PARTITION BY RANGE (order_date);
 
 -- Create partitions per year
-CREATE TABLE sales.sales_orders_2024 
+CREATE TABLE sales.sales_orders_2024
   PARTITION OF sales.sales_orders
   FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
 
-CREATE TABLE sales.sales_orders_2025 
+CREATE TABLE sales.sales_orders_2025
   PARTITION OF sales.sales_orders
   FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
 
-CREATE TABLE sales.sales_orders_2026 
+CREATE TABLE sales.sales_orders_2026
   PARTITION OF sales.sales_orders
   FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
 
 -- Default partition for future dates
-CREATE TABLE sales.sales_orders_default 
+CREATE TABLE sales.sales_orders_default
   PARTITION OF sales.sales_orders
   DEFAULT;
 ```
 
 #### Subscription Logs (Append-Only, High Volume)
+
 ```sql
 -- Partition by month
 CREATE TABLE sales.subscription_logs (
@@ -2447,12 +2732,13 @@ CREATE TABLE sales.subscription_logs (
 ) PARTITION BY RANGE (created_at);
 
 -- Monthly partitions
-CREATE TABLE sales.subscription_logs_2026_03 
+CREATE TABLE sales.subscription_logs_2026_03
   PARTITION OF sales.subscription_logs
   FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
 ```
 
 #### Document Status History (Time-Series)
+
 ```sql
 -- Partition by quarter
 CREATE TABLE sales.document_status_history (
@@ -2460,7 +2746,7 @@ CREATE TABLE sales.document_status_history (
 ) PARTITION BY RANGE (transitioned_at);
 
 -- Quarterly partitions
-CREATE TABLE sales.document_status_history_2026_q1 
+CREATE TABLE sales.document_status_history_2026_q1
   PARTITION OF sales.document_status_history
   FOR VALUES FROM ('2026-01-01') TO ('2026-04-01');
 ```
@@ -2468,19 +2754,21 @@ CREATE TABLE sales.document_status_history_2026_q1
 ### Archival Process
 
 **Automated Archival Job** (runs monthly):
+
 ```sql
 -- Move orders older than 7 years to archive schema
-INSERT INTO archive.sales_orders 
-SELECT * FROM sales.sales_orders 
+INSERT INTO archive.sales_orders
+SELECT * FROM sales.sales_orders
 WHERE order_date < NOW() - INTERVAL '7 years'
   AND status IN ('done', 'cancelled');
 
 -- Delete from hot table after successful archive
-DELETE FROM sales.sales_orders 
+DELETE FROM sales.sales_orders
 WHERE id IN (SELECT id FROM archive.sales_orders WHERE archived_at = CURRENT_DATE);
 ```
 
 **Retention Policy**:
+
 - Sales orders: 10 years (tax/legal compliance)
 - Invoices: 10 years
 - Payments: 10 years
@@ -2497,12 +2785,13 @@ WHERE id IN (SELECT id FROM archive.sales_orders WHERE archived_at = CURRENT_DAT
 Entities that change over time need effective dating to preserve history:
 
 #### Pricelist Items
+
 ```typescript
 {
   // ... existing columns
   effectiveFrom: timestamp().notNull().defaultNow(),
   effectiveTo: timestamp(), // null = current price
-  
+
   // Price history chain
   supersededBy: uuid().references(() => pricelistItems.id), // Link to next version
 }
@@ -2512,10 +2801,11 @@ Entities that change over time need effective dating to preserve history:
 ```
 
 **Query Pattern**:
+
 ```sql
 -- Get price effective on specific date
 SELECT * FROM sales.pricelist_items
-WHERE pricelist_id = $1 
+WHERE pricelist_id = $1
   AND product_id = $2
   AND effective_from <= $3::date
   AND (effective_to IS NULL OR effective_to > $3::date)
@@ -2524,12 +2814,13 @@ LIMIT 1;
 ```
 
 #### Tax Rates
+
 ```typescript
 {
   // ... existing columns
   effectiveFrom: timestamp().notNull(),
   effectiveTo: timestamp(),
-  
+
   // Tax rule evolution
   replacedBy: uuid().references(() => taxRates.id),
 }
@@ -2538,12 +2829,13 @@ LIMIT 1;
 **Use Case**: VAT rate change from 19% → 21% on 2026-01-01
 
 #### Partner Relationships
+
 ```typescript
 {
   // ... existing columns
   relationshipStart: timestamp().notNull().defaultNow(),
   relationshipEnd: timestamp(), // For churned customers
-  
+
   // Credit limit history
   creditLimitEffectiveFrom: timestamp(),
   creditLimitReviewedBy: uuid().references(() => users.id),
@@ -2551,12 +2843,13 @@ LIMIT 1;
 ```
 
 #### Commission Plans
+
 ```typescript
 {
   // ... existing columns
   effectiveFrom: timestamp().notNull(),
   effectiveTo: timestamp(),
-  
+
   // Commission policy evolution
   previousPlanId: uuid().references(() => commissionPlans.id),
 }
@@ -2573,16 +2866,17 @@ LIMIT 1;
 Critical fields added to capture "why" and "who" for compliance:
 
 #### Sales Orders Enhancement
+
 ```typescript
 {
   // ... existing columns
-  
+
   // Credit check audit
   creditCheckPassed: boolean(),
   creditCheckAt: timestamp(),
   creditCheckBy: uuid().references(() => users.id),
   creditLimitAtCheck: numeric(14, 2), // Snapshot of limit when checked
-  
+
   // Pricing policy audit
   pricelistSnapshotId: uuid(), // Version of pricelist used
   exchangeRateUsed: numeric(12, 6), // FX rate locked at confirmation
@@ -2592,20 +2886,21 @@ Critical fields added to capture "why" and "who" for compliance:
 ```
 
 #### Sales Order Lines Enhancement
+
 ```typescript
 {
   // ... existing columns
-  
+
   // Price auditability
   priceSource: text(), // 'pricelist:{id}', 'manual', 'contract:{id}'
   priceListedAt: numeric(14, 2), // Original price before discounts
   priceOverrideReason: text(), // Required if price < list price
   priceApprovedBy: uuid().references(() => users.id),
-  
+
   // Tax auditability
   taxRuleSnapshot: jsonb(), // Full tax computation rules used
   fiscalPositionApplied: uuid().references(() => fiscalPositions.id),
-  
+
   // Discount auditability (in addition to line_item_discounts table)
   totalDiscountPercent: numeric(5, 2), // Effective combined discount
   discountApprovedBy: uuid().references(() => users.id),
@@ -2616,26 +2911,28 @@ Critical fields added to capture "why" and "who" for compliance:
 ### Approval Authority Matrix
 
 **Configuration Table**: `approval_policies`
+
 ```typescript
 {
   id: uuid().primaryKey(),
   tenantId: integer().notNull(),
-  
+
   policyName: text().notNull(), // 'sales_order_approval', 'discount_approval'
-  
+
   // Threshold rules
   thresholdType: text().notNull(), // 'amount', 'discount_percent', 'credit_over_limit'
   thresholdValue: numeric(14, 2),
-  
+
   // Required approver
   approverRole: text().notNull(), // 'sales_manager', 'finance_director', 'ceo'
   approvalLevel: integer().notNull(), // 1, 2, 3 for sequential approvals
-  
+
   isActive: boolean().notNull().default(true),
 }
 ```
 
 **Example Policies**:
+
 - Orders < $10k: Auto-approved
 - Orders $10k-$100k: Requires sales manager approval
 - Orders > $100k: Requires finance director + CEO approval
@@ -2673,8 +2970,9 @@ table.$config = {
 ### Prerequisites ✅ COMPLETE
 
 **Phase 0 Dependencies**:
+
 - ✅ `countries` table available for FK references
-- ✅ `states` table available for FK references  
+- ✅ `states` table available for FK references
 - ✅ `currencies` table available for default currency/pricelist
 - ✅ Seeds deployed with demo data
 
@@ -2683,6 +2981,7 @@ table.$config = {
 **Goal**: Transform flat `partners` table into enterprise-grade customer/vendor management
 
 **Tables to Create/Modify**: 5
+
 1. ✏️ **ENHANCE** `partners` — Add 11 new columns (company hierarchy, localization, credit, defaults)
 2. ➕ **NEW** `partner_addresses` — Multi-address support (invoice/delivery/contact)
 3. ➕ **NEW** `partner_bank_accounts` — Banking details with defaults
@@ -2690,11 +2989,13 @@ table.$config = {
 5. ➕ **NEW** `partner_tag_assignments` — M2M junction table
 
 **Logic Functions**: 3
+
 - `checkCreditLimit(partner, orderTotal)` → boolean
 - `getInvoiceAddress(partnerId)` → Address
 - `getDeliveryAddress(partnerId)` → Address
 
 **Estimated Effort**: 2-3 days
+
 - Day 1: Schema enhancement + address/bank tables
 - Day 2: Tags M2M + logic functions
 - Day 3: Tests + seeds + validation
@@ -2704,27 +3005,28 @@ table.$config = {
 #### partners Table Enhancement
 
 **New Columns** (11):
+
 ```typescript
 {
   // Existing: id, tenantId, name, email, phone, type, isActive, timestamps, audit
-  
+
   // Company Hierarchy
   isCompany: boolean().default(true),
   parentId: uuid().references(() => partners.id), // For subsidiaries
-  
+
   // Localization
   vat: text(), // Tax ID / VAT number
   countryId: integer().references(() => countries.countryId),
   stateId: integer().references(() => states.stateId),
-  
+
   // Credit Management
   creditLimit: numeric(14, 2).default("0.00"),
-  
+
   // Default References (null = will be defined in later phases)
   defaultPaymentTermId: uuid(), // FK to payment_terms (Phase 3)
   defaultPricelistId: uuid(), // FK to pricelists (Phase 4)
   defaultFiscalPositionId: uuid(), // FK to fiscal_positions (Phase 2)
-  
+
   // Accounting Integration (placeholders for Phase 11)
   propertyAccountReceivableId: text(), // Account code
   propertyAccountPayableId: text(), // Account code
@@ -2732,6 +3034,7 @@ table.$config = {
 ```
 
 **Backward Compatibility**: ✅ Guaranteed
+
 - All new columns are nullable or have defaults
 - Existing 5 partners in production will remain functional
 - No breaking changes to current API endpoints
@@ -2739,6 +3042,7 @@ table.$config = {
 ### Test Coverage Plan
 
 **Schema Contracts** (5 tests):
+
 ```typescript
 describe('Phase 1: Partner Enhancement', () => {
   it('partners table has 11 new columns', () => { ... })
@@ -2750,6 +3054,7 @@ describe('Phase 1: Partner Enhancement', () => {
 ```
 
 **Logic Functions** (12 tests):
+
 ```typescript
 describe('checkCreditLimit', () => {
   it('returns true when order is within limit', () => { ... })
@@ -2774,8 +3079,9 @@ describe('getDeliveryAddress', () => {
 ### Migration Strategy
 
 **Step 1**: Add new columns to `partners` (non-breaking)
+
 ```sql
-ALTER TABLE sales.partners 
+ALTER TABLE sales.partners
   ADD COLUMN is_company boolean DEFAULT true,
   ADD COLUMN parent_id uuid REFERENCES sales.partners(id),
   ADD COLUMN vat text,
@@ -2790,23 +3096,27 @@ ALTER TABLE sales.partners
 ```
 
 **Step 2**: Create new tables (additive only)
+
 - `partner_addresses`
 - `partner_bank_accounts`
 - `partner_tags`
 - `partner_tag_assignments`
 
 **Step 3**: Seed demo data
+
 - Create addresses for existing 5 partners
 - Add demo bank accounts
 - Create sample tags (VIP, Wholesale, Retail)
 
 **Step 4**: Deploy logic functions
+
 - API endpoints remain unchanged
 - New endpoints added for address/bank management
 
 ### Success Criteria
 
 **Phase 1 Complete When**:
+
 - ✅ All 5 tables deployed to production
 - ✅ TypeScript compilation passes
 - ✅ 17/17 tests passing (5 schema + 12 logic)
@@ -2817,16 +3127,17 @@ ALTER TABLE sales.partners
 
 ### Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| FKs to future tables (payment_terms, pricelists) | Schema references non-existent tables | Use nullable UUIDs without FK constraints; add constraints in Phase 2-4 |
-| Address logic conflicts with existing partner fields | Data inconsistency | Keep partner.email/phone as primary; addresses are additional |
-| Credit limit enforcement not yet in sales order | Incomplete feature | Document as "informational only" until Phase 6 integrates it |
-| Tags explosion (too many tags created) | UX clutter | Add tag management UI with bulk operations |
+| Risk                                                 | Impact                                | Mitigation                                                              |
+| ---------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| FKs to future tables (payment_terms, pricelists)     | Schema references non-existent tables | Use nullable UUIDs without FK constraints; add constraints in Phase 2-4 |
+| Address logic conflicts with existing partner fields | Data inconsistency                    | Keep partner.email/phone as primary; addresses are additional           |
+| Credit limit enforcement not yet in sales order      | Incomplete feature                    | Document as "informational only" until Phase 6 integrates it            |
+| Tags explosion (too many tags created)               | UX clutter                            | Add tag management UI with bulk operations                              |
 
 ### Next Steps After Phase 1
 
 **Unblocks**:
+
 - ✅ Phase 2 (Tax Engine) — Can reference partner country/state for tax rules
 - ✅ Phase 6 (Sales Orders) — Can use address table for invoice/delivery addresses
 - ⚠️ Phase 3 (Payment Terms) — Can set partner defaults (but table doesn't exist yet)
@@ -2838,12 +3149,13 @@ ALTER TABLE sales.partners
 
 ## 🚀 READY TO START PHASE 1
 
-**Status**: Phase 0 validated ✅  
-**Dependencies**: All Phase 1 requirements met ✅  
-**Estimated Duration**: 2-3 days  
-**Confidence Level**: HIGH ✅  
+**Status**: Phase 0 validated ✅
+**Dependencies**: All Phase 1 requirements met ✅
+**Estimated Duration**: 2-3 days
+**Confidence Level**: HIGH ✅
 
 **Command to Begin**:
+
 ```bash
 # Create feature branch
 git checkout -b phase-1-partner-enhancement
@@ -2872,15 +3184,15 @@ echo "Phase 1: Partner Enhancement" > .phase-1-started.md
 ### Zod Schemas
 
 ```typescript
-import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
+import { createSelectSchema, createInsertSchema, createUpdateSchema } from "drizzle-zod";
 
-export const selectPartnerSchema = createSelectSchema(partners)
-export const insertPartnerSchema = createInsertSchema(partners)
-export const updatePartnerSchema = createUpdateSchema(partners)
+export const selectPartnerSchema = createSelectSchema(partners);
+export const insertPartnerSchema = createInsertSchema(partners);
+export const updatePartnerSchema = createUpdateSchema(partners);
 
-export type Partner = z.infer<typeof selectPartnerSchema>
-export type PartnerInsert = z.infer<typeof insertPartnerSchema>
-export type PartnerUpdate = z.infer<typeof updatePartnerSchema>
+export type Partner = z.infer<typeof selectPartnerSchema>;
+export type PartnerInsert = z.infer<typeof insertPartnerSchema>;
+export type PartnerUpdate = z.infer<typeof updatePartnerSchema>;
 ```
 
 ### Business Logic Placement
@@ -2956,16 +3268,16 @@ Create seed scripts for reference data (countries, currencies, UoMs):
 // packages/db/src/_seeds/reference-data.ts
 export async function seedReferenceData(db: Database) {
   await db.insert(countries).values([
-    { code: 'US', name: 'United States', phone_code: '+1', vat_label: 'EIN' },
-    { code: 'CA', name: 'Canada', phone_code: '+1', vat_label: 'GST/HST' },
+    { code: "US", name: "United States", phone_code: "+1", vat_label: "EIN" },
+    { code: "CA", name: "Canada", phone_code: "+1", vat_label: "GST/HST" },
     // ... ISO 3166-1 complete list
-  ])
-  
+  ]);
+
   await db.insert(currencies).values([
-    { code: 'USD', name: 'US Dollar', symbol: '$', decimal_places: 2 },
-    { code: 'EUR', name: 'Euro', symbol: '€', decimal_places: 2 },
+    { code: "USD", name: "US Dollar", symbol: "$", decimal_places: 2 },
+    { code: "EUR", name: "Euro", symbol: "€", decimal_places: 2 },
     // ... ISO 4217 complete list
-  ])
+  ]);
 }
 ```
 
@@ -2973,41 +3285,43 @@ export async function seedReferenceData(db: Database) {
 
 ## Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| **Breaking existing code** | 🔴 High | Use `ALTER TABLE ADD COLUMN`, not `DROP`; add defaults |
-| **Performance degradation** | 🟡 Medium | Index all FK columns; monitor query plans |
-| **Enum creation order** | 🟡 Medium | Create enums before tables referencing them |
-| **Seed data conflicts** | 🟡 Medium | Use deterministic UUIDs; idempotent seed scripts |
-| **Metadata refresh failures** | 🟢 Low | Already fixed; tested on 36 models |
+| Risk                          | Impact    | Mitigation                                             |
+| ----------------------------- | --------- | ------------------------------------------------------ |
+| **Breaking existing code**    | 🔴 High   | Use `ALTER TABLE ADD COLUMN`, not `DROP`; add defaults |
+| **Performance degradation**   | 🟡 Medium | Index all FK columns; monitor query plans              |
+| **Enum creation order**       | 🟡 Medium | Create enums before tables referencing them            |
+| **Seed data conflicts**       | 🟡 Medium | Use deterministic UUIDs; idempotent seed scripts       |
+| **Metadata refresh failures** | 🟢 Low    | Already fixed; tested on 36 models                     |
 
 ---
 
 ## Timeline Estimate
 
-| Phase | Tables | Complexity | Estimated Time |
-|-------|--------|------------|----------------|
-| **Phase 0** | 9 | Low-Medium (reference + policy) | 3 days |
-| **Phase 1** | 5 | Medium (partner enhancement) | 2 days |
-| **Phase 2** | 6 | High (tax engine logic) | 4 days |
-| **Phase 3** | 2 | Low (payment terms) | 1 day |
-| **Phase 4** | 2 | High (pricing engine logic) | 3 days |
-| **Phase 5** | 7 | High (product refactor) | 4 days |
-| **Phase 6** | 4 | High (complete order logic) | 5 days |
-| **Phase 7** | 4 | Medium (consignment workflow) | 2 days |
-| **Phase 8** | 3 | Medium (returns workflow) | 2 days |
-| **Phase 9** | 5 | Medium (subscriptions) | 3 days |
-| **Phase 10** | 7 | Medium (commissions) | 3 days |
-| **Phase 11** | 6 | Medium (infrastructure) | 3 days |
-| **Indexing** | - | Medium (strategy implementation) | 2 days |
-| **Total** | **62** | — | **37 days (~7.5 weeks)** |
+| Phase        | Tables | Complexity                       | Estimated Time           |
+| ------------ | ------ | -------------------------------- | ------------------------ |
+| **Phase 0**  | 9      | Low-Medium (reference + policy)  | 3 days                   |
+| **Phase 1**  | 5      | Medium (partner enhancement)     | 2 days                   |
+| **Phase 2**  | 6      | High (tax engine logic)          | 4 days                   |
+| **Phase 3**  | 2      | Low (payment terms)              | 1 day                    |
+| **Phase 4**  | 2      | High (pricing engine logic)      | 3 days                   |
+| **Phase 5**  | 7      | High (product refactor)          | 4 days                   |
+| **Phase 6**  | 4      | High (complete order logic)      | 5 days                   |
+| **Phase 7**  | 4      | Medium (consignment workflow)    | 2 days                   |
+| **Phase 8**  | 3      | Medium (returns workflow)        | 2 days                   |
+| **Phase 9**  | 5      | Medium (subscriptions)           | 3 days                   |
+| **Phase 10** | 7      | Medium (commissions)             | 3 days                   |
+| **Phase 11** | 6      | Medium (infrastructure)          | 3 days                   |
+| **Indexing** | -      | Medium (strategy implementation) | 2 days                   |
+| **Total**    | **62** | —                                | **37 days (~7.5 weeks)** |
 
 **Breakdown**:
+
 - **Schema Design**: 25 days
 - **Business Logic Implementation**: 8 days
 - **Testing & Validation**: 4 days
 
 **Parallelization Opportunities**:
+
 - Phases 1, 2, 3 can be partially parallel (independent domains)
 - Phases 7, 8, 9, 10 can be fully parallel after Phase 6
 - Phase 11 can be implemented incrementally with each document type
@@ -3019,6 +3333,7 @@ export async function seedReferenceData(db: Database) {
 ## Success Criteria
 
 Phase complete when:
+
 - ✅ All tables deployed to DB
 - ✅ Drizzle schemas pass TypeScript check
 - ✅ Seed data exists for all entities
@@ -3050,10 +3365,10 @@ Phase complete when:
 
 ---
 
-**Created**: March 26, 2026  
-**Status**: Ready for execution (Enhanced with full checklist coverage)  
-**Owner**: Development Team  
-**Next Review**: After Phase 0 completion  
+**Created**: March 26, 2026
+**Status**: Ready for execution (Enhanced with full checklist coverage)
+**Owner**: Development Team
+**Next Review**: After Phase 0 completion
 **Checklist Coverage**: 95%+ (see [sales-coverage-gap-analysis.md](.ideas/sales-coverage-gap-analysis.md))
 
 ---
@@ -3061,23 +3376,27 @@ Phase complete when:
 ## DB-First Checklist Compliance
 
 ### ✅ 1️⃣ Structural Coverage (Schema Completeness) - 100%
+
 - ✅ Every business concept as table (62 tables covering all sales processes)
 - ✅ No overloaded tables (clear domain separation)
 - ✅ No JSON escape hatches (structured relations only)
 - ✅ DDD naming (ubiquitous language: partners, orders, lines)
 
 ### ✅ 2️⃣ Relational Integrity (Truth Connections) - 95%
+
 - ✅ All relationships FK-enforced
 - ✅ Proper cascade rules (RESTRICT for financial, CASCADE for dependent)
 - ✅ Temporal relationships (effective_from/to on prices, taxes)
 - ✅ No array columns (junction tables for M2M)
 
 ### ✅ 3️⃣ Business Rule Enforcement (Invariant Safety) - 100%
+
 - ✅ Check constraints (non-negative, date ranges, status transitions)
 - ✅ Unique constraints (sequence numbers, tenant isolation)
 - ✅ Derived truth (order totals = sum lines, enforced at DB)
 
 ### ✅ 4️⃣ Financial & Numerical Integrity - 90%
+
 - ⚠️ Numeric(14,2) storage (recommendation: Decimal.js for calculations)
 - ✅ Currency table exists (Phase 0)
 - ✅ FX rate source traceable (exchange_rate_source field)
@@ -3085,24 +3404,28 @@ Phase complete when:
 - ✅ Quantity safety (UoM conversion rules in logic module)
 
 ### ✅ 5️⃣ State & Workflow Truth - 100%
+
 - ✅ Lifecycle states (draft/sent/sale/done/cancel for orders)
 - ✅ State transitions auditable (document_status_history table)
 - ✅ Terminal states enforced (check constraints)
 - ✅ Event traceability (transitioned_by, transition_reason)
 
 ### ✅ 6️⃣ Audit & Forensics - 100%
+
 - ✅ Universal audit columns (tenant_id, created_at/by, updated_at/by)
 - ✅ Change history (document_status_history, soft deletes)
 - ✅ Decision auditability (price_source, discount_authorized_by, tax_rule_snapshot)
 - ✅ Financial immutability (status check constraints prevent modification after posting)
 
 ### ✅ 7️⃣ Multi-Tenant & Security Truth - 100%
+
 - ✅ Tenant ID on all tables
 - ✅ RLS policies (tenantIsolationPolicies() + serviceBypassPolicy())
 - ✅ Cross-tenant joins impossible (FK constraints + RLS)
 - ✅ Tenant-specific configs isolated (tenant_id in all config tables)
 
 ### ✅ 8️⃣ Reference & Master Data Coverage - 100%
+
 - ✅ Currency (Phase 0)
 - ✅ Units of Measure (Phase 0)
 - ✅ Countries/Regions (Phase 0)
@@ -3113,6 +3436,7 @@ Phase complete when:
 - ✅ Product Categories (existing + enhanced Phase 5)
 
 ### ✅ 9️⃣ Performance Reality (Operational Truth) - 100%
+
 - ✅ FK indexes (all foreign keys indexed)
 - ✅ High-frequency filters indexed (tenant_id, status, date)
 - ✅ Composite indexes (dashboard queries optimized)
@@ -3121,6 +3445,7 @@ Phase complete when:
 - ✅ Partitioning (orders, logs, history by date range)
 
 ### ✅ 🔟 Seed & Test Truth Coverage - 90%
+
 - ✅ Seeds respect FK constraints (dependency-ordered seeding)
 - ✅ Realistic scenarios (full order-to-cash workflow)
 - ✅ All lifecycle states seeded (draft, confirmed, cancelled, done)
@@ -3128,7 +3453,9 @@ Phase complete when:
 - ⚠️ Scenario coverage matrix (to be documented in seed README)
 
 ### ✅ 11️⃣ ERP-Grade Document Completeness - 100%
+
 For each document type (Orders, Invoices, Returns, etc.):
+
 - ✅ Header table (sales_orders, return_orders, etc.)
 - ✅ Line table (sales_order_lines, return_order_lines, etc.)
 - ✅ Tax breakdown (sale_order_line_taxes M2M junction)
@@ -3139,6 +3466,7 @@ For each document type (Orders, Invoices, Returns, etc.):
 - ✅ Accounting impact (accounting_postings bridge)
 
 ### ✅ 12️⃣ Anti-Patterns Check - 100%
+
 - ✅ Business rules in domain modules (not services/frontend)
 - ✅ Calculations in database constraints (order totals, subtotals)
 - ✅ Enums for closed states (no magic strings)
@@ -3153,6 +3481,7 @@ For each document type (Orders, Invoices, Returns, etc.):
 > **A new engineering team could rebuild all services using only the schema, constraints, and seeds — and still reproduce correct business behavior.**
 
 ✅ **PASS** - This expansion plan achieves this standard:
+
 - Schema encodes all business rules as constraints
 - Seed data provides complete realistic scenarios
 - Logic modules are pure functions (no hidden state)

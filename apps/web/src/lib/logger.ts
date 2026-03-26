@@ -52,7 +52,11 @@ class BrowserLogger implements Logger {
     return requestedIndex >= currentIndex;
   }
 
-  private log(level: LogLevel, firstArg: LogContext | string, secondArg?: LogContext | string | unknown) {
+  private log(
+    level: LogLevel,
+    firstArg: LogContext | string,
+    secondArg?: LogContext | string | unknown
+  ) {
     if (!this.shouldLog(level)) return;
 
     let context: LogContext;
@@ -104,7 +108,7 @@ class BrowserLogger implements Logger {
         fatal: "color: darkred; font-weight: bold",
       }[level];
 
-      console.log(`%c${emoji} [${level.toUpperCase()}] ${msg}`, style, logData);
+      console.warn(`%c${emoji} [${level.toUpperCase()}] ${msg}`, style, logData);
       return;
     }
 
@@ -119,12 +123,12 @@ class BrowserLogger implements Logger {
       //   body: JSON.stringify(logData)
       // }).catch(() => {}); // Silent fail
     } else {
-      console.log(JSON.stringify(logData));
+      console.warn(JSON.stringify(logData));
     }
   }
 
   trace(firstArg: LogContext | string, secondArg?: LogContext | string | unknown): void {
-    this.log("trace", firstArg,secondArg);
+    this.log("trace", firstArg, secondArg);
   }
 
   debug(firstArg: LogContext | string, secondArg?: LogContext | string | unknown): void {

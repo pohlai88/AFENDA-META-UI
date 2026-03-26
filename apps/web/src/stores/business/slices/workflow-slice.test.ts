@@ -49,6 +49,10 @@ const initialState: WorkflowState = {
   lastUpdatedAt: null,
 };
 
+type WorkflowRootState = {
+  workflow: WorkflowState;
+};
+
 describe("workflow-slice", () => {
   describe("instance lifecycle", () => {
     it("handles loadInstancesStart", () => {
@@ -290,7 +294,7 @@ describe("workflow-slice", () => {
 
   describe("selectors", () => {
     it("selectPendingInstances returns only pending workflow instances", () => {
-      const rootState = {
+      const rootState: WorkflowRootState = {
         workflow: workflowReducer(
           initialState,
           loadInstancesSuccess({
@@ -301,7 +305,7 @@ describe("workflow-slice", () => {
             ],
           })
         ),
-      } as any;
+      };
 
       const pending = selectPendingInstances(rootState);
 
@@ -311,7 +315,7 @@ describe("workflow-slice", () => {
     });
 
     it("selectCompletedInstances returns only completed workflow instances", () => {
-      const rootState = {
+      const rootState: WorkflowRootState = {
         workflow: workflowReducer(
           initialState,
           loadInstancesSuccess({
@@ -323,7 +327,7 @@ describe("workflow-slice", () => {
             ],
           })
         ),
-      } as any;
+      };
 
       const completed = selectCompletedInstances(rootState);
 
@@ -341,16 +345,16 @@ describe("workflow-slice", () => {
         })
       );
 
-      const rootState = { workflow: state } as any;
+      const rootState: WorkflowRootState = { workflow: state };
       const approvals = selectPendingApprovals(rootState);
 
       expect(approvals).toHaveLength(1);
     });
 
     it("selectWorkflowIsLoading returns loading state", () => {
-      const rootState = {
+      const rootState: WorkflowRootState = {
         workflow: workflowReducer(initialState, loadInstancesStart()),
-      } as any;
+      };
 
       const isLoading = selectWorkflowIsLoading(rootState);
       expect(isLoading).toBe(true);

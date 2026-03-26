@@ -65,7 +65,12 @@ vi.mock("../../db/index.js", () => ({
 }));
 
 import { ConflictError, ValidationError } from "../../middleware/errorHandler.js";
-import { generateCommissionForOrder } from "./commission-service.js";
+import {
+  approveCommissionEntries,
+  generateCommissionForOrder,
+  getCommissionReport,
+  payCommissionEntries,
+} from "./commission-service.js";
 
 const order = {
   id: "order-1",
@@ -232,5 +237,174 @@ describe("sales commission service", () => {
         planId: "plan-profit",
       })
     ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("uses territory default salesperson when order has no assigned user", async () => {
+    queueSelect(
+      [{ ...order, userId: null, partnerId: "partner-1" }],
+      [plan],
+      [tier],
+      [
+        {
+          id: "partner-1",
+          tenantId: 7,
+          countryId: 840,
+          stateId: 5,
+          deletedAt: null,
+        },
+      ],
+      [
+        {
+          id: "rule-1",
+          tenantId: 7,
+          territoryId: "territory-1",
+          countryId: 840,
+          stateId: 5,
+          zipFrom: null,
+          zipTo: null,
+          priority: 20,
+          isActive: true,
+          deletedAt: null,
+        },
+      ],
+      [
+        {
+          id: "territory-1",
+          tenantId: 7,
+          code: "NA-WEST",
+          teamId: "team-1",
+          defaultSalespersonId: 77,
+          isActive: true,
+          deletedAt: null,
+        },
+      ],
+      []
+    );
+    setInsertResult([
+      {
+        id: "entry-2",
+        tenantId: 7,
+        orderId: order.id,
+        salespersonId: 77,
+        planId: plan.id,
+        baseAmount: "2400.00",
+        commissionAmount: "240.00",
+        status: "draft",
+        paidDate: null,
+      },
+    ]);
+
+    const result = await generateCommissionForOrder({
+      tenantId: 7,
+      actorId: 21,
+      orderId: order.id,
+      planId: plan.id,
+    });
+
+    expect(result.assignment.salespersonId).toBe(77);
+    expect(result.assignment.selectedBy).toBe("territory_default");
+    expect(result.entry.salespersonId).toBe(77);
+  });
+
+  it("approves draft commission entries and leaves approved entries unchanged", async () => {
+    queueSelect([
+      {
+        id: "entry-draft",
+        tenantId: 7,
+        status: "draft",
+        paidDate: null,
+        salespersonId: 21,
+        periodStart: new Date("2026-03-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-03-31T23:59:59.000Z"),
+        deletedAt: null,
+      },
+      {
+        id: "entry-approved",
+        tenantId: 7,
+        status: "approved",
+        paidDate: null,
+        salespersonId: 21,
+        periodStart: new Date("2026-03-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-03-31T23:59:59.000Z"),
+        deletedAt: null,
+      },
+    ]);
+    setUpdateResult([
+      {
+        id: "entry-draft",
+        tenantId: 7,
+        status: "approved",
+        paidDate: null,
+      },
+    ]);
+
+    const result = await approveCommissionEntries({
+      tenantId: 7,
+      actorId: 21,
+      salespersonId: 21,
+    });
+
+    expect(result.updatedCount).toBe(1);
+    expect(result.unchangedCount).toBe(1);
+  });
+
+  it("blocks paying draft entries directly", async () => {
+    queueSelect([
+      {
+        id: "entry-draft",
+        tenantId: 7,
+        status: "draft",
+        paidDate: null,
+        salespersonId: 21,
+        periodStart: new Date("2026-03-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-03-31T23:59:59.000Z"),
+        deletedAt: null,
+      },
+    ]);
+
+    await expect(
+      payCommissionEntries({
+        tenantId: 7,
+        actorId: 21,
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("returns filtered commission report with summary totals", async () => {
+    queueSelect([
+      {
+        id: "entry-1",
+        tenantId: 7,
+        status: "draft",
+        baseAmount: "1000.00",
+        commissionAmount: "100.00",
+        salespersonId: 21,
+        periodStart: new Date("2026-03-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-03-31T23:59:59.000Z"),
+        createdAt: new Date("2026-03-15T00:00:00.000Z"),
+        deletedAt: null,
+      },
+      {
+        id: "entry-2",
+        tenantId: 7,
+        status: "approved",
+        baseAmount: "500.00",
+        commissionAmount: "50.00",
+        salespersonId: 22,
+        periodStart: new Date("2026-03-01T00:00:00.000Z"),
+        periodEnd: new Date("2026-03-31T23:59:59.000Z"),
+        createdAt: new Date("2026-03-14T00:00:00.000Z"),
+        deletedAt: null,
+      },
+    ]);
+
+    const result = await getCommissionReport({
+      tenantId: 7,
+      salespersonId: 21,
+    });
+
+    expect(result.entries).toHaveLength(1);
+    expect(result.summary.count).toBe(1);
+    expect(result.summary.commissionAmountTotal).toBe("100.00");
   });
 });

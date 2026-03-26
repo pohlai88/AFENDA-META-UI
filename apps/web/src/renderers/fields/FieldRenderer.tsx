@@ -11,7 +11,6 @@ import { TagsField } from "./TagsField.js";
 import { JsonField } from "./JsonField.js";
 import { ColorField } from "./ColorField.js";
 import { RatingField } from "./RatingField.js";
-import { RichTextField } from "./RichTextField.js";
 import { FileField } from "./FileField.js";
 import { ImageField } from "./ImageField.js";
 import { PhoneField } from "./PhoneField.js";

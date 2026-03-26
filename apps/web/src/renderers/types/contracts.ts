@@ -100,7 +100,7 @@ export interface RendererContract {
  * All renderers should accept these base props.
  * @template TRecord — shape of a single data record (defaults to `JsonObject`)
  */
-export interface RendererBaseProps<TRecord extends JsonObject = JsonObject> {
+export interface RendererBaseProps<_TRecord extends JsonObject = JsonObject> {
   /** Model name (e.g., "contacts", "opportunities") */
   model: string;
 

@@ -151,6 +151,20 @@ export async function seedCommissionsAndTeamsPhase10(
     .values([
       {
         ...seedAuditScope,
+        id: SEED_IDS.commissionEntryOrderOneDraft,
+        orderId: SEED_IDS.orderOne,
+        salespersonId: seedAuditScope.createdBy,
+        planId: SEED_IDS.commissionPlanRevenueStandard,
+        baseAmount,
+        commissionAmount,
+        status: "draft",
+        paidDate: null,
+        periodStart: new Date("2024-03-01T00:00:00Z"),
+        periodEnd: new Date("2024-03-31T23:59:59Z"),
+        notes: "Draft commission queued for manager approval.",
+      },
+      {
+        ...seedAuditScope,
         id: SEED_IDS.commissionEntryOrderOne,
         orderId: SEED_IDS.orderOne,
         salespersonId: seedAuditScope.createdBy,
@@ -162,6 +176,20 @@ export async function seedCommissionsAndTeamsPhase10(
         periodStart: new Date("2024-04-01T00:00:00Z"),
         periodEnd: new Date("2024-04-30T23:59:59Z"),
         notes: "Commission generated from confirmed order SO-2024-0001.",
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.commissionEntryOrderOnePaid,
+        orderId: SEED_IDS.orderOne,
+        salespersonId: seedAuditScope.createdBy,
+        planId: SEED_IDS.commissionPlanRevenueStandard,
+        baseAmount,
+        commissionAmount,
+        status: "paid",
+        paidDate: new Date("2024-05-31T12:00:00Z"),
+        periodStart: new Date("2024-05-01T00:00:00Z"),
+        periodEnd: new Date("2024-05-31T23:59:59Z"),
+        notes: "Commission paid through payroll batch.",
       },
     ])
     .execute();
@@ -228,6 +256,27 @@ export async function validateCommissionsPhase10Invariants(tx: Tx): Promise<void
     throw new Error(
       `Commission amount mismatch: expected ${expectedCommission.toFixed(2)}, got ${Number(commissionEntry.commissionAmount).toFixed(2)}`
     );
+  }
+
+  const [statusCoverage] = await tx
+    .select({
+      draftCount: sql<number>`count(*) filter (where ${commissionEntries.status} = 'draft')`,
+      approvedCount: sql<number>`count(*) filter (where ${commissionEntries.status} = 'approved')`,
+      paidCount: sql<number>`count(*) filter (where ${commissionEntries.status} = 'paid')`,
+    })
+    .from(commissionEntries)
+    .where(eq(commissionEntries.planId, SEED_IDS.commissionPlanRevenueStandard));
+
+  if (!statusCoverage || statusCoverage.draftCount < 1) {
+    throw new Error("Commission lifecycle coverage mismatch: expected at least one draft entry");
+  }
+
+  if (statusCoverage.approvedCount < 1) {
+    throw new Error("Commission lifecycle coverage mismatch: expected at least one approved entry");
+  }
+
+  if (statusCoverage.paidCount < 1) {
+    throw new Error("Commission lifecycle coverage mismatch: expected at least one paid entry");
   }
 
   console.log("✓ Verified Phase 10 commissions and sales team invariants");

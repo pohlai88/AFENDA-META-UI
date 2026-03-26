@@ -12,7 +12,8 @@
       "@afenda/db": ["../../packages/db/src/index.ts"],
       "@afenda/db/*": ["../../packages/db/src/*"],
       "@afenda/db/schema-meta": ["../../packages/db/src/schema-meta/index.ts"],
-      "@afenda/db/schema-domain": ["../../packages/db/src/schema-domain/index.ts"]
+      "@afenda/db/schema-domain": ["../../packages/db/src/schema-domain/index.ts"],
+      "@afenda/db/schema-platform": ["../../packages/db/src/schema-platform/index.ts"]
     }
   },
   "include": ["src"]

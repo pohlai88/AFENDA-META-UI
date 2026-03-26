@@ -15,7 +15,8 @@ export default [
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
-        project: true,
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         process: "readonly",
@@ -75,7 +76,7 @@ export default [
           selector:
             "CallExpression[callee.object.name='logger'][callee.property.name=/^(trace|debug|info|warn|error|fatal)$/] > Literal:first-child + ObjectExpression",
           message:
-            "Pino expects logger.<level>({ context }, \"message\") — merge object first, message string second.",
+            'Pino expects logger.<level>({ context }, "message") — merge object first, message string second.',
         },
       ],
     },

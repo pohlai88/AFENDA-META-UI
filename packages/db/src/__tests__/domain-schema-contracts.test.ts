@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   commissionEntries,
+  accountingPostings,
   commissionPlans,
   commissionPlanTiers,
   consignmentAgreementLines,
   consignmentAgreements,
   consignmentStockReportLines,
   consignmentStockReports,
+  documentApprovals,
+  documentStatusHistory,
   partners,
   fiscalPositionAccountMaps,
   fiscalPositionTaxMaps,
@@ -42,6 +45,9 @@ import {
   saleOrderOptionLines,
   saleOrderStatusHistory,
   saleOrderTaxSummary,
+  lineItemDiscounts,
+  roundingPolicies,
+  salesDocumentAttachments,
   salesTeamMembers,
   salesTeams,
   salesOrders,
@@ -318,6 +324,58 @@ describe("sales domain schema contracts", () => {
     expect(getTableColumns(commissionEntries).status).toBeDefined();
     expect(getTableColumns(commissionEntries).periodStart).toBeDefined();
     expect(getTableColumns(commissionEntries).periodEnd).toBeDefined();
+  });
+
+  it("phase 11 tables capture document infrastructure and accounting bridge columns", () => {
+    expect(getTableColumns(documentStatusHistory).documentType).toBeDefined();
+    expect(getTableColumns(documentStatusHistory).documentId).toBeDefined();
+    expect(getTableColumns(documentStatusHistory).fromStatus).toBeDefined();
+    expect(getTableColumns(documentStatusHistory).toStatus).toBeDefined();
+    expect(getTableColumns(documentStatusHistory).transitionedAt).toBeDefined();
+    expect(getTableColumns(documentStatusHistory).transitionedBy).toBeDefined();
+
+    expect(getTableColumns(documentApprovals).documentType).toBeDefined();
+    expect(getTableColumns(documentApprovals).documentId).toBeDefined();
+    expect(getTableColumns(documentApprovals).approvalLevel).toBeDefined();
+    expect(getTableColumns(documentApprovals).approverUserId).toBeDefined();
+    expect(getTableColumns(documentApprovals).status).toBeDefined();
+    expect(getTableColumns(documentApprovals).documentAmount).toBeDefined();
+
+    expect(getTableColumns(salesDocumentAttachments).documentType).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).documentId).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).fileName).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).fileSize).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).mimeType).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).storageProvider).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).storagePath).toBeDefined();
+    expect(getTableColumns(salesDocumentAttachments).isPublic).toBeDefined();
+
+    expect(getTableColumns(lineItemDiscounts).documentType).toBeDefined();
+    expect(getTableColumns(lineItemDiscounts).lineId).toBeDefined();
+    expect(getTableColumns(lineItemDiscounts).discountType).toBeDefined();
+    expect(getTableColumns(lineItemDiscounts).discountPercent).toBeDefined();
+    expect(getTableColumns(lineItemDiscounts).discountAmount).toBeDefined();
+    expect(getTableColumns(lineItemDiscounts).authorizedBy).toBeDefined();
+    expect(getTableColumns(lineItemDiscounts).sequence).toBeDefined();
+
+    expect(getTableColumns(accountingPostings).sourceDocumentType).toBeDefined();
+    expect(getTableColumns(accountingPostings).sourceDocumentId).toBeDefined();
+    expect(getTableColumns(accountingPostings).journalEntryId).toBeDefined();
+    expect(getTableColumns(accountingPostings).postingDate).toBeDefined();
+    expect(getTableColumns(accountingPostings).amount).toBeDefined();
+    expect(getTableColumns(accountingPostings).currencyCode).toBeDefined();
+    expect(getTableColumns(accountingPostings).postingStatus).toBeDefined();
+    expect(getTableColumns(accountingPostings).reversalEntryId).toBeDefined();
+
+    expect(getTableColumns(roundingPolicies).policyName).toBeDefined();
+    expect(getTableColumns(roundingPolicies).policyKey).toBeDefined();
+    expect(getTableColumns(roundingPolicies).roundingMethod).toBeDefined();
+    expect(getTableColumns(roundingPolicies).roundingPrecision).toBeDefined();
+    expect(getTableColumns(roundingPolicies).roundingUnit).toBeDefined();
+    expect(getTableColumns(roundingPolicies).appliesTo).toBeDefined();
+    expect(getTableColumns(roundingPolicies).currencyCode).toBeDefined();
+    expect(getTableColumns(roundingPolicies).effectiveFrom).toBeDefined();
+    expect(getTableColumns(roundingPolicies).effectiveTo).toBeDefined();
   });
 
   it("phase 1 enhancement: partners table has all 11 new columns", () => {
@@ -630,17 +688,17 @@ describe("sales domain schema contracts", () => {
     expect(cols.sourceOrderId).toBeDefined(); // FK to original sales order
     expect(cols.partnerId).toBeDefined(); // FK to partner
     expect(cols.reasonCodeId).toBeDefined(); // FK to return_reason_codes
-    
+
     // State machine (draft → approved → received → inspected → credited)
     expect(cols.status).toBeDefined();
-    
+
     // Approval workflow
     expect(cols.approvedBy).toBeDefined(); // Actor ID who approved
     expect(cols.approvedDate).toBeDefined(); // Approval timestamp
-    
+
     // Additional fields
     expect(cols.notes).toBeDefined(); // Return notes
-    
+
     // Audit trail
     expect(cols.deletedAt).toBeDefined();
     expect(cols.createdAt).toBeDefined();
@@ -656,21 +714,21 @@ describe("sales domain schema contracts", () => {
     expect(cols.returnOrderId).toBeDefined(); // FK to return_orders
     expect(cols.sourceLineId).toBeDefined(); // FK to original sales order line
     expect(cols.productId).toBeDefined(); // FK to product
-    
+
     // Quantity tracking with precision
     expect(cols.quantity).toBeDefined();
     expect(cols.quantity.columnType).toBe("PgNumeric");
-    
+
     // Financial fields with PgNumeric precision
     expect(cols.unitPrice).toBeDefined();
     expect(cols.unitPrice.columnType).toBe("PgNumeric");
     expect(cols.creditAmount).toBeDefined();
     expect(cols.creditAmount.columnType).toBe("PgNumeric");
-    
+
     // Inspection results
     expect(cols.condition).toBeDefined(); // good | damaged | defective | used
     expect(cols.notes).toBeDefined(); // Line notes
-    
+
     // Audit columns
     expect(cols.createdAt).toBeDefined();
     expect(cols.updatedAt).toBeDefined();

@@ -20,9 +20,8 @@ import {
 import { MoreVerticalIcon } from "lucide-react";
 import { useActions } from "~/hooks/useActions";
 import type { MetaAction } from "@afenda/meta-types";
-import { logger } from '../lib/logger';
-const log = logger.child({ module: 'RowActionsMenu' });
-
+import { logger } from "../lib/logger";
+const log = logger.child({ module: "RowActionsMenu" });
 
 export interface RowActionsMenuProps {
   model: string;
@@ -34,10 +33,6 @@ export interface RowActionsMenuProps {
 export function RowActionsMenu({ model, recordId, record, actions = [] }: RowActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const { execute, isExecuting } = useActions(model);
-
-  if (actions.length === 0) {
-    return null;
-  }
 
   const handleExecuteAction = React.useCallback(
     async (action: MetaAction) => {
@@ -54,6 +49,11 @@ export function RowActionsMenu({ model, recordId, record, actions = [] }: RowAct
     },
     [execute, model, recordId, record]
   );
+
+  // Early return AFTER all hooks
+  if (actions.length === 0) {
+    return null;
+  }
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

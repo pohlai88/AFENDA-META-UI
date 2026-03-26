@@ -148,7 +148,8 @@ const REPORT_STATE_MACHINE_RULES: TransitionRule<ConsignmentReportStatus>[] = [
       const agreementActive = ctx.agreementStatus === "active";
       return validationValid && agreementActive;
     },
-    description: "Generate invoice from confirmed report (requires valid validation + active agreement)",
+    description:
+      "Generate invoice from confirmed report (requires valid validation + active agreement)",
   },
 ];
 
@@ -157,7 +158,10 @@ export const consignmentReportStateMachine = new StateMachine<ConsignmentReportS
 );
 
 export class ConsignmentEngineError extends Error {
-  constructor(message: string, readonly code?: InvariantCode) {
+  constructor(
+    message: string,
+    readonly code?: InvariantCode
+  ) {
     super(message);
     this.name = "ConsignmentEngineError";
   }
@@ -193,9 +197,7 @@ export function assertCanInvoiceReport(status: ConsignmentReportStatus): void {
   }
 }
 
-export function validateStockReport(
-  input: ValidateStockReportInput
-): StockReportValidationResult {
+export function validateStockReport(input: ValidateStockReportInput): StockReportValidationResult {
   const { report, lines } = input;
   const issues: ValidationIssue[] = [];
 
@@ -283,9 +285,7 @@ export function validateStockReport(
     };
   });
 
-  const errors = issues
-    .filter((issue) => issue.severity === "error")
-    .map((issue) => issue.message);
+  const errors = issues.filter((issue) => issue.severity === "error").map((issue) => issue.message);
 
   return {
     valid: errors.length === 0,
@@ -306,7 +306,7 @@ export function generateInvoiceFromReport(
       validationValid: validation ? validation.valid : true,
       agreementStatus: agreement.status,
     });
-  } catch (error) {
+  } catch {
     if (agreement.status !== "active") {
       throw new ConsignmentEngineError(
         `Cannot invoice consignment report for agreement in status '${agreement.status}'.`,
@@ -376,9 +376,7 @@ export function generateInvoiceFromReport(
   };
 }
 
-export function checkAgreementExpiry(
-  input: CheckAgreementExpiryInput
-): AgreementExpiryResult {
+export function checkAgreementExpiry(input: CheckAgreementExpiryInput): AgreementExpiryResult {
   const { agreement, evaluatedAt = new Date() } = input;
   const { status, endDate } = agreement;
 

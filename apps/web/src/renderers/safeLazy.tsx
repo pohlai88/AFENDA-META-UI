@@ -7,9 +7,8 @@
 
 import React from "react";
 import type { RendererModule, RendererType, RendererVersion } from "./types/contracts";
-import { logger } from '../lib/logger';
-const log = logger.child({ module: 'safeLazy' });
-
+import { logger } from "../lib/logger";
+const log = logger.child({ module: "safeLazy" });
 
 /** Props shape for inline fallback renderer components (renderer props are unknown at this boundary). */
 type RendererFallbackProps = Record<string, unknown>;
@@ -122,7 +121,7 @@ interface SafeLazyOptions {
  * );
  * ```
  */
-export function safeLazy<T extends React.ComponentType<any>>(
+export function safeLazy<T extends React.ComponentType<object>>(
   importer: () => Promise<RendererModule>,
   options: SafeLazyOptions = {}
 ): React.LazyExoticComponent<T> {
@@ -145,11 +144,10 @@ export function safeLazy<T extends React.ComponentType<any>>(
         const error = "Module loaded but is null or undefined";
         log.error(`[safeLazy] ${error}`, { rendererId, exportName });
         return {
-          default:
-            fallback ||
+          default: (fallback ||
             ((_props: RendererFallbackProps) => (
               <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
-            )),
+            ))) as T,
         };
       }
 
@@ -167,11 +165,10 @@ export function safeLazy<T extends React.ComponentType<any>>(
             availableExports: Object.keys(mod),
           });
           return {
-            default:
-              fallback ||
+            default: (fallback ||
               ((_props: RendererFallbackProps) => (
                 <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
-              )),
+              ))) as T,
           };
         }
       } else {
@@ -185,11 +182,10 @@ export function safeLazy<T extends React.ComponentType<any>>(
             availableExports: Object.keys(mod),
           });
           return {
-            default:
-              fallback ||
+            default: (fallback ||
               ((_props: RendererFallbackProps) => (
                 <FallbackRenderer error={error} rendererId={rendererId} exportName="default" />
-              )),
+              ))) as T,
           };
         }
       }
@@ -199,11 +195,10 @@ export function safeLazy<T extends React.ComponentType<any>>(
         const error = `Export is not a function (got ${typeof component})`;
         log.error(`[safeLazy] ${error}`, { rendererId, exportName });
         return {
-          default:
-            fallback ||
+          default: (fallback ||
             ((_props: RendererFallbackProps) => (
               <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
-            )),
+            ))) as T,
         };
       }
 
@@ -224,11 +219,10 @@ export function safeLazy<T extends React.ComponentType<any>>(
       });
 
       return {
-        default:
-          fallback ||
+        default: (fallback ||
           ((_props: RendererFallbackProps) => (
             <FallbackRenderer error={error} rendererId={rendererId} exportName={exportName} />
-          )),
+          ))) as T,
       };
     }
   }) as React.LazyExoticComponent<T>;
@@ -243,13 +237,12 @@ export function safeLazy<T extends React.ComponentType<any>>(
  * const MetaList = safeRendererLazy("list", "v2");
  * ```
  */
-export function safeRendererLazy<T extends React.ComponentType<any>>(
+export function safeRendererLazy<T extends React.ComponentType<object>>(
   type: RendererType,
   version: RendererVersion = "v1",
   options: Omit<SafeLazyOptions, "exportName" | "rendererId"> = {}
 ): React.LazyExoticComponent<T> {
   // Import synchronously - registry should already be loaded
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getRenderer } = require("./registry");
   const registration = getRenderer(type, version);
 
@@ -263,7 +256,7 @@ export function safeRendererLazy<T extends React.ComponentType<any>>(
             rendererId={`${type}-${version}`}
           />
         )) as unknown as T,
-      })
+      } as unknown as RendererModule)
     );
   }
 

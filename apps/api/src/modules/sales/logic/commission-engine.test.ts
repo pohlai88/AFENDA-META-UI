@@ -217,4 +217,55 @@ describe("sales commission engine", () => {
       })
     ).toThrow("Paid commission entries cannot be moved back to approved.");
   });
+
+  it("rejects tiers that do not belong to the selected plan", () => {
+    expect(() =>
+      calculateCommission({
+        plan: activePlan,
+        tiers: [
+          {
+            ...baseTier,
+            planId: "another-plan",
+          },
+        ],
+        metrics: { revenue: "1000.00" },
+      })
+    ).toThrow("Commission tier does not belong to the selected plan.");
+  });
+
+  it("rejects negative commission metrics", () => {
+    expect(() =>
+      calculateCommission({
+        plan: activePlan,
+        tiers: [baseTier],
+        metrics: { revenue: "-1.00" },
+      })
+    ).toThrow("Commission base revenue cannot be negative.");
+  });
+
+  it("keeps paid date null when approving a draft", () => {
+    const approved = approveCommissionEntry({
+      status: "draft",
+      paidDate: new Date("2025-02-10T10:00:00.000Z"),
+      reference: "x",
+    });
+
+    expect(approved.status).toBe("approved");
+    expect(approved.paidDate).toBeNull();
+  });
+
+  it("uses paid date override when marking paid", () => {
+    const paidAt = new Date("2026-03-26T00:00:00.000Z");
+    const paid = markCommissionEntryPaid(
+      {
+        status: "approved",
+        paidDate: null,
+        reference: "entry-1",
+      },
+      paidAt
+    );
+
+    expect(paid.status).toBe("paid");
+    expect(paid.paidDate).toEqual(paidAt);
+  });
 });

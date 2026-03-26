@@ -104,6 +104,12 @@ import {
 } from "./_enums.js";
 import {
   CommissionEntryIdSchema,
+  DocumentStatusHistoryIdSchema,
+  DocumentApprovalIdSchema,
+  SalesDocumentAttachmentIdSchema,
+  LineItemDiscountIdSchema,
+  AccountingPostingIdSchema,
+  RoundingPolicyIdSchema,
   CommissionPlanIdSchema,
   CommissionPlanTierIdSchema,
   ConsignmentAgreementIdSchema,
@@ -2894,6 +2900,379 @@ export const commissionEntries = salesSchema.table(
   ]
 );
 
+export const documentStatusHistory = salesSchema.table(
+  "document_status_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    documentType: text("document_type").notNull(),
+    documentId: uuid("document_id").notNull(),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
+    transitionedAt: timestamp("transitioned_at", { withTimezone: true }).notNull().defaultNow(),
+    transitionedBy: integer("transitioned_by").notNull(),
+    reason: text("reason"),
+    notes: text("notes"),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_document_status_history_tenant").on(table.tenantId),
+    index("idx_sales_document_status_history_lookup").on(
+      table.tenantId,
+      table.documentType,
+      table.documentId,
+      table.transitionedAt
+    ),
+    index("idx_sales_document_status_history_actor").on(
+      table.tenantId,
+      table.transitionedBy,
+      table.transitionedAt
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_document_status_history_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.transitionedBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_document_status_history_transitioned_by",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_document_status_history"),
+    serviceBypassPolicy("sales_document_status_history"),
+  ]
+);
+
+export const documentApprovals = salesSchema.table(
+  "document_approvals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    documentType: text("document_type").notNull(),
+    documentId: uuid("document_id").notNull(),
+    approvalLevel: integer("approval_level").notNull().default(1),
+    approverUserId: integer("approver_user_id").notNull(),
+    approverRole: text("approver_role"),
+    status: text("status").notNull().default("pending"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+    comments: text("comments"),
+    documentAmount: numeric("document_amount", { precision: 14, scale: 2 }),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_document_approvals_tenant").on(table.tenantId),
+    index("idx_sales_document_approvals_pending").on(
+      table.tenantId,
+      table.approverUserId,
+      table.status
+    ),
+    index("idx_sales_document_approvals_history").on(
+      table.tenantId,
+      table.documentType,
+      table.documentId,
+      table.approvalLevel
+    ),
+    check("chk_sales_document_approvals_level_positive", sql`${table.approvalLevel} > 0`),
+    check(
+      "chk_sales_document_approvals_status",
+      sql`${table.status} IN ('pending', 'approved', 'rejected')`
+    ),
+    check(
+      "chk_sales_document_approvals_approved_consistency",
+      sql`${table.status} <> 'approved' OR ${table.approvedAt} IS NOT NULL`
+    ),
+    check(
+      "chk_sales_document_approvals_rejected_consistency",
+      sql`${table.status} <> 'rejected' OR ${table.rejectedAt} IS NOT NULL`
+    ),
+    check(
+      "chk_sales_document_approvals_amount_non_negative",
+      sql`${table.documentAmount} IS NULL OR ${table.documentAmount} >= 0`
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_document_approvals_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.approverUserId],
+      foreignColumns: [users.userId],
+      name: "fk_sales_document_approvals_approver",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_document_approvals"),
+    serviceBypassPolicy("sales_document_approvals"),
+  ]
+);
+
+export const salesDocumentAttachments = salesSchema.table(
+  "document_attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    documentType: text("document_type").notNull(),
+    documentId: uuid("document_id").notNull(),
+    fileName: text("file_name").notNull(),
+    fileSize: integer("file_size").notNull(),
+    mimeType: text("mime_type").notNull(),
+    storageProvider: text("storage_provider").notNull(),
+    storagePath: text("storage_path").notNull(),
+    storageUrl: text("storage_url"),
+    attachmentType: text("attachment_type"),
+    description: text("description"),
+    isPublic: boolean("is_public").notNull().default(false),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_document_attachments_tenant").on(table.tenantId),
+    index("idx_sales_document_attachments_lookup").on(
+      table.tenantId,
+      table.documentType,
+      table.documentId,
+      table.createdAt
+    ),
+    index("idx_sales_document_attachments_type").on(
+      table.tenantId,
+      table.attachmentType,
+      table.createdAt
+    ),
+    uniqueIndex("uq_sales_document_attachments_storage_path")
+      .on(table.tenantId, table.storagePath)
+      .where(sql`${table.deletedAt} IS NULL`),
+    check("chk_sales_document_attachments_size_non_negative", sql`${table.fileSize} >= 0`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_document_attachments_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_document_attachments"),
+    serviceBypassPolicy("sales_document_attachments"),
+  ]
+);
+
+export const lineItemDiscounts = salesSchema.table(
+  "line_item_discounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    documentType: text("document_type").notNull(),
+    lineId: uuid("line_id").notNull(),
+    discountType: text("discount_type").notNull(),
+    discountSource: text("discount_source"),
+    discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }),
+    discountAmount: numeric("discount_amount", { precision: 14, scale: 2 }),
+    authorizedBy: integer("authorized_by"),
+    authorizedAt: timestamp("authorized_at", { withTimezone: true }),
+    maxDiscountAllowed: numeric("max_discount_allowed", { precision: 5, scale: 2 }),
+    reason: text("reason"),
+    sequence: integer("sequence").notNull().default(1),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_line_item_discounts_tenant").on(table.tenantId),
+    index("idx_sales_line_item_discounts_audit").on(
+      table.tenantId,
+      table.discountType,
+      table.authorizedBy,
+      table.authorizedAt
+    ),
+    index("idx_sales_line_item_discounts_line").on(
+      table.tenantId,
+      table.documentType,
+      table.lineId,
+      table.sequence
+    ),
+    check(
+      "chk_sales_line_item_discounts_percent_range",
+      sql`${table.discountPercent} IS NULL OR (${table.discountPercent} >= 0 AND ${table.discountPercent} <= 100)`
+    ),
+    check(
+      "chk_sales_line_item_discounts_amount_non_negative",
+      sql`${table.discountAmount} IS NULL OR ${table.discountAmount} >= 0`
+    ),
+    check(
+      "chk_sales_line_item_discounts_requires_value",
+      sql`${table.discountPercent} IS NOT NULL OR ${table.discountAmount} IS NOT NULL`
+    ),
+    check(
+      "chk_sales_line_item_discounts_manual_auth",
+      sql`${table.discountType} <> 'manual' OR ${table.authorizedBy} IS NOT NULL`
+    ),
+    check("chk_sales_line_item_discounts_sequence_positive", sql`${table.sequence} > 0`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_line_item_discounts_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.authorizedBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_line_item_discounts_authorized_by",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_line_item_discounts"),
+    serviceBypassPolicy("sales_line_item_discounts"),
+  ]
+);
+
+export const accountingPostings = salesSchema.table(
+  "accounting_postings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    sourceDocumentType: text("source_document_type").notNull(),
+    sourceDocumentId: uuid("source_document_id").notNull(),
+    journalEntryId: uuid("journal_entry_id"),
+    postingDate: timestamp("posting_date", { withTimezone: true }).notNull(),
+    debitAccountCode: text("debit_account_code"),
+    creditAccountCode: text("credit_account_code"),
+    amount: numeric("amount", { precision: 14, scale: 2 }).notNull().default("0"),
+    currencyCode: text("currency_code").notNull(),
+    postingStatus: text("posting_status").notNull().default("draft"),
+    postedBy: integer("posted_by"),
+    postedAt: timestamp("posted_at", { withTimezone: true }),
+    reversedAt: timestamp("reversed_at", { withTimezone: true }),
+    reversedBy: integer("reversed_by"),
+    reversalReason: text("reversal_reason"),
+    reversalEntryId: uuid("reversal_entry_id"),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_accounting_postings_tenant").on(table.tenantId),
+    index("idx_sales_accounting_postings_date").on(
+      table.tenantId,
+      table.postingDate,
+      table.postingStatus
+    ),
+    index("idx_sales_accounting_postings_source").on(
+      table.tenantId,
+      table.sourceDocumentType,
+      table.sourceDocumentId
+    ),
+    check("chk_sales_accounting_postings_amount_non_negative", sql`${table.amount} >= 0`),
+    check(
+      "chk_sales_accounting_postings_status",
+      sql`${table.postingStatus} IN ('draft', 'posted', 'reversed')`
+    ),
+    check(
+      "chk_sales_accounting_postings_posted_consistency",
+      sql`${table.postingStatus} <> 'posted' OR (${table.postedBy} IS NOT NULL AND ${table.postedAt} IS NOT NULL)`
+    ),
+    check(
+      "chk_sales_accounting_postings_reversed_consistency",
+      sql`${table.postingStatus} <> 'reversed' OR (${table.reversedBy} IS NOT NULL AND ${table.reversedAt} IS NOT NULL)`
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_accounting_postings_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.postedBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_accounting_postings_posted_by",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.reversedBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_accounting_postings_reversed_by",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.reversalEntryId],
+      foreignColumns: [table.id],
+      name: "fk_sales_accounting_postings_reversal_entry",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_accounting_postings"),
+    serviceBypassPolicy("sales_accounting_postings"),
+  ]
+);
+
+export const roundingPolicies = salesSchema.table(
+  "rounding_policies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    policyName: text("policy_name").notNull(),
+    policyKey: text("policy_key").notNull(),
+    roundingMethod: text("rounding_method").notNull(),
+    roundingPrecision: integer("rounding_precision").notNull().default(2),
+    roundingUnit: numeric("rounding_unit", { precision: 14, scale: 6 }),
+    appliesTo: text("applies_to").notNull(),
+    currencyCode: text("currency_code"),
+    isActive: boolean("is_active").notNull().default(true),
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull().defaultNow(),
+    effectiveTo: timestamp("effective_to", { withTimezone: true }),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_rounding_policies_tenant").on(table.tenantId),
+    index("idx_sales_rounding_policies_lookup").on(
+      table.tenantId,
+      table.policyKey,
+      table.currencyCode,
+      table.effectiveFrom
+    ),
+    index("idx_sales_rounding_policies_active").on(table.tenantId, table.appliesTo, table.isActive),
+    uniqueIndex("uq_sales_rounding_policies_effective")
+      .on(table.tenantId, table.policyKey, table.currencyCode, table.effectiveFrom)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.isActive} = true`),
+    check(
+      "chk_sales_rounding_policies_method",
+      sql`${table.roundingMethod} IN ('round', 'ceil', 'floor', 'truncate')`
+    ),
+    check(
+      "chk_sales_rounding_policies_precision_range",
+      sql`${table.roundingPrecision} BETWEEN 0 AND 6`
+    ),
+    check(
+      "chk_sales_rounding_policies_unit_positive",
+      sql`${table.roundingUnit} IS NULL OR ${table.roundingUnit} > 0`
+    ),
+    check(
+      "chk_sales_rounding_policies_effective_order",
+      sql`${table.effectiveTo} IS NULL OR ${table.effectiveTo} >= ${table.effectiveFrom}`
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_rounding_policies_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_rounding_policies"),
+    serviceBypassPolicy("sales_rounding_policies"),
+  ]
+);
+
 export const domainInvariantLogs = salesSchema.table(
   "domain_invariant_logs",
   {
@@ -2962,11 +3341,7 @@ export const domainEventLogs = salesSchema.table(
       table.entityId,
       table.createdAt
     ),
-    index("idx_sales_domain_event_logs_type").on(
-      table.tenantId,
-      table.eventType,
-      table.createdAt
-    ),
+    index("idx_sales_domain_event_logs_type").on(table.tenantId, table.eventType, table.createdAt),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.tenantId],
@@ -3041,6 +3416,12 @@ export const territoryRuleSelectSchema = createSelectSchema(territoryRules);
 export const commissionPlanSelectSchema = createSelectSchema(commissionPlans);
 export const commissionPlanTierSelectSchema = createSelectSchema(commissionPlanTiers);
 export const commissionEntrySelectSchema = createSelectSchema(commissionEntries);
+export const documentStatusHistorySelectSchema = createSelectSchema(documentStatusHistory);
+export const documentApprovalSelectSchema = createSelectSchema(documentApprovals);
+export const salesDocumentAttachmentSelectSchema = createSelectSchema(salesDocumentAttachments);
+export const lineItemDiscountSelectSchema = createSelectSchema(lineItemDiscounts);
+export const accountingPostingSelectSchema = createSelectSchema(accountingPostings);
+export const roundingPolicySelectSchema = createSelectSchema(roundingPolicies);
 export const domainInvariantLogSelectSchema = createSelectSchema(domainInvariantLogs);
 export const domainEventLogSelectSchema = createSelectSchema(domainEventLogs);
 
@@ -3274,6 +3655,117 @@ export const commissionEntryInsertSchema = createInsertSchema(commissionEntries,
   periodStart: z.coerce.date(),
   periodEnd: z.coerce.date(),
   notes: z.string().max(2000).optional().nullable(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const documentStatusHistoryInsertSchema = createInsertSchema(documentStatusHistory, {
+  id: DocumentStatusHistoryIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  documentType: z.string().min(1).max(120),
+  documentId: z.uuid(),
+  fromStatus: z.string().max(120).optional().nullable(),
+  toStatus: z.string().min(1).max(120),
+  transitionedAt: z.coerce.date().optional(),
+  transitionedBy: z.number().int().positive(),
+  reason: z.string().max(2000).optional().nullable(),
+  notes: z.string().max(4000).optional().nullable(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const documentApprovalInsertSchema = createInsertSchema(documentApprovals, {
+  id: DocumentApprovalIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  documentType: z.string().min(1).max(120),
+  documentId: z.uuid(),
+  approvalLevel: z.number().int().positive().optional(),
+  approverUserId: z.number().int().positive(),
+  approverRole: z.string().max(120).optional().nullable(),
+  status: z.enum(["pending", "approved", "rejected"]).optional(),
+  approvedAt: z.coerce.date().optional().nullable(),
+  rejectedAt: z.coerce.date().optional().nullable(),
+  comments: z.string().max(4000).optional().nullable(),
+  documentAmount: positiveMoneyStringSchema.optional().nullable(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const salesDocumentAttachmentInsertSchema = createInsertSchema(salesDocumentAttachments, {
+  id: SalesDocumentAttachmentIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  documentType: z.string().min(1).max(120),
+  documentId: z.uuid(),
+  fileName: z.string().min(1).max(512),
+  fileSize: z.number().int().min(0),
+  mimeType: z.string().min(1).max(255),
+  storageProvider: z.string().min(1).max(80),
+  storagePath: z.string().min(1).max(1024),
+  storageUrl: z.url().optional().nullable(),
+  attachmentType: z.string().max(120).optional().nullable(),
+  description: z.string().max(4000).optional().nullable(),
+  isPublic: z.boolean().optional(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const lineItemDiscountInsertSchema = createInsertSchema(lineItemDiscounts, {
+  id: LineItemDiscountIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  documentType: z.string().min(1).max(120),
+  lineId: z.uuid(),
+  discountType: z.string().min(1).max(80),
+  discountSource: z.string().max(255).optional().nullable(),
+  discountPercent: discountStringSchema.optional().nullable(),
+  discountAmount: positiveMoneyStringSchema.optional().nullable(),
+  authorizedBy: z.number().int().positive().optional().nullable(),
+  authorizedAt: z.coerce.date().optional().nullable(),
+  maxDiscountAllowed: discountStringSchema.optional().nullable(),
+  reason: z.string().max(2000).optional().nullable(),
+  sequence: z.number().int().positive().optional(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const accountingPostingInsertSchema = createInsertSchema(accountingPostings, {
+  id: AccountingPostingIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  sourceDocumentType: z.string().min(1).max(120),
+  sourceDocumentId: z.uuid(),
+  journalEntryId: z.uuid().optional().nullable(),
+  postingDate: z.coerce.date(),
+  debitAccountCode: z.string().max(64).optional().nullable(),
+  creditAccountCode: z.string().max(64).optional().nullable(),
+  amount: positiveMoneyStringSchema.optional(),
+  currencyCode: z.string().min(3).max(3),
+  postingStatus: z.enum(["draft", "posted", "reversed"]).optional(),
+  postedBy: z.number().int().positive().optional().nullable(),
+  postedAt: z.coerce.date().optional().nullable(),
+  reversedAt: z.coerce.date().optional().nullable(),
+  reversedBy: z.number().int().positive().optional().nullable(),
+  reversalReason: z.string().max(2000).optional().nullable(),
+  reversalEntryId: AccountingPostingIdSchema.optional().nullable(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const roundingPolicyInsertSchema = createInsertSchema(roundingPolicies, {
+  id: RoundingPolicyIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  policyName: z.string().min(1).max(160),
+  policyKey: z.string().min(1).max(120),
+  roundingMethod: z.enum(["round", "ceil", "floor", "truncate"]),
+  roundingPrecision: z.number().int().min(0).max(6).optional(),
+  roundingUnit: z
+    .string()
+    .regex(/^\d+(\.\d{1,6})?$/, "Must be a valid positive decimal")
+    .optional()
+    .nullable(),
+  appliesTo: z.string().min(1).max(80),
+  currencyCode: z.string().min(3).max(3).optional().nullable(),
+  isActive: z.boolean().optional(),
+  effectiveFrom: z.coerce.date().optional(),
+  effectiveTo: z.coerce.date().optional().nullable(),
   createdBy: z.number().int().positive(),
   updatedBy: z.number().int().positive(),
 });

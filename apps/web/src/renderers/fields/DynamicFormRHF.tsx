@@ -302,7 +302,11 @@ export function DynamicFormRHF({
     };
   }, [cancelPendingAsyncWork]);
 
-  const baseResolver = React.useMemo(() => zodResolver(resolvedSchema as any), [resolvedSchema]);
+  const baseResolver = React.useMemo(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form v5 compatibility
+    () => zodResolver(resolvedSchema as any),
+    [resolvedSchema]
+  );
 
   const runDebouncedAsyncValidation = React.useCallback(
     (path: string, rule: AsyncFieldRule, value: unknown): Promise<string | null> => {

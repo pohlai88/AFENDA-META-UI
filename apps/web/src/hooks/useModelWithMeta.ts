@@ -109,6 +109,7 @@ export function useModelWithMeta<T = Record<string, unknown>>(
       }
       return model$.createRecord(data);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- model$ is a stable hook result
     [model, model$.createRecord, permissions]
   );
 
@@ -122,6 +123,7 @@ export function useModelWithMeta<T = Record<string, unknown>>(
       }
       return model$.updateRecord(id, data);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- model$ is a stable hook result
     [model, model$.updateRecord, permissions]
   );
 
@@ -135,6 +137,7 @@ export function useModelWithMeta<T = Record<string, unknown>>(
       }
       return model$.deleteRecord(id);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- model$ is a stable hook result
     [model, model$.deleteRecord, permissions]
   );
 

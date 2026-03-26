@@ -23,8 +23,8 @@ function readNumberEnv(name: string, fallback: number): number {
 }
 
 export interface UploadCleanupLogger {
-  info: (message: string, meta?: Record<string, unknown>) => void;
-  error: (message: string, meta?: Record<string, unknown>) => void;
+  info: (objOrMsg: Record<string, unknown> | string, message?: string) => void;
+  error: (objOrMsg: Record<string, unknown> | string, message?: string) => void;
 }
 
 export function startUploadRetentionJob(logger: UploadCleanupLogger): () => void {
@@ -41,14 +41,20 @@ export function startUploadRetentionJob(logger: UploadCleanupLogger): () => void
   const runCleanup = async () => {
     try {
       const pruned = await pruneOrphanedUploads(retentionMs);
-      logger.info("[Uploads] Retention cleanup completed", {
-        pruned,
-        retentionMs,
-      });
+      logger.info(
+        {
+          pruned,
+          retentionMs,
+        },
+        "[Uploads] Retention cleanup completed"
+      );
     } catch (error) {
-      logger.error("[Uploads] Retention cleanup failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "[Uploads] Retention cleanup failed"
+      );
     }
   };
 
@@ -57,10 +63,13 @@ export function startUploadRetentionJob(logger: UploadCleanupLogger): () => void
     void runCleanup();
   }, intervalMs);
 
-  logger.info("[Uploads] Retention job started", {
-    intervalMs,
-    retentionMs,
-  });
+  logger.info(
+    {
+      intervalMs,
+      retentionMs,
+    },
+    "[Uploads] Retention job started"
+  );
 
   return () => {
     clearInterval(interval);

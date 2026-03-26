@@ -1,9 +1,4 @@
-import type {
-  AnalyticsFlushReason,
-  AnalyticsProviderAdapter,
-  AnalyticsProviderId,
-  ErpAnalyticsEvent,
-} from "./schema";
+import type { AnalyticsFlushReason, AnalyticsProviderAdapter, ErpAnalyticsEvent } from "./schema";
 
 type AnalyticsGlobal = typeof globalThis & {
   posthog?: {

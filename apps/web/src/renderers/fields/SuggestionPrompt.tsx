@@ -57,7 +57,7 @@ function getPersonalizationBadge(level: string): {
 function InlineVariant({
   suggestions,
   onSuggestionClick,
-  showReasons,
+  showReasons: _showReasons,
 }: Omit<SuggestionPromptProps, "variant">) {
   if (suggestions.length === 0) return null;
 

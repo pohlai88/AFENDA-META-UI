@@ -27,9 +27,8 @@ import { PageHeader, PageContainer } from "~/components/layout";
 import { FormFieldRenderer } from "./fields/FormFieldRenderer";
 import { useFieldConditions, FieldConditionsProvider } from "./conditions";
 import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
-import { logger } from '../lib/logger';
-const log = logger.child({ module: 'MetaFormV2' });
-
+import { logger } from "../lib/logger";
+const log = logger.child({ module: "MetaFormV2" });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -288,8 +287,8 @@ export function MetaFormV2({
   }, [meta?.fields]);
 
   // Initialize form
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const form = useForm<Record<string, any>>({
+  const form = useForm<Record<string, unknown>>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form v5 compatibility
     resolver: zodResolver(schema as any),
     defaultValues: (record as Record<string, unknown>) ?? {},
   });

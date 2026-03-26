@@ -13,9 +13,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "~/stores/business/hooks";
 import {
-  loadInstancesStart,
-  loadInstancesSuccess,
-  loadInstancesFailure,
   createInstanceStart,
   createInstanceSuccess,
   createInstanceFailure,
@@ -31,6 +28,14 @@ import {
 } from "~/stores/business";
 import { toast } from "sonner";
 import type { WorkflowInstance } from "@afenda/meta-types";
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && typeof err.message === "string" && err.message.length > 0) {
+    return err.message;
+  }
+
+  return fallback;
+}
 
 export interface TriggerWorkflowPayload {
   workflowId: string;
@@ -126,8 +131,8 @@ export function useWorkflow(): {
         }
 
         throw new Error("No workflow instance returned");
-      } catch (err: any) {
-        const errMsg = err?.message || "Failed to trigger workflow";
+      } catch (err: unknown) {
+        const errMsg = getErrorMessage(err, "Failed to trigger workflow");
         setLocalError(errMsg);
         dispatch(createInstanceFailure(errMsg));
         toast.error(errMsg);
@@ -196,8 +201,8 @@ export function useWorkflow(): {
         }
 
         throw new Error("No workflow instance returned");
-      } catch (err: any) {
-        const errMsg = err?.message || "Failed to submit approval";
+      } catch (err: unknown) {
+        const errMsg = getErrorMessage(err, "Failed to submit approval");
         setLocalError(errMsg);
         dispatch(updateInstanceFailure(errMsg));
         toast.error(errMsg);

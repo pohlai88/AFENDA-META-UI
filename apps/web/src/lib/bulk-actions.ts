@@ -59,17 +59,10 @@ export function useRowBulkAction(
   const bulkAction = useBulkAction(model);
 
   const execute = async (action: BulkAction) => {
-    let idsToUpdate: string[] = [];
-
-    if (selection.mode === "query") {
-      // Query-based selection: get all matching IDs
-      // In a real implementation, this would fetch from API with the filter
-      // For now, we'll use all row IDs as approximation
-      idsToUpdate = allRows.map((row) => String(row.id)).filter((id) => id && id !== "undefined");
-    } else {
-      // Row-based selection: use selected IDs directly
-      idsToUpdate = selection.ids;
-    }
+    const idsToUpdate: string[] =
+      selection.mode === "query"
+        ? allRows.map((row) => String(row.id)).filter((id) => id && id !== "undefined")
+        : selection.ids;
 
     if (idsToUpdate.length === 0) {
       toast.warning("No records selected");

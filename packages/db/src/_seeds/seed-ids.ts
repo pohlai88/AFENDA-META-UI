@@ -155,6 +155,8 @@ export const SEED_IDS = {
   commissionPlanRevenueStandard: "00001405-0000-4000-8000-000000001405",
   commissionPlanTierRevenueStandard: "00001406-0000-4000-8000-000000001406",
   commissionEntryOrderOne: "00001407-0000-4000-8000-000000001407",
+  commissionEntryOrderOneDraft: "00001408-0000-4000-8000-000000001408",
+  commissionEntryOrderOnePaid: "00001409-0000-4000-8000-000000001409",
 
   // ── Product Templates (Phase 5) ───────────────────────────────────────────
   productTmplTShirt: "00001501-0000-4000-8000-000000001501",

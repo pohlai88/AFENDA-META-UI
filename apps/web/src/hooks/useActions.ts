@@ -43,7 +43,7 @@ export function useActions(model: string) {
    */
   const execute = useCallback(
     async (actionId: string, context: ActionContext) => {
-      const action = actions.find((a: any) => a.id === actionId);
+      const action = actions.find((a) => a.id === actionId);
       if (!action) {
         const msg = `Action '${actionId}' not found`;
         setError(msg);
@@ -97,8 +97,8 @@ export function useActions(model: string) {
         const resultData = await response.json();
         toast.success(`${action.label} completed successfully`);
         return resultData;
-      } catch (err: any) {
-        const errMsg = err?.message || "Action failed";
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Action failed";
         setError(errMsg);
         toast.error(errMsg);
       } finally {

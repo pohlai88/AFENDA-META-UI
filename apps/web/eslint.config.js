@@ -15,6 +15,7 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import prettierConfig from "eslint-config-prettier";
+import globals from "globals";
 
 export default [
   {
@@ -33,23 +34,10 @@ export default [
         },
       },
       globals: {
-        // Browser globals
-        window: "readonly",
-        document: "readonly",
-        localStorage: "readonly",
-        fetch: "readonly",
-        console: "readonly",
-        URLSearchParams: "readonly",
-        HTMLElement: "readonly",
-        HTMLDivElement: "readonly",
-        HTMLInputElement: "readonly",
-        HTMLButtonElement: "readonly",
-        HTMLParagraphElement: "readonly",
-        MediaQueryListEvent: "readonly",
-        crypto: "readonly",
-        // Node/Vite
+        ...globals.browser,
+        // Node/Vite (for import.meta, process.env)
         process: "readonly",
-        // React
+        // React is global in JSX transform
         React: "readonly",
       },
     },
@@ -74,7 +62,10 @@ export default [
       // ============================================================================
       // TYPESCRIPT RULES
       // ============================================================================
+      "no-undef": "off", // TypeScript handles this better
+      "no-redeclare": "off", // Disable base rule (using TypeScript version for overloads)
       "no-unused-vars": "off", // Disable base rule (using TypeScript version)
+      "@typescript-eslint/no-redeclare": ["error", { ignoreDeclarationMerge: true }], // TypeScript-aware, handles function overloads
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
@@ -99,6 +90,7 @@ export default [
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "no-debugger": "warn",
       "no-constant-binary-expression": "error", // Catches bugs like if (x && CONSTANT)
+      "no-useless-assignment": "warn", // Warn on assignments that are never read
 
       // ============================================================================
       // STATE MATRIX ENFORCEMENT RULES
@@ -120,6 +112,15 @@ export default [
     settings: {
       react: {
         version: "detect",
+      },
+    },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
@@ -182,12 +183,33 @@ export default [
     },
   },
   // ============================================================================
+  // RENDERER/BOOTSTRAP INFRASTRUCTURE (intentional mixed exports)
+  // ============================================================================
+  {
+    files: [
+      "src/bootstrap/permissions-context.tsx",
+      "src/renderers/safeLazy.tsx",
+      "src/renderers/layout/LayoutRenderer.tsx",
+      "src/renderers/fields/DynamicFormRHF.tsx",
+      "src/renderers/fields/FieldRenderer.tsx",
+      "src/renderers/fields/FieldWrapper.tsx",
+      "src/renderers/fields/index.tsx",
+    ],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  // ============================================================================
   // TEST FILES CONFIGURATION (Vitest globals)
   // ============================================================================
   {
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/test/**/*.{ts,tsx}"],
     languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
       globals: {
+        ...globals.browser,
         // Test globals (Vitest/Jest)
         describe: "readonly",
         it: "readonly",
@@ -198,23 +220,24 @@ export default [
         beforeAll: "readonly",
         afterAll: "readonly",
         vi: "readonly",
-        // Node.js/Browser globals needed in tests
-        global: "writable",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
-        Headers: "readonly",
-        Request: "readonly",
-        Response: "readonly",
-        fetch: "readonly",
-        Storage: "readonly",
-        // DOM types used in test mocks
-        IntersectionObserver: "readonly",
-        IntersectionObserverEntry: "readonly",
-        ResizeObserver: "readonly",
-        Element: "readonly",
       },
+    },
+  },
+  // ============================================================================
+  // DEMO / EXAMPLE FILES (intentional instructional code patterns)
+  // ============================================================================
+  {
+    files: [
+      "src/**/*.example.{ts,tsx}",
+      "src/**/*_DEMO.{ts,tsx}",
+      "src/**/*_EXAMPLES.{ts,tsx}",
+      "src/**/INTEGRATION_EXAMPLES.tsx",
+      "src/**/SUGGESTIONS_DEMO.ts",
+    ],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "react-refresh/only-export-components": "off",
     },
   },
   // ============================================================================

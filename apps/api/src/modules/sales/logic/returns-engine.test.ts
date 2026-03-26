@@ -1,4 +1,3 @@
-import { Decimal } from "decimal.js";
 import { describe, it, expect } from "vitest";
 
 import {
@@ -155,7 +154,7 @@ describe("validateReturnQuantities", () => {
   it("fails when source order is invalid", () => {
     const input: ValidateReturnQuantitiesInput = {
       ...baseInput,
-      sourceOrder: null as any,
+      sourceOrder: null as unknown as ValidateReturnQuantitiesInput["sourceOrder"],
     };
 
     const result = validateReturnQuantities(input);

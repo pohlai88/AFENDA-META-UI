@@ -19,11 +19,13 @@ Goal: Keep monorepo healthy. Make changes safely. Use CI gates as source of trut
 ## 2. Golden Commands
 
 **Master gate (required before completion):**
+
 ```bash
 pnpm ci:gate
 ```
 
 **Targeted gates (run relevant ones first):**
+
 ```bash
 pnpm ci:gate:boundaries      # package import boundaries
 pnpm ci:gate:typescript      # type checking
@@ -36,6 +38,7 @@ pnpm ci:gate:vite            # vite config quality
 ```
 
 **Diagnostics:**
+
 ```bash
 pnpm ci:gate:verbose         # detailed gate output
 pnpm run typecheck:debug     # pinpoint type errors
@@ -44,6 +47,7 @@ pnpm sherif                  # workspace lint
 ```
 
 **Dependency fixes:**
+
 ```bash
 pnpm syncpack:fix
 pnpm syncpack:format
@@ -105,6 +109,7 @@ tooling     @afenda/ci-gate          -> (no runtime deps)
 ## 6. Dependency Hygiene
 
 When changing dependencies:
+
 1. Prefer workspace catalogs
 2. Keep internal refs as `workspace:*`
 3. Validate:
@@ -124,6 +129,7 @@ When changing dependencies:
 ## 7. Agent Safety Policy
 
 **Do NOT:**
+
 - Skip CI checks based on assumptions
 - Claim done while any gate fails
 - Introduce destructive git operations
@@ -132,6 +138,7 @@ When changing dependencies:
 - Downgrade production code/schemas to make tests pass
 
 **DO:**
+
 - Keep edits scoped and justified
 - Explain why each file changed
 - Re-run gates after every fix batch
@@ -143,6 +150,7 @@ When changing dependencies:
 ## 8. Output Format (Required)
 
 After each task:
+
 1. **Files changed** — list with brief reason
 2. **Commands run** — exact order
 3. **Gate results** — per-gate pass/fail
@@ -155,6 +163,7 @@ If any gate fails, continue fixing until pass.
 ## 9. Fast Playbooks
 
 **Feature/bugfix (API/web):**
+
 ```bash
 pnpm ci:gate:boundaries
 pnpm ci:gate:typescript
@@ -162,6 +171,7 @@ pnpm ci:gate
 ```
 
 **Dependency changes:**
+
 ```bash
 pnpm syncpack:list
 pnpm sherif
@@ -170,12 +180,14 @@ pnpm ci:gate
 ```
 
 **Renderer/lazy routes:**
+
 ```bash
 pnpm ci:contracts
 pnpm ci:gate
 ```
 
 **Schema improvements (when tests reveal missing fields):**
+
 ```bash
 # 1. Update schema definition (add missing columns)
 # 2. Update seed/test data to use new fields
@@ -184,6 +196,7 @@ pnpm ci:gate
 ```
 
 **Architecture drift:**
+
 ```bash
 pnpm ci:gate:boundaries
 pnpm ci:gate:circular
@@ -195,6 +208,7 @@ pnpm ci:gate
 ## 10. TypeScript Config Rules (TS 5.9+)
 
 **Hard rules — never violate:**
+
 - No `baseUrl` anywhere (deprecated TS 6, removed TS 7)
 - No `paths` in `tsconfig.base.json` (expands common source dir, breaks child `rootDir`)
 - `paths` entries must be relative (`../../packages/...`)
@@ -219,13 +233,13 @@ packages/*/tsconfig.json  → rootDir: "src", outDir: "dist",
 
 **Package → paths map:**
 
-| Package    | Cross-package imports                                       | paths target    |
-|------------|-------------------------------------------------------------|-----------------|
-| meta-types | (none)                                                      | (none)          |
-| db         | @afenda/meta-types                                          | meta-types dist |
-| ui         | (none)                                                      | (none)          |
+| Package    | Cross-package imports                                            | paths target    |
+| ---------- | ---------------------------------------------------------------- | --------------- |
+| meta-types | (none)                                                           | (none)          |
+| db         | @afenda/meta-types                                               | meta-types dist |
+| ui         | (none)                                                           | (none)          |
 | api        | @afenda/meta-types, @afenda/db, db/schema-meta, db/schema-domain | all → source    |
-| web        | @afenda/meta-types, @afenda/ui, ~/*                         | all → source    |
+| web        | @afenda/meta-types, @afenda/ui, ~/\*                             | all → source    |
 
 **Why split config for emitting apps:**
 Cross-package `paths` pull files from `../../packages/...`, expanding the common source directory to `../..`. If `rootDir` is `./src`, TS6059 fires. Fix: typecheck config uses `noEmit: true` (no rootDir needed); build config uses empty `paths: {}` and resolves via `node_modules` after Turborepo builds dependencies.
@@ -235,6 +249,7 @@ Cross-package `paths` pull files from `../../packages/...`, expanding the common
 ## 11. Definition of Done
 
 Task is done only when **all** are true:
+
 1. Code changes scoped and justified
 2. Relevant targeted gate(s) pass
 3. `pnpm ci:gate` passes
@@ -257,33 +272,56 @@ Task is done only when **all** are true:
 ## 13. Schema Quality Examples
 
 **Bad (compromising quality):**
+
 ```typescript
 // Removing fields from seed data to match incomplete schema ❌
-await tx.insert(fiscalPositions).values([{
-  name: "Domestic",
-  // removed: sequence, isActive — schema was missing them
-}]);
+await tx.insert(fiscalPositions).values([
+  {
+    name: "Domestic",
+    // removed: sequence, isActive — schema was missing them
+  },
+]);
 ```
 
 **Good (improving schema):**
+
 ```typescript
 // Adding missing fields to schema ✅
 export const fiscalPositions = table("fiscal_positions", {
   name: text("name").notNull(),
-  sequence: integer("sequence").notNull().default(10),  // added
+  sequence: integer("sequence").notNull().default(10), // added
   isActive: boolean("is_active").notNull().default(true), // added
   // ... rest
 });
 
 // Now seed data can use full quality
-await tx.insert(fiscalPositions).values([{
-  name: "Domestic",
-  sequence: 10,
-  isActive: true,
-}]);
+await tx.insert(fiscalPositions).values([
+  {
+    name: "Domestic",
+    sequence: 10,
+    isActive: true,
+  },
+]);
 ```
 
 **Principle:** Tests and seed files often have higher quality data than initial schema drafts. When type errors surface missing fields, improve the schema definition — never degrade the test/seed data.
+
+---
+
+## 14. ESLint Skills Workflow
+
+Use the skill set below for consistent lint governance and performance in this monorepo:
+
+1. `.agents/skills/eslint-enterprise-monorepo/SKILL.md`
+   Use for flat config architecture, boundaries policy, and CI lint quality gates.
+2. `.agents/skills/eslint-monorepo-performance/SKILL.md`
+   Use for lint runtime optimization (cache, concurrency, typed-linting scope, profiling).
+
+Recommended flow for ESLint-heavy tasks:
+
+1. Apply architecture/correctness decisions from `eslint-enterprise-monorepo`.
+2. Run lint profiling and optimization from `eslint-monorepo-performance`.
+3. Validate with `pnpm ci:gate` before completion.
 
 ---
 

@@ -50,7 +50,15 @@ export interface SubscriptionValidationResult {
 export interface ValidateSubscriptionInput {
   subscription: Pick<
     Subscription,
-    "id" | "status" | "dateStart" | "dateEnd" | "nextInvoiceDate" | "recurringTotal" | "mrr" | "arr" | "closeReasonId"
+    | "id"
+    | "status"
+    | "dateStart"
+    | "dateEnd"
+    | "nextInvoiceDate"
+    | "recurringTotal"
+    | "mrr"
+    | "arr"
+    | "closeReasonId"
   >;
   lines: Array<
     Pick<SubscriptionLine, "id" | "productId" | "quantity" | "priceUnit" | "discount" | "subtotal">
@@ -233,7 +241,9 @@ export function isFinanciallyEqual(a: Decimal, b: Decimal): boolean {
  * @param input - Subscription, lines, and template
  * @returns Validation result with issues and line checks
  */
-export function validateSubscription(input: ValidateSubscriptionInput): SubscriptionValidationResult {
+export function validateSubscription(
+  input: ValidateSubscriptionInput
+): SubscriptionValidationResult {
   const { subscription, lines, template } = input;
   const issues: ValidationIssue[] = [];
   const lineChecks: SubscriptionLineValidation[] = [];
@@ -389,11 +399,7 @@ export function validateSubscription(input: ValidateSubscriptionInput): Subscrip
   }
 
   // SUB-8: Subscription-level negative values
-  if (
-    actualMrr.lt(0) ||
-    actualArr.lt(0) ||
-    new Decimal(subscription.recurringTotal).lt(0)
-  ) {
+  if (actualMrr.lt(0) || actualArr.lt(0) || new Decimal(subscription.recurringTotal).lt(0)) {
     issues.push({
       code: "SUB-8",
       severity: "error",
@@ -486,33 +492,34 @@ export function computeMRR(input: MRRComputationInput): MRRComputationResult {
 export function computeNextInvoiceDate(input: NextInvoiceDateInput): Date {
   const baseDate = input.lastInvoiced ? new Date(input.lastInvoiced) : new Date(input.currentDate);
 
-  // Add billing period
-  const nextDate = new Date(baseDate);
-  switch (input.billingPeriod) {
-    case "weekly":
-      nextDate.setDate(nextDate.getDate() + 7);
-      break;
-    case "monthly":
-      nextDate.setMonth(nextDate.getMonth() + 1);
-      break;
-    case "quarterly":
-      nextDate.setMonth(nextDate.getMonth() + 3);
-      break;
-    case "yearly":
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
-      break;
+  if (input.billingPeriod === "weekly") {
+    const weeklyDate = new Date(baseDate);
+    weeklyDate.setDate(weeklyDate.getDate() + 7);
+    return weeklyDate;
   }
 
-  // Set billing day (with month-end clamping)
-  if (input.billingPeriod !== "weekly") {
-    const year = nextDate.getFullYear();
-    const month = nextDate.getMonth();
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    const targetDay = Math.min(input.billingDay, lastDayOfMonth);
-    nextDate.setDate(targetDay);
-  }
+  const monthOffsetByPeriod: Record<Exclude<SubscriptionBillingPeriod, "weekly">, number> = {
+    monthly: 1,
+    quarterly: 3,
+    yearly: 12,
+  };
 
-  return nextDate;
+  const monthOffset = monthOffsetByPeriod[input.billingPeriod];
+  const monthIndex = baseDate.getFullYear() * 12 + baseDate.getMonth() + monthOffset;
+  const targetYear = Math.floor(monthIndex / 12);
+  const targetMonth = monthIndex % 12;
+  const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(input.billingDay, lastDayOfMonth);
+
+  return new Date(
+    targetYear,
+    targetMonth,
+    targetDay,
+    baseDate.getHours(),
+    baseDate.getMinutes(),
+    baseDate.getSeconds(),
+    baseDate.getMilliseconds()
+  );
 }
 
 /**
@@ -521,9 +528,7 @@ export function computeNextInvoiceDate(input: NextInvoiceDateInput): Date {
  * @param input - Subscription and evaluation date
  * @returns Expiry detection result
  */
-export function detectSubscriptionExpiry(
-  input: SubscriptionExpiryInput
-): SubscriptionExpiryResult {
+export function detectSubscriptionExpiry(input: SubscriptionExpiryInput): SubscriptionExpiryResult {
   const { subscription } = input;
   const evaluatedAt = input.evaluatedAt ?? new Date();
 
@@ -531,10 +536,7 @@ export function detectSubscriptionExpiry(
   const hasEndDate = subscription.dateEnd !== null;
   const endDateReached = hasEndDate && subscription.dateEnd!.getTime() <= evaluatedAt.getTime();
 
-  const shouldExpire =
-    !expired &&
-    subscription.status === "active" &&
-    endDateReached;
+  const shouldExpire = !expired && subscription.status === "active" && endDateReached;
 
   return {
     currentStatus: subscription.status,

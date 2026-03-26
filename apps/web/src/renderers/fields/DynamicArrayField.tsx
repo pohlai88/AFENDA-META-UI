@@ -313,12 +313,14 @@ export function DynamicArrayField({
   getFieldError,
   createFieldRendererProps,
 }: DynamicArrayFieldProps) {
-  const items = Array.isArray(getValueAtPath(values, arrayPath))
-    ? (getValueAtPath(values, arrayPath) as Record<string, unknown>[])
-    : [];
-  const canAdd = !readonly && (field.maxItems === undefined || items.length < field.maxItems);
-  const dragInstructionsId = `${arrayPath.replace(/\./g, "-")}-drag-instructions`;
-  const [liveAnnouncement, setLiveAnnouncement] = React.useState("");
+  const items = React.useMemo(() => {
+    const value = getValueAtPath(values, arrayPath);
+    return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+  }, [values, arrayPath]);
+
+  const [liveAnnouncement, setLiveAnnouncement] = React.useState<string>("");
+  const dragInstructionsId = React.useId();
+  const canAdd = !readonly && (!field.maxItems || items.length < field.maxItems);
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),

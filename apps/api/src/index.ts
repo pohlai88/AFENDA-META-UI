@@ -346,10 +346,7 @@ async function startServer() {
       "[Startup] Tenant store loaded from database"
     );
   } catch (err) {
-    logger.error(
-      { error: getDbErrorSummary(err) },
-      "[Startup] Database connectivity check failed"
-    );
+    logger.error({ error: getDbErrorSummary(err) }, "[Startup] Database connectivity check failed");
     logger.error(
       "[Startup] API will continue to start, but database-backed routes will return DB_UNAVAILABLE until PostgreSQL is reachable"
     );
@@ -358,8 +355,8 @@ async function startServer() {
   // Initialize enterprise pillars bridges
   initWorkflowMeshBridge();
   stopUploadRetention = startUploadRetentionJob({
-    info: (message, meta) => logger.info(meta ?? {}, message),
-    error: (message, meta) => logger.error(meta ?? {}, message),
+    info: (message, meta) => logger.info(typeof meta === "object" ? meta : {}, String(message)),
+    error: (message, meta) => logger.error(typeof meta === "object" ? meta : {}, String(message)),
   });
 
   app.listen(config.port, () => {

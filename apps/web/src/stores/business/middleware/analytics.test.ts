@@ -1,5 +1,5 @@
 import { configureStore, type Middleware, type UnknownAction } from "@reduxjs/toolkit";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   configureAnalyticsClient,
@@ -7,7 +7,7 @@ import {
   resetAnalyticsClientForTests,
   type AnalyticsProviderAdapter,
 } from "../analytics";
-import authReducer, { loginSuccess, logout } from "../slices/auth-slice";
+import authReducer, { loginSuccess } from "../slices/auth-slice";
 import permissionsReducer, { bootstrapPermissionsSuccess } from "../slices/permissions-slice";
 import { analytics, buildAnalyticsEvent, shouldTrackAnalytics } from "./analytics";
 

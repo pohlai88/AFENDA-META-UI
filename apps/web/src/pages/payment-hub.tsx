@@ -56,7 +56,6 @@ function getStatusColor(status: SalesOrder["status"]) {
 export default function PaymentHub() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // --- List View: All sales orders
   const listOptions: ListOptions = { page, limit: 10 };
