@@ -606,4 +606,73 @@ describe("sales domain schema contracts", () => {
     expect(tmplValCols.priceExtra).toBeDefined();
     expect(tmplValCols.priceExtra.columnType).toBe("PgNumeric");
   });
+
+  // Phase 8: Returns/RMA Process
+  it("phase 8: return_reason_codes defines standard return reasons with active status", () => {
+    const cols = getTableColumns(returnReasonCodes);
+    expect(cols.id).toBeDefined();
+    expect(cols.tenantId).toBeDefined();
+    expect(cols.code).toBeDefined(); // Unique code (e.g., "DAMAGED", "DEFECTIVE")
+    expect(cols.name).toBeDefined(); // Human-readable name
+    expect(cols.requiresInspection).toBeDefined(); // Inspection required?
+    expect(cols.restockPolicy).toBeDefined(); // restock | scrap | refurbish
+    expect(cols.isActive).toBeDefined(); // Can deactivate reasons
+    expect(cols.deletedAt).toBeDefined(); // Soft delete
+    expect(cols.createdAt).toBeDefined();
+    expect(cols.updatedAt).toBeDefined();
+  });
+
+  it("phase 8: return_orders has state machine and approval workflow", () => {
+    const cols = getTableColumns(returnOrders);
+    expect(cols.id).toBeDefined();
+    expect(cols.tenantId).toBeDefined();
+    expect(cols.name).toBeDefined(); // RMA number (e.g., "RMA-2024-0001")
+    expect(cols.sourceOrderId).toBeDefined(); // FK to original sales order
+    expect(cols.partnerId).toBeDefined(); // FK to partner
+    expect(cols.reasonCodeId).toBeDefined(); // FK to return_reason_codes
+    
+    // State machine (draft → approved → received → inspected → credited)
+    expect(cols.status).toBeDefined();
+    
+    // Approval workflow
+    expect(cols.approvedBy).toBeDefined(); // Actor ID who approved
+    expect(cols.approvedDate).toBeDefined(); // Approval timestamp
+    
+    // Additional fields
+    expect(cols.notes).toBeDefined(); // Return notes
+    
+    // Audit trail
+    expect(cols.deletedAt).toBeDefined();
+    expect(cols.createdAt).toBeDefined();
+    expect(cols.updatedAt).toBeDefined();
+    expect(cols.createdBy).toBeDefined();
+    expect(cols.updatedBy).toBeDefined();
+  });
+
+  it("phase 8: return_order_lines has financial precision for quantity and credit calculations", () => {
+    const cols = getTableColumns(returnOrderLines);
+    expect(cols.id).toBeDefined();
+    expect(cols.tenantId).toBeDefined();
+    expect(cols.returnOrderId).toBeDefined(); // FK to return_orders
+    expect(cols.sourceLineId).toBeDefined(); // FK to original sales order line
+    expect(cols.productId).toBeDefined(); // FK to product
+    
+    // Quantity tracking with precision
+    expect(cols.quantity).toBeDefined();
+    expect(cols.quantity.columnType).toBe("PgNumeric");
+    
+    // Financial fields with PgNumeric precision
+    expect(cols.unitPrice).toBeDefined();
+    expect(cols.unitPrice.columnType).toBe("PgNumeric");
+    expect(cols.creditAmount).toBeDefined();
+    expect(cols.creditAmount.columnType).toBe("PgNumeric");
+    
+    // Inspection results
+    expect(cols.condition).toBeDefined(); // good | damaged | defective | used
+    expect(cols.notes).toBeDefined(); // Line notes
+    
+    // Audit columns
+    expect(cols.createdAt).toBeDefined();
+    expect(cols.updatedAt).toBeDefined();
+  });
 });

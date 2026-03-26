@@ -135,7 +135,7 @@ export async function seedReturnsPhase8(tx: Tx, seedAuditScope: SeedAuditScope):
         id: SEED_IDS.returnOrderReceived,
         name: "RMA-2024-0003",
         sourceOrderId: SEED_IDS.orderThree,
-        partnerId: SEED_IDS.partnerCharlieInc,
+        partnerId: SEED_IDS.partnerGammaServices,
         status: "received",
         reasonCodeId: SEED_IDS.returnReasonWrongItem,
         approvedBy: seedAuditScope.createdBy,
@@ -246,7 +246,7 @@ export async function seedReturnsPhase8(tx: Tx, seedAuditScope: SeedAuditScope):
         id: SEED_IDS.returnOrderCancelled,
         name: "RMA-2024-0006",
         sourceOrderId: SEED_IDS.orderThree,
-        partnerId: SEED_IDS.partnerCharlieInc,
+        partnerId: SEED_IDS.partnerGammaServices,
         status: "cancelled",
         reasonCodeId: SEED_IDS.returnReasonUnwanted,
         approvedBy: null,
@@ -356,9 +356,4 @@ export async function validateReturnsPhase8Invariants(tx: Tx): Promise<void> {
   }
 
   console.log("✓ Validated Phase 8 returns invariants (6 lifecycle states)");
-}
-    }
-  }
-
-  console.log("✓ Verified Phase 8 return/RMA invariants");
 }
