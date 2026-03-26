@@ -483,6 +483,326 @@ export const products = salesSchema.table(
   ]
 );
 
+// ── Phase 5: Product Configuration ────────────────────────────────────────────
+
+export const productTemplates = salesSchema.table(
+  "product_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    ...nameColumn,
+    internalReference: text("internal_reference"),
+    barcode: text("barcode"),
+    categoryId: uuid("category_id"),
+    uomId: integer("uom_id"),
+    uomPoId: integer("uom_po_id"),
+    type: productTypeEnum("type").notNull().default("consumable"),
+    tracking: productTrackingEnum("tracking").notNull().default("none"),
+    invoicePolicy: invoicePolicyEnum("invoice_policy").notNull().default("ordered"),
+    canBeSold: boolean("can_be_sold").notNull().default(true),
+    canBePurchased: boolean("can_be_purchased").notNull().default(true),
+    listPrice: numeric("list_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    standardPrice: numeric("standard_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    weight: numeric("weight", { precision: 10, scale: 4 }),
+    volume: numeric("volume", { precision: 10, scale: 4 }),
+    description: text("description"),
+    salesDescription: text("sales_description"),
+    purchaseDescription: text("purchase_description"),
+    sequence: integer("sequence").notNull().default(1),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_product_templates_tenant").on(table.tenantId),
+    index("idx_sales_product_templates_category").on(table.tenantId, table.categoryId),
+    index("idx_sales_product_templates_active").on(table.tenantId, table.isActive),
+    uniqueIndex("uq_sales_product_templates_barcode")
+      .on(table.tenantId, sql`lower(${table.barcode})`)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.barcode} IS NOT NULL`),
+    check("chk_sales_product_templates_list_price", sql`${table.listPrice} >= 0`),
+    check("chk_sales_product_templates_std_price", sql`${table.standardPrice} >= 0`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_product_templates_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.categoryId],
+      foreignColumns: [productCategories.id],
+      name: "fk_sales_product_templates_category",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.uomId],
+      foreignColumns: [unitsOfMeasure.uomId],
+      name: "fk_sales_product_templates_uom",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.uomPoId],
+      foreignColumns: [unitsOfMeasure.uomId],
+      name: "fk_sales_product_templates_uom_po",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_templates"),
+    serviceBypassPolicy("sales_product_templates"),
+  ]
+);
+
+export const productAttributes = salesSchema.table(
+  "product_attributes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    ...nameColumn,
+    displayType: attributeDisplayTypeEnum("display_type").notNull().default("radio"),
+    createVariantPolicy: createVariantPolicyEnum("create_variant_policy")
+      .notNull()
+      .default("always"),
+    sequence: integer("sequence").notNull().default(1),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_product_attributes_tenant").on(table.tenantId),
+    uniqueIndex("uq_sales_product_attributes_name")
+      .on(table.tenantId, sql`lower(${table.name})`)
+      .where(sql`${table.deletedAt} IS NULL`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_product_attributes_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_attributes"),
+    serviceBypassPolicy("sales_product_attributes"),
+  ]
+);
+
+export const productAttributeValues = salesSchema.table(
+  "product_attribute_values",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    attributeId: uuid("attribute_id").notNull(),
+    ...nameColumn,
+    htmlColor: text("html_color"),
+    sequence: integer("sequence").notNull().default(1),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_product_attribute_values_tenant").on(table.tenantId),
+    index("idx_sales_product_attribute_values_attribute").on(table.tenantId, table.attributeId),
+    uniqueIndex("uq_sales_product_attribute_values_name")
+      .on(table.tenantId, table.attributeId, sql`lower(${table.name})`)
+      .where(sql`${table.deletedAt} IS NULL`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_product_attribute_values_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.attributeId],
+      foreignColumns: [productAttributes.id],
+      name: "fk_sales_product_attribute_values_attribute",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_attribute_values"),
+    serviceBypassPolicy("sales_product_attribute_values"),
+  ]
+);
+
+export const productTemplateAttributeLines = salesSchema.table(
+  "product_template_attribute_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    templateId: uuid("template_id").notNull(),
+    attributeId: uuid("attribute_id").notNull(),
+    sequence: integer("sequence").notNull().default(1),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_ptmpl_attr_lines_tenant").on(table.tenantId),
+    index("idx_sales_ptmpl_attr_lines_template").on(table.tenantId, table.templateId),
+    uniqueIndex("uq_sales_ptmpl_attr_lines_tmpl_attr").on(
+      table.tenantId,
+      table.templateId,
+      table.attributeId
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_ptmpl_attr_lines_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.templateId],
+      foreignColumns: [productTemplates.id],
+      name: "fk_sales_ptmpl_attr_lines_template",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.attributeId],
+      foreignColumns: [productAttributes.id],
+      name: "fk_sales_ptmpl_attr_lines_attribute",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_template_attribute_lines"),
+    serviceBypassPolicy("sales_product_template_attribute_lines"),
+  ]
+);
+
+export const productTemplateAttributeValues = salesSchema.table(
+  "product_template_attribute_values",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    templateAttributeLineId: uuid("template_attribute_line_id").notNull(),
+    attributeValueId: uuid("attribute_value_id").notNull(),
+    priceExtra: numeric("price_extra", { precision: 12, scale: 2 }).notNull().default("0"),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_ptmpl_attr_vals_tenant").on(table.tenantId),
+    index("idx_sales_ptmpl_attr_vals_line").on(table.tenantId, table.templateAttributeLineId),
+    uniqueIndex("uq_sales_ptmpl_attr_vals_line_val").on(
+      table.tenantId,
+      table.templateAttributeLineId,
+      table.attributeValueId
+    ),
+    check("chk_sales_ptmpl_attr_vals_price_extra", sql`${table.priceExtra} >= 0`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_ptmpl_attr_vals_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.templateAttributeLineId],
+      foreignColumns: [productTemplateAttributeLines.id],
+      name: "fk_sales_ptmpl_attr_vals_line",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.attributeValueId],
+      foreignColumns: [productAttributeValues.id],
+      name: "fk_sales_ptmpl_attr_vals_attr_val",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_template_attribute_values"),
+    serviceBypassPolicy("sales_product_template_attribute_values"),
+  ]
+);
+
+export const productVariants = salesSchema.table(
+  "product_variants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    templateId: uuid("template_id").notNull(),
+    combinationIndices: text("combination_indices").notNull().default(""),
+    internalReference: text("internal_reference"),
+    barcode: text("barcode"),
+    lstPrice: numeric("lst_price", { precision: 12, scale: 2 }),
+    standardPrice: numeric("standard_price", { precision: 12, scale: 2 }),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_product_variants_tenant").on(table.tenantId),
+    index("idx_sales_product_variants_template").on(table.tenantId, table.templateId),
+    index("idx_sales_product_variants_active").on(table.tenantId, table.isActive),
+    uniqueIndex("uq_sales_product_variants_barcode")
+      .on(table.tenantId, sql`lower(${table.barcode})`)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.barcode} IS NOT NULL`),
+    uniqueIndex("uq_sales_product_variants_combination")
+      .on(table.tenantId, table.templateId, table.combinationIndices)
+      .where(sql`${table.deletedAt} IS NULL`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_product_variants_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.templateId],
+      foreignColumns: [productTemplates.id],
+      name: "fk_sales_product_variants_template",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_variants"),
+    serviceBypassPolicy("sales_product_variants"),
+  ]
+);
+
+export const productPackaging = salesSchema.table(
+  "product_packaging",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    variantId: uuid("variant_id").notNull(),
+    ...nameColumn,
+    qty: numeric("qty", { precision: 12, scale: 4 }).notNull().default("0"),
+    barcode: text("barcode"),
+    sequence: integer("sequence").notNull().default(1),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestampColumns,
+    ...softDeleteColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_product_packaging_tenant").on(table.tenantId),
+    index("idx_sales_product_packaging_variant").on(table.tenantId, table.variantId),
+    check("chk_sales_product_packaging_qty_positive", sql`${table.qty} > 0`),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_product_packaging_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.variantId],
+      foreignColumns: [productVariants.id],
+      name: "fk_sales_product_packaging_variant",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_product_packaging"),
+    serviceBypassPolicy("sales_product_packaging"),
+  ]
+);
+
 export const salesOrders = salesSchema.table(
   "sales_orders",
   {
@@ -633,6 +953,7 @@ export const salesOrderLines = salesSchema.table(
     tenantId: integer("tenant_id").notNull(),
     orderId: uuid("order_id").notNull(),
     productId: uuid("product_id").notNull(),
+    productTemplateId: uuid("product_template_id"),
     taxId: uuid("tax_id"),
     productUomId: integer("product_uom_id"),
     description: text("description"),
@@ -723,6 +1044,13 @@ export const salesOrderLines = salesSchema.table(
       name: "fk_sales_order_lines_product",
     })
       .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.productTemplateId],
+      foreignColumns: [productTemplates.id],
+      name: "fk_sales_order_lines_product_template",
+    })
+      .onDelete("set null")
       .onUpdate("cascade"),
     foreignKey({
       columns: [table.productUomId],
@@ -1303,6 +1631,72 @@ export const saleOrderLineTaxes = salesSchema.table(
       .onUpdate("cascade"),
     ...tenantIsolationPolicies("sales_sale_order_line_taxes"),
     serviceBypassPolicy("sales_sale_order_line_taxes"),
+  ]
+);
+
+export const saleOrderOptionLines = salesSchema.table(
+  "sale_order_option_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    orderId: uuid("order_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    name: text("name").notNull(),
+    quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull().default("1"),
+    priceUnit: numeric("price_unit", { precision: 14, scale: 2 }).notNull(),
+    discount: numeric("discount", { precision: 5, scale: 2 }).notNull().default("0"),
+    uomId: integer("uom_id").notNull(),
+    sequence: integer("sequence").notNull().default(10),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_sale_order_option_lines_tenant").on(table.tenantId),
+    index("idx_sales_sale_order_option_lines_order").on(
+      table.tenantId,
+      table.orderId,
+      table.sequence
+    ),
+    index("idx_sales_sale_order_option_lines_product").on(table.tenantId, table.productId),
+    check("chk_sales_sale_order_option_lines_quantity_positive", sql`${table.quantity} > 0`),
+    check(
+      "chk_sales_sale_order_option_lines_price_unit_non_negative",
+      sql`${table.priceUnit} >= 0`
+    ),
+    check(
+      "chk_sales_sale_order_option_lines_discount_range",
+      sql`${table.discount} >= 0 AND ${table.discount} <= 100`
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_sale_order_option_lines_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.orderId],
+      foreignColumns: [salesOrders.id],
+      name: "fk_sales_sale_order_option_lines_order",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.productId],
+      foreignColumns: [products.id],
+      name: "fk_sales_sale_order_option_lines_product",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.uomId],
+      foreignColumns: [unitsOfMeasure.uomId],
+      name: "fk_sales_sale_order_option_lines_uom",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_sale_order_option_lines"),
+    serviceBypassPolicy("sales_sale_order_option_lines"),
   ]
 );
 
@@ -2499,6 +2893,17 @@ export const partnerTagSelectSchema = createSelectSchema(partnerTags);
 export const partnerTagAssignmentSelectSchema = createSelectSchema(partnerTagAssignments);
 export const productCategorySelectSchema = createSelectSchema(productCategories);
 export const productSelectSchema = createSelectSchema(products);
+export const productTemplateSelectSchema = createSelectSchema(productTemplates);
+export const productAttributeSelectSchema = createSelectSchema(productAttributes);
+export const productAttributeValueSelectSchema = createSelectSchema(productAttributeValues);
+export const productTemplateAttributeLineSelectSchema = createSelectSchema(
+  productTemplateAttributeLines
+);
+export const productTemplateAttributeValueSelectSchema = createSelectSchema(
+  productTemplateAttributeValues
+);
+export const productVariantSelectSchema = createSelectSchema(productVariants);
+export const productPackagingSelectSchema = createSelectSchema(productPackaging);
 export const salesOrderSelectSchema = createSelectSchema(salesOrders);
 export const salesOrderLineSelectSchema = createSelectSchema(salesOrderLines);
 export const paymentTermSelectSchema = createSelectSchema(paymentTerms);
@@ -2512,6 +2917,7 @@ export const fiscalPositionSelectSchema = createSelectSchema(fiscalPositions);
 export const fiscalPositionTaxMapSelectSchema = createSelectSchema(fiscalPositionTaxMaps);
 export const fiscalPositionAccountMapSelectSchema = createSelectSchema(fiscalPositionAccountMaps);
 export const saleOrderLineTaxSelectSchema = createSelectSchema(saleOrderLineTaxes);
+export const saleOrderOptionLineSelectSchema = createSelectSchema(saleOrderOptionLines);
 export const saleOrderStatusHistorySelectSchema = createSelectSchema(saleOrderStatusHistory);
 export const saleOrderTaxSummarySelectSchema = createSelectSchema(saleOrderTaxSummary);
 export const consignmentAgreementSelectSchema = createSelectSchema(consignmentAgreements);
@@ -2835,6 +3241,113 @@ export const productInsertSchema = createInsertSchema(products, {
   categoryId: ProductCategoryIdSchema.optional().nullable(),
   unitPrice: positiveMoneyStringSchema,
   description: z.string().max(2000).optional().nullable(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const productTemplateInsertSchema = createInsertSchema(productTemplates, {
+  id: ProductTemplateIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  name: z.string().min(1).max(200),
+  internalReference: z.string().max(120).optional().nullable(),
+  barcode: z.string().max(120).optional().nullable(),
+  categoryId: ProductCategoryIdSchema.optional().nullable(),
+  uomId: z.number().int().positive().optional().nullable(),
+  uomPoId: z.number().int().positive().optional().nullable(),
+  type: ProductTypeSchema.optional(),
+  tracking: ProductTrackingSchema.optional(),
+  invoicePolicy: InvoicePolicySchema.optional(),
+  canBeSold: z.boolean().optional(),
+  canBePurchased: z.boolean().optional(),
+  listPrice: positiveMoneyStringSchema.optional(),
+  standardPrice: positiveMoneyStringSchema.optional(),
+  weight: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Must be valid decimal")
+    .optional()
+    .nullable(),
+  volume: z
+    .string()
+    .regex(/^\d+(\.\d{1,4})?$/, "Must be valid decimal")
+    .optional()
+    .nullable(),
+  description: z.string().max(4000).optional().nullable(),
+  salesDescription: z.string().max(4000).optional().nullable(),
+  purchaseDescription: z.string().max(4000).optional().nullable(),
+  sequence: z.number().int().min(1).optional(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const productAttributeInsertSchema = createInsertSchema(productAttributes, {
+  id: ProductAttributeIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  name: z.string().min(1).max(200),
+  displayType: AttributeDisplayTypeSchema.optional(),
+  createVariantPolicy: CreateVariantPolicySchema.optional(),
+  sequence: z.number().int().min(1).optional(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const productAttributeValueInsertSchema = createInsertSchema(productAttributeValues, {
+  id: ProductAttributeValueIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  attributeId: ProductAttributeIdSchema,
+  name: z.string().min(1).max(200),
+  htmlColor: z.string().max(80).optional().nullable(),
+  sequence: z.number().int().min(1).optional(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const productTemplateAttributeLineInsertSchema = createInsertSchema(
+  productTemplateAttributeLines,
+  {
+    id: ProductTemplateAttributeLineIdSchema.optional(),
+    tenantId: z.number().int().positive(),
+    templateId: ProductTemplateIdSchema,
+    attributeId: ProductAttributeIdSchema,
+    sequence: z.number().int().min(1).optional(),
+    createdBy: z.number().int().positive(),
+    updatedBy: z.number().int().positive(),
+  }
+);
+
+export const productTemplateAttributeValueInsertSchema = createInsertSchema(
+  productTemplateAttributeValues,
+  {
+    id: ProductTemplateAttributeValueIdSchema.optional(),
+    tenantId: z.number().int().positive(),
+    templateAttributeLineId: ProductTemplateAttributeLineIdSchema,
+    attributeValueId: ProductAttributeValueIdSchema,
+    priceExtra: positiveMoneyStringSchema.optional(),
+    createdBy: z.number().int().positive(),
+    updatedBy: z.number().int().positive(),
+  }
+);
+
+export const productVariantInsertSchema = createInsertSchema(productVariants, {
+  id: ProductVariantIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  templateId: ProductTemplateIdSchema,
+  combinationIndices: z.string().max(2000).optional(),
+  internalReference: z.string().max(120).optional().nullable(),
+  barcode: z.string().max(120).optional().nullable(),
+  lstPrice: positiveMoneyStringSchema.optional().nullable(),
+  standardPrice: positiveMoneyStringSchema.optional().nullable(),
+  createdBy: z.number().int().positive(),
+  updatedBy: z.number().int().positive(),
+});
+
+export const productPackagingInsertSchema = createInsertSchema(productPackaging, {
+  id: ProductPackagingIdSchema.optional(),
+  tenantId: z.number().int().positive(),
+  variantId: ProductVariantIdSchema,
+  name: z.string().min(1).max(200),
+  qty: z.string().regex(/^\d+(\.\d{1,4})?$/, "Must be valid positive decimal"),
+  barcode: z.string().max(120).optional().nullable(),
+  sequence: z.number().int().min(1).optional(),
   createdBy: z.number().int().positive(),
   updatedBy: z.number().int().positive(),
 });
@@ -3182,6 +3695,17 @@ export const partnerTagUpdateSchema = createUpdateSchema(partnerTags);
 export const partnerTagAssignmentUpdateSchema = createUpdateSchema(partnerTagAssignments);
 export const productCategoryUpdateSchema = createUpdateSchema(productCategories);
 export const productUpdateSchema = createUpdateSchema(products);
+export const productTemplateUpdateSchema = createUpdateSchema(productTemplates);
+export const productAttributeUpdateSchema = createUpdateSchema(productAttributes);
+export const productAttributeValueUpdateSchema = createUpdateSchema(productAttributeValues);
+export const productTemplateAttributeLineUpdateSchema = createUpdateSchema(
+  productTemplateAttributeLines
+);
+export const productTemplateAttributeValueUpdateSchema = createUpdateSchema(
+  productTemplateAttributeValues
+);
+export const productVariantUpdateSchema = createUpdateSchema(productVariants);
+export const productPackagingUpdateSchema = createUpdateSchema(productPackaging);
 export const salesOrderUpdateSchema = createUpdateSchema(salesOrders);
 export const salesOrderLineUpdateSchema = createUpdateSchema(salesOrderLines);
 export const paymentTermUpdateSchema = createUpdateSchema(paymentTerms);
@@ -3233,6 +3757,20 @@ export type ProductCategory = typeof productCategories.$inferSelect;
 export type NewProductCategory = typeof productCategories.$inferInsert;
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
+export type ProductTemplate = typeof productTemplates.$inferSelect;
+export type NewProductTemplate = typeof productTemplates.$inferInsert;
+export type ProductAttribute = typeof productAttributes.$inferSelect;
+export type NewProductAttribute = typeof productAttributes.$inferInsert;
+export type ProductAttributeValue = typeof productAttributeValues.$inferSelect;
+export type NewProductAttributeValue = typeof productAttributeValues.$inferInsert;
+export type ProductTemplateAttributeLine = typeof productTemplateAttributeLines.$inferSelect;
+export type NewProductTemplateAttributeLine = typeof productTemplateAttributeLines.$inferInsert;
+export type ProductTemplateAttributeValue = typeof productTemplateAttributeValues.$inferSelect;
+export type NewProductTemplateAttributeValue = typeof productTemplateAttributeValues.$inferInsert;
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type NewProductVariant = typeof productVariants.$inferInsert;
+export type ProductPackaging = typeof productPackaging.$inferSelect;
+export type NewProductPackaging = typeof productPackaging.$inferInsert;
 export type SalesOrder = typeof salesOrders.$inferSelect;
 export type NewSalesOrder = typeof salesOrders.$inferInsert;
 export type SalesOrderLine = typeof salesOrderLines.$inferSelect;

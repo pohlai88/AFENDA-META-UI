@@ -43,8 +43,12 @@ export const CommissionEntryIdSchema = z.uuid().brand<"CommissionEntryId">();
 export const ProductTemplateIdSchema = z.uuid().brand<"ProductTemplateId">();
 export const ProductAttributeIdSchema = z.uuid().brand<"ProductAttributeId">();
 export const ProductAttributeValueIdSchema = z.uuid().brand<"ProductAttributeValueId">();
-export const ProductTemplateAttributeLineIdSchema = z.uuid().brand<"ProductTemplateAttributeLineId">();
-export const ProductTemplateAttributeValueIdSchema = z.uuid().brand<"ProductTemplateAttributeValueId">();
+export const ProductTemplateAttributeLineIdSchema = z
+  .uuid()
+  .brand<"ProductTemplateAttributeLineId">();
+export const ProductTemplateAttributeValueIdSchema = z
+  .uuid()
+  .brand<"ProductTemplateAttributeValueId">();
 export const ProductVariantIdSchema = z.uuid().brand<"ProductVariantId">();
 export const ProductPackagingIdSchema = z.uuid().brand<"ProductPackagingId">();
 

@@ -38,8 +38,15 @@ import {
   paymentTerms,
   pricelistItems,
   pricelists,
+  productAttributeValues,
+  productAttributes,
   productCategories,
+  productPackaging,
   products,
+  productTemplateAttributeLines,
+  productTemplateAttributeValues,
+  productTemplates,
+  productVariants,
   returnOrderLines,
   returnOrders,
   returnReasonCodes,
@@ -114,6 +121,13 @@ export async function clearExistingData(tx: Tx): Promise<void> {
   await tx.delete(salesOrderLines).execute();
   await tx.delete(salesOrders).execute();
   // ── Product ───────────────────────────────────────────────────────────────
+  await tx.delete(productPackaging).execute();
+  await tx.delete(productTemplateAttributeValues).execute();
+  await tx.delete(productVariants).execute();
+  await tx.delete(productTemplateAttributeLines).execute();
+  await tx.delete(productAttributeValues).execute();
+  await tx.delete(productAttributes).execute();
+  await tx.delete(productTemplates).execute();
   await tx.delete(products).execute();
   await tx.delete(productCategories).execute();
   // ── Partner ───────────────────────────────────────────────────────────────

@@ -24,7 +24,12 @@ import { seedCommissionsAndTeamsPhase10, validateCommissionsPhase10Invariants } 
 import { seedConsignmentPhase7, validateConsignmentPhase7Invariants } from "./domains/consignment/index.js";
 import { ensureDefaultTenant, seedReferenceData } from "./domains/foundation/index.js";
 import { seedPartners } from "./domains/partner/index.js";
-import { seedProductCategories, seedProducts } from "./domains/product/index.js";
+import {
+  seedProductCategories,
+  seedProductConfiguration,
+  seedProducts,
+  validateProductConfigurationInvariants,
+} from "./domains/product/index.js";
 import { seedReturnsPhase8, validateReturnsPhase8Invariants } from "./domains/returns/index.js";
 import { seedSalesOrdersAndLines, validateSalesPhase6Invariants } from "./domains/sales/index.js";
 import { seedSubscriptionsPhase9, validateSubscriptionsPhase9Invariants } from "./domains/subscriptions/index.js";
@@ -52,6 +57,8 @@ async function seedCore(tx: Tx, seedAuditScope: SeedAuditScope): Promise<void> {
   await seedPartners(tx, seedAuditScope);
   await seedProductCategories(tx, seedAuditScope);
   await seedProducts(tx, seedAuditScope);
+  await seedProductConfiguration(tx, seedAuditScope);
+  await validateProductConfigurationInvariants(tx);
   await seedCommercialPolicies(tx, seedAuditScope);
   await seedTaxPolicies(tx, seedAuditScope);
 }

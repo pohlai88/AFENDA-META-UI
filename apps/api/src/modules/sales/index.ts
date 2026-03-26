@@ -289,4 +289,5 @@ export * from "./logic/partner-engine.js";
 export * from "./logic/commission-engine.js";
 export * from "./logic/payment-terms.js";
 export * from "./logic/pricing-engine.js";
+export * from "./logic/product-configurator.js";
 export * from "./logic/tax-engine.js";

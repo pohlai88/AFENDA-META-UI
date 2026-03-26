@@ -21,8 +21,15 @@ import {
   paymentTerms,
   pricelistItems,
   pricelists,
+  productAttributes,
+  productAttributeValues,
   productCategories,
+  productPackaging,
   products,
+  productTemplateAttributeLines,
+  productTemplateAttributeValues,
+  productTemplates,
+  productVariants,
   returnOrderLines,
   returnOrders,
   returnReasonCodes,
@@ -32,6 +39,7 @@ import {
   subscriptions,
   subscriptionTemplates,
   saleOrderLineTaxes,
+  saleOrderOptionLines,
   saleOrderStatusHistory,
   saleOrderTaxSummary,
   salesTeamMembers,
@@ -180,6 +188,20 @@ describe("sales domain schema contracts", () => {
     expect(getTableColumns(saleOrderTaxSummary).taxGroupId).toBeDefined();
     expect(getTableColumns(saleOrderTaxSummary).baseAmount).toBeDefined();
     expect(getTableColumns(saleOrderTaxSummary).taxAmount).toBeDefined();
+  });
+
+  it("sale order option lines enable quotation optional items", () => {
+    const cols = getTableColumns(saleOrderOptionLines);
+    expect(cols.id).toBeDefined();
+    expect(cols.tenantId).toBeDefined();
+    expect(cols.orderId).toBeDefined();
+    expect(cols.productId).toBeDefined();
+    expect(cols.name).toBeDefined();
+    expect(cols.quantity).toBeDefined();
+    expect(cols.priceUnit).toBeDefined();
+    expect(cols.discount).toBeDefined();
+    expect(cols.uomId).toBeDefined();
+    expect(cols.sequence).toBeDefined();
   });
 
   it("consignment tables capture agreement, reporting, and stock math columns", () => {
@@ -534,5 +556,54 @@ describe("sales domain schema contracts", () => {
     expect(cols.priceMinMargin.columnType).toBe("PgNumeric");
     expect(cols.priceMaxMargin.columnType).toBe("PgNumeric");
     expect(cols.minQuantity.columnType).toBe("PgNumeric");
+  });
+
+  // Phase 5: Product Configuration
+  it("phase 5: product_templates defines archetype with pricing, UoM and lifecycle fields", () => {
+    const cols = getTableColumns(productTemplates);
+    expect(cols.id).toBeDefined();
+    expect(cols.tenantId).toBeDefined();
+    expect(cols.name).toBeDefined();
+    expect(cols.listPrice).toBeDefined();
+    expect(cols.listPrice.columnType).toBe("PgNumeric");
+    expect(cols.standardPrice).toBeDefined();
+    expect(cols.standardPrice.columnType).toBe("PgNumeric");
+    expect(cols.type).toBeDefined();
+    expect(cols.tracking).toBeDefined();
+    expect(cols.invoicePolicy).toBeDefined();
+    expect(cols.uomId).toBeDefined();
+    expect(cols.deletedAt).toBeDefined();
+    expect(cols.createdAt).toBeDefined();
+  });
+
+  it("phase 5: product_variants links to template with deterministic combination_indices", () => {
+    const cols = getTableColumns(productVariants);
+    expect(cols.id).toBeDefined();
+    expect(cols.tenantId).toBeDefined();
+    expect(cols.templateId).toBeDefined();
+    expect(cols.combinationIndices).toBeDefined();
+    expect(cols.lstPrice).toBeDefined();
+    expect(cols.isActive).toBeDefined();
+    expect(cols.deletedAt).toBeDefined();
+  });
+
+  it("phase 5: product_attributes and attribute_values define the variant dimension matrix", () => {
+    const attrCols = getTableColumns(productAttributes);
+    expect(attrCols.id).toBeDefined();
+    expect(attrCols.displayType).toBeDefined();
+    expect(attrCols.createVariantPolicy).toBeDefined();
+
+    const valCols = getTableColumns(productAttributeValues);
+    expect(valCols.attributeId).toBeDefined();
+    expect(valCols.htmlColor).toBeDefined();
+
+    const lineCols = getTableColumns(productTemplateAttributeLines);
+    expect(lineCols.templateId).toBeDefined();
+    expect(lineCols.attributeId).toBeDefined();
+
+    const tmplValCols = getTableColumns(productTemplateAttributeValues);
+    expect(tmplValCols.templateAttributeLineId).toBeDefined();
+    expect(tmplValCols.priceExtra).toBeDefined();
+    expect(tmplValCols.priceExtra.columnType).toBe("PgNumeric");
   });
 });
