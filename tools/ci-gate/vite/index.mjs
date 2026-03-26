@@ -30,6 +30,11 @@
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
+import {
+  convertCheckResult,
+  formatViteIssues,
+  summarizeViteIssues,
+} from "./utils/diagnostics.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -83,42 +88,27 @@ async function loadChecks() {
 }
 
 /**
- * Report results
- */
-function reportResults(results) {
-  const allErrors = [];
-  const allWarnings = [];
-  
+
+  // Convert check results to structured issues
   for (const result of results) {
-    if (result.errors && result.errors.length > 0) {
-      console.log(`\n${colors.red}${colors.bright}✖ ${result.name} (${result.errors.length} error(s))${colors.reset}`);
-      for (const error of result.errors) {
-        console.log(`  ${colors.red}✖${colors.reset} ${error.message}`);
-        if (error.file) {
-          console.log(`    ${colors.dim}${error.file}${colors.reset}`);
-        }
-        if (error.suggestion) {
-          console.log(`    ${colors.cyan}→${colors.reset} ${error.suggestion}`);
-        }
-      }
-      allErrors.push(...result.errors);
-    }
-    
-    if (result.warnings && result.warnings.length > 0) {
-      console.log(`\n${colors.yellow}${colors.bright}⚠ ${result.name} (${result.warnings.length} warning(s))${colors.reset}`);
-      for (const warning of result.warnings) {
-        console.log(`  ${colors.yellow}⚠${colors.reset} ${warning.message}`);
-        if (warning.file) {
-          console.log(`    ${colors.dim}${warning.file}${colors.reset}`);
-        }
-        if (warning.suggestion) {
-          console.log(`    ${colors.cyan}→${colors.reset} ${warning.suggestion}`);
-        }
-      }
-      allWarnings.push(...result.warnings);
-    }
-    
-    if ((!result.errors || result.errors.length === 0) && 
+    const { errors, warnings } = convertCheckResult(result.name, result);
+    allErrors.push(...errors);
+    allWarnings.push(...warnings);
+  }
+
+  // Display errors
+  if (allErrors.length > 0) {
+    console.log(formatViteIssues(allErrors));
+  }
+
+  // Display warnings
+  if (allWarnings.length > 0) {
+    console.log(formatViteIssues(allWarnings));
+  }
+
+  // Display summary
+  console.log(summarizeViteIssues(allErrors, allWarnings));
+  if ((!result.errors || result.errors.length === 0) && 
         (!result.warnings || result.warnings.length === 0)) {
       console.log(`${colors.green}✓${colors.reset} ${result.name}`);
     }
@@ -196,5 +186,12 @@ async function main() {
 
 main().catch((err) => {
   console.error(`${colors.red}Fatal error:${colors.reset}`, err);
-  process.exit(1);
-});
+  process.exit(1);gate failed with ${errorCount} error(s)${colors.reset}`);
+    console.log(`\n${colors.cyan}Next steps:${colors.reset}`);
+    console.log(`  1. Apply the fix suggestions above`);
+    console.log(`  2. Review vite.config.ts and related files`);
+    console.log(`  3. Re-run: ${colors.bright}node tools/ci-gate/vite/index.mjs${colors.reset}`);
+    console.log(`  4. See docs: ${colors.dim}docs/QUICK_REFERENCE_BUNDLE.md${colors.reset}\n`);
+    process.exit(1);
+  } else {
+    console.log(`\n${colors.green}✓ Vite gate passed!${colors.reset}\n

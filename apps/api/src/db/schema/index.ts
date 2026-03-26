@@ -20,13 +20,29 @@ export {
 
 // Sales domain tables (from shared @afenda/db package)
 export {
+  commissionEntries,
+  commissionPlans,
+  commissionPlanTiers,
+  consignmentAgreementLines,
+  consignmentAgreements,
+  consignmentStockReportLines,
+  consignmentStockReports,
   orderStatusEnum,
   partnerTypeEnum,
   partners,
   productCategories,
   products,
+  returnOrderLines,
+  returnOrders,
+  returnReasonCodes,
+  salesTeamMembers,
+  salesTeams,
   salesOrders,
   salesOrderLines,
+  subscriptionLines,
+  subscriptions,
+  territories,
+  territoryRules,
 } from "@afenda/db/schema-domain";
 
 // Phase 4: Tenant persistence tables

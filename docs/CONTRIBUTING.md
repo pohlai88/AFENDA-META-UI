@@ -201,8 +201,16 @@ pnpm test:e2e
 Before merging any code, all CI gates must pass. Run the full gate suite locally:
 
 ```bash
-pnpm ci:gate
+pnpm ci:gate:full
 ```
+
+For faster local feedback during active development, use:
+
+```bash
+pnpm ci:gate:fast
+```
+
+`fast` mode is intended for iteration and may skip expensive dependency network checks. `full` mode remains required before merge and in protected CI pipelines.
 
 This runs:
 
@@ -308,6 +316,21 @@ pnpm ci:gate:dependencies
 
 # Circular dependencies only
 pnpm ci:gate:circular
+```
+
+### CI Gate Performance Maintenance
+
+CI gate performance should be optimized occasionally as the codebase evolves.
+
+1. Benchmark `fast` and `full` modes at least once per month.
+2. Re-run benchmarking after adding new checks/gates or when runtime increases by about 20%.
+3. Prioritize optimizations that keep policy quality intact: reduce duplicated work, combine related checks, and add bounded concurrency where safe.
+
+Recommended cadence commands:
+
+```bash
+pnpm ci:gate:fast
+pnpm ci:gate:full
 ```
 
 ### Auto-Fix Mode

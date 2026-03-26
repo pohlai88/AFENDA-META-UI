@@ -27,6 +27,9 @@ import { PageHeader, PageContainer } from "~/components/layout";
 import { FormFieldRenderer } from "./fields/FormFieldRenderer";
 import { useFieldConditions, FieldConditionsProvider } from "./conditions";
 import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'MetaFormV2' });
+
 
 // ---------------------------------------------------------------------------
 // Types
@@ -385,7 +388,7 @@ export function MetaFormV2({
       } catch (err) {
         const error = err as Error;
         toast.error(error.message || "Failed to save record");
-        console.error("Save failed:", err);
+        log.error("Save failed:", err);
       }
     },
     [recordId, updateRecord, createRecord, onSaved, meta?.fields, fieldStates, form, lifecycle]

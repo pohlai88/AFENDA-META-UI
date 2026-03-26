@@ -10,6 +10,9 @@ import {
   getQueryErrorPresentationOverrides,
   registerQueryErrorPresentationOverrides,
 } from "./query-error-overrides-registry";
+import { logger } from "../lib/logger";
+
+const log = logger.child({ module: "query-client" });
 
 const PROD_QUERY_STALE_TIME_MS = 5 * 60 * 1000;
 const DEV_QUERY_STALE_TIME_MS = 0;
@@ -46,7 +49,7 @@ function logQueryError(error: unknown) {
     source: "query",
     presentationOverrides: getQueryErrorPresentationOverrides(),
   });
-  console.error("[QueryClient] Query error", { classification, error });
+  log.error("[QueryClient] Query error", { classification, error });
   maybeSurfaceActionableError(classification);
 }
 
@@ -55,7 +58,7 @@ function logMutationError(error: unknown) {
     source: "mutation",
     presentationOverrides: getQueryErrorPresentationOverrides(),
   });
-  console.error("[QueryClient] Mutation error", { classification, error });
+  log.error("[QueryClient] Mutation error", { classification, error });
   maybeSurfaceActionableError(classification);
 }
 

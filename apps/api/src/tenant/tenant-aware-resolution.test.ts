@@ -116,9 +116,10 @@ describe("Tenant-Aware Metadata Resolution", () => {
       );
 
       expect(resolved).toBeDefined();
-      expect((resolved as { fields?: { amount?: { type?: string } } }).fields?.amount?.type).toBe(
-        "currency"
-      );
+      // Fields is an array per ModelMeta type definition
+      const fields = (resolved as { fields?: Array<{ name: string; type?: string }> }).fields;
+      const amountField = fields?.find((f) => f.name === "amount");
+      expect(amountField?.type).toBe("currency");
     });
 
     it("should apply industry overrides", () => {

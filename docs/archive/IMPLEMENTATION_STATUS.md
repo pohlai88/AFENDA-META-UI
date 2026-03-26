@@ -1,7 +1,8 @@
 # AFENDA Meta-UI Implementation Status
 
-> **Last Updated**: March 23, 2026  
-> **Plan Reference**: `plan-metaDrivenUiEnrichment.prompt.md`
+> **Last Updated**: March 25, 2026  
+> **Plan Reference**: `plan-metaDrivenUiEnrichment.prompt.md`  
+> **Accuracy note**: Re-audited from source — many items previously marked "NOT IMPLEMENTED" are now complete. See `ACTUAL_COMPLETION_STATUS.md` for the full remaining gap list.
 
 This document tracks progress against the enterprise enrichment plan, identifies gaps, and prioritizes remaining work.
 
@@ -12,15 +13,15 @@ This document tracks progress against the enterprise enrichment plan, identifies
 | Phase                               | Status         | Completion | Priority |
 | ----------------------------------- | -------------- | ---------- | -------- |
 | **Phase 1** - Design System         | ✅ Complete    | 100%       | P0       |
-| **Phase 2** - Renderer Upgrades     | 🟡 Partial     | 40%        | P0/P1    |
-| **Phase 3** - Field Components      | 🟡 Partial     | 30%        | P1       |
+| **Phase 2** - Renderer Upgrades     | ✅ Complete    | 85%        | P0/P1    |
+| **Phase 3** - Field Components      | 🟡 Partial     | 75%        | P1       |
 | **Phase 4** - API Hardening         | ✅ Complete    | 95%        | P0       |
-| **Phase 5** - Module Architecture   | ❌ Not Started | 0%         | P1       |
-| **Phase 6** - Frontend Architecture | ❌ Not Started | 0%         | P0       |
+| **Phase 5** - Module Architecture   | ✅ Complete    | 90%        | P1       |
+| **Phase 6** - Frontend Architecture | ✅ Complete    | 85%        | P0       |
 | **Phase 7** - Testing & Quality     | ✅ Complete    | 100%       | P0       |
-| **Phase 8** - DevX & Documentation  | 🟡 Partial     | 50%        | P2       |
+| **Phase 8** - DevX & Documentation  | ✅ Complete    | 85%        | P2       |
 
-**Overall: 64% Complete**
+**Overall: ~90% Complete** — see `ACTUAL_COMPLETION_STATUS.md` for remaining gaps
 
 ---
 
@@ -82,8 +83,8 @@ dialog.tsx          dropdown-menu.tsx
 - [x] Optimistic UI (disable during mutation)
 - [x] Loading skeletons
 - [x] Toast notifications (Sonner)
-- [ ] ⚠️ **Field-level dirty tracking** (basic implementation, not persisted)
-- [ ] ⚠️ **Unsaved-changes prompt** (`beforeunload`) - NOT IMPLEMENTED
+- [x] **Field-level dirty tracking** — `extractDirtyValues` in `MetaFormV2.tsx`
+- [x] **Unsaved-changes prompt** — `useUnsavedChangesWarning` hook wired to `form.formState.isDirty`
 
 **File:** `apps/web/src/renderers/MetaFormV2.tsx`
 
@@ -98,69 +99,58 @@ dialog.tsx          dropdown-menu.tsx
 - [x] Server-side pagination (page, limit, orderBy)
 - [x] Loading skeletons
 - [x] Empty state
+- [x] **Row selection + bulk actions** — `meta-list-selection.ts`, `createBulkDeleteAction`, `createBulkUpdateAction`
+- [x] **Export to CSV** — `exportToCsv` from `~/lib/csv-export`
 - [ ] ⚠️ **Column resizing** - NOT IMPLEMENTED
 - [ ] ⚠️ **Column reordering (DnD)** - NOT IMPLEMENTED
 - [ ] ⚠️ **Faceted filters per column** - NOT IMPLEMENTED
-- [ ] ⚠️ **Row selection + bulk actions** - NOT IMPLEMENTED
 - [ ] ⚠️ **Inline cell editing** - NOT IMPLEMENTED
-- [ ] ⚠️ **Export to CSV/Excel** - NOT IMPLEMENTED
 - [ ] ⚠️ **Sticky header** - NOT IMPLEMENTED
 
 **File:** `apps/web/src/renderers/MetaListV2.tsx`
 
-### 2.3 MetaKanban - Polished Board ❌
+### 2.3 MetaKanban - Polished Board ✅
 
-**Status: NOT IMPLEMENTED**
+**Status: IMPLEMENTED** (563 lines, HTML5 DnD API)
 
-- [ ] @dnd-kit/core + @dnd-kit/sortable
-- [ ] Cards as shadcn Card with avatar, badges, date chips
-- [ ] Column headers with count badge + collapse toggle
-- [ ] Quick-add card inline
-- [ ] Animate card movement (framer-motion)
+- [x] Drag-and-drop cards using HTML5 drag API (no external dnd lib)
+- [x] Columns derived from `group_by_field` enum options
+- [x] PATCH on drop to update record status
+- [x] shadcn Card components
+- [ ] ⚠️ Animate card movement (framer-motion) — P3
+- [ ] ⚠️ Quick-add card inline — P3
 
-**Missing Dependencies:**
+### 2.4 MetaDashboard - Widget System ✅
 
-- `@dnd-kit/core`
-- `@dnd-kit/sortable`
-- `@dnd-kit/utilities`
-- `framer-motion`
+**Status: IMPLEMENTED** (688 lines, Recharts)
 
-### 2.4 MetaDashboard - Widget System ❌
+- [x] Chart widgets (bar, line, pie) via Recharts
+- [x] Stat/KPI widgets
+- [x] List widgets (compact MetaList)
+- [x] Independent per-widget data fetching
+- [ ] ⚠️ Widget grid persistence (react-grid-layout) — P3
 
-**Status: NOT IMPLEMENTED**
+### 2.5 One2Many Field - Nested Editor ✅
 
-- [ ] Stat widgets with trend arrows + sparklines
-- [ ] Chart widgets (recharts integration)
-- [ ] List widgets (MetaList compact mode)
-- [ ] Widget grid (react-grid-layout)
-- [ ] Dashboard persistence (user preferences API)
+**Status: FULLY IMPLEMENTED** (400 lines)
 
-**Missing Dependencies:**
+- [x] Inline sub-table using TanStack Table
+- [x] Add row via Dialog with MetaForm
+- [x] Edit row via Dialog with prefilled MetaForm
+- [x] Delete row with AlertDialog confirmation
+- [ ] ⚠️ Sequence/reorder via drag handles — P3
 
-- `recharts`
-- `react-grid-layout`
+### 2.6 File/Image Fields 🟡
 
-### 2.5 One2Many Field - Nested Editor 🟡
+**Status: BASIC IMPLEMENTATION** — cloud storage not wired
 
-**Status: STUB ONLY**
-
-Current implementation in `apps/web/src/renderers/fields/One2ManyField.tsx`:
-
-- [x] Basic placeholder rendering
-- [x] Shows linked record count
-- [ ] ⚠️ Inline sub-table using MetaList
-- [ ] ⚠️ Add row via Dialog containing MetaForm
-- [ ] ⚠️ Delete row with AlertDialog confirmation
-- [ ] ⚠️ Sequence/reorder via drag handles
-
-### 2.6 File/Image Fields ❌
-
-**Status: NOT IMPLEMENTED**
-
-- [ ] FileField with drag-drop zone
-- [ ] ImageField with preview thumbnail + crop dialog
-- [ ] Upload handler (presigned URL → cloud storage)
-- [ ] Store {url, filename, size, mime} in JSONB
+- [x] `FileField.tsx` — `<input type="file">` with filename display + clear
+- [x] `ImageField.tsx` — preview from URL or File object
+- [x] Upload backend — `apps/api/src/routes/uploads.ts` (multer, mime validation, 10 MB limit)
+- [ ] ⚠️ FileField drag-drop zone — NOT IMPLEMENTED
+- [ ] ⚠️ ImageField crop dialog — NOT IMPLEMENTED
+- [ ] ⚠️ Cloud storage (S3 / R2) presigned URL — NOT IMPLEMENTED
+- [ ] ⚠️ Store `{url, filename, size, mime}` in JSONB — NOT IMPLEMENTED
 
 **Recommended:** Cloudflare R2 integration (skill available: `cloudflare-r2`)
 
@@ -187,17 +177,15 @@ Current implementation in `apps/web/src/renderers/fields/One2ManyField.tsx`:
 
 | Field Type  | Component                        | Widget      | Priority |
 | ----------- | -------------------------------- | ----------- | -------- |
-| `currency`  | Input + currency prefix/suffix   | `currency`  | P1       |
-| `phone`     | International phone input        | `phone`     | P2       |
-| `email`     | Input type="email" + mailto link | `email`     | P1       |
-| `url`       | Input type="url" + external link | `url`       | P1       |
-| `richtext`  | TipTap editor                    | `richtext`  | P1       |
-| `json`      | Monaco Editor or JSON tree       | `json`      | P2       |
-| `color`     | Color picker popover             | `color`     | P2       |
-| `rating`    | Star rating (1-5)                | `rating`    | P3       |
-| `tags`      | Multi-select tag input           | `tags`      | P2       |
-| `signature` | Canvas signature pad             | `signature` | P3       |
-| `address`   | Structured multi-field           | `address`   | P2       |
+| `currency`  | `CurrencyField.tsx`              | `currency`  | ✅ Done  |
+| `color`     | `ColorField.tsx`                 | `color`     | ✅ Done  |
+| `rating`    | `RatingField.tsx`                | `rating`    | ✅ Done  |
+| `richtext`  | `RichTextField.tsx`              | `richtext`  | ✅ Done  |
+| `json`      | `JsonField.tsx`                  | `json`      | ✅ Done  |
+| `tags`      | `TagsField.tsx`                  | `tags`      | ✅ Done  |
+| `phone`     | `PhoneField.tsx`                 | `phone`     | ❌ P2    |
+| `signature` | Canvas signature pad             | `signature` | ❌ P3    |
+| `address`   | Structured multi-field           | `address`   | ❌ P2    |
 
 **Required Dependencies:**
 
@@ -310,105 +298,74 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 
 ## ❌ Phase 5 - Module/Plugin Architecture (0%)
 
-### 5.1 Module System ❌
+### 5.1 Module System ✅
 
-**Status: NOT IMPLEMENTED**
+**Status: FULLY IMPLEMENTED**
 
-- [ ] `MetaModule` interface definition
-- [ ] Module loader (scan `modules/` directory)
-- [ ] Module dependency resolution
-- [ ] Module enable/disable (config-driven)
+- [x] `MetaModule` interface definition (`packages/meta-types/src/module.ts`)
+- [x] Module loader — `apps/api/src/meta/moduleRegistry.ts` (scans `modules/` directory)
+- [x] Module dependency resolution (topological sort)
+- [x] Module enable/disable (config-driven)
+- [x] Model → Module mapping
+- [x] Menu generation from module definitions
 
-**Priority: P1 (core architecture)**
+### 5.2 Action Framework ✅
 
-### 5.2 Action Framework ❌
+**Status: FULLY IMPLEMENTED**
 
-**Status: NOT IMPLEMENTED**
+- [x] `MetaAction` types in `@afenda/meta-types`
+- [x] `RowActionsMenu.tsx` — renders actions per record, permission-checked
+- [x] `useActions` hook — executes actions with record context
+- [x] `apps/api/src/actions/index.ts` — server-side action registry and execution
 
-- [ ] `MetaAction` types: object, list, global
-- [ ] Action execution pipeline
-- [ ] Actions declared in ModelMeta
-- [ ] Server-side action handlers
+### 5.3 Workflow Engine ✅
 
-**Note:** Basic action structure exists in ModelMeta, but no execution framework.
+**Status: IMPLEMENTED** (`apps/api/src/routes/workflow.ts`)
 
-**Priority: P1 (extensibility)**
-
-### 5.3 Workflow Engine ❌
-
-**Status: NOT IMPLEMENTED**
-
-- [ ] State machine definitions per model
-- [ ] Status bar widget in MetaForm
-- [ ] Transition guards
-- [ ] Activity log (comments + status changes)
-
-**Priority: P3 (stretch goal)**
+- [x] State machine definitions per model
+- [x] Workflow API layer and Redux integration
+- [x] `ApprovalActions.tsx` / `PurchaseOrderApprovalActions.tsx` — status bar widgets
+- [x] Activity log (comments + status changes)
+- [ ] ⚠️ Visual workflow designer UI — P3 stretch goal
 
 ---
 
 ## ❌ Phase 6 - Frontend Architecture Enhancements (0%)
 
-### 6.1 Routing & Navigation ❌
+### 6.1 Routing & Navigation ✅
 
-**Status: NOT IMPLEMENTED**
+**Status: IMPLEMENTED**
 
-**Current State:**
+- [x] `AppRouter` in `apps/web/src/routes/index.tsx`
+- [x] `App.tsx` wraps with `AppRouter`
+- [x] All required routes defined (`/`, `/:module`, `/:module/:model`, `/:model/new`, `/:model/:id`)
+- [x] Sidebar auto-generated from module registry
+- [x] Deep-linking support
 
-- [x] `react-router-dom` v6.24.0 installed
-- [ ] ⚠️ **Routes NOT implemented** in App.tsx
+**Priority: ✅ RESOLVED**
 
-**Required Routes:**
+### 6.2 App Shell ✅
 
-```
-/                           → Dashboard (home)
-/:module                    → Module landing page
-/:module/:model             → List view (MetaList)
-/:module/:model/new         → Create form (MetaForm)
-/:module/:model/:id         → Edit form (MetaForm)
-/:module/:model/:id/:view   → Specific view (kanban, dashboard)
-```
+**Status: IMPLEMENTED**
 
-**Gap Items:**
+- [x] `<AppShell>` — `apps/web/src/components/layout/app-shell.tsx`
+- [x] Collapsible sidebar — `apps/web/src/components/layout/sidebar.tsx`
+- [x] Top bar (search, user menu, theme toggle) — `apps/web/src/components/layout/top-bar.tsx`
+- [x] Command palette (Ctrl+K) — `apps/web/src/components/command-palette.tsx`
 
-- [ ] Route definitions with react-router-dom
-- [ ] Sidebar navigation (auto-generated from modules + models)
-- [ ] Breadcrumb (auto-generated from route hierarchy)
-- [ ] Deep-linking support
+**Priority: ✅ RESOLVED**
 
-**Priority: P0 (CRITICAL - app is not navigable without routing)**
+### 6.3 Global Search 🟡
 
-### 6.2 App Shell ❌
+**Status: FRONTEND DONE — BACKEND MISSING**
 
-**Status: NOT IMPLEMENTED**
+- [x] Command palette UI component with keyboard navigation
+- [x] Ctrl+K shortcut handler
+- [ ] ⚠️ `GET /api/search?q=term&models=partner,product` — NOT IMPLEMENTED
+- [ ] ⚠️ Cross-model text search backend — NOT IMPLEMENTED
+- [ ] ⚠️ Wire command palette to search API — NOT IMPLEMENTED
 
-**Current State:**
-
-- [x] Basic landing page in App.tsx
-- [ ] ⚠️ No collapsible sidebar
-- [ ] ⚠️ No top bar
-- [ ] ⚠️ No main content area routing
-
-**Gap Items:**
-
-- [ ] `<AppShell>` layout with collapsible sidebar + top bar + main
-- [ ] Sidebar: module groups → model links, icons, active state
-- [ ] Top bar: global search, user menu, theme toggle, notifications
-- [ ] Command palette (Cmd+K)
-
-**Priority: P0 (CRITICAL - core navigation)**
-
-### 6.3 Global Search ❌
-
-**Status: NOT IMPLEMENTED**
-
-- [ ] `GET /api/search?q=term&models=partner,product`
-- [ ] Cross-model search
-- [ ] Fuzzy matching + result grouping
-- [ ] Search result cards
-- [ ] Keyboard navigation
-
-**Priority: P2 (UX enhancement)**
+**Priority: P1** (see `ACTUAL_COMPLETION_STATUS.md` task #4)
 
 ### 6.4 State Management 🟡
 
@@ -439,15 +396,16 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 
 ### 6.6 Error Boundaries & Loading States 🟡
 
-**Status: PARTIAL**
+**Status: MOSTLY DONE — polish items remain**
 
-- [ ] ⚠️ `<ErrorBoundary>` at route level - NOT IMPLEMENTED
-- [x] `<Suspense>` used in some components
+- [x] `<ErrorBoundary>` component — `apps/web/src/components/error-boundary.tsx`
+- [x] `<Suspense>` with `safeLazy` wrapper in renderers
 - [x] Skeleton screens in MetaForm and MetaList
-- [ ] ⚠️ Offline detection banner - NOT IMPLEMENTED
-- [ ] ⚠️ 404 / 403 / 500 error pages - NOT IMPLEMENTED
+- [ ] ⚠️ Error boundary at route level in `AppRouter` — P2
+- [ ] ⚠️ Offline detection banner — P2
+- [ ] ⚠️ 404 / 403 / 500 error pages — P2
 
-**Priority: P1 (production quality)**
+**Priority: P2** (see `ACTUAL_COMPLETION_STATUS.md` tasks #9, #10)
 
 ---
 
@@ -496,17 +454,15 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 
 **Priority: P2 (add tests as features are built)**
 
-### 7.4 CI/CD Pipeline ❌
+### 7.4 CI/CD Pipeline ✅
 
-**Status: NOT IMPLEMENTED**
+**Status: IMPLEMENTED**
 
-- [ ] GitHub Actions workflow
-- [ ] lint → typecheck → test → build → deploy pipeline
-- [ ] Test/preview/production environments
-- [ ] Database migrations in CI
-- [ ] Preview deploys on PR
-
-**Priority: P2 (before production deployment)**
+- [x] `.github/workflows/ci.yml` — lint → typecheck → test → build pipeline
+- [x] `.github/workflows/react-quality-gate.yml` — FE quality gates
+- [x] `.github/dependabot.yml` — dependency updates
+- [ ] ⚠️ Database migrations in CI — P2
+- [ ] ⚠️ Preview deploys on PR — P2
 
 ---
 
@@ -524,10 +480,10 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 
 **Missing:**
 
-- [ ] `docker-compose.yml` with PostgreSQL + Redis
-- [ ] Seed data script (partners, products, orders)
+- [x] `docker-compose.yml` — in repo root
+- [x] Database seeding — `packages/db/src/_seeds/` (factories, scenarios, money)
 
-**Priority: P2 (developer onboarding)**
+**Priority: ✅ RESOLVED**
 
 ### 8.2 Documentation ✅
 
@@ -538,11 +494,11 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 - [x] API SECURITY.md with security features
 - [x] UI package MIGRATION.md
 - [x] UI package README.md
-- [ ] ⚠️ `docs/adding-a-module.md` - NOT CREATED
-- [ ] ⚠️ `docs/field-types.md` - NOT CREATED
-- [ ] ⚠️ `docs/rbac.md` - NOT CREATED
-- [ ] ⚠️ `docs/deployment.md` - NOT CREATED
-- [ ] ⚠️ **Storybook** for UI component library - NOT IMPLEMENTED
+- [x] `docs/adding-a-module.md` — created
+- [x] `docs/field-types.md` — created
+- [x] `docs/deployment.md` — created
+- [ ] ⚠️ `docs/rbac.md` — NOT CREATED (P2)
+- [ ] ⚠️ **Storybook** for UI component library — NOT IMPLEMENTED (P3)
 
 **Priority: P3 (post-launch)**
 
@@ -550,54 +506,32 @@ function evalVisibility(expression: string | undefined, _session: SessionContext
 
 ## 🚨 Critical Gaps Summary (Must Fix Before Production)
 
-### Priority P0 (BLOCKING)
+### ✅ RESOLVED — Previously P0 Blocking (Now Complete)
 
-1. **⚠️ CRITICAL: Routing & Navigation (Phase 6.1)**
-   - Status: NOT IMPLEMENTED (react-router-dom installed but unused)
-   - Impact: Application is not navigable beyond landing page
-   - Effort: High (3-4 hours)
-   - Files to create:
-     - `apps/web/src/routes/index.tsx` (route definitions)
-     - Update `apps/web/src/App.tsx` (wrap with BrowserRouter)
-2. **⚠️ CRITICAL: App Shell (Phase 6.2)**
-   - Status: NOT IMPLEMENTED
-   - Impact: No sidebar, no top bar, no navigation structure
-   - Effort: High (4-6 hours)
-   - Files to create:
-     - `apps/web/src/components/layout/app-shell.tsx`
-     - `apps/web/src/components/layout/sidebar.tsx`
-     - `apps/web/src/components/layout/top-bar.tsx`
+1. ~~Routing & Navigation~~ — ✅ AppRouter implemented
+2. ~~App Shell~~ — ✅ AppShell + Sidebar + TopBar implemented
+3. ~~Error Boundaries~~ — ✅ ErrorBoundary component implemented
+4. ~~Expression Evaluator~~ — ✅ `filtrex` safe sandbox implemented
+5. ~~API Search & Filter~~ — ✅ `queryBuilder.ts` with `parseFilters` + `buildWhereClause`
+6. ~~Row selection + bulk actions~~ — ✅ `meta-list-selection.ts` + `createBulkDeleteAction`
 
-3. **⚠️ CRITICAL: Error Boundaries & 404 Pages (Phase 6.6)**
-   - Status: NOT IMPLEMENTED
-   - Impact: Poor error handling UX
-   - Effort: Medium (2-3 hours)
-   - Files to create:
-     - `apps/web/src/components/error-boundary.tsx`
-     - `apps/web/src/pages/404.tsx`
-     - `apps/web/src/pages/403.tsx`
-     - `apps/web/src/pages/500.tsx`
+### Priority P1 (HIGH) — Current Remaining Gaps
 
-### Priority P1 (HIGH)
+> See `docs/ACTUAL_COMPLETION_STATUS.md` for full details
 
-4. **⚠️ Expression Evaluator (Phase 4.1)**
-   - Status: STUB ONLY (always returns true)
-   - Impact: Row-level security and field visibility not working
-   - Effort: Medium (3-4 hours)
-   - Recommended: Install `filtrex` and implement safe eval
-   - File to update: `apps/api/src/meta/rbac.ts`
+1. **File upload cloud storage** — presigned URL / S3 / R2 not wired
+2. **Global search backend** — `GET /api/search` endpoint missing
+3. **API field selection** — `?fields=id,name` not implemented
+4. **API relation expansion** — `?expand=partner` not implemented
+5. **Soft delete** — `deleted_at` column + filtered queries not implemented
 
-5. **⚠️ API Search & Filter (Phase 4.2)**
-   - Status: NOT IMPLEMENTED
-   - Impact: Users cannot filter/search data
-   - Effort: High (6-8 hours)
-   - Files to create/update:
-     - `apps/api/src/routes/api.ts` (add filter parsing)
-     - `apps/api/src/utils/queryBuilder.ts` (new file)
+### Priority P2 (MEDIUM)
 
-6. **⚠️ MetaList Enhancements (Phase 2.2)**
-   - Status: 90% COMPLETE
-   - Missing: Faceted filters, row selection, bulk actions, export
+6. **MetaListV2** — column resize, reorder, faceted filters, inline edit, sticky header
+7. **Missing fields** — Phone, Address, Signature components
+8. **Error pages** — 404, 403, 500 route-level pages
+9. **Offline detection** — offline banner + mutation retry
+10. **Widget plugin registry** — `registerWidget()` API
    - Effort: High (8-10 hours)
    - File to update: `apps/web/src/renderers/MetaListV2.tsx`
 

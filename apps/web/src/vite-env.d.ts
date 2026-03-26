@@ -25,6 +25,8 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_API_KEY?: string;
   /** PostHog ingest host (default: https://us.i.posthog.com) */
   readonly VITE_POSTHOG_HOST?: string;
+  /** Log level for frontend logger (trace|debug|info|warn|error|fatal) */
+  readonly VITE_LOG_LEVEL?: string;
 }
 
 interface ImportMeta {

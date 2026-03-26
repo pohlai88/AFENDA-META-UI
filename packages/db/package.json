@@ -33,6 +33,10 @@
     "./schema-domain": {
       "import": "./dist/schema-domain/index.js",
       "types": "./dist/schema-domain/index.d.ts"
+    },
+    "./schema-platform": {
+      "import": "./dist/schema-platform/index.js",
+      "types": "./dist/schema-platform/index.d.ts"
     }
   },
   "scripts": {

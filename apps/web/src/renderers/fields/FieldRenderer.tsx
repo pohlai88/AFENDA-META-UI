@@ -14,9 +14,31 @@ import { RatingField } from "./RatingField.js";
 import { RichTextField } from "./RichTextField.js";
 import { FileField } from "./FileField.js";
 import { ImageField } from "./ImageField.js";
+import { PhoneField } from "./PhoneField.js";
+import { AddressField } from "./AddressField.js";
+import { SignatureField } from "./SignatureField.js";
+
+type FieldWidgetComponent = React.ComponentType<DiscriminatedFieldProps>;
+
+const widgetRegistry = new Map<string, FieldWidgetComponent>();
+
+export function registerWidget(name: string, component: FieldWidgetComponent): void {
+  widgetRegistry.set(name, component);
+}
+
+export function unregisterWidget(name: string): void {
+  widgetRegistry.delete(name);
+}
 
 export function FieldRenderer(props: DiscriminatedFieldProps) {
   const { field, value, onChange, readonly = false, invalid } = props;
+
+  if (field.widget) {
+    const customWidget = widgetRegistry.get(field.widget);
+    if (customWidget) {
+      return React.createElement(customWidget, props);
+    }
+  }
 
   // Widget hint overrides for textual fields.
   if (field.widget === "textarea") {
@@ -48,7 +70,6 @@ export function FieldRenderer(props: DiscriminatedFieldProps) {
     case "text":
     case "email":
     case "url":
-    case "phone":
       return (
         <StringField
           field={field}
@@ -56,6 +77,36 @@ export function FieldRenderer(props: DiscriminatedFieldProps) {
           onChange={(next) => onChange?.(next as never)}
           readonly={readonly}
           type={field.type}
+        />
+      );
+
+    case "phone":
+      return (
+        <PhoneField
+          field={field}
+          value={value}
+          onChange={(next) => onChange?.(next as never)}
+          readonly={readonly}
+        />
+      );
+
+    case "address":
+      return (
+        <AddressField
+          field={field}
+          value={value}
+          onChange={(next) => onChange?.(next as never)}
+          readonly={readonly}
+        />
+      );
+
+    case "signature":
+      return (
+        <SignatureField
+          field={field}
+          value={value}
+          onChange={(next) => onChange?.(next as never)}
+          readonly={readonly}
         />
       );
 

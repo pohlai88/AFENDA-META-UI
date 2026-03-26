@@ -58,6 +58,26 @@ export default [
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "no-debugger": "warn",
       "no-constant-binary-expression": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../lib/logger.js", "../../lib/logger.js", "*/lib/logger.js"],
+              message: "Import logger from src/logging/logger.js in API modules.",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.object.name='logger'][callee.property.name=/^(trace|debug|info|warn|error|fatal)$/] > Literal:first-child + ObjectExpression",
+          message:
+            "Pino expects logger.<level>({ context }, \"message\") — merge object first, message string second.",
+        },
+      ],
     },
   },
   {

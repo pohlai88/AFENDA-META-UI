@@ -77,6 +77,39 @@ export interface OrderLineShape {
   sequence: number;
 }
 
+export interface TaxGroupShape {
+  id: string;
+  name: string;
+  countryId: number | null;
+  sequence: number;
+}
+
+export interface TaxRateShape {
+  id: string;
+  name: string;
+  typeTaxUse: "sale" | "purchase" | "none";
+  amountType: "percent" | "fixed" | "group" | "code";
+  amount: string;
+  taxGroupId: string;
+  priceInclude: boolean;
+  isActive: boolean;
+  sequence: number;
+  countryId: number | null;
+}
+
+export interface FiscalPositionShape {
+  id: string;
+  name: string;
+  countryId: number | null;
+  stateIds: string | null;
+  autoApply: boolean;
+  vatRequired: boolean;
+  zipFrom: string | null;
+  zipTo: string | null;
+  sequence: number;
+  isActive: boolean;
+}
+
 // Prevent overriding structural truth keys.
 type SafeOverride<T, K extends keyof T> = Partial<Omit<T, K>>;
 
@@ -85,6 +118,9 @@ export type CategoryOverride = SafeOverride<CategoryShape, "id">;
 export type ProductOverride = SafeOverride<ProductShape, "id" | "categoryId">;
 export type SalesOrderOverride = SafeOverride<SalesOrderShape, "id" | "partnerId">;
 export type LineOverride = SafeOverride<OrderLineShape, "id" | "orderId" | "productId">;
+export type TaxGroupOverride = SafeOverride<TaxGroupShape, "id">;
+export type TaxRateOverride = SafeOverride<TaxRateShape, "id" | "taxGroupId">;
+export type FiscalPositionOverride = SafeOverride<FiscalPositionShape, "id">;
 
 const LINE_SUBTOTALS = {
   lineOne: calcLineSubtotal(2, 599.99, 10.0),
@@ -512,6 +548,214 @@ const orderLineFactory = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
+// Factory: Tax Groups
+// ────────────────────────────────────────────────────────────────────────────
+
+const taxGroupFactory = {
+  salesStandard(overrides?: TaxGroupOverride): TaxGroupShape {
+    return {
+      id: SEED_IDS.taxGroupSalesStandard,
+      name: "Sales Tax",
+      countryId: null,
+      sequence: 10,
+      ...overrides,
+    };
+  },
+
+  vat(overrides?: TaxGroupOverride): TaxGroupShape {
+    return {
+      id: SEED_IDS.taxGroupVat,
+      name: "VAT",
+      countryId: null,
+      sequence: 20,
+      ...overrides,
+    };
+  },
+
+  gst(overrides?: TaxGroupOverride): TaxGroupShape {
+    return {
+      id: SEED_IDS.taxGroupGst,
+      name: "GST",
+      countryId: null,
+      sequence: 30,
+      ...overrides,
+    };
+  },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Factory: Tax Rates
+// ────────────────────────────────────────────────────────────────────────────
+
+const taxRateFactory = {
+  salesStandard10(overrides?: TaxRateOverride): TaxRateShape {
+    return {
+      id: SEED_IDS.taxRateSalesStandard10,
+      name: "Sales Tax 10%",
+      typeTaxUse: "sale",
+      amountType: "percent",
+      amount: "10",
+      taxGroupId: SEED_IDS.taxGroupSalesStandard,
+      priceInclude: false,
+      isActive: true,
+      sequence: 10,
+      countryId: null,
+      ...overrides,
+    };
+  },
+
+  vat20(overrides?: TaxRateOverride): TaxRateShape {
+    return {
+      id: SEED_IDS.taxRateVat20,
+      name: "VAT 20%",
+      typeTaxUse: "sale",
+      amountType: "percent",
+      amount: "20",
+      taxGroupId: SEED_IDS.taxGroupVat,
+      priceInclude: true,
+      isActive: true,
+      sequence: 10,
+      countryId: null,
+      ...overrides,
+    };
+  },
+
+  cgst9(overrides?: TaxRateOverride): TaxRateShape {
+    return {
+      id: SEED_IDS.taxRateCgst9,
+      name: "CGST 9%",
+      typeTaxUse: "sale",
+      amountType: "percent",
+      amount: "9",
+      taxGroupId: SEED_IDS.taxGroupGst,
+      priceInclude: false,
+      isActive: true,
+      sequence: 10,
+      countryId: null,
+      ...overrides,
+    };
+  },
+
+  sgst9(overrides?: TaxRateOverride): TaxRateShape {
+    return {
+      id: SEED_IDS.taxRateSgst9,
+      name: "SGST 9%",
+      typeTaxUse: "sale",
+      amountType: "percent",
+      amount: "9",
+      taxGroupId: SEED_IDS.taxGroupGst,
+      priceInclude: false,
+      isActive: true,
+      sequence: 20,
+      countryId: null,
+      ...overrides,
+    };
+  },
+
+  gst18(overrides?: TaxRateOverride): TaxRateShape {
+    return {
+      id: SEED_IDS.taxRateGst18,
+      name: "GST 18% (Compound)",
+      typeTaxUse: "sale",
+      amountType: "group",
+      amount: "0",
+      taxGroupId: SEED_IDS.taxGroupGst,
+      priceInclude: false,
+      isActive: true,
+      sequence: 30,
+      countryId: null,
+      ...overrides,
+    };
+  },
+
+  cityTax2(overrides?: TaxRateOverride): TaxRateShape {
+    return {
+      id: SEED_IDS.taxRateCityTax2,
+      name: "City Sales Tax 2%",
+      typeTaxUse: "sale",
+      amountType: "percent",
+      amount: "2",
+      taxGroupId: SEED_IDS.taxGroupSalesStandard,
+      priceInclude: false,
+      isActive: true,
+      sequence: 20,
+      countryId: null,
+      ...overrides,
+    };
+  },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Factory: Fiscal Positions
+// ────────────────────────────────────────────────────────────────────────────
+
+const fiscalPositionFactory = {
+  domesticUs(overrides?: FiscalPositionOverride): FiscalPositionShape {
+    return {
+      id: SEED_IDS.fiscalPositionDomesticUs,
+      name: "Domestic (US)",
+      countryId: null,
+      stateIds: null,
+      autoApply: true,
+      vatRequired: false,
+      zipFrom: null,
+      zipTo: null,
+      sequence: 10,
+      isActive: true,
+      ...overrides,
+    };
+  },
+
+  internationalEu(overrides?: FiscalPositionOverride): FiscalPositionShape {
+    return {
+      id: SEED_IDS.fiscalPositionInternationalEu,
+      name: "International (EU)",
+      countryId: null,
+      stateIds: null,
+      autoApply: true,
+      vatRequired: true,
+      zipFrom: null,
+      zipTo: null,
+      sequence: 20,
+      isActive: true,
+      ...overrides,
+    };
+  },
+
+  indiaGst(overrides?: FiscalPositionOverride): FiscalPositionShape {
+    return {
+      id: SEED_IDS.fiscalPositionIndiaGst,
+      name: "India GST",
+      countryId: null,
+      stateIds: null,
+      autoApply: true,
+      vatRequired: false,
+      zipFrom: null,
+      zipTo: null,
+      sequence: 30,
+      isActive: true,
+      ...overrides,
+    };
+  },
+
+  taxExempt(overrides?: FiscalPositionOverride): FiscalPositionShape {
+    return {
+      id: SEED_IDS.fiscalPositionTaxExempt,
+      name: "Tax Exempt",
+      countryId: null,
+      stateIds: null,
+      autoApply: false,
+      vatRequired: false,
+      zipFrom: null,
+      zipTo: null,
+      sequence: 40,
+      isActive: true,
+      ...overrides,
+    };
+  },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 // Unified Export
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -529,4 +773,7 @@ export const SeedFactory = {
   product: productFactory,
   salesOrder: salesOrderFactory,
   orderLine: orderLineFactory,
+  taxGroup: taxGroupFactory,
+  taxRate: taxRateFactory,
+  fiscalPosition: fiscalPositionFactory,
 } as const;

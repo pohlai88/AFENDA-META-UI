@@ -22,6 +22,10 @@ import { noConsoleUsage } from "./checks/no-console-usage.mjs";
 import { properImports } from "./checks/proper-imports.mjs";
 import { reqLogUsage } from "./checks/req-log-usage.mjs";
 import { messageFormat } from "./checks/message-format.mjs";
+import { childLoggerBindings } from "./checks/child-logger-bindings.mjs";
+import { stringInterpolation } from "./checks/string-interpolation.mjs";
+import { errorSerialization } from "./checks/error-serialization.mjs";
+import { serializerUsage } from "./checks/serializer-usage.mjs";
 import { reportResults } from "./utils/error-reporter.mjs";
 
 const CHECKS = [
@@ -29,6 +33,10 @@ const CHECKS = [
   { name: "Proper Imports", fn: properImports },
   { name: "req.log Usage", fn: reqLogUsage },
   { name: "Message Format", fn: messageFormat },
+  { name: "Child Logger Bindings", fn: childLoggerBindings },
+  { name: "String Interpolation", fn: stringInterpolation },
+  { name: "Error Serialization", fn: errorSerialization },
+  { name: "Serializer Usage", fn: serializerUsage },
 ];
 
 async function main() {

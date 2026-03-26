@@ -1,3 +1,6 @@
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'schema-evolution' });
+
 /**
  * Metadata Schema Evolution System
  * =================================
@@ -100,7 +103,7 @@ export function registerMigration(
 ): void {
   const key = `${from}→${to}`;
   migrations.set(key, migrator);
-  console.log(`[Schema] Registered migration: ${key}`);
+  log.info(`[Schema] Registered migration: ${key}`);
 }
 
 /**
@@ -134,7 +137,7 @@ export function runMigrations(
   const path = getMigrationPath(currentVersion, targetVersion);
 
   if (path.length === 0) {
-    console.warn(`[Schema] No migration path from ${currentVersion} to ${targetVersion}`);
+    log.warn(`[Schema] No migration path from ${currentVersion} to ${targetVersion}`);
     return meta;
   }
 
@@ -146,7 +149,7 @@ export function runMigrations(
     const migrator = migrations.get(key);
 
     if (!migrator) {
-      console.error(`[Schema] Missing migration: ${key}`);
+      log.error(`[Schema] Missing migration: ${key}`);
       throw new Error(`Migration not found: ${key}`);
     }
 
@@ -154,7 +157,7 @@ export function runMigrations(
     migrated.schemaVersion = nextVersion;
     currentStep = nextVersion;
 
-    console.log(`[Schema] Migrated: ${key}`);
+    log.info(`[Schema] Migrated: ${key}`);
   }
 
   return migrated;

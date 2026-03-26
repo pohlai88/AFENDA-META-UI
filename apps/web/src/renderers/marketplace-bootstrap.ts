@@ -7,6 +7,9 @@
 import { marketplace, registerFromRegistry } from "./marketplace";
 import type { CapabilityDeclaration } from "./marketplace";
 import { RendererRegistry } from "./registry";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'marketplace-bootstrap' });
+
 
 /**
  * Performance profiles for each renderer
@@ -130,7 +133,7 @@ export function bootstrapMarketplace(): void {
     registerFromRegistry("meta-dashboard-v1", declaration);
   }
 
-  console.log(`[Marketplace] Bootstrapped with ${marketplace.list().length} renderers`);
+  log.info(`[Marketplace] Bootstrapped with ${marketplace.list().length} renderers`);
 }
 
 // Auto-bootstrap on module load

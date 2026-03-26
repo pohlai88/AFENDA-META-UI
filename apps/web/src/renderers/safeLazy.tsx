@@ -7,6 +7,9 @@
 
 import React from "react";
 import type { RendererModule, RendererType, RendererVersion } from "./types/contracts";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'safeLazy' });
+
 
 /** Props shape for inline fallback renderer components (renderer props are unknown at this boundary). */
 type RendererFallbackProps = Record<string, unknown>;
@@ -130,7 +133,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
       const mod = await importer();
 
       if (debug) {
-        console.log(`[safeLazy] Loaded module:`, {
+        log.info(`[safeLazy] Loaded module:`, {
           rendererId,
           exportName,
           moduleKeys: Object.keys(mod),
@@ -140,7 +143,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
       // Check for null/undefined module
       if (!mod) {
         const error = "Module loaded but is null or undefined";
-        console.error(`[safeLazy] ${error}`, { rendererId, exportName });
+        log.error(`[safeLazy] ${error}`, { rendererId, exportName });
         return {
           default:
             fallback ||
@@ -159,7 +162,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
 
         if (!component) {
           const error = `Named export '${exportName}' not found`;
-          console.error(`[safeLazy] ${error}`, {
+          log.error(`[safeLazy] ${error}`, {
             rendererId,
             availableExports: Object.keys(mod),
           });
@@ -177,7 +180,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
 
         if (!component) {
           const error = "Default export not found";
-          console.error(`[safeLazy] ${error}`, {
+          log.error(`[safeLazy] ${error}`, {
             rendererId,
             availableExports: Object.keys(mod),
           });
@@ -194,7 +197,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
       // Validate it's a function (React component)
       if (typeof component !== "function") {
         const error = `Export is not a function (got ${typeof component})`;
-        console.error(`[safeLazy] ${error}`, { rendererId, exportName });
+        log.error(`[safeLazy] ${error}`, { rendererId, exportName });
         return {
           default:
             fallback ||
@@ -205,7 +208,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
       }
 
       if (debug) {
-        console.log(`[safeLazy] Successfully loaded renderer:`, {
+        log.info(`[safeLazy] Successfully loaded renderer:`, {
           rendererId,
           exportName: exportName || "default",
         });
@@ -214,7 +217,7 @@ export function safeLazy<T extends React.ComponentType<any>>(
       return { default: component as T };
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
-      console.error(`[safeLazy] Import failed:`, {
+      log.error(`[safeLazy] Import failed:`, {
         rendererId,
         exportName,
         error,
@@ -251,7 +254,7 @@ export function safeRendererLazy<T extends React.ComponentType<any>>(
   const registration = getRenderer(type, version);
 
   if (!registration) {
-    console.error(`[safeRendererLazy] Renderer not found:`, { type, version });
+    log.error(`[safeRendererLazy] Renderer not found:`, { type, version });
     return safeLazy<T>(() =>
       Promise.resolve({
         default: ((_props: RendererFallbackProps) => (

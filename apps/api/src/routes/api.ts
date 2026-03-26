@@ -22,12 +22,12 @@
  */
 
 import { Router, type Request, type Response } from "express";
-import { sql, eq, asc, desc, type SQL, type Column } from "drizzle-orm";
+import { sql, eq, asc, desc, inArray, and, isNull, type SQL, type Column } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { getSchema } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
 import { parseFilters, parseSortParams, buildWhereClause } from "../utils/queryBuilder.js";
-import type { SessionContext } from "@afenda/meta-types";
+import type { SessionContext, MetaField } from "@afenda/meta-types";
 
 const router = Router();
 
@@ -120,6 +120,160 @@ async function resolveTable(model: string): Promise<Record<string, unknown> | nu
   }
 }
 
+function parseCsvQueryParam(value: unknown): string[] {
+  if (typeof value !== "string") return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function normalizeExpandAlias(fieldName: string): string {
+  return fieldName.replace(/(_id|Id)$/u, "");
+}
+
+function isManyToOneRelation(field: MetaField): boolean {
+  return field.type === "many2one" && typeof field.relation?.model === "string";
+}
+
+function selectFieldNames({
+  requested,
+  visible,
+  metaFields,
+  tableColumns,
+}: {
+  requested: string[];
+  visible: Set<string>;
+  metaFields: MetaField[];
+  tableColumns: DynamicTableColumns;
+}): string[] {
+  const allowed = new Set(
+    metaFields.map((f) => f.name).filter((name) => visible.has(name) && Boolean(tableColumns[name]))
+  );
+
+  if (!requested.length) {
+    return Array.from(allowed);
+  }
+
+  return requested.filter((name) => allowed.has(name));
+}
+
+function resolveExpandFields({
+  expandTokens,
+  metaFields,
+  visible,
+}: {
+  expandTokens: string[];
+  metaFields: MetaField[];
+  visible: Set<string>;
+}): MetaField[] {
+  if (!expandTokens.length) return [];
+
+  const tokenSet = new Set(expandTokens);
+  return metaFields.filter((field) => {
+    if (!isManyToOneRelation(field)) return false;
+    if (!visible.has(field.name)) return false;
+
+    const alias = normalizeExpandAlias(field.name);
+    const relationModel = field.relation?.model;
+    return tokenSet.has(field.name) || tokenSet.has(alias) || (relationModel ? tokenSet.has(relationModel) : false);
+  });
+}
+
+function buildSelectProjection(tableColumns: DynamicTableColumns, fieldNames: string[]): RowRecord {
+  const projection: RowRecord = {};
+  for (const fieldName of fieldNames) {
+    const column = tableColumns[fieldName];
+    if (column) {
+      projection[fieldName] = column;
+    }
+  }
+  return projection;
+}
+
+function findSoftDeleteColumn(tableColumns: DynamicTableColumns): string | null {
+  if (tableColumns.deleted_at) return "deleted_at";
+  if (tableColumns.deletedAt) return "deletedAt";
+  return null;
+}
+
+function includeDeletedQueryParam(value: unknown): boolean {
+  return typeof value === "string" && value.toLowerCase() === "true";
+}
+
+async function expandManyToOneRows(
+  rows: RowRecord[],
+  expandFields: MetaField[],
+  sess: SessionContext
+): Promise<RowRecord[]> {
+  if (!rows.length || !expandFields.length) return rows;
+
+  const expandedRows = rows.map((row) => ({ ...row }));
+
+  for (const field of expandFields) {
+    const relation = field.relation;
+    if (!relation?.model) continue;
+
+    const relatedMeta = await getSchema(relation.model);
+    if (!relatedMeta) continue;
+
+    const relatedRbac = resolveRbac(relatedMeta, sess);
+    if (!relatedRbac.allowedOps.can_read) continue;
+
+    const relatedTable = await resolveTable(relation.model);
+    if (!relatedTable) continue;
+
+    const relatedColumns = relatedTable as DynamicTableColumns;
+    const foreignKey = relation.foreign_key ?? field.name;
+    const valueField = relation.value_field ?? "id";
+    const displayField = relation.display_field ?? relatedMeta.title_field ?? "name";
+
+    const valueColumn = relatedColumns[valueField];
+    if (!valueColumn) continue;
+
+    const relationIds = Array.from(
+      new Set(
+        expandedRows
+          .map((row) => row[foreignKey])
+          .filter((value): value is string | number => typeof value === "string" || typeof value === "number")
+      )
+    );
+
+    if (!relationIds.length) continue;
+
+    const relatedVisibleSet = new Set(relatedRbac.visibleFields);
+    const relatedFieldNames = Array.from(new Set([valueField, displayField])).filter(
+      (name) => relatedVisibleSet.has(name) && Boolean(relatedColumns[name])
+    );
+    if (!relatedFieldNames.length) continue;
+
+    const projection = buildSelectProjection(relatedColumns, relatedFieldNames);
+    let relatedQuery = dbLike.select(projection).from(relatedTable) as QueryLike | PromiseLike<RowRecord[]>;
+    relatedQuery = (relatedQuery as QueryLike).where(inArray(valueColumn, relationIds));
+    const relatedRows = await (relatedQuery as unknown as PromiseLike<RowRecord[]>);
+
+    const byId = new Map<string, RowRecord>();
+    for (const relatedRow of relatedRows) {
+      const key = relatedRow[valueField];
+      if (typeof key === "string" || typeof key === "number") {
+        byId.set(String(key), relatedRow);
+      }
+    }
+
+    const expandedKey = `${field.name}__expanded`;
+    for (const row of expandedRows) {
+      const fkValue = row[foreignKey];
+      if (typeof fkValue === "string" || typeof fkValue === "number") {
+        row[expandedKey] = byId.get(String(fkValue)) ?? null;
+      } else {
+        row[expandedKey] = null;
+      }
+    }
+  }
+
+  return expandedRows;
+}
+
 // ---------------------------------------------------------------------------
 // GET /api/:model — paginated list with filtering and sorting
 // ---------------------------------------------------------------------------
@@ -164,9 +318,50 @@ router.get("/:model", async (req: Request, res: Response) => {
       return;
     }
 
-    // Build where clause from filters
     const tableColumns = table as DynamicTableColumns;
+    const visibleSet = new Set(rbac.visibleFields);
+    const includeDeleted = includeDeletedQueryParam(req.query.include_deleted);
+    const softDeleteColumn = findSoftDeleteColumn(tableColumns);
+
+    // Parse projected fields and expandable relations
+    const requestedFields = parseCsvQueryParam(req.query.fields);
+    const expandTokens = parseCsvQueryParam(req.query.expand);
+    const responseFieldNames = selectFieldNames({
+      requested: requestedFields,
+      visible: visibleSet,
+      metaFields: meta.fields,
+      tableColumns,
+    });
+
+    if (!responseFieldNames.length) {
+      res.status(400).json({ error: "No readable fields were selected" });
+      return;
+    }
+
+    const expandFields = resolveExpandFields({
+      expandTokens,
+      metaFields: meta.fields,
+      visible: visibleSet,
+    });
+
+    const queryFieldNames = [...responseFieldNames];
+    for (const relationField of expandFields) {
+      const foreignKey = relationField.relation?.foreign_key ?? relationField.name;
+      if (!queryFieldNames.includes(foreignKey) && tableColumns[foreignKey]) {
+        queryFieldNames.push(foreignKey);
+      }
+    }
+
+    const projection = buildSelectProjection(tableColumns, queryFieldNames);
+
+    // Build where clause from filters
     const whereClause = buildWhereClause(tableColumns, filtersResult.data);
+    const effectiveWhereClause =
+      softDeleteColumn && !includeDeleted
+        ? whereClause
+          ? and(whereClause, isNull(tableColumns[softDeleteColumn]))
+          : isNull(tableColumns[softDeleteColumn])
+        : whereClause;
 
     // Build order by clause from sort params
     const orderByClauses = sortResult.data.map((sort) => {
@@ -180,10 +375,10 @@ router.get("/:model", async (req: Request, res: Response) => {
     }
 
     // Build query with Drizzle
-    let query = dbLike.select().from(table) as QueryLike | PromiseLike<RowRecord[]>;
+    let query = dbLike.select(projection).from(table) as QueryLike | PromiseLike<RowRecord[]>;
 
-    if (whereClause) {
-      query = (query as QueryLike).where(whereClause);
+    if (effectiveWhereClause) {
+      query = (query as QueryLike).where(effectiveWhereClause);
     }
 
     query = (query as QueryLike).orderBy(...orderByClauses).limit(limit).offset(offset);
@@ -196,19 +391,22 @@ router.get("/:model", async (req: Request, res: Response) => {
       | { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }
       | PromiseLike<Array<{ count: number | string }>>;
 
-    if (whereClause) {
-      countQuery = (countQuery as { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }).where(whereClause);
+    if (effectiveWhereClause) {
+      countQuery = (countQuery as { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }).where(
+        effectiveWhereClause
+      );
     }
 
     const [{ count }] = await (countQuery as PromiseLike<Array<{ count: number | string }>>);
     const total = Number(count);
 
-    // Filter visible fields based on RBAC
-    const visibleSet = new Set(rbac.visibleFields);
-    const filteredRows = rows.map((row: RowRecord) => {
+    const expandedRows = await expandManyToOneRows(rows, expandFields, sess);
+
+    const responseSet = new Set(responseFieldNames);
+    const filteredRows = expandedRows.map((row: RowRecord) => {
       const filtered: RowRecord = {};
       for (const [key, value] of Object.entries(row)) {
-        if (visibleSet.has(key)) {
+        if (responseSet.has(key) || key.endsWith("__expanded")) {
           filtered[key] = value;
         }
       }
@@ -221,6 +419,9 @@ router.get("/:model", async (req: Request, res: Response) => {
         page,
         limit,
         total,
+        fields: requestedFields.length ? responseFieldNames : undefined,
+        expand: expandFields.length ? expandFields.map((field) => field.name) : undefined,
+        include_deleted: includeDeleted || undefined,
         filters: filtersResult.data.conditions.length > 0 ? filtersResult.data : undefined,
         sort: sortResult.data.length > 0 ? sortResult.data : undefined,
       },
@@ -256,17 +457,80 @@ router.get("/:model/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const cols = rbac.visibleFields.join(", ");
-    const rows = await db.execute(
-      sql.raw(`SELECT ${cols} FROM ${model} WHERE id = '${id}' LIMIT 1`)
-    );
+    const table = await resolveTable(model);
+    if (!table) {
+      res.status(400).json({ error: `No table found for model: ${model}` });
+      return;
+    }
 
-    if (!rows.rows.length) {
+    const tableColumns = table as DynamicTableColumns;
+    const visibleSet = new Set(rbac.visibleFields);
+    const includeDeleted = includeDeletedQueryParam(req.query.include_deleted);
+    const softDeleteColumn = findSoftDeleteColumn(tableColumns);
+
+    const requestedFields = parseCsvQueryParam(req.query.fields);
+    const expandTokens = parseCsvQueryParam(req.query.expand);
+    const responseFieldNames = selectFieldNames({
+      requested: requestedFields,
+      visible: visibleSet,
+      metaFields: meta.fields,
+      tableColumns,
+    });
+
+    if (!responseFieldNames.length) {
+      res.status(400).json({ error: "No readable fields were selected" });
+      return;
+    }
+
+    const expandFields = resolveExpandFields({
+      expandTokens,
+      metaFields: meta.fields,
+      visible: visibleSet,
+    });
+
+    const queryFieldNames = [...responseFieldNames];
+    for (const relationField of expandFields) {
+      const foreignKey = relationField.relation?.foreign_key ?? relationField.name;
+      if (!queryFieldNames.includes(foreignKey) && tableColumns[foreignKey]) {
+        queryFieldNames.push(foreignKey);
+      }
+    }
+
+    const projection = buildSelectProjection(tableColumns, queryFieldNames);
+    const idClause = eq(tableColumns.id, id);
+    const effectiveWhereClause =
+      softDeleteColumn && !includeDeleted
+        ? and(idClause, isNull(tableColumns[softDeleteColumn]))
+        : idClause;
+    const finalWhereClause = effectiveWhereClause ?? idClause;
+
+    let query = dbLike.select(projection).from(table) as QueryLike | PromiseLike<RowRecord[]>;
+    query = (query as QueryLike).where(finalWhereClause).limit(1);
+    const rows = await (query as unknown as PromiseLike<RowRecord[]>);
+
+    if (!rows.length) {
       res.status(404).json({ error: "Not found" });
       return;
     }
 
-    res.json({ data: rows.rows[0] });
+    const expandedRows = await expandManyToOneRows(rows, expandFields, sess);
+    const responseSet = new Set(responseFieldNames);
+
+    const record: RowRecord = {};
+    for (const [key, value] of Object.entries(expandedRows[0])) {
+      if (responseSet.has(key) || key.endsWith("__expanded")) {
+        record[key] = value;
+      }
+    }
+
+    res.json({
+      data: record,
+      meta: {
+        fields: requestedFields.length ? responseFieldNames : undefined,
+        expand: expandFields.length ? expandFields.map((field) => field.name) : undefined,
+        include_deleted: includeDeleted || undefined,
+      },
+    });
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model, id }, `GET /${model}/${id} failed`);
     if (isDbUnavailableError(err)) {
@@ -415,7 +679,31 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
     }
 
     const tableColumns = table as DynamicTableColumns;
-    await dbLike.delete(table).where(eq(tableColumns.id, id));
+    const softDeleteColumn = findSoftDeleteColumn(tableColumns);
+
+    if (softDeleteColumn) {
+      const now = new Date();
+      const updatePayload: RowRecord = { [softDeleteColumn]: now };
+      if (tableColumns.updated_at) {
+        updatePayload.updated_at = now;
+      } else if (tableColumns.updatedAt) {
+        updatePayload.updatedAt = now;
+      }
+
+      const [updated] = await dbLike
+        .update(table)
+        .set(updatePayload)
+        .where(eq(tableColumns.id, id))
+        .returning();
+
+      if (!updated) {
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+    } else {
+      await dbLike.delete(table).where(eq(tableColumns.id, id));
+    }
+
     res.status(204).send();
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model, id }, `DELETE /${model}/${id} failed`);

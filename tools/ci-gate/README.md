@@ -242,6 +242,8 @@ node tools/ci-gate/index.mjs [OPTIONS]
 | Option            | Description                        | Example         |
 | ----------------- | ---------------------------------- | --------------- |
 | `--gate=<name>`   | Run a specific gate                | `--gate=logger` |
+| `--mode=<mode>`   | Execution mode: `full` or `fast`  | `--mode=fast`   |
+| `--concurrency=N` | Run up to N gates in parallel      | `--concurrency=2` |
 | `--fix`           | Enable auto-fix mode for all gates | `--fix`         |
 | `--verbose`, `-v` | Show verbose output from all gates | `--verbose`     |
 | `--help`, `-h`    | Show help message                  | `--help`        |
@@ -256,6 +258,45 @@ pnpm ci:gate
 
 # From ci-gate directory
 node index.mjs
+```
+
+#### Run Fast Mode (Developer Feedback)
+
+```bash
+# Fast mode skips expensive dependency network checks
+pnpm ci:gate:fast
+
+# Optional bounded parallelism
+node tools/ci-gate/index.mjs --mode=fast --concurrency=2
+```
+
+#### Run Full Mode (Pre-merge / CI)
+
+```bash
+# Full policy checks, including dependency audit/outdated stages
+pnpm ci:gate:full
+```
+
+### Mode Guidance
+
+- Use `--mode=fast` during local iteration when you need quick feedback.
+- Use `--mode=full` for pre-merge checks and scheduled CI runs.
+- Fast mode currently skips dependency audit/outdated checks and reports those skips as warnings.
+
+### Periodic CI-Gate Optimization
+
+Treat CI-gate performance as a maintained asset, not a one-time task.
+
+- Benchmark gate duration at least monthly, or after adding new gates/checks.
+- Re-benchmark whenever median local run time regresses by 20% or more.
+- Prefer targeted optimizations first: reduce process startups, parallelize independent steps, and avoid repeated filesystem scans.
+- Keep policy strong by preserving a regular `full` run cadence in CI even when developers use `fast` mode locally.
+
+Suggested benchmark commands:
+
+```bash
+pnpm ci:gate:fast
+pnpm ci:gate:full
 ```
 
 **Output:\*\*** contracts/README.md

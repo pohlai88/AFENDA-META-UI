@@ -17,6 +17,12 @@ import { bootstrapAnalytics } from "./bootstrap/analytics-bootstrap";
 import { getAppConfig } from "./lib/app-config";
 import App from "./App.js";
 import "./index.css";
+import { logger } from "./lib/logger";
+
+const log = logger.child({ module: "main" });
+
+document.title = import.meta.env.VITE_APP_TITLE ?? "AFENDA";
+
 
 // ───────────────────────────────────────────────────────────────────────
 // Dynamic Import Error Handler
@@ -25,7 +31,7 @@ import "./index.css";
 // ───────────────────────────────────────────────────────────────────────
 window.addEventListener("vite:preloadError", (event) => {
   // Allow custom handling (e.g., show user-friendly error, auto-refresh)
-  console.error("Failed to load application chunk:", event.payload);
+  log.error("Failed to load application chunk:", event.payload);
 
   // Strategy: Prompt user to refresh (prevents infinite loops)
   if (!sessionStorage.getItem("vite-chunk-error-handled")) {

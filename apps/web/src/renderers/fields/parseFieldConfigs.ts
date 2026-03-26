@@ -58,6 +58,8 @@ const supportedLeafFieldTypes = new Set<FieldType>([
   "email",
   "url",
   "phone",
+  "address",
+  "signature",
   "enum",
   "many2one",
   "one2many",

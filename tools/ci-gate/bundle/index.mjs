@@ -31,6 +31,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
+import {
+  convertBudgetErrors,
+  convertBudgetWarnings,
+  convertBaselineErrors,
+  formatBundleIssues,
+  summarizeBundleIssues,
+} from "./utils/diagnostics.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -383,37 +390,38 @@ function printReport(stats, baseline) {
     console.log(`  ${formatSize(chunk.sizeKB).padEnd(12)} ${colors.dim}${tag.padEnd(8)}${colors.reset} ${chunk.name}`);
   }
 
-  console.log("\n" + "=".repeat(70));
-}
+  // Convert to structured issues
+  const errors = [
+    ...convertBudgetErrors(budgetResults.errors || []),
+    ...convertBaselineErrors(baselineResults.errors || []),
+  ];
 
-/**
- * Print validation results
- */
-function printResults(budgetResults, baselineResults) {
-  const allErrors = [...budgetResults.errors, ...baselineResults.errors];
-  const allWarnings = [...budgetResults.warnings, ...baselineResults.warnings];
+  const warnings = [
+    ...convertBudgetWarnings(budgetResults.warnings || []),
+  ];
 
-  if (allErrors.length > 0) {
-    console.log(`\n${colors.red}${colors.bright}✖ Errors (${allErrors.length})${colors.reset}`);
-    for (const error of allErrors) {
-      console.log(`  ${colors.red}✖${colors.reset} ${error.message}`);
-      if (error.file) {
-        console.log(`    ${colors.dim}File: ${error.file}${colors.reset}`);
-      }
-    }
+  // Display errors
+  if (errors.length > 0) {
+    console.log(formatBundleIssues(errors));
   }
 
-  if (allWarnings.length > 0) {
-    console.log(`\n${colors.yellow}${colors.bright}⚠ Warnings (${allWarnings.length})${colors.reset}`);
-    for (const warning of allWarnings) {
-      console.log(`  ${colors.yellow}⚠${colors.reset} ${warning.message}`);
-      if (warning.file) {
-        console.log(`    ${colors.dim}File: ${warning.file}${colors.reset}`);
-      }
-    }
+  // Display warnings
+  if (warnings.length > 0) {
+    console.log(formatBundleIssues(warnings));
   }
 
+  // Display info
   if (baselineResults.info && baselineResults.info.length > 0) {
+    console.log(`\n${colors.blue}${colors.bright}ℹ Info${colors.reset}`);
+    for (const info of baselineResults.info) {
+      console.log(`  ${colors.blue}ℹ${colors.reset} ${info}`);
+    }
+  }
+
+  // Display summary
+  console.log(summarizeBundleIssues(errors, warnings));
+
+  return eeResults.info && baselineResults.info.length > 0) {
     console.log(`\n${colors.blue}${colors.bright}ℹ Info${colors.reset}`);
     for (const info of baselineResults.info) {
       console.log(`  ${colors.blue}ℹ${colors.reset} ${info}`);
@@ -457,14 +465,15 @@ async function main() {
     process.exit(0);
   }
 
-  // Validate
-  console.log(`\n${colors.blue}ℹ${colors.reset} Validating against budgets...`);
-  const budgetResults = validateBudgets(currentStats);
-  const baselineResults = compareBaseline(currentStats, baseline);
-
-  const errorCount = printResults(budgetResults, baselineResults);
-
-  if (errorCount > 0) {
+  // Validategate failed with ${errorCount} error(s)${colors.reset}`);
+    console.log(`\n${colors.cyan}Next steps:${colors.reset}`);
+    console.log(`  1. Review bundle composition: ${colors.bright}pnpm --filter web analyze${colors.reset}`);
+    console.log(`  2. Apply the fix suggestions above`);
+    console.log(`  3. Re-run: ${colors.bright}node tools/ci-gate/bundle/index.mjs${colors.reset}`);
+    console.log(`  4. Update baseline if intentional: ${colors.bright}pnpm ci:gate:bundle --update${colors.reset}\n`);
+    process.exit(1);
+  } else {
+    console.log(`\n${colors.green}✓ Bundle gate passed!${colors.reset}\n
     console.log(`\n${colors.red}✖ Bundle CI gate failed with ${errorCount} error(s)${colors.reset}`);
     console.log("\nNext steps:");
     console.log("  1. Review bundle composition: pnpm --filter web analyze");

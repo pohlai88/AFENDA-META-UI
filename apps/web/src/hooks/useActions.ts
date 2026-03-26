@@ -71,7 +71,13 @@ export function useActions(model: string) {
         };
 
         if (context.data && ["POST", "PUT", "PATCH"].includes(action.method)) {
-          options.body = JSON.stringify(context.data);
+          const payload: Record<string, unknown> = { ...context.data };
+          if (context.recordId && !payload.orderId) {
+            payload.orderId = Array.isArray(context.recordId)
+              ? context.recordId[0]
+              : context.recordId;
+          }
+          options.body = JSON.stringify(payload);
         }
 
         const response = await fetch(url, options);

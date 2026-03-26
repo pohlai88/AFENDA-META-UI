@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "~/lib/query-keys";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'useDashboardStats' });
+
 
 interface ListMetaResponse {
   meta?: {
@@ -31,7 +34,7 @@ async function safeFetchModelTotal(model: string): Promise<number> {
   try {
     return await fetchModelTotal(model);
   } catch (error) {
-    console.warn(`Failed to fetch ${model}, defaulting to 0:`, error);
+    log.warn(`Failed to fetch ${model}, defaulting to 0:`, error);
     return 0;
   }
 }

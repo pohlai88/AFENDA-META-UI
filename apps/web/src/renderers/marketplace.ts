@@ -6,6 +6,9 @@
  */
 
 import type { RendererType, RendererVersion, RendererCapabilities } from "./types/contracts";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'marketplace' });
+
 
 /**
  * Performance characteristics of a renderer
@@ -233,7 +236,7 @@ class RendererMarketplace {
    */
   register(rendererId: string, declaration: CapabilityDeclaration): void {
     this.declarations.set(rendererId, declaration);
-    console.log(
+    log.info(
       `[Marketplace] Registered renderer: ${rendererId} (${declaration.type}@${declaration.version})`
     );
   }

@@ -20,6 +20,9 @@ import {
 import { MoreVerticalIcon } from "lucide-react";
 import { useActions } from "~/hooks/useActions";
 import type { MetaAction } from "@afenda/meta-types";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'RowActionsMenu' });
+
 
 export interface RowActionsMenuProps {
   model: string;
@@ -46,7 +49,7 @@ export function RowActionsMenu({ model, recordId, record, actions = [] }: RowAct
         });
         setIsOpen(false);
       } catch (error) {
-        console.error("Failed to execute action:", error);
+        log.error("Failed to execute action:", error);
       }
     },
     [execute, model, recordId, record]

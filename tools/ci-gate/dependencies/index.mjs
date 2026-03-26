@@ -55,6 +55,8 @@ const repoRoot = join(__dirname, "..", "..", "..");
 
 const STRICT = process.argv.includes("--strict");
 const VERBOSE = process.argv.includes("--verbose") || process.argv.includes("-v");
+const SKIP_AUDIT = process.argv.includes("--skip-audit");
+const SKIP_OUTDATED = process.argv.includes("--skip-outdated");
 
 const colors = {
   reset: "\x1b[0m",
@@ -192,6 +194,11 @@ function createIssue({
 function main() {
   console.log(`${colors.bright}${colors.blue}Dependency Governance CI Gate${colors.reset}`);
   console.log(`${colors.dim}Checking workspace dependency policy compliance...${colors.reset}`);
+  if (SKIP_AUDIT || SKIP_OUTDATED) {
+    console.log(
+      `${colors.yellow}Fast mode enabled:${colors.reset} skip-audit=${SKIP_AUDIT}, skip-outdated=${SKIP_OUTDATED}`
+    );
+  }
 
   const rootPkgPath = join(repoRoot, "package.json");
   const rootPkg = readJson(rootPkgPath);
@@ -205,7 +212,7 @@ function main() {
   const errors = [];
   const warnings = [];
 
-  // Rule 0: Governance versions should be centrally defined — either in the workspace
+  // Rule 0: Governance versions should be centrally defined - either in the workspace
   // catalog (preferred, pnpm-workspace.yaml > catalog:) or in root pnpm.overrides
   // (acceptable for transitive-only pins).
   const rootOverrides = rootPkg.pnpm?.overrides || {};
@@ -398,105 +405,137 @@ function main() {
   }
 
   // Rule 5: High severity audit must pass.
-  try {
-    execSync("pnpm audit --audit-level=high", {
-      cwd: repoRoot,
-      encoding: "utf-8",
-      stdio: "pipe",
-    });
-  } catch (error) {
-    if (VERBOSE) {
-      console.log(`${colors.dim}${error.stdout || ""}${colors.reset}`);
-      console.log(`${colors.dim}${error.stderr || ""}${colors.reset}`);
-    }
+  if (SKIP_AUDIT) {
+    warnings.push(
+      createIssue({
+        level: "warning",
+        category: "SECURITY_AUDIT",
+        message: "pnpm audit skipped (--skip-audit).",
+        explanation:
+          "Fast mode skipped vulnerability scanning to reduce runtime. Run full mode regularly to enforce security policy.",
+        fixes: [
+          "Run full mode CI gate (without --skip-audit) at least daily in CI.",
+          "Run pnpm audit --audit-level=high before merges to protected branches.",
+        ],
+      })
+    );
+  } else {
+    try {
+      execSync("pnpm audit --audit-level=high", {
+        cwd: repoRoot,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+    } catch (error) {
+      if (VERBOSE) {
+        console.log(`${colors.dim}${error.stdout || ""}${colors.reset}`);
+        console.log(`${colors.dim}${error.stderr || ""}${colors.reset}`);
+      }
 
-    const output = `${error.stdout || ""}\n${error.stderr || ""}`.toLowerCase();
-    if (output.includes("vulnerab")) {
-      errors.push(
-        createIssue({
-          level: "error",
-          category: "SECURITY_AUDIT",
-          message: "High/critical vulnerabilities detected by pnpm audit.",
-          explanation:
-            "Security policy requires immediate remediation for high and critical vulnerabilities.",
-          relatedFiles: ["pnpm-lock.yaml", "package.json"],
-          fixes: [
-            "Run pnpm audit --audit-level=high for full vulnerability details.",
-            "Upgrade or replace vulnerable packages and commit lockfile updates.",
-          ],
-        })
-      );
-    } else {
-      warnings.push(
-        createIssue({
-          level: "warning",
-          category: "SECURITY_AUDIT",
-          message: "pnpm audit could not complete reliably.",
-          explanation:
-            "Audit command failed unexpectedly, often due to registry/network instability.",
-          fixes: [
-            "Retry pnpm audit --audit-level=high.",
-            "Check registry/network settings and CI egress policies.",
-          ],
-        })
-      );
-    }
-  }
-
-  // Rule 6: Major version drift should be tracked as warning.
-  try {
-    const outdatedRaw = execSync("pnpm outdated --recursive --format json", {
-      cwd: repoRoot,
-      encoding: "utf-8",
-      stdio: "pipe",
-    });
-
-    if (VERBOSE) {
-      console.log(`${colors.dim}${outdatedRaw}${colors.reset}`);
-    }
-
-    if (outdatedRaw?.trim()) {
-      const outdatedJson = JSON.parse(outdatedRaw);
-      const items = extractOutdatedItems(outdatedJson);
-      const majorDrifts = items
-        .filter((item) => {
-          const currentMajor = getMajor(item.current);
-          const latestMajor = getMajor(item.latest);
-          return currentMajor && latestMajor && latestMajor > currentMajor;
-        })
-        .map((item) => `${item.name || "unknown"} ${item.current} -> ${item.latest}`);
-
-      if (majorDrifts.length > 0) {
+      const output = `${error.stdout || ""}\n${error.stderr || ""}`.toLowerCase();
+      if (output.includes("vulnerab")) {
+        errors.push(
+          createIssue({
+            level: "error",
+            category: "SECURITY_AUDIT",
+            message: "High/critical vulnerabilities detected by pnpm audit.",
+            explanation:
+              "Security policy requires immediate remediation for high and critical vulnerabilities.",
+            relatedFiles: ["pnpm-lock.yaml", "package.json"],
+            fixes: [
+              "Run pnpm audit --audit-level=high for full vulnerability details.",
+              "Upgrade or replace vulnerable packages and commit lockfile updates.",
+            ],
+          })
+        );
+      } else {
         warnings.push(
           createIssue({
             level: "warning",
-            category: "OUTDATED_PARSE",
-            message: `Major update candidates detected: ${majorDrifts.join(" | ")}`,
+            category: "SECURITY_AUDIT",
+            message: "pnpm audit could not complete reliably.",
             explanation:
-              "Major upgrades should be handled in planned migration waves, not auto-updated blindly.",
-            relatedFiles: ["package.json", "pnpm-lock.yaml"],
+              "Audit command failed unexpectedly, often due to registry/network instability.",
             fixes: [
-              "Track major candidates in dependency-validation-report.md.",
-              "Plan migration branch with rollback and regression checks.",
+              "Retry pnpm audit --audit-level=high.",
+              "Check registry/network settings and CI egress policies.",
             ],
           })
         );
       }
     }
-  } catch {
+  }
+
+  // Rule 6: Major version drift should be tracked as warning.
+  if (SKIP_OUTDATED) {
     warnings.push(
       createIssue({
         level: "warning",
         category: "OUTDATED_PARSE",
-        message: "Unable to parse pnpm outdated output for major drift reporting.",
+        message: "pnpm outdated skipped (--skip-outdated).",
         explanation:
-          "The gate could not build advisory major drift insights; core checks still ran.",
+          "Fast mode skipped major-drift advisory checks to reduce runtime. Run full mode periodically to keep upgrade planning current.",
         fixes: [
-          "Run pnpm outdated --recursive --format json manually.",
-          "Ensure pnpm version is compatible with JSON output shape.",
+          "Run pnpm outdated --recursive --format json in scheduled CI.",
+          "Review major upgrades monthly and track migration plans.",
         ],
       })
     );
+  } else {
+    try {
+      const outdatedRaw = execSync("pnpm outdated --recursive --format json", {
+        cwd: repoRoot,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+
+      if (VERBOSE) {
+        console.log(`${colors.dim}${outdatedRaw}${colors.reset}`);
+      }
+
+      if (outdatedRaw?.trim()) {
+        const outdatedJson = JSON.parse(outdatedRaw);
+        const items = extractOutdatedItems(outdatedJson);
+        const majorDrifts = items
+          .filter((item) => {
+            const currentMajor = getMajor(item.current);
+            const latestMajor = getMajor(item.latest);
+            return currentMajor && latestMajor && latestMajor > currentMajor;
+          })
+          .map((item) => `${item.name || "unknown"} ${item.current} -> ${item.latest}`);
+
+        if (majorDrifts.length > 0) {
+          warnings.push(
+            createIssue({
+              level: "warning",
+              category: "OUTDATED_PARSE",
+              message: `Major update candidates detected: ${majorDrifts.join(" | ")}`,
+              explanation:
+                "Major upgrades should be handled in planned migration waves, not auto-updated blindly.",
+              relatedFiles: ["package.json", "pnpm-lock.yaml"],
+              fixes: [
+                "Track major candidates in dependency-validation-report.md.",
+                "Plan migration branch with rollback and regression checks.",
+              ],
+            })
+          );
+        }
+      }
+    } catch {
+      warnings.push(
+        createIssue({
+          level: "warning",
+          category: "OUTDATED_PARSE",
+          message: "Unable to parse pnpm outdated output for major drift reporting.",
+          explanation:
+            "The gate could not build advisory major drift insights; core checks still ran.",
+          fixes: [
+            "Run pnpm outdated --recursive --format json manually.",
+            "Ensure pnpm version is compatible with JSON output shape.",
+          ],
+        })
+      );
+    }
   }
 
   if (errors.length > 0) {

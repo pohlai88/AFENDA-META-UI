@@ -7,6 +7,9 @@ import {
 } from "~/stores/business";
 import type { Permission } from "~/stores/business";
 import { getAppConfig } from "~/lib/app-config";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'permissions-bootstrap' });
+
 
 export const PERMISSIONS_BOOTSTRAP_RETRY_EVENT = "permissions-bootstrap:retry";
 
@@ -95,7 +98,7 @@ export function PermissionsBootstrap({ children }: { children: React.ReactNode }
           return;
         }
 
-        console.error("Permissions bootstrap failed", {
+        log.error("Permissions bootstrap failed", {
           endpoint: appConfig.permissionsBootstrapEndpoint,
           error,
         });

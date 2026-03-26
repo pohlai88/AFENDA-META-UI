@@ -26,6 +26,8 @@ import type {
 } from "@afenda/meta-types";
 import { compileExpression } from "filtrex";
 
+import { logger } from '../logging/logger.js';
+
 // ---------------------------------------------------------------------------
 // Core RBAC resolver
 // ---------------------------------------------------------------------------
@@ -165,7 +167,7 @@ function evalVisibility(expression: string | undefined, session: SessionContext)
     return Boolean(result);
   } catch (error) {
     // Log error and fail-safe to hidden (security default)
-    console.error(`[RBAC] Expression evaluation failed: ${expression}`, error);
+    logger.error({ err: error, expression }, 'RBAC expression evaluation failed');
     return false;
   }
 }

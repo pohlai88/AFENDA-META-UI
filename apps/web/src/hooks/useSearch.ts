@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "~/lib/query-keys";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'useSearch' });
+
 
 export interface SearchRecord {
   [key: string]: unknown;
@@ -18,7 +21,7 @@ export function useSearch(model: string, query: string) {
         const d = (await res.json()) as { data: SearchRecord[] };
         return d.data;
       } catch (error) {
-        console.warn(`Search for "${model}" failed, returning empty results:`, error);
+        log.warn(`Search for "${model}" failed, returning empty results:`, error);
         return [];
       }
     },

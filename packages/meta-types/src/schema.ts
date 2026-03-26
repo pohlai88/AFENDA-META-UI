@@ -12,6 +12,8 @@ export type FieldType =
   | "email"
   | "url"
   | "phone"
+  | "address"
+  | "signature"
   | "password"
   | "uuid"
   | "json"

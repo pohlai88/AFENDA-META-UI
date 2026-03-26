@@ -9,7 +9,11 @@ This CI gate ensures consistent, production-grade logging patterns by validating
 ✅ **No Console Usage** — All `console.log/error/warn` replaced with Pino logger  
 ✅ **Proper Imports** — No deprecated Winston/Morgan imports  
 ✅ **req.log Usage** — Route handlers use request-scoped logging  
-✅ **Message Format** — Correct Pino API signature (object first, message second)
+✅ **Message Format** — Correct Pino API signature (object first, message second)  
+✅ **Child Logger Bindings** — Child loggers have persistent context (NEW)  
+✅ **String Interpolation** — No template literals or concatenation in log messages (NEW)  
+✅ **Error Serialization** — Errors logged with full stack traces (NEW)  
+✅ **Serializer Usage** — Sensitive data uses serializers or explicit fields (NEW)
 
 ## Quick Start
 
@@ -28,19 +32,25 @@ pnpm ci:logger
 
 ```
 tools/ci-gate/logger/
-├── index.mjs                    # Main entry point
+├── index.mjs                            # Main entry point
 ├── checks/
-│   ├── no-console-usage.mjs     # Validates no console.log/error usage
-│   ├── proper-imports.mjs       # Validates no Winston/Morgan imports
-│   ├── req-log-usage.mjs        # Validates req.log in route handlers
-│   └── message-format.mjs       # Validates Pino API signature
+│   ├── no-console-usage.mjs             # Validates no console.log/error usage
+│   ├── proper-imports.mjs               # Validates no Winston/Morgan imports
+│   ├── req-log-usage.mjs                # Validates req.log in route handlers
+│   ├── message-format.mjs               # Validates Pino API signature
+│   ├── child-logger-bindings.mjs        # Validates child logger context (NEW)
+│   ├── string-interpolation.mjs         # Detects template literals in logs (NEW)
+│   ├── error-serialization.mjs          # Validates error stack trace logging (NEW)
+│   └── serializer-usage.mjs             # Validates PII protection patterns (NEW)
 ├── utils/
-│   └── error-reporter.mjs       # Formats and displays results
+│   └── error-reporter.mjs               # Formats and displays results
 ├── templates/
-│   ├── logger-usage.example.ts  # Correct logger patterns
-│   ├── req-log.example.ts       # Request logging patterns
-│   └── mock-logger.ts           # Mock logger for tests
-└── README.md                    # This file
+│   ├── logger-usage.example.ts          # Correct logger patterns
+│   ├── req-log.example.ts               # Request logging patterns
+│   └── mock-logger.ts                   # Mock logger for tests
+├── UPGRADE-PROPOSAL.md                  # Feature upgrade roadmap
+├── IMPLEMENTATION-SUMMARY.md            # Implementation status
+└── README.md                            # This file
 ```
 
 ## Check Details
@@ -157,6 +167,137 @@ logger.info("User logged in", { userId: "123" });
 
 // ✅ After (Pino pattern)
 logger.info({ userId: "123" }, "User logged in");
+```
+
+### 5. Child Logger Bindings (NEW)
+
+**Purpose**: Validates that child loggers include persistent context bindings for traceability.
+
+**Validates**:
+- Child loggers have meaningful context: `module`, `service`, `component`
+- Not empty: `logger.child({})` ❌
+- Not transient data: `logger.child({ requestId, orderId })` ❌
+
+**Why**: Child loggers should bind persistent context that stays constant across multiple log calls:
+- **Good**: `logger.child({ module: 'payment', service: 'stripe' })`
+- **Bad**: `logger.child({ orderId })` (changes per request - use in log call instead)
+
+**Migration**:
+```typescript
+// ❌ Before (empty or transient bindings)
+const log = logger.child({});
+log.info({ orderId }, 'Processing order');
+
+const log2 = logger.child({ orderId: req.params.id });
+log2.info('Order fetched');
+
+// ✅ After (persistent context bindings)
+const log = logger.child({ module: 'orders', component: 'orderService' });
+log.info({ orderId }, 'Processing order');
+log.info({ orderId }, 'Order fetched');
+```
+
+### 6. String Interpolation (NEW)
+
+**Purpose**: Detects performance-harming string concatenation/interpolation in log messages.
+
+**Validates**:
+- No template literals: `` logger.info(`User ${userId} logged in`) `` ❌
+- No concatenation: `logger.info('User ' + userId + ' logged in')` ❌
+- Use structured fields: `logger.info({ userId }, 'User logged in')` ✅
+
+**Why**: String interpolation happens **before** the log level check:
+- CPU wasted building strings for logs that are below threshold
+- Structured fields only serialize if log level passes
+- Better query-ability in log aggregation tools
+
+**Migration**:
+```typescript
+// ❌ Before (premature string building)
+logger.info(`Order ${orderId} total: $${total}`);
+logger.warn('Failed to fetch user: ' + err.message);
+
+// ✅ After (efficient structured logging)
+logger.info({ orderId, total }, 'Order processed');
+logger.warn({ err }, 'Failed to fetch user');
+```
+
+### 7. Error Serialization (NEW)
+
+**Purpose**: Ensures error objects are logged with full stack traces using Pino's error serializer.
+
+**Validates**:
+- NOT: `logger.error({ message: err.message }, 'text')` ❌
+- NOT: `logger.error({ error: err.toString() }, 'text')` ❌
+- YES: `logger.error({ err }, 'text')` ✅
+
+**Why**: Pino's `stdSerializers.err` automatically extracts:
+- Error type/name
+- Error message
+- Full stack trace
+- Any custom error properties
+
+Logging only `err.message` loses the stack trace, making debugging nearly impossible.
+
+**Migration**:
+```typescript
+// ❌ Before (loses stack trace)
+try {
+  await operation();
+} catch (err) {
+  logger.error({ message: err.message }, 'Operation failed');
+  logger.error({ error: err.toString() }, 'Operation failed');
+}
+
+// ✅ After (full error context)
+try {
+  await operation();
+} catch (err) {
+  logger.error({ err }, 'Operation failed');
+  // Pino automatically logs: type, message, stack, and custom properties
+}
+```
+
+### 8. Serializer Usage (NEW)
+
+**Purpose**: Validates that sensitive objects (user, request, session) use serializers or explicit field access to prevent PII exposure.
+
+**Validates**:
+- NOT: `logger.info({ user: userData }, 'Logged in')` ❌ (may contain password)
+- YES: `logger.info({ userId: user.id, role: user.role }, 'Logged in')` ✅
+- YES: `logger.info({ req }, 'Request')` ✅ (standard Pino serializer)
+
+**Why**: Logging full objects can expose sensitive data:
+- Passwords stored in user objects
+- Auth tokens in request headers
+- Credit card details in session data
+
+**Protected Objects**: `user`, `request`, `req`, `response`, `res`, `session`, `auth`
+
+**Migration**:
+```typescript
+// ❌ Before (PII exposure risk)
+logger.info({ user: userData }, 'User logged in');
+// userData might contain: { id, email, password, ssn, creditCard }
+
+logger.debug({ request: fullRequest }, 'API call');
+// fullRequest might contain: Authorization headers, cookies, API keys
+
+// ✅ After (explicit safe fields)
+logger.info({ userId: user.id, role: user.role }, 'User logged in');
+
+logger.debug({ method: req.method, url: req.url }, 'API call');
+
+// ✅ OR configure serializer for automatic PII redaction
+const logger = pino({
+  serializers: {
+    user: (user) => ({ id: user.id, role: user.role }), // Redacts password/email
+  },
+  redact: {
+    paths: ['user.password', 'user.ssn', 'req.headers.authorization'],
+    censor: '[REDACTED]',
+  },
+});
 ```
 
 ## Best Practices

@@ -54,6 +54,8 @@ import workflowRouter from "./routes/workflow.js";
 import tenantRouter from "./routes/tenant.js";
 import expEngineRouter from "./routes/expEngine.js";
 import uploadsRouter from "./routes/uploads.js";
+import searchRouter from "./routes/search.js";
+import salesRouter from "./routes/sales.js";
 import { yoga } from "./graphql/server.js";
 import { UPLOADS_PUBLIC_DIR, shouldServeLocalUploadsStatic } from "./uploads/storage.js";
 import { startUploadRetentionJob } from "./uploads/cleanup.js";
@@ -228,6 +230,7 @@ if (config.rateLimitEnabled) {
   app.use("/api/rules", apiLimiter); // Rule evaluation
   app.use("/api/expressions", apiLimiter); // Expression testing
   app.use("/api/uploads", apiLimiter);
+  app.use("/api/sales", apiLimiter);
 }
 app.use("/api/graph", graphRouter);
 app.use("/api/mesh", meshRouter);
@@ -236,6 +239,13 @@ app.use("/api/tenants", tenantRouter);
 app.use("/api/rules", expEngineRouter);
 app.use("/api/expressions", expEngineRouter);
 app.use("/api", uploadsRouter);
+app.use("/api/sales", salesRouter);
+
+// Search route (before generic CRUD catch-all)
+if (config.rateLimitEnabled) {
+  app.use("/api/search", apiLimiter);
+}
+app.use("/api/search", searchRouter);
 
 // API routes (standard rate limit — CRUD operations)
 if (config.rateLimitEnabled) {
@@ -337,9 +347,7 @@ async function startServer() {
     );
   } catch (err) {
     logger.error(
-      {
-        error: getDbErrorSummary(err),
-      },
+      { error: getDbErrorSummary(err) },
       "[Startup] Database connectivity check failed"
     );
     logger.error(

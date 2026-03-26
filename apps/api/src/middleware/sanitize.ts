@@ -16,6 +16,7 @@
  */
 
 import mongoSanitize from "express-mongo-sanitize";
+import { logger } from "../logging/index.js";
 import type { Request, Response, NextFunction } from "express";
 
 // ---------------------------------------------------------------------------
@@ -25,10 +26,11 @@ import type { Request, Response, NextFunction } from "express";
 export const sanitizeNoSQL = mongoSanitize({
   replaceWith: "_", // Replace $ and . with underscore
   onSanitize: ({ req, key }) => {
-    console.warn(`[SECURITY] Sanitized NoSQL injection attempt in ${key}`, {
+    logger.warn({
+      key,
       ip: req.ip,
       url: req.url,
-    });
+    }, "Input sanitized");
   },
 });
 
@@ -95,11 +97,12 @@ export function pathTraversalSanitizer(req: Request, res: Response, next: NextFu
   // Check params for path traversal attempts
   for (const [key, value] of Object.entries(req.params)) {
     if (typeof value === "string" && PATH_TRAVERSAL_PATTERN.test(value)) {
-      console.warn(`[SECURITY] Path traversal attempt blocked in param ${key}`, {
+      logger.warn({
+        key,
         value,
         ip: req.ip,
         url: req.url,
-      });
+      }, 'Path traversal attempt blocked in param');
 
       res.status(400).json({
         error: "Invalid request",
@@ -112,11 +115,12 @@ export function pathTraversalSanitizer(req: Request, res: Response, next: NextFu
   // Check query params
   for (const [key, value] of Object.entries(req.query)) {
     if (typeof value === "string" && PATH_TRAVERSAL_PATTERN.test(value)) {
-      console.warn(`[SECURITY] Path traversal attempt blocked in query ${key}`, {
+      logger.warn({
+        key,
         value,
         ip: req.ip,
         url: req.url,
-      });
+      }, 'Path traversal attempt blocked in query');
 
       res.status(400).json({
         error: "Invalid request",

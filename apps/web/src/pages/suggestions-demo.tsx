@@ -26,6 +26,9 @@ import {
   CardTitle,
 } from "@afenda/ui";
 import { PageContainer, PageHeader } from "~/components/layout";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'suggestions-demo' });
+
 
 const demoSchema = z.object({
   baseUsername: z.string().min(3, "Username must be at least 3 characters"),
@@ -82,7 +85,7 @@ export default function SuggestionsDemoPage() {
   };
 
   const onSubmit: SubmitHandler<DemoFormData> = (data) => {
-    console.log("Form submitted with:", data);
+    log.info("Form submitted with:", data);
     alert(
       `Username accepted: "${data.baseUsername}"\n\nUser context:\n` +
         `Name: ${data.firstName} ${data.lastName}\n` +

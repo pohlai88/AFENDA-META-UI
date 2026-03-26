@@ -11,6 +11,9 @@
 
 import { type Middleware } from "@reduxjs/toolkit";
 import { getAppConfig } from "~/lib/app-config";
+import { logger } from '../../../lib/logger';
+const log = logger.child({ module: 'audit-logger' });
+
 
 const appConfig = getAppConfig();
 
@@ -44,7 +47,7 @@ export const auditLogger: Middleware = (store) => (next) => (action) => {
 
     if (shouldAudit) {
       // Log audit event
-      console.warn("[AUDIT LOG]", {
+      log.warn("[AUDIT LOG]", {
         timestamp,
         user: user ? { id: user.id, email: user.email } : null,
         action: actionType,

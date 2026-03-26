@@ -27,6 +27,7 @@
  */
 
 import { readdir } from "fs/promises";
+import { logger } from "../logging/index.js";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import type { MetaModule, ModuleRegistryResult } from "@afenda/meta-types";
@@ -49,7 +50,7 @@ class ModuleRegistry {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.warn("[ModuleRegistry] Initializing...");
+    logger.info('ModuleRegistry initializing');
 
     const modulesDir = join(__dirname, "../modules");
 
@@ -58,8 +59,9 @@ class ModuleRegistry {
       const entries = await readdir(modulesDir, { withFileTypes: true });
       const moduleNames = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
-      console.warn(
-        `[ModuleRegistry] Found ${moduleNames.length} module(s): ${moduleNames.join(", ")}`
+      logger.info(
+        { count: moduleNames.length, modules: moduleNames },
+        'Found modules'
       );
 
       // Load each module
@@ -71,9 +73,9 @@ class ModuleRegistry {
       this.resolveDependencies();
 
       this.initialized = true;
-      console.warn(`[ModuleRegistry] Initialized with ${this.modules.size} module(s)`);
+      logger.info({ count: this.modules.size }, 'ModuleRegistry initialized');
     } catch (error) {
-      console.error("[ModuleRegistry] Failed to initialize:", error);
+      logger.error({ err: error }, 'Failed to initialize ModuleRegistry');
       // Continue with empty registry rather than crashing
     }
   }
@@ -90,7 +92,7 @@ class ModuleRegistry {
       const moduleDefinition: MetaModule = moduleExports.default || moduleExports.module;
 
       if (!moduleDefinition) {
-        console.warn(`[ModuleRegistry] Module "${moduleName}" does not export a module definition`);
+        logger.warn({ moduleName }, 'Module does not export a module definition');
         return;
       }
 
@@ -98,7 +100,7 @@ class ModuleRegistry {
       const enabled = moduleDefinition.config?.enabled !== false;
 
       if (!enabled) {
-        console.warn(`[ModuleRegistry] Module "${moduleName}" is disabled`);
+        logger.info({ moduleName }, 'Module is disabled');
         return;
       }
 
@@ -112,14 +114,14 @@ class ModuleRegistry {
         }
       }
 
-      console.warn(`[ModuleRegistry] Loaded module: ${moduleName}`);
+      logger.info({ moduleName }, 'Module loaded');
 
       // Call onLoad hook if present
       if (moduleDefinition.hooks?.onLoad) {
         await moduleDefinition.hooks.onLoad();
       }
     } catch (error) {
-      console.error(`[ModuleRegistry] Failed to load module "${moduleName}":`, error);
+      logger.error({ err: error, moduleName }, 'Failed to load module');
     }
   }
 
@@ -148,8 +150,9 @@ class ModuleRegistry {
         if (this.modules.has(dep)) {
           visit(dep);
         } else {
-          console.warn(
-            `[ModuleRegistry] Module "${name}" depends on "${dep}", but "${dep}" is not loaded`
+          logger.warn(
+            { module: name, dependency: dep },
+            'Module dependency not loaded'
           );
         }
       }
@@ -161,7 +164,7 @@ class ModuleRegistry {
       visit(moduleName);
     }
 
-    console.warn(`[ModuleRegistry] Load order: ${loadOrder.join(" → ")}`);
+    logger.info({ loadOrder }, 'Module load order determined');
   }
 
   /**
@@ -268,5 +271,5 @@ export const moduleRegistry = new ModuleRegistry();
 
 // Auto-initialize on first import
 moduleRegistry.initialize().catch((err) => {
-  console.error("[ModuleRegistry] Auto-initialization failed:", err);
+  logger.error({ err }, 'ModuleRegistry auto-initialization failed');
 });

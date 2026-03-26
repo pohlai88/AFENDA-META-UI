@@ -21,6 +21,7 @@ import { CommandPalette } from "~/components/command-palette";
 import { SHELL_IDS, SHELL_LABELS, SHELL_LAYOUT } from "./shell-config";
 import { cn } from "~/lib/utils";
 import { ErrorBoundaryClass } from "~/components/error-boundary";
+import { OfflineBanner } from "~/components/offline-banner";
 import { PageSkeleton } from "~/components/ui/page-skeleton";
 import { useAppDispatch } from "~/stores/business";
 import { useNotificationStore, useSidebarStore } from "~/stores/ui";
@@ -122,6 +123,7 @@ export function AppShell() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <TopBar />
+        <OfflineBanner />
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-background">

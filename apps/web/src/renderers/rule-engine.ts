@@ -6,6 +6,9 @@
  */
 
 import type { JsonValue, JsonObject } from "@afenda/meta-types";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'rule-engine' });
+
 
 /**
  * Rule context - unified business graph
@@ -104,7 +107,7 @@ function evaluateExpression(expr: string, ctx: RuleContext): boolean {
     const func = new Function("ctx", `with(ctx.data) { return ${expr}; }`);
     return func(ctx);
   } catch (error) {
-    console.error(`[Rules] Failed to evaluate expression: ${expr}`, error);
+    log.error(`[Rules] Failed to evaluate expression: ${expr}`, error);
     return false;
   }
 }
@@ -122,7 +125,7 @@ class RuleEngine {
    */
   register(rule: Rule): void {
     this.rules.set(rule.id, rule);
-    console.log(`[Rules] Registered: ${rule.id} - ${rule.name}`);
+    log.info(`[Rules] Registered: ${rule.id} - ${rule.name}`);
   }
 
   /**
@@ -182,11 +185,11 @@ class RuleEngine {
     const matchingRules = this.findMatchingRules(event);
 
     if (matchingRules.length === 0) {
-      console.log(`[Rules] No rules matched event: ${event}`);
+      log.info(`[Rules] No rules matched event: ${event}`);
       return [];
     }
 
-    console.log(`[Rules] Executing ${matchingRules.length} rules for event: ${event}`);
+    log.info(`[Rules] Executing ${matchingRules.length} rules for event: ${event}`);
 
     const results: RuleExecutionResult[] = [];
 
@@ -198,7 +201,7 @@ class RuleEngine {
         const conditionMet = await rule.if(ctx);
 
         if (!conditionMet) {
-          console.log(`[Rules] ${rule.id} condition not met`);
+          log.info(`[Rules] ${rule.id} condition not met`);
           continue;
         }
 
@@ -219,14 +222,14 @@ class RuleEngine {
         // Audit log
         this.auditLog(result);
 
-        console.log(`[Rules] ${rule.id} executed in ${duration}ms:`, decision);
+        log.info(`[Rules] ${rule.id} executed in ${duration}ms:`, decision);
 
         // If rule blocks, stop execution
         if (decision.type === "block") {
           break;
         }
       } catch (error) {
-        console.error(`[Rules] Error executing ${rule.id}:`, error);
+        log.error(`[Rules] Error executing ${rule.id}:`, error);
       }
     }
 
@@ -315,7 +318,7 @@ class RuleEngine {
     const rule = this.rules.get(ruleId);
     if (rule) {
       rule.enabled = enabled;
-      console.log(`[Rules] ${ruleId} ${enabled ? "enabled" : "disabled"}`);
+      log.info(`[Rules] ${ruleId} ${enabled ? "enabled" : "disabled"}`);
     }
   }
 
@@ -324,7 +327,7 @@ class RuleEngine {
    */
   unregister(ruleId: string): void {
     this.rules.delete(ruleId);
-    console.log(`[Rules] Unregistered: ${ruleId}`);
+    log.info(`[Rules] Unregistered: ${ruleId}`);
   }
 
   /**

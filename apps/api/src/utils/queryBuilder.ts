@@ -23,6 +23,7 @@
  */
 
 import { z } from "zod";
+import { logger } from "../logging/index.js";
 import {
   and,
   or,
@@ -93,7 +94,7 @@ function buildCondition(table: Record<string, Column>, filter: FilterCondition):
   const column = table[filter.field];
 
   if (!column) {
-    console.warn(`[QueryBuilder] Unknown field: ${filter.field}`);
+    logger.warn({ field: filter.field }, 'Unknown field');
     return undefined;
   }
 
@@ -127,14 +128,14 @@ function buildCondition(table: Record<string, Column>, filter: FilterCondition):
 
       case "in":
         if (!Array.isArray(value)) {
-          console.warn(`[QueryBuilder] 'in' operator requires array value`);
+          logger.warn({ field: filter.field, operator: 'in' }, "'in' operator requires array value");
           return undefined;
         }
         return inArray(column, value);
 
       case "between":
         if (!Array.isArray(value) || value.length !== 2) {
-          console.warn(`[QueryBuilder] 'between' operator requires array of 2 values`);
+          logger.warn({ field: filter.field, operator: 'between' }, "'between' operator requires array of 2 values");
           return undefined;
         }
         return between(column, value[0], value[1]);
@@ -146,11 +147,11 @@ function buildCondition(table: Record<string, Column>, filter: FilterCondition):
         return isNotNull(column);
 
       default:
-        console.warn(`[QueryBuilder] Unknown operator: ${op}`);
+        logger.warn({ field: filter.field, operator: op }, 'Unknown operator');
         return undefined;
     }
   } catch (error) {
-    console.error(`[QueryBuilder] Error building condition for ${filter.field}:`, error);
+    logger.error({ err: error, field: filter.field }, 'Error building condition');
     return undefined;
   }
 }

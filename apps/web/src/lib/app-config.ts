@@ -1,3 +1,6 @@
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'app-config' });
+
 const DEFAULT_NOTIFICATION_TOAST_DEDUPE_MS = 2500;
 const MAX_NOTIFICATION_TOAST_DEDUPE_MS = 60_000;
 const DEFAULT_PERMISSIONS_BOOTSTRAP_ENDPOINT = "/meta/bootstrap";
@@ -104,7 +107,7 @@ export function getAppConfig(env: AppRuntimeEnv = import.meta.env): AppConfig {
   if (env.DEV && env.VITE_NOTIFICATION_TOAST_DEDUPE_MS !== undefined) {
     const raw = env.VITE_NOTIFICATION_TOAST_DEDUPE_MS;
     if (Number.isNaN(Number(raw)) || raw.trim() === "") {
-      console.warn(
+      log.warn(
         `[AppConfig] Invalid VITE_NOTIFICATION_TOAST_DEDUPE_MS: "${raw}", using default (${DEFAULT_NOTIFICATION_TOAST_DEDUPE_MS}ms)`
       );
     }

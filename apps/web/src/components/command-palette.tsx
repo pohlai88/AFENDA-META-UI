@@ -32,7 +32,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPa
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(controlledOpen ?? false);
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
-  const { query, setQuery, results, recordViewed } = useGlobalSearch();
+  const { query, setQuery, results, recordViewed, isSearching } = useGlobalSearch();
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   // Sync controlled open state
@@ -165,9 +165,13 @@ export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPa
         </div>
 
         {/* Results */}
-        {displayResults.length === 0 ? (
+        {isSearching ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No results found
+            Searching…
+          </div>
+        ) : displayResults.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            {query.length >= 2 ? "No results found" : "Type to search…"}
           </div>
         ) : (
           <div className="max-h-96 overflow-y-auto">

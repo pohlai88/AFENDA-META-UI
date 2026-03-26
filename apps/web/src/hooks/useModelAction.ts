@@ -28,7 +28,19 @@ export function useModelAction({ model, recordId }: UseModelActionOptions) {
   return useMutation({
     mutationFn: async (action: MetaAction) => {
       const url = action.url.replace(/:id\b/g, recordId);
-      const res = await fetch(url, { method: action.method });
+      const init: RequestInit = {
+        method: action.method,
+      };
+
+      if (
+        action.method === "POST" &&
+        action.url === "/api/sales/commissions/generate"
+      ) {
+        init.headers = { "Content-Type": "application/json" };
+        init.body = JSON.stringify({ orderId: recordId });
+      }
+
+      const res = await fetch(url, init);
 
       if (!res.ok) {
         throw Object.assign(new Error(`Action "${action.label}" failed`), {

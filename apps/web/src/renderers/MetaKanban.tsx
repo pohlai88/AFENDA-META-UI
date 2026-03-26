@@ -15,6 +15,9 @@ import React, { useState, useMemo, useCallback, memo } from "react";
 import type { MetaKanbanView, MetaField } from "@afenda/meta-types";
 import { useMeta } from "../hooks/useMeta.js";
 import { useModelList, useModel } from "../hooks/useModel.js";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'MetaKanban' });
+
 
 function errorMessageFromUnknown(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -183,7 +186,7 @@ export function MetaKanban({ model, onCardClick, renderCard }: MetaKanbanProps) 
         });
         await refetch();
       } catch (err) {
-        console.error("Kanban drop failed:", err);
+        log.error("Kanban drop failed:", err);
         setMutationError(errorMessageFromUnknown(err));
         setLocalOverrides((current) => {
           const next = new Map(current);

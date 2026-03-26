@@ -20,7 +20,10 @@ import { JsonField } from "./JsonField.js";
 import { ColorField } from "./ColorField.js";
 import { RatingField } from "./RatingField.js";
 import { RichTextField } from "./RichTextField.js";
-import { FieldRenderer } from "./FieldRenderer.js";
+import { PhoneField } from "./PhoneField.js";
+import { AddressField } from "./AddressField.js";
+import { SignatureField } from "./SignatureField.js";
+import { FieldRenderer, registerWidget, unregisterWidget } from "./FieldRenderer.js";
 import { DynamicForm } from "./DynamicForm.js";
 import {
   DynamicFormRHF,
@@ -372,7 +375,12 @@ export {
   ColorField,
   RatingField,
   RichTextField,
+  PhoneField,
+  AddressField,
+  SignatureField,
   FieldRenderer,
+  registerWidget,
+  unregisterWidget,
   DynamicForm,
   DynamicFormRHF,
   DynamicZodForm,

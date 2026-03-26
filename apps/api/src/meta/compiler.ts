@@ -15,6 +15,7 @@
 
 import {
   type FieldType,
+  type MetaAction,
   type MetaField,
   type MetaListView,
   type MetaFormView,
@@ -124,9 +125,10 @@ function buildListView(fields: MetaField[]): MetaListView {
 /** Compile an IntrospectedModel into a ModelMeta. */
 export function compileModel(model: IntrospectedModel): ModelMeta {
   const fields: MetaField[] = model.fields.map(compileField);
+  const modelName = camelToSnake(model.name);
 
   return {
-    model: camelToSnake(model.name),
+    model: modelName,
     label: humanise(model.name),
     label_plural: humanise(model.name) + "s",
     fields,
@@ -134,7 +136,7 @@ export function compileModel(model: IntrospectedModel): ModelMeta {
       form: buildFormView(fields),
       list: buildListView(fields),
     },
-    actions: [],
+    actions: buildDefaultActions(modelName),
     permissions: {
       default_role_permissions: {
         admin: { can_create: true, can_read: true, can_update: true, can_delete: true },
@@ -162,4 +164,23 @@ function humanise(str: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function buildDefaultActions(model: string): MetaAction[] {
+  if (model === "sales_order") {
+    return [
+      {
+        id: "generate_commission",
+        label: "Generate Commission",
+        method: "POST",
+        url: "/api/sales/commissions/generate",
+        style: "secondary",
+        icon: "BadgePercent",
+        allowed_roles: ["admin", "sales_manager", "sales_ops"],
+        confirm_message: "Generate or refresh commission entries for this sales order?",
+      },
+    ];
+  }
+
+  return [];
 }

@@ -18,6 +18,7 @@ import type {
   DecisionAuditQuery,
   DecisionAuditChain,
 } from "@afenda/meta-types";
+import { logger } from '../logging/logger.js';
 
 // ── Write Buffer ───────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ export async function flushBuffer(): Promise<number> {
   } catch (err) {
     // On failure, re-queue entries (best-effort)
     buffer.unshift(...batch);
-    console.error("[decision-audit] flush failed, re-queued", batch.length, "entries:", err);
+    logger.error({ err, batchSize: batch.length }, 'Decision audit flush failed, re-queued entries');
     return 0;
   }
 }

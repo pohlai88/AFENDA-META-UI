@@ -35,6 +35,10 @@ const ALLOWED_FILES = [
   "apps/api/src/meta/introspect-cli.ts", // CLI utility script
   "apps/api/src/meta/test-rbac-expressions.ts", // Test/debug script
   "apps/web/src/components/error-boundary.tsx", // UI error boundary (console for dev debugging)
+  "apps/web/src/renderers/fields/SUGGESTIONS_DEMO.ts", // Demo/documentation file
+  "apps/web/src/renderers/fields/INTEGRATION_EXAMPLES.tsx", // Example code file
+  "apps/web/src/renderers/fields/EnhancedStringField.example.tsx", // Example code file
+  "apps/web/src/renderers/registry.test.ts", // Test file
 ];
 
 export async function noConsoleUsage({ fix }) {

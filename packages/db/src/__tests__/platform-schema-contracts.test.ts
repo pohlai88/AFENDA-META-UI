@@ -1,7 +1,20 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { appModules, tenants, users, roles, permissions, userRoles } from "../schema/index.js";
+import {
+  appModules,
+  approvalLogs,
+  countries,
+  currencies,
+  documentAttachments,
+  permissions,
+  roles,
+  sequences,
+  tenants,
+  unitsOfMeasure,
+  userRoles,
+  users,
+} from "../schema/index.js";
 
 describe("platform schema contracts", () => {
   it("core.tenants exposes the expected base columns", () => {
@@ -49,5 +62,23 @@ describe("platform schema contracts", () => {
     expect(columns.roleId).toBeDefined();
     expect(columns.tenantId).toBeDefined();
     expect(columns.assignedBy).toBeDefined();
+  });
+
+  it("reference tables expose global localization and currency columns", () => {
+    expect(getTableColumns(countries).code).toBeDefined();
+    expect(getTableColumns(countries).vatLabel).toBeDefined();
+    expect(getTableColumns(currencies).code).toBeDefined();
+    expect(getTableColumns(currencies).rounding).toBeDefined();
+    expect(getTableColumns(unitsOfMeasure).factor).toBeDefined();
+    expect(getTableColumns(unitsOfMeasure).uomType).toBeDefined();
+  });
+
+  it("reference sequences and audit tables stay tenant-scoped", () => {
+    expect(getTableColumns(sequences).tenantId).toBeDefined();
+    expect(getTableColumns(sequences).resetPeriod).toBeDefined();
+    expect(getTableColumns(documentAttachments).tenantId).toBeDefined();
+    expect(getTableColumns(documentAttachments).entityType).toBeDefined();
+    expect(getTableColumns(approvalLogs).actorRoleSnapshot).toBeDefined();
+    expect(getTableColumns(approvalLogs).decidedAt).toBeDefined();
   });
 });

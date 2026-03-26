@@ -7,6 +7,9 @@
 
 import type { JsonValue, JsonObject } from "@afenda/meta-types";
 import type { RendererModule } from "./types/contracts";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'plugin-engine' });
+
 
 /**
  * Plugin types
@@ -119,12 +122,12 @@ class PluginRegistry {
    */
   register(plugin: UIPlugin): void {
     if (this.plugins.has(plugin.id)) {
-      console.warn(`[Plugins] Plugin already registered: ${plugin.id}`);
+      log.warn(`[Plugins] Plugin already registered: ${plugin.id}`);
       return;
     }
 
     this.plugins.set(plugin.id, plugin);
-    console.log(`[Plugins] Registered: ${plugin.id} v${plugin.version}`);
+    log.info(`[Plugins] Registered: ${plugin.id} v${plugin.version}`);
   }
 
   /**
@@ -228,11 +231,11 @@ export class UIEngine {
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      console.warn("[Engine] Already initialized");
+      log.warn("[Engine] Already initialized");
       return;
     }
 
-    console.log("[Engine] Initializing...");
+    log.info("[Engine] Initializing...");
 
     const plugins = this.registry.list();
 
@@ -242,24 +245,24 @@ export class UIEngine {
     // Load plugins
     for (const plugin of ordered) {
       await plugin.onLoad?.();
-      console.log(`[Engine] Loaded: ${plugin.id}`);
+      log.info(`[Engine] Loaded: ${plugin.id}`);
     }
 
     // Install plugins
     for (const plugin of ordered) {
       plugin.install(this);
-      console.log(`[Engine] Installed: ${plugin.id}`);
+      log.info(`[Engine] Installed: ${plugin.id}`);
     }
 
     // Activate plugins
     for (const plugin of ordered) {
       await plugin.onActivate?.();
       this.registry.activate(plugin.id);
-      console.log(`[Engine] Activated: ${plugin.id}`);
+      log.info(`[Engine] Activated: ${plugin.id}`);
     }
 
     this.initialized = true;
-    console.log(`[Engine] Initialized with ${plugins.length} plugins`);
+    log.info(`[Engine] Initialized with ${plugins.length} plugins`);
   }
 
   /**

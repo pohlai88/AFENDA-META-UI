@@ -1,42 +1,66 @@
 # Adding a Module
 
-This document describes the minimal path to add a new module end-to-end.
+This document defines the canonical DB-first path to add a module end-to-end.
 
-## 1. Register Metadata
+## 1. Database First (Required)
 
-- Define module metadata in the registry source used by the API.
-- Add fields with explicit types and labels.
-- Add relation config for `many2one`/`many2many` when needed.
+Create domain files under `packages/db/src/schema-domain/<domain>/`:
 
-## 2. API Surface
+- `_schema.ts` — `pgSchema("<domain>")`
+- `_enums.ts` — enum triplet (`as const` + Drizzle enum + Zod enum)
+- `_zodShared.ts` — branded IDs and reusable refinement schemas
+- `_relations.ts` — domain relation map
+- `tables.ts` — table definitions, indexes, constraints, policies, Zod CRUD schemas
+- `index.ts` — export all domain modules
 
-- Add module routes under `apps/api/src`.
-- Implement list/detail/create/update endpoints.
-- Ensure filters and RBAC hooks are connected.
+Mandatory table requirements:
 
-## 3. UI Integration
+- `tenantId` on every table
+- `...timestampColumns`, `...softDeleteColumns`, `...auditColumns`
+- Explicit index for every FK column (tenant-leading where applicable)
+- Partial unique indexes for soft-delete-safe uniqueness (`WHERE deletedAt IS NULL`)
+- DB `CHECK` constraints for hard invariants
+- `tenantIsolationPolicies()` + `serviceBypassPolicy()` in table config
 
-- Ensure module appears in navigation/menu config.
-- Add list and form rendering config.
-- Validate field rendering with `FormFieldRenderer` and relation/upload fields if used.
+## 2. Schema Exports + Migration
 
-## 4. Seed + Test Data
+- Export domain from `packages/db/src/schema-domain/index.ts`
+- Ensure domain appears via `packages/db/src/schema/index.ts`
+- Add migration SQL (`drizzle-kit generate`) for schema/table/index/constraint changes
 
-- Extend deterministic seeds under `packages/db/src/_seeds` when module requires baseline data.
-- Keep IDs deterministic when used by tests.
+## 3. Metadata + API
 
-## 5. Validation
+- Add module manifest in `apps/api/src/modules/<domain>/index.ts`
+- Ensure metadata introspection includes the new models
+- Implement domain logic in `apps/api/src/modules/<domain>/logic.ts` for state transitions and invariants
+- Keep generic CRUD routes RBAC-aware and filter-safe
+
+## 4. UI Integration
+
+- Ensure module appears in navigation/menu
+- Validate list/form rendering for new fields and relations
+- Add custom field widgets only when metadata-driven defaults are insufficient
+
+## 5. Seed + Invariant Coverage
+
+- Extend deterministic seeds in `packages/db/src/_seeds/`
+- Ensure tenant scope exists before seeding tenant-bound tables
+- Add invariant tests for domain math/state machine rules
+
+## 6. Validation Gates
 
 ```bash
+pnpm --filter @afenda/db typecheck
 pnpm ci:gate:boundaries
 pnpm ci:gate:typescript
 pnpm ci:contracts
 pnpm ci:gate
 ```
 
-## 6. Definition of Done
+## 7. Definition of Done
 
-- Module is navigable from UI
-- CRUD API works and is covered by tests
+- Module schema follows canonical domain pattern
+- CRUD + domain logic paths are working and tested
+- Seeds are deterministic and tenant-safe
 - CI gates pass
-- Documentation updated (field behavior, deployment impact, module notes)
+- Documentation updated (module behavior, migration impact, operational notes)

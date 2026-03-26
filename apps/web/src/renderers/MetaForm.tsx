@@ -19,6 +19,9 @@ import { useMeta } from "../hooks/useMeta.js";
 import { useModel } from "../hooks/useModel.js";
 import { FieldRenderer } from "./fields/index.js";
 import type { DiscriminatedFieldProps } from "./fields/index.js";
+import { logger } from '../lib/logger';
+const log = logger.child({ module: 'MetaForm' });
+
 
 type MetaFieldOfType<T extends FieldType> = Omit<MetaField, "type"> & { type: T };
 
@@ -340,7 +343,7 @@ export function MetaForm({ model, recordId, meta: staticMeta, onSaved, onCancel 
       }
       onSaved?.(saved as Record<string, unknown>);
     } catch (err) {
-      console.error("Save failed:", err);
+      log.error("Save failed:", err);
       setSaveError(errorMessageFromUnknown(err));
     }
   };
