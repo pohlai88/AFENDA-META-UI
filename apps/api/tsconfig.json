@@ -1,11 +1,19 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "noEmit": true,
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "paths": {
+      "@afenda/meta-types": ["../../packages/meta-types/src/index.ts"],
+      "@afenda/meta-types/*": ["../../packages/meta-types/src/*"],
+      "@afenda/db": ["../../packages/db/src/index.ts"],
+      "@afenda/db/*": ["../../packages/db/src/*"],
+      "@afenda/db/schema-meta": ["../../packages/db/src/schema-meta/index.ts"],
+      "@afenda/db/schema-domain": ["../../packages/db/src/schema-domain/index.ts"]
+    }
   },
   "include": ["src"]
 }

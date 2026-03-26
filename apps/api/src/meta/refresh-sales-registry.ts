@@ -82,7 +82,14 @@ async function main() {
           create_inline: false,
         },
       },
-      actions: model === "sales_order" ? salesOrderActions() : [],
+      actions:
+        model === "sales_order"
+          ? salesOrderActions()
+          : model === "consignment_stock_report"
+            ? consignmentStockReportActions()
+            : model === "consignment_agreement"
+              ? consignmentAgreementActions()
+              : [],
       permissions: {
         default_role_permissions: {
           admin: { can_create: true, can_read: true, can_update: true, can_delete: true },
@@ -155,6 +162,46 @@ function salesOrderActions(): MetaAction[] {
       icon: "BadgePercent",
       allowed_roles: ["admin", "sales_manager", "sales_ops"],
       confirm_message: "Generate or refresh commission entries for this sales order?",
+    },
+  ];
+}
+
+function consignmentStockReportActions(): MetaAction[] {
+  return [
+    {
+      id: "validate_consignment_report",
+      label: "Validate Stock Report",
+      method: "POST",
+      url: "/api/sales/consignment/reports/validate",
+      style: "secondary",
+      icon: "ClipboardCheck",
+      allowed_roles: ["admin", "sales_manager", "sales_ops"],
+      confirm_message: "Validate stock balances and pricing totals for this report?",
+    },
+    {
+      id: "generate_consignment_invoice_draft",
+      label: "Generate Invoice Draft",
+      method: "POST",
+      url: "/api/sales/consignment/reports/invoice-draft",
+      style: "secondary",
+      icon: "FileSpreadsheet",
+      allowed_roles: ["admin", "sales_manager", "sales_ops"],
+      confirm_message: "Generate an invoice draft from sold quantities in this report?",
+    },
+  ];
+}
+
+function consignmentAgreementActions(): MetaAction[] {
+  return [
+    {
+      id: "evaluate_consignment_expiry",
+      label: "Evaluate Expiry",
+      method: "POST",
+      url: "/api/sales/consignment/agreements/expire",
+      style: "secondary",
+      icon: "CalendarClock",
+      allowed_roles: ["admin", "sales_manager", "sales_ops"],
+      confirm_message: "Evaluate expiry and update agreement status if the agreement is past end date?",
     },
   ];
 }

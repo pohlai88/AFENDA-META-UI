@@ -192,48 +192,43 @@ pnpm ci:gate
 
 ---
 
-## 10. IDE-Specific Quick Copy
+## 10. TypeScript Config Rules (TS 5.9+)
 
-Use as first instruction in your IDE agent:
+**Hard rules — never violate:**
+- No `baseUrl` anywhere (deprecated TS 6, removed TS 7)
+- No `paths` in `tsconfig.base.json` (expands common source dir, breaks child `rootDir`)
+- `paths` entries must be relative (`../../packages/...`)
+- `ignoreDeprecations` value is `"5.0"` (not `"6.0"`)
 
-**Universal (all agents):**
-```text
-Follow AGENT.md in AFENDA-META-UI repo.
-Core rules:
-1) Schema Quality First — improve schemas when tests show missing fields; never downgrade production code
-2) Terminal-First — run pnpm ci:gate before claiming done
-3) Minimal Edits — scoped diffs only
-4) Respect Boundaries — follow package dependency graph
-Output: files changed, commands run, gate results, final status
+**Config architecture:**
+
+```
+tsconfig.base.json        → shared options only (strict, target, module, lib, declaration)
+                            NO paths, NO baseUrl, NO outDir, NO rootDir
+
+apps/api/tsconfig.json    → noEmit: true, paths to package source (IDE/typecheck)
+apps/api/tsconfig.build.json → extends tsconfig.json, noEmit: false,
+                               rootDir: "./src", outDir: "./dist", paths: {}
+
+apps/web/tsconfig.json    → noEmit: true, ignoreDeprecations: "5.0",
+                            paths for IDE only (Vite resolve.alias handles runtime)
+
+packages/*/tsconfig.json  → rootDir: "src", outDir: "dist",
+                            paths only for own imports (relative ../../)
 ```
 
-**Cursor:**
-```text
-AGENT.md is highest policy. Run pnpm ci:gate before done.
-Prefer small diffs. If tests fail due to missing schema fields, improve the schema definition.
-Output: files, commands, results, status.
-```
+**Package → paths map:**
 
-**Copilot:**
-```text
-Follow AGENT.md exactly. Run pnpm ci:gate before final response.
-When seed data has fields not in schema, add those fields to schema — don't remove from seed data.
-Report: files, commands, results.
-```
+| Package    | Cross-package imports                                       | paths target    |
+|------------|-------------------------------------------------------------|-----------------|
+| meta-types | (none)                                                      | (none)          |
+| db         | @afenda/meta-types                                          | meta-types dist |
+| ui         | (none)                                                      | (none)          |
+| api        | @afenda/meta-types, @afenda/db, db/schema-meta, db/schema-domain | all → source    |
+| web        | @afenda/meta-types, @afenda/ui, ~/*                         | all → source    |
 
-**Windsor:**
-```text
-Terminal-first validation via AGENT.md.
-Never downgrade schemas for test passes — improve schemas to match high-quality test data.
-Workflow: edit → targeted gates → pnpm ci:gate → report.
-```
-
-**Antigravity:**
-```text
-AGENT.md policy: schema quality first, terminal-first validation, minimal edits.
-Optimize feedback speed but always finish with pnpm ci:gate.
-If tests reveal missing fields, improve schema — don't compromise seed data.
-```
+**Why split config for emitting apps:**
+Cross-package `paths` pull files from `../../packages/...`, expanding the common source directory to `../..`. If `rootDir` is `./src`, TS6059 fires. Fix: typecheck config uses `noEmit: true` (no rootDir needed); build config uses empty `paths: {}` and resolves via `node_modules` after Turborepo builds dependencies.
 
 ---
 

@@ -17,29 +17,51 @@
  *   Converts default imports to named imports automatically
  */
 
-import { glob } from "glob";
 import fs from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "node:url";
 
 const INCORRECT_PATTERN = /^import\s+Decimal\s+from\s+['"]decimal\.js['"]/gm;
 const CORRECT_PATTERN = /^import\s+\{\s*Decimal\s*\}\s+from\s+['"]decimal\.js['"]/gm;
 
-const EXCLUSIONS = [
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-  "**/.turbo/**",
-];
+const EXCLUDED_DIRS = new Set(["node_modules", "dist", "build", ".turbo"]);
+const CURRENT_FILE = fileURLToPath(import.meta.url);
+const CURRENT_DIR = path.dirname(CURRENT_FILE);
+const REPO_ROOT = path.resolve(CURRENT_DIR, "../../../..");
+
+async function walkTypeScriptFiles(rootDir, collected = []) {
+  const entries = await fs.readdir(rootDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(rootDir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS.has(entry.name)) {
+        continue;
+      }
+      await walkTypeScriptFiles(fullPath, collected);
+      continue;
+    }
+
+    if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))) {
+      collected.push(fullPath);
+    }
+  }
+
+  return collected;
+}
 
 export async function decimalConsistency({ fix }) {
   const errors = [];
   let fixCount = 0;
 
   // Scan all TypeScript files
-  const files = await glob("{apps,packages}/**/*.{ts,tsx}", {
-    ignore: EXCLUSIONS,
-    absolute: true,
-  });
+  const appsRoot = path.join(REPO_ROOT, "apps");
+  const packagesRoot = path.join(REPO_ROOT, "packages");
+  const files = [
+    ...(await walkTypeScriptFiles(appsRoot)),
+    ...(await walkTypeScriptFiles(packagesRoot)),
+  ];
 
   for (const file of files) {
     const relativePath = path.relative(process.cwd(), file);

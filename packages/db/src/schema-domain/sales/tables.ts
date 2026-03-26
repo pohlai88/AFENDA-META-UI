@@ -95,6 +95,12 @@ import {
   returnStatusEnum,
   TaxTypeUseSchema,
   taxTypeUseEnum,
+  InvariantStatusSchema,
+  invariantStatusEnum,
+  InvariantSeveritySchema,
+  invariantSeverityEnum,
+  DomainEventTypeSchema,
+  domainEventTypeEnum,
 } from "./_enums.js";
 import {
   CommissionEntryIdSchema,
@@ -104,6 +110,8 @@ import {
   ConsignmentAgreementLineIdSchema,
   ConsignmentStockReportIdSchema,
   ConsignmentStockReportLineIdSchema,
+  DomainInvariantLogIdSchema,
+  DomainEventLogIdSchema,
   FiscalPositionAccountMapIdSchema,
   FiscalPositionIdSchema,
   FiscalPositionTaxMapIdSchema,
@@ -2886,6 +2894,98 @@ export const commissionEntries = salesSchema.table(
   ]
 );
 
+export const domainInvariantLogs = salesSchema.table(
+  "domain_invariant_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    invariantCode: text("invariant_code").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    status: invariantStatusEnum("status").notNull(),
+    severity: invariantSeverityEnum("severity").notNull(),
+    expectedValue: text("expected_value"),
+    actualValue: text("actual_value"),
+    context: text("context"),
+    evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_domain_invariant_logs_tenant").on(table.tenantId),
+    index("idx_sales_domain_invariant_logs_entity").on(
+      table.tenantId,
+      table.entityType,
+      table.entityId,
+      table.evaluatedAt
+    ),
+    index("idx_sales_domain_invariant_logs_code").on(
+      table.tenantId,
+      table.invariantCode,
+      table.evaluatedAt
+    ),
+    index("idx_sales_domain_invariant_logs_status").on(
+      table.tenantId,
+      table.status,
+      table.severity,
+      table.evaluatedAt
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_domain_invariant_logs_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_domain_invariant_logs"),
+    serviceBypassPolicy("sales_domain_invariant_logs"),
+  ]
+);
+
+export const domainEventLogs = salesSchema.table(
+  "domain_event_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    eventType: domainEventTypeEnum("event_type").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    payload: text("payload"),
+    triggeredBy: integer("triggered_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    ...auditColumns,
+  },
+  (table) => [
+    index("idx_sales_domain_event_logs_tenant").on(table.tenantId),
+    index("idx_sales_domain_event_logs_entity").on(
+      table.tenantId,
+      table.entityType,
+      table.entityId,
+      table.createdAt
+    ),
+    index("idx_sales_domain_event_logs_type").on(
+      table.tenantId,
+      table.eventType,
+      table.createdAt
+    ),
+    foreignKey({
+      columns: [table.tenantId],
+      foreignColumns: [tenants.tenantId],
+      name: "fk_sales_domain_event_logs_tenant",
+    })
+      .onDelete("restrict")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.triggeredBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_domain_event_logs_user",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    ...tenantIsolationPolicies("sales_domain_event_logs"),
+    serviceBypassPolicy("sales_domain_event_logs"),
+  ]
+);
+
 export const partnerSelectSchema = createSelectSchema(partners);
 export const partnerAddressSelectSchema = createSelectSchema(partnerAddresses);
 export const partnerBankAccountSelectSchema = createSelectSchema(partnerBankAccounts);
@@ -2941,6 +3041,8 @@ export const territoryRuleSelectSchema = createSelectSchema(territoryRules);
 export const commissionPlanSelectSchema = createSelectSchema(commissionPlans);
 export const commissionPlanTierSelectSchema = createSelectSchema(commissionPlanTiers);
 export const commissionEntrySelectSchema = createSelectSchema(commissionEntries);
+export const domainInvariantLogSelectSchema = createSelectSchema(domainInvariantLogs);
+export const domainEventLogSelectSchema = createSelectSchema(domainEventLogs);
 
 export const partnerInsertSchema = createInsertSchema(partners, {
   id: PartnerIdSchema.optional(),

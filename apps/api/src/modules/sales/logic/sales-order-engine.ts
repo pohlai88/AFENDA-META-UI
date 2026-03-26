@@ -1,69 +1,195 @@
 /**
- * Sales Order Engine - Phase 6
- * 
- * Business logic for enterprise order-to-cash workflows:
- * - State machine: draft → sent → sale → done
- * - Credit limit validation
- * - Multi-currency support
- * - Pricelist integration
- * - Fiscal position tax mapping
- * - Delivery and invoice tracking
- * - Optional items (quotation extras)
- * 
+ * Sales Order Engine — Phase 6
+ *
+ * Pure business-logic functions for enterprise order-to-cash workflows.
+ * No direct DB access — all data is passed in via context parameters,
+ * matching the pattern established by partner-engine, tax-engine, and
+ * pricing-engine.
+ *
+ * State machine: draft → sent → sale → done  (cancel from any)
+ *
  * @module sales/logic/sales-order-engine
  */
 
-import Decimal from "decimal.js";
-import { db } from "@afenda/db";
+import { Decimal } from "decimal.js";
 import {
-  salesOrders,
-  salesOrderLines,
-  saleOrderLineTaxes,
-  partners,
-  partnerAddresses,
-  type SalesOrderInsert,
-  type SalesOrderSelect,
-  type SalesOrderLineSelect,
-} from "@afenda/db/schema";
-import { eq, and, inArray, isNull, desc } from "drizzle-orm";
-import { checkCreditLimit, type CreditCheckResult } from "./partner-engine.js";
-import { computeLineTaxes, mapTax, detectFiscalPosition } from "./tax-engine.js";
-import { resolvePrice } from "./pricing-engine.js";
+  computeLineTaxes,
+  mapTax,
+  type TaxEngineContext,
+  type FiscalPosition,
+  type TaxComputation,
+} from "./tax-engine.js";
+import {
+  resolvePrice,
+  type Pricelist,
+  type PricedProduct,
+} from "./pricing-engine.js";
+import {
+  checkCreditLimit,
+  type PartnerContext,
+  type CreditCheckResult,
+} from "./partner-engine.js";
 
 // ============================================================================
-// TYPES
+// Types
 // ============================================================================
 
-export interface SendQuotationContext {
-  tenantId: string;
-  orderId: string;
-  userId?: string;
+/** Valid order statuses as defined in the orderStatusEnum. */
+export type OrderStatus = "draft" | "sent" | "sale" | "done" | "cancel";
+
+export type DeliveryStatus = "no" | "partial" | "full";
+export type InvoiceStatus = "no" | "to_invoice" | "invoiced";
+export type DisplayLineType = "product" | "line_section" | "line_note";
+
+/** Minimal order shape consumed by the engine. */
+export interface OrderData {
+  id: string;
+  tenantId: number;
+  status: OrderStatus;
+  partnerId: string;
+  pricelistId: string | null;
+  fiscalPositionId: string | null;
+  currencyId: number | null;
+  companyCurrencyRate: string | null;
+  amountUntaxed: string;
+  amountTax: string;
+  amountTotal: string;
+  invoiceStatus: InvoiceStatus;
+  deliveryStatus: DeliveryStatus;
 }
 
-export interface ConfirmOrderContext {
-  tenantId: string;
+/** Minimal line shape consumed by the engine. */
+export interface OrderLineData {
+  id: string;
   orderId: string;
-  userId?: string;
+  productId: string;
+  taxId: string | null;
+  quantity: string;
+  priceUnit: string;
+  discount: string;
+  priceSubtotal: string;
+  priceTax: string;
+  priceTotal: string;
+  qtyDelivered: string;
+  qtyToInvoice: string;
+  qtyInvoiced: string;
+  invoiceStatus: InvoiceStatus;
+  displayType: DisplayLineType;
 }
 
-export interface ConfirmResult {
-  success: boolean;
-  sequenceNumber?: string;
-  creditCheckResult: CreditCheckResult;
-  errors: string[];
+// ── State-transition contexts ──────────────────────────────────────────────
+
+export interface SendQuotationInput {
+  order: OrderData;
+  lines: OrderLineData[];
 }
 
-export interface CancelOrderContext {
-  tenantId: string;
-  orderId: string;
-  userId?: string;
+export interface ConfirmOrderInput {
+  order: OrderData;
+  lines: OrderLineData[];
+  partnerContext: PartnerContext;
+  sequenceNumber: string;
+}
+
+export interface CancelOrderInput {
+  order: OrderData;
+  lines: OrderLineData[];
   reason?: string;
 }
 
-export interface MarkDoneContext {
-  tenantId: string;
+export interface MarkDoneInput {
+  order: OrderData;
+}
+
+// ── Financial-computation contexts ─────────────────────────────────────────
+
+export interface ComputeLineAmountsInput {
+  quantity: string | number;
+  priceUnit: string | number;
+  discount: string | number;
+}
+
+export interface ComputeOrderAmountsInput {
+  lines: OrderLineData[];
+}
+
+// ── Change-handler contexts ────────────────────────────────────────────────
+
+export interface ChangeProductInput {
+  line: OrderLineData;
+  product: PricedProduct;
+  pricelist: Pricelist | null;
+  taxEngineContext: TaxEngineContext;
+  fiscalPosition?: FiscalPosition;
+}
+
+export interface ChangePricelistInput {
+  lines: OrderLineData[];
+  products: Map<string, PricedProduct>;
+  pricelist: Pricelist;
+}
+
+export interface ChangeFiscalPositionInput {
+  lines: OrderLineData[];
+  taxEngineContext: TaxEngineContext;
+  fiscalPosition: FiscalPosition | null;
+}
+
+// ── Delivery / invoice contexts ────────────────────────────────────────────
+
+export interface CheckDeliveryInput {
+  lines: OrderLineData[];
+}
+
+export interface CheckInvoiceInput {
+  lines: OrderLineData[];
+}
+
+export interface InvoiceLine {
+  orderLineId: string;
+  productId: string;
+  quantity: Decimal;
+  priceUnit: Decimal;
+  discount: Decimal;
+  subtotal: Decimal;
+}
+
+export interface Invoice {
   orderId: string;
-  userId?: string;
+  partnerId: string;
+  lines: InvoiceLine[];
+  amountUntaxed: Decimal;
+  amountTax: Decimal;
+  amountTotal: Decimal;
+}
+
+export interface CreateInvoiceInput {
+  order: OrderData;
+  lines: OrderLineData[];
+  taxEngineContext: TaxEngineContext;
+  fiscalPosition?: FiscalPosition;
+  /** Optional subset of line IDs to invoice. If omitted, all uninvoiced lines. */
+  lineIds?: string[];
+}
+
+export interface ValidateOrderInput {
+  order: OrderData;
+  lines: OrderLineData[];
+  partnerContext: PartnerContext;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+// ── Result types ───────────────────────────────────────────────────────────
+
+export interface ConfirmResult {
+  success: boolean;
+  sequenceNumber: string | null;
+  creditCheckResult: CreditCheckResult;
+  errors: string[];
 }
 
 export interface OrderAmounts {
@@ -72,66 +198,22 @@ export interface OrderAmounts {
   amountTotal: Decimal;
 }
 
-export interface ComputeOrderAmountsContext {
-  tenantId: string;
-  orderId: string;
+// ============================================================================
+// Errors
+// ============================================================================
+
+export class SalesOrderEngineError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SalesOrderEngineError";
+  }
 }
 
-export interface ChangeProductContext {
-  tenantId: string;
-  orderLineId: string;
-  productId: string;
-}
-
-export interface ChangePricelistContext {
-  tenantId: string;
-  orderId: string;
-  pricelistId: string;
-}
-
-export interface ChangeFiscalPositionContext {
-  tenantId: string;
-  orderId: string;
-  fiscalPositionId: string | null;
-}
-
-export type DeliveryStatus = "no" | "partial" | "full";
-
-export interface CheckDeliveryStatusContext {
-  tenantId: string;
-  orderId: string;
-}
-
-export type InvoiceStatus = "no" | "to_invoice" | "invoiced";
-
-export interface CheckInvoiceStatusContext {
-  tenantId: string;
-  orderId: string;
-}
-
-export interface CreateInvoiceContext {
-  tenantId: string;
-  orderId: string;
-  userId?: string;
-  lineIds?: string[]; // If specified, only invoice these lines
-}
-
-export interface Invoice {
-  id: string;
-  orderId: string;
-  partnerId: string;
-  amountTotal: Decimal;
-  lineCount: number;
-}
-
-export interface ValidateOrderContext {
-  tenantId: string;
-  orderId: string;
-}
-
-export interface ValidationResult {
-  valid: boolean;
-  errors: string[];
+export class InvalidStateTransitionError extends SalesOrderEngineError {
+  constructor(from: OrderStatus, to: OrderStatus) {
+    super(`Invalid state transition: ${from} → ${to}`);
+    this.name = "InvalidStateTransitionError";
+  }
 }
 
 // ============================================================================
@@ -139,317 +221,152 @@ export interface ValidationResult {
 // ============================================================================
 
 /**
- * Send quotation to customer (draft → sent)
- * 
- * - Validates: order has lines, partner is set
- * - Updates: status = 'sent', quotation_date = now
- * 
- * @throws Error if order not found, not in draft status, or missing lines
+ * Send quotation to customer (draft → sent).
+ *
+ * Validates: order has at least one product line, partner is set.
+ * Returns the updated order status fields.
  */
-export async function sendQuotation(context: SendQuotationContext): Promise<void> {
-  const { tenantId, orderId, userId } = context;
-
-  // Fetch order
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
-  });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
+export function sendQuotation(
+  input: SendQuotationInput
+): { status: "sent"; quotationDate: Date } {
+  const { order, lines } = input;
 
   if (order.status !== "draft") {
-    throw new Error(`Cannot send quotation: order is in '${order.status}' status`);
+    throw new InvalidStateTransitionError(order.status, "sent");
   }
 
-  if (!order.partnerId) {
-    throw new Error("Cannot send quotation: partner not set");
-  }
-
-  if (!order.lines || order.lines.length === 0) {
-    throw new Error("Cannot send quotation: order has no lines");
-  }
-
-  // Update order
-  await db
-    .update(salesOrders)
-    .set({
-      status: "sent",
-      quotationDate: new Date(),
-      updatedAt: new Date(),
-      updatedBy: userId || null,
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
+  const productLines = lines.filter((l) => l.displayType === "product");
+  if (productLines.length === 0) {
+    throw new SalesOrderEngineError(
+      "Cannot send quotation: order must have at least one product line"
     );
+  }
+
+  return { status: "sent", quotationDate: new Date() };
 }
 
 /**
- * Confirm order (draft|sent → sale)
- * 
- * - Validates: credit limit, product availability
- * - Generates: sequence_number (SO-000042/2026)
- * - Locks: prices, currency rate, fiscal position
- * - Updates: status = 'sale', confirmation_date = now
- * - Triggers: inventory reservation (future), commission recording (Phase 10)
- * 
- * @returns ConfirmResult with success status, sequence number, credit check result, and errors
+ * Confirm order (draft | sent → sale).
+ *
+ * Validates credit limit, generates sequence number, locks prices.
  */
-export async function confirmOrder(context: ConfirmOrderContext): Promise<ConfirmResult> {
-  const { tenantId, orderId, userId } = context;
-
-  // Fetch order with full context
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
-  });
-
-  if (!order) {
-    return {
-      success: false,
-      creditCheckResult: {
-        approved: false,
-        creditLimit: new Decimal(0),
-        totalDue: new Decimal(0),
-        orderTotal: new Decimal(0),
-        availableCredit: new Decimal(0),
-        message: "Order not found",
-      },
-      errors: ["Order not found"],
-    };
-  }
+export function confirmOrder(input: ConfirmOrderInput): ConfirmResult {
+  const { order, lines, partnerContext, sequenceNumber } = input;
 
   if (order.status !== "draft" && order.status !== "sent") {
     return {
       success: false,
+      sequenceNumber: null,
       creditCheckResult: {
         approved: false,
-        creditLimit: new Decimal(0),
+        creditLimit: null,
         totalDue: new Decimal(0),
-        orderTotal: new Decimal(0),
-        availableCredit: new Decimal(0),
-        message: `Cannot confirm order in '${order.status}' status`,
+        orderTotal: new Decimal(order.amountTotal),
+        availableCredit: null,
+        message: `Cannot confirm order in status '${order.status}'`,
       },
-      errors: [`Cannot confirm order in '${order.status}' status`],
+      errors: [`Invalid state transition: ${order.status} → sale`],
     };
   }
 
-  if (!order.partnerId) {
+  const productLines = lines.filter((l) => l.displayType === "product");
+  if (productLines.length === 0) {
     return {
       success: false,
+      sequenceNumber: null,
       creditCheckResult: {
         approved: false,
-        creditLimit: new Decimal(0),
+        creditLimit: null,
         totalDue: new Decimal(0),
-        orderTotal: new Decimal(0),
-        availableCredit: new Decimal(0),
-        message: "Partner not set",
+        orderTotal: new Decimal(order.amountTotal),
+        availableCredit: null,
+        message: "Order has no product lines",
       },
-      errors: ["Partner not set"],
+      errors: ["Cannot confirm order: order must have at least one product line"],
     };
   }
 
-  // Compute order amounts
-  const amounts = await computeOrderAmounts({ tenantId, orderId });
+  // Credit limit check
+  const creditCheck = checkCreditLimit(partnerContext, order.amountTotal);
 
-  // Check credit limit
-  const creditCheck = await checkCreditLimit(
-    { tenantId, partnerId: order.partnerId },
-    amounts.amountTotal
-  );
-
+  const errors: string[] = [];
   if (!creditCheck.approved) {
-    return {
-      success: false,
-      creditCheckResult: creditCheck,
-      errors: [creditCheck.message],
-    };
+    errors.push(creditCheck.message);
   }
-
-  // Generate sequence number (SO-000042/2026)
-  const year = new Date().getFullYear();
-  const lastOrder = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    orderBy: [desc(salesOrders.createdAt)],
-  });
-
-  let nextNumber = 1;
-  if (lastOrder?.sequenceNumber) {
-    const match = lastOrder.sequenceNumber.match(/SO-(\d+)\/\d{4}/);
-    if (match) {
-      nextNumber = parseInt(match[1], 10) + 1;
-    }
-  }
-
-  const sequenceNumber = `SO-${String(nextNumber).padStart(6, "0")}/${year}`;
-
-  // Lock currency rate (defaulting to 1.0 for now - Phase 8 will add real currency conversion)
-  const companyCurrencyRate = "1.000000";
-
-  // Update order
-  await db
-    .update(salesOrders)
-    .set({
-      status: "sale",
-      sequenceNumber,
-      confirmationDate: new Date(),
-      companyCurrencyRate,
-      updatedAt: new Date(),
-      updatedBy: userId || null,
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
-    );
 
   return {
-    success: true,
-    sequenceNumber,
+    success: creditCheck.approved,
+    sequenceNumber: creditCheck.approved ? sequenceNumber : null,
     creditCheckResult: creditCheck,
-    errors: [],
+    errors,
   };
 }
 
 /**
- * Cancel order (any → cancel)
- * 
- * - Validates: no delivered quantities, no invoiced quantities
- * - Reverses: inventory reservations, commissions
- * - Updates: status = 'cancel', deleted_at = now (soft delete)
- * 
- * @throws Error if order has deliveries or invoices
+ * Cancel order (any non-done → cancel).
+ *
+ * Validates: no delivered quantities, no invoiced quantities.
  */
-export async function cancelOrder(context: CancelOrderContext): Promise<void> {
-  const { tenantId, orderId, userId } = context;
+export function cancelOrder(
+  input: CancelOrderInput
+): { status: "cancel"; cancelReason: string | null } {
+  const { order, lines, reason } = input;
 
-  // Fetch order with lines
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
-  });
-
-  if (!order) {
-    throw new Error("Order not found");
+  if (order.status === "done") {
+    throw new InvalidStateTransitionError("done", "cancel");
+  }
+  if (order.status === "cancel") {
+    throw new SalesOrderEngineError("Order is already cancelled");
   }
 
-  // Validate no delivered quantities
-  const hasDeliveries = order.lines?.some((line) => {
-    const qtyDelivered = new Decimal(line.qtyDelivered || 0);
-    return qtyDelivered.greaterThan(0);
+  // Check no deliveries
+  const hasDeliveries = lines.some((l) => {
+    return l.displayType === "product" && new Decimal(l.qtyDelivered).gt(0);
   });
-
   if (hasDeliveries) {
-    throw new Error("Cannot cancel order: some quantities have been delivered");
-  }
-
-  // Validate no invoiced quantities
-  const hasInvoices = order.lines?.some((line) => {
-    const qtyInvoiced = new Decimal(line.qtyInvoiced || 0);
-    return qtyInvoiced.greaterThan(0);
-  });
-
-  if (hasInvoices) {
-    throw new Error("Cannot cancel order: some quantities have been invoiced");
-  }
-
-  // Soft delete order
-  await db
-    .update(salesOrders)
-    .set({
-      status: "cancel",
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-      updatedBy: userId || null,
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
+    throw new SalesOrderEngineError(
+      "Cannot cancel order: some quantities have been delivered"
     );
+  }
+
+  // Check no invoices
+  const hasInvoices = lines.some((l) => {
+    return l.displayType === "product" && new Decimal(l.qtyInvoiced).gt(0);
+  });
+  if (hasInvoices) {
+    throw new SalesOrderEngineError(
+      "Cannot cancel order: some quantities have been invoiced"
+    );
+  }
+
+  return { status: "cancel", cancelReason: reason ?? null };
 }
 
 /**
- * Mark order as done (sale → done)
- * 
- * - Validates: delivery_status = 'full', invoice_status = 'invoiced'
- * - Updates: status = 'done'
- * 
- * @throws Error if not fully delivered and invoiced
+ * Mark order as done (sale → done).
+ *
+ * Validates: delivery_status = 'full', invoice_status = 'invoiced'.
  */
-export async function markDone(context: MarkDoneContext): Promise<void> {
-  const { tenantId, orderId, userId } = context;
-
-  // Fetch order
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-  });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
+export function markDone(
+  input: MarkDoneInput
+): { status: "done" } {
+  const { order } = input;
 
   if (order.status !== "sale") {
-    throw new Error(`Cannot mark as done: order is in '${order.status}' status`);
+    throw new InvalidStateTransitionError(order.status, "done");
   }
-
-  // Check delivery status
-  const deliveryStatus = await checkDeliveryStatus({ tenantId, orderId });
-  if (deliveryStatus !== "full") {
-    throw new Error("Cannot mark as done: order not fully delivered");
-  }
-
-  // Check invoice status
-  const invoiceStatus = await checkInvoiceStatus({ tenantId, orderId });
-  if (invoiceStatus !== "invoiced") {
-    throw new Error("Cannot mark as done: order not fully invoiced");
-  }
-
-  // Update order
-  await db
-    .update(salesOrders)
-    .set({
-      status: "done",
-      updatedAt: new Date(),
-      updatedBy: userId || null,
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
+  if (order.deliveryStatus !== "full") {
+    throw new SalesOrderEngineError(
+      "Cannot mark as done: delivery is not complete"
     );
+  }
+  if (order.invoiceStatus !== "invoiced") {
+    throw new SalesOrderEngineError(
+      "Cannot mark as done: invoicing is not complete"
+    );
+  }
+
+  return { status: "done" };
 }
 
 // ============================================================================
@@ -457,404 +374,150 @@ export async function markDone(context: MarkDoneContext): Promise<void> {
 // ============================================================================
 
 /**
- * Compute order amounts from lines
- * 
- * Returns: { amount_untaxed, amount_tax, amount_total }
- * 
- * Algorithm:
- * 1. For each non-section/note line:
- *    - line.price_subtotal = qty × price_unit × (1 - discount/100)
- *    - line.price_tax = computeLineTaxes(subtotal, tax_ids, fiscal_position)
- *    - line.price_total = subtotal + tax
- * 2. order.amount_untaxed = sum(lines.price_subtotal)
- * 3. order.amount_tax = sum(lines.price_tax)
- * 4. order.amount_total = amount_untaxed + amount_tax
- * 
- * Financial Invariants:
- * - INV-1: line.price_subtotal = line.quantity × line.price_unit × (1 - line.discount / 100)
- * - INV-2: line.price_total = line.price_subtotal + line.price_tax
- * - INV-3: order.amount_total = order.amount_untaxed + order.amount_tax
+ * Compute a single line's subtotal: qty × price_unit × (1 - discount / 100).
+ *
+ * Uses Decimal.js for banker-grade precision.
  */
-export async function computeOrderAmounts(context: ComputeOrderAmountsContext): Promise<OrderAmounts> {
-  const { tenantId, orderId } = context;
+export function computeLineSubtotal(input: ComputeLineAmountsInput): Decimal {
+  const qty = new Decimal(input.quantity);
+  const price = new Decimal(input.priceUnit);
+  const discount = new Decimal(input.discount);
 
-  // Fetch order with lines and taxes
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: {
-        with: {
-          taxes: {
-            with: {
-              tax: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!order) {
-    throw new Error("Order not found");
+  if (discount.lt(0)) {
+    throw new SalesOrderEngineError("Discount cannot be negative");
+  }
+  if (discount.gt(100)) {
+    throw new SalesOrderEngineError("Discount cannot exceed 100%");
   }
 
+  return qty.mul(price).mul(new Decimal(1).minus(discount.div(100)));
+}
+
+/**
+ * Compute order-level totals from lines.
+ *
+ * Only product lines contribute to totals (section/note lines excluded).
+ */
+export function computeOrderAmounts(input: ComputeOrderAmountsInput): OrderAmounts {
   let amountUntaxed = new Decimal(0);
   let amountTax = new Decimal(0);
 
-  // Process each line
-  for (const line of order.lines || []) {
-    // Skip section and note lines (display_type !== 'product')
-    if (line.displayType !== "product") {
-      continue;
-    }
+  for (const line of input.lines) {
+    if (line.displayType !== "product") continue;
 
-    // INV-1: Compute line subtotal
-    const quantity = new Decimal(line.quantity);
-    const priceUnit = new Decimal(line.priceUnit);
-    const discount = new Decimal(line.discount || 0);
-    
-    const priceSubtotal = quantity
-      .times(priceUnit)
-      .times(new Decimal(1).minus(discount.dividedBy(100)));
-
-    // INV-2: Compute line tax
-    const taxIds = line.taxes?.map((t) => t.taxId) || [];
-    const taxComputation = await computeLineTaxes({
-      tenantId,
-      baseAmount: priceSubtotal,
-      taxIds,
-      fiscalPositionId: order.fiscalPositionId || undefined,
-    });
-
-    const priceTax = taxComputation.totalTax;
-    const priceTotal = priceSubtotal.plus(priceTax);
-
-    // Update line amounts
-    await db
-      .update(salesOrderLines)
-      .set({
-        priceSubtotal: priceSubtotal.toFixed(2),
-        priceTax: priceTax.toFixed(2),
-        priceTotal: priceTotal.toFixed(2),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(salesOrderLines.id, line.id),
-          eq(salesOrderLines.tenantId, tenantId)
-        )
-      );
-
-    // Accumulate order totals
-    amountUntaxed = amountUntaxed.plus(priceSubtotal);
-    amountTax = amountTax.plus(priceTax);
+    amountUntaxed = amountUntaxed.plus(new Decimal(line.priceSubtotal));
+    amountTax = amountTax.plus(new Decimal(line.priceTax));
   }
-
-  // INV-3: Compute order total
-  const amountTotal = amountUntaxed.plus(amountTax);
-
-  // Update order amounts
-  await db
-    .update(salesOrders)
-    .set({
-      amountUntaxed: amountUntaxed.toFixed(2),
-      amountTax: amountTax.toFixed(2),
-      amountTotal: amountTotal.toFixed(2),
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
-    );
 
   return {
     amountUntaxed,
     amountTax,
-    amountTotal,
+    amountTotal: amountUntaxed.plus(amountTax),
   };
 }
 
-/**
- * Recompute line amounts when product changes
- * 
- * - Fetches: product price from pricelist, taxes, UoM, name, customer_lead
- * - Updates: price_unit, tax_ids, uom_id, name
- * - Triggers: computeOrderAmounts()
- * 
- * @throws Error if line or product not found
- */
-export async function onChangeProduct(context: ChangeProductContext): Promise<void> {
-  const { tenantId, orderLineId, productId } = context;
-
-  // Fetch order line with order context
-  const line = await db.query.salesOrderLines.findFirst({
-    where: and(
-      eq(salesOrderLines.id, orderLineId),
-      eq(salesOrderLines.tenantId, tenantId),
-      isNull(salesOrderLines.deletedAt)
-    ),
-  });
-
-  if (!line) {
-    throw new Error("Order line not found");
-  }
-
-  // Fetch order to get pricelist and fiscal position
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, line.orderId),
-      eq(salesOrders.tenantId, tenantId)
-    ),
-  });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
-
-  // Fetch product with template
-  const product = await db.query.productVariants.findFirst({
-    where: and(
-      eq(db.schema.productVariants.id, productId),
-      eq(db.schema.productVariants.tenantId, tenantId)
-    ),
-    with: {
-      template: true,
-    },
-  });
-
-  if (!product || !product.template) {
-    throw new Error("Product not found");
-  }
-
-  // Resolve price from pricelist
-  const quantity = new Decimal(line.quantity);
-  const priceResolution = order.pricelistId
-    ? await resolvePrice({
-        tenantId,
-        productId,
-        pricelistId: order.pricelistId,
-        quantity,
-        date: new Date(),
-      })
-    : { price: new Decimal(product.template.listPrice) };
-
-  // Get default taxes (from product template)
-  const defaultTaxIds = product.template.taxIds || [];
-
-  // Update line
-  await db
-    .update(salesOrderLines)
-    .set({
-      productId,
-      productTemplateId: product.templateId,
-      name: product.template.name,
-      priceUnit: priceResolution.price.toFixed(2),
-      productUomId: product.template.uomId,
-      customerLead: product.template.leadTime || 0,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(salesOrderLines.id, orderLineId),
-        eq(salesOrderLines.tenantId, tenantId)
-      )
-    );
-
-  // Clear existing taxes
-  await db
-    .delete(saleOrderLineTaxes)
-    .where(
-      and(
-        eq(saleOrderLineTaxes.orderLineId, orderLineId),
-        eq(saleOrderLineTaxes.tenantId, tenantId)
-      )
-    );
-
-  // Insert new taxes
-  if (defaultTaxIds.length > 0) {
-    await db.insert(saleOrderLineTaxes).values(
-      defaultTaxIds.map((taxId) => ({
-        id: crypto.randomUUID(),
-        tenantId,
-        orderLineId,
-        taxId,
-        createdAt: new Date(),
-      }))
-    );
-  }
-
-  // Recompute order amounts
-  await computeOrderAmounts({ tenantId, orderId: line.orderId });
-}
+// ============================================================================
+// CHANGE HANDLERS (onChangeProduct, onChangePricelist, onChangeFiscalPosition)
+// ============================================================================
 
 /**
- * Recompute all line prices when pricelist changes
- * 
- * - For each line: resolvePrice(product, pricelist, qty) → new price_unit
- * - Triggers: computeOrderAmounts()
+ * When a product changes on a line: fetch price from pricelist, resolve
+ * taxes via fiscal position, return the updated line fields.
  */
-export async function onChangePricelist(context: ChangePricelistContext): Promise<void> {
-  const { tenantId, orderId, pricelistId } = context;
+export function onChangeProduct(input: ChangeProductInput): {
+  priceUnit: Decimal;
+  taxIds: string[];
+  taxComputation: TaxComputation;
+} {
+  const { line, product, pricelist, taxEngineContext, fiscalPosition } = input;
 
-  // Fetch order with lines
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
-  });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
-
-  // Update order pricelist
-  await db
-    .update(salesOrders)
-    .set({
-      pricelistId,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
-    );
-
-  // Recompute each line price
-  for (const line of order.lines || []) {
-    if (line.displayType !== "product" || !line.productId) {
-      continue;
-    }
-
-    const quantity = new Decimal(line.quantity);
-    const priceResolution = await resolvePrice({
-      tenantId,
-      productId: line.productId,
-      pricelistId,
-      quantity,
-      date: new Date(),
+  // Resolve price from pricelist (or fall back to list price)
+  let priceUnit: Decimal;
+  if (pricelist) {
+    const priceResult = resolvePrice({
+      pricelist,
+      product,
+      quantity: line.quantity,
     });
-
-    await db
-      .update(salesOrderLines)
-      .set({
-        priceUnit: priceResolution.price.toFixed(2),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(salesOrderLines.id, line.id),
-          eq(salesOrderLines.tenantId, tenantId)
-        )
-      );
+    priceUnit = priceResult.price;
+  } else {
+    priceUnit = new Decimal(product.listPrice);
   }
 
-  // Recompute order amounts
-  await computeOrderAmounts({ tenantId, orderId });
+  // Resolve tax IDs
+  const rawTaxIds = line.taxId ? [line.taxId] : [];
+  const mappedTaxIds = fiscalPosition
+    ? rawTaxIds
+        .map((id) => mapTax(taxEngineContext, id, fiscalPosition))
+        .filter((id): id is string => id !== null)
+    : rawTaxIds;
+
+  // Compute taxes
+  const taxComputation = computeLineTaxes(
+    taxEngineContext,
+    priceUnit.toString(),
+    line.quantity,
+    line.discount,
+    mappedTaxIds,
+    fiscalPosition
+  );
+
+  return { priceUnit, taxIds: mappedTaxIds, taxComputation };
 }
 
 /**
- * Remap taxes when fiscal position changes
- * 
- * - For each line: mapTax(original_tax_ids, fiscal_position) → new tax_ids
- * - Triggers: computeOrderAmounts()
+ * When pricelist changes on an order: recalculate each product line's price.
+ *
+ * Returns updated price_unit per line.
  */
-export async function onChangeFiscalPosition(context: ChangeFiscalPositionContext): Promise<void> {
-  const { tenantId, orderId, fiscalPositionId } = context;
+export function onChangePricelist(
+  input: ChangePricelistInput
+): Map<string, Decimal> {
+  const { lines, products, pricelist } = input;
+  const updatedPrices = new Map<string, Decimal>();
 
-  // Fetch order with lines and taxes
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: {
-        with: {
-          taxes: true,
-        },
-      },
-    },
-  });
+  for (const line of lines) {
+    if (line.displayType !== "product") continue;
 
-  if (!order) {
-    throw new Error("Order not found");
+    const product = products.get(line.productId);
+    if (!product) continue;
+
+    const priceResult = resolvePrice({
+      pricelist,
+      product,
+      quantity: line.quantity,
+    });
+    updatedPrices.set(line.id, priceResult.price);
   }
 
-  // Update order fiscal position
-  await db
-    .update(salesOrders)
-    .set({
-      fiscalPositionId,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
-    );
+  return updatedPrices;
+}
 
-  // Remap taxes for each line
-  for (const line of order.lines || []) {
-    if (line.displayType !== "product") {
-      continue;
-    }
+/**
+ * When fiscal position changes: remap tax IDs on every line.
+ *
+ * Returns a map of lineId → new tax ID (or null for exempt).
+ */
+export function onChangeFiscalPosition(
+  input: ChangeFiscalPositionInput
+): Map<string, string | null> {
+  const { lines, taxEngineContext, fiscalPosition } = input;
+  const updatedTaxes = new Map<string, string | null>();
 
-    const originalTaxIds = line.taxes?.map((t) => t.taxId) || [];
-    
-    if (originalTaxIds.length === 0) {
-      continue;
-    }
+  for (const line of lines) {
+    if (line.displayType !== "product") continue;
+    if (!line.taxId) continue;
 
-    // Map taxes through fiscal position
-    const { mappedTaxIds } = fiscalPositionId
-      ? await mapTax({
-          tenantId,
-          originalTaxIds,
-          fiscalPositionId,
-        })
-      : { mappedTaxIds: originalTaxIds };
-
-    // Clear existing taxes
-    await db
-      .delete(saleOrderLineTaxes)
-      .where(
-        and(
-          eq(saleOrderLineTaxes.orderLineId, line.id),
-          eq(saleOrderLineTaxes.tenantId, tenantId)
-        )
-      );
-
-    // Insert mapped taxes
-    if (mappedTaxIds.length > 0) {
-      await db.insert(saleOrderLineTaxes).values(
-        mappedTaxIds.map((taxId) => ({
-          id: crypto.randomUUID(),
-          tenantId,
-          orderLineId: line.id,
-          taxId,
-          createdAt: new Date(),
-        }))
-      );
+    if (fiscalPosition) {
+      const mapped = mapTax(taxEngineContext, line.taxId, fiscalPosition);
+      updatedTaxes.set(line.id, mapped);
+    } else {
+      // No fiscal position → keep original tax
+      updatedTaxes.set(line.id, line.taxId);
     }
   }
 
-  // Recompute order amounts
-  await computeOrderAmounts({ tenantId, orderId });
+  return updatedTaxes;
 }
 
 // ============================================================================
@@ -862,261 +525,161 @@ export async function onChangeFiscalPosition(context: ChangeFiscalPositionContex
 // ============================================================================
 
 /**
- * Update delivery status from line-level quantities
- * 
- * - Compares: qty vs. qty_delivered
- * - Returns: 'no' (all 0), 'partial' (some delivered), 'full' (all delivered)
- * - Updates: order.delivery_status
- * 
- * INV-5: Delivery Status Derivation
- * - 'no': all lines.qty_delivered == 0
- * - 'partial': any line.qty_delivered < line.quantity
- * - 'full': all lines.qty_delivered >= line.quantity
+ * Derive delivery status from line-level quantities.
+ *
+ * - 'no':      all product lines have qty_delivered == 0
+ * - 'partial': some delivered, not all
+ * - 'full':    all product lines have qty_delivered >= quantity
  */
-export async function checkDeliveryStatus(context: CheckDeliveryStatusContext): Promise<DeliveryStatus> {
-  const { tenantId, orderId } = context;
+export function checkDeliveryStatus(input: CheckDeliveryInput): DeliveryStatus {
+  const productLines = input.lines.filter((l) => l.displayType === "product");
+  if (productLines.length === 0) return "no";
 
-  // Fetch order with lines
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
-  });
+  let allDelivered = true;
+  let noneDelivered = true;
 
-  if (!order) {
-    throw new Error("Order not found");
+  for (const line of productLines) {
+    const qty = new Decimal(line.quantity);
+    const delivered = new Decimal(line.qtyDelivered);
+
+    if (delivered.gt(0)) noneDelivered = false;
+    if (delivered.lt(qty)) allDelivered = false;
   }
 
-  let hasDelivered = false;
-  let fullyDelivered = true;
-
-  for (const line of order.lines || []) {
-    if (line.displayType !== "product") {
-      continue;
-    }
-
-    const quantity = new Decimal(line.quantity);
-    const qtyDelivered = new Decimal(line.qtyDelivered || 0);
-
-    if (qtyDelivered.greaterThan(0)) {
-      hasDelivered = true;
-    }
-
-    if (qtyDelivered.lessThan(quantity)) {
-      fullyDelivered = false;
-    }
-  }
-
-  const deliveryStatus: DeliveryStatus = !hasDelivered
-    ? "no"
-    : fullyDelivered
-    ? "full"
-    : "partial";
-
-  // Update order
-  await db
-    .update(salesOrders)
-    .set({
-      deliveryStatus,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
-    );
-
-  return deliveryStatus;
+  if (noneDelivered) return "no";
+  if (allDelivered) return "full";
+  return "partial";
 }
 
 /**
- * Update invoice status from line-level quantities
- * 
- * - Compares: qty vs. qty_invoiced
- * - Returns: 'no' (all 0), 'to_invoice' (some invoiced), 'invoiced' (all invoiced)
- * - Updates: order.invoice_status, line.invoice_status, line.qty_to_invoice
- * 
- * INV-4: Invoice Status Derivation
- * - 'no': all lines.qty_invoiced == 0
- * - 'to_invoice': any line.qty_invoiced < line.quantity
- * - 'invoiced': all lines.qty_invoiced == line.quantity
+ * Derive invoice status from line-level quantities.
+ *
+ * - 'no':         all product lines have qty_invoiced == 0
+ * - 'to_invoice': some invoiced, not all
+ * - 'invoiced':   all product lines have qty_invoiced >= quantity
  */
-export async function checkInvoiceStatus(context: CheckInvoiceStatusContext): Promise<InvoiceStatus> {
-  const { tenantId, orderId } = context;
+export function checkInvoiceStatus(input: CheckInvoiceInput): InvoiceStatus {
+  const productLines = input.lines.filter((l) => l.displayType === "product");
+  if (productLines.length === 0) return "no";
 
-  // Fetch order with lines
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
-  });
+  let allInvoiced = true;
+  let noneInvoiced = true;
 
-  if (!order) {
-    throw new Error("Order not found");
+  for (const line of productLines) {
+    const qty = new Decimal(line.quantity);
+    const invoiced = new Decimal(line.qtyInvoiced);
+
+    if (invoiced.gt(0)) noneInvoiced = false;
+    if (invoiced.lt(qty)) allInvoiced = false;
   }
 
-  let hasInvoiced = false;
-  let fullyInvoiced = true;
-
-  for (const line of order.lines || []) {
-    if (line.displayType !== "product") {
-      continue;
-    }
-
-    const quantity = new Decimal(line.quantity);
-    const qtyInvoiced = new Decimal(line.qtyInvoiced || 0);
-    const qtyToInvoice = quantity.minus(qtyInvoiced);
-
-    if (qtyInvoiced.greaterThan(0)) {
-      hasInvoiced = true;
-    }
-
-    if (qtyInvoiced.lessThan(quantity)) {
-      fullyInvoiced = false;
-    }
-
-    // Update line invoice status and qty_to_invoice
-    const lineInvoiceStatus: InvoiceStatus = qtyInvoiced.equals(0)
-      ? "no"
-      : qtyInvoiced.greaterThanOrEqualTo(quantity)
-      ? "invoiced"
-      : "to_invoice";
-
-    await db
-      .update(salesOrderLines)
-      .set({
-        qtyToInvoice: qtyToInvoice.toFixed(3),
-        invoiceStatus: lineInvoiceStatus,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(salesOrderLines.id, line.id),
-          eq(salesOrderLines.tenantId, tenantId)
-        )
-      );
-  }
-
-  const invoiceStatus: InvoiceStatus = !hasInvoiced
-    ? "no"
-    : fullyInvoiced
-    ? "invoiced"
-    : "to_invoice";
-
-  // Update order
-  await db
-    .update(salesOrders)
-    .set({
-      invoiceStatus,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(salesOrders.id, orderId),
-        eq(salesOrders.tenantId, tenantId)
-      )
-    );
-
-  return invoiceStatus;
+  if (noneInvoiced) return "no";
+  if (allInvoiced) return "invoiced";
+  return "to_invoice";
 }
 
 /**
- * Generate invoice from uninvoiced order lines
- * 
- * - Filters: lines where qty_to_invoice > 0
- * - Creates: sales invoice with invoice lines
- * - Updates: line.qty_invoiced += invoice_line.quantity
- * - Triggers: checkInvoiceStatus()
- * 
- * Note: Actual invoice table creation is deferred to Phase 7 (Invoicing module).
- * This placeholder returns a stub Invoice object for testing.
+ * Compute qty_to_invoice for each product line.
+ *
+ * qty_to_invoice = quantity - qty_invoiced (floored at 0).
  */
-export async function createInvoice(context: CreateInvoiceContext): Promise<Invoice> {
-  const { tenantId, orderId, userId, lineIds } = context;
+export function computeQtyToInvoice(
+  lines: OrderLineData[]
+): Map<string, Decimal> {
+  const result = new Map<string, Decimal>();
+  for (const line of lines) {
+    if (line.displayType !== "product") continue;
+    const toInvoice = Decimal.max(
+      new Decimal(line.quantity).minus(new Decimal(line.qtyInvoiced)),
+      0
+    );
+    result.set(line.id, toInvoice);
+  }
+  return result;
+}
 
-  // Fetch order with lines
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: true,
-    },
+/**
+ * Generate an invoice from uninvoiced order lines.
+ *
+ * Filters lines where qty_to_invoice > 0 (or a subset via lineIds),
+ * computes tax per line, and returns the invoice data.
+ */
+export function createInvoice(input: CreateInvoiceInput): Invoice {
+  const { order, lines, taxEngineContext, fiscalPosition, lineIds } = input;
+
+  // Filter to invoiceable lines
+  let invoiceableLines = lines.filter((l) => {
+    if (l.displayType !== "product") return false;
+    const toInvoice = new Decimal(l.quantity).minus(new Decimal(l.qtyInvoiced));
+    return toInvoice.gt(0);
   });
 
-  if (!order) {
-    throw new Error("Order not found");
+  if (lineIds && lineIds.length > 0) {
+    const idSet = new Set(lineIds);
+    invoiceableLines = invoiceableLines.filter((l) => idSet.has(l.id));
   }
 
-  // Filter lines to invoice
-  const linesToInvoice = order.lines?.filter((line) => {
-    if (line.displayType !== "product") {
-      return false;
-    }
-
-    if (lineIds && !lineIds.includes(line.id)) {
-      return false;
-    }
-
-    const qtyToInvoice = new Decimal(line.qtyToInvoice || 0);
-    return qtyToInvoice.greaterThan(0);
-  });
-
-  if (!linesToInvoice || linesToInvoice.length === 0) {
-    throw new Error("No lines to invoice");
+  if (invoiceableLines.length === 0) {
+    throw new SalesOrderEngineError("No lines available to invoice");
   }
 
-  // Compute invoice total
-  let invoiceTotal = new Decimal(0);
-  for (const line of linesToInvoice) {
-    const priceTotal = new Decimal(line.priceTotal || 0);
-    invoiceTotal = invoiceTotal.plus(priceTotal);
+  let amountUntaxed = new Decimal(0);
+  let amountTax = new Decimal(0);
+  const invoiceLines: InvoiceLine[] = [];
+
+  for (const line of invoiceableLines) {
+    const qtyToInvoice = new Decimal(line.quantity).minus(
+      new Decimal(line.qtyInvoiced)
+    );
+    const priceUnit = new Decimal(line.priceUnit);
+    const discount = new Decimal(line.discount);
+
+    const subtotal = qtyToInvoice
+      .mul(priceUnit)
+      .mul(new Decimal(1).minus(discount.div(100)));
+
+    // Compute tax for this invoice line
+    const taxIds = line.taxId ? [line.taxId] : [];
+    const mappedTaxIds = fiscalPosition
+      ? taxIds
+          .map((id) => mapTax(taxEngineContext, id, fiscalPosition))
+          .filter((id): id is string => id !== null)
+      : taxIds;
+
+    const taxResult = computeLineTaxes(
+      taxEngineContext,
+      priceUnit.toString(),
+      qtyToInvoice.toString(),
+      discount.toString(),
+      mappedTaxIds,
+      fiscalPosition
+    );
+
+    const lineTax = taxResult.taxLines.reduce(
+      (sum, tl) => sum.plus(tl.amount),
+      new Decimal(0)
+    );
+
+    amountUntaxed = amountUntaxed.plus(subtotal);
+    amountTax = amountTax.plus(lineTax);
+
+    invoiceLines.push({
+      orderLineId: line.id,
+      productId: line.productId,
+      quantity: qtyToInvoice,
+      priceUnit,
+      discount,
+      subtotal,
+    });
   }
 
-  // Update line qty_invoiced
-  for (const line of linesToInvoice) {
-    const qtyInvoiced = new Decimal(line.qtyInvoiced || 0);
-    const qtyToInvoice = new Decimal(line.qtyToInvoice || 0);
-    const newQtyInvoiced = qtyInvoiced.plus(qtyToInvoice);
-
-    await db
-      .update(salesOrderLines)
-      .set({
-        qtyInvoiced: newQtyInvoiced.toFixed(3),
-        updatedAt: new Date(),
-        updatedBy: userId || null,
-      })
-      .where(
-        and(
-          eq(salesOrderLines.id, line.id),
-          eq(salesOrderLines.tenantId, tenantId)
-        )
-      );
-  }
-
-  // Update invoice status
-  await checkInvoiceStatus({ tenantId, orderId });
-
-  // Return stub invoice (Phase 7 will create actual invoice table)
   return {
-    id: crypto.randomUUID(),
-    orderId,
-    partnerId: order.partnerId!,
-    amountTotal: invoiceTotal,
-    lineCount: linesToInvoice.length,
+    orderId: order.id,
+    partnerId: order.partnerId,
+    lines: invoiceLines,
+    amountUntaxed,
+    amountTax,
+    amountTotal: amountUntaxed.plus(amountTax),
   };
 }
 
@@ -1125,113 +688,25 @@ export async function createInvoice(context: CreateInvoiceContext): Promise<Invo
 // ============================================================================
 
 /**
- * Validate order can be confirmed
- * 
- * - Checks: partner credit limit vs. order total
- * - Checks: products are active and sellable
- * - Checks: fiscal position matches partner country (if auto_apply)
- * - Returns: { valid: boolean, errors: string[] }
+ * Validate that an order can be confirmed.
+ *
+ * Checks: partner credit limit, at least one product line.
  */
-export async function validateOrder(context: ValidateOrderContext): Promise<ValidationResult> {
-  const { tenantId, orderId } = context;
-
+export function validateOrder(input: ValidateOrderInput): ValidationResult {
+  const { order, lines, partnerContext } = input;
   const errors: string[] = [];
 
-  // Fetch order with full context
-  const order = await db.query.salesOrders.findFirst({
-    where: and(
-      eq(salesOrders.id, orderId),
-      eq(salesOrders.tenantId, tenantId),
-      isNull(salesOrders.deletedAt)
-    ),
-    with: {
-      lines: {
-        with: {
-          product: {
-            with: {
-              template: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!order) {
-    errors.push("Order not found");
-    return { valid: false, errors };
+  // Must have product lines
+  const productLines = lines.filter((l) => l.displayType === "product");
+  if (productLines.length === 0) {
+    errors.push("Order has no product lines");
   }
 
-  // Validate partner
-  if (!order.partnerId) {
-    errors.push("Partner not set");
+  // Credit check
+  const creditCheck = checkCreditLimit(partnerContext, order.amountTotal);
+  if (!creditCheck.approved) {
+    errors.push(creditCheck.message);
   }
 
-  // Validate lines exist
-  if (!order.lines || order.lines.length === 0) {
-    errors.push("Order has no lines");
-  }
-
-  // Validate products are active
-  for (const line of order.lines || []) {
-    if (line.displayType !== "product") {
-      continue;
-    }
-
-    if (!line.product) {
-      errors.push(`Product not found for line ${line.id}`);
-      continue;
-    }
-
-    if (!line.product.template?.isActive) {
-      errors.push(`Product '${line.product.template?.name}' is not active`);
-    }
-
-    if (line.product.template?.canBeSold === false) {
-      errors.push(`Product '${line.product.template?.name}' cannot be sold`);
-    }
-  }
-
-  // Validate credit limit
-  if (order.partnerId) {
-    const amounts = await computeOrderAmounts({ tenantId, orderId });
-    const creditCheck = await checkCreditLimit(
-      { tenantId, partnerId: order.partnerId },
-      amounts.amountTotal
-    );
-
-    if (!creditCheck.approved) {
-      errors.push(creditCheck.message);
-    }
-  }
-
-  // Validate fiscal position
-  if (order.fiscalPositionId && order.partnerId) {
-    const partner = await db.query.partners.findFirst({
-      where: and(
-        eq(partners.id, order.partnerId),
-        eq(partners.tenantId, tenantId)
-      ),
-    });
-
-    const fiscalPosition = await db.query.fiscalPositions.findFirst({
-      where: and(
-        eq(db.schema.fiscalPositions.id, order.fiscalPositionId),
-        eq(db.schema.fiscalPositions.tenantId, tenantId)
-      ),
-    });
-
-    if (partner && fiscalPosition?.autoApply) {
-      if (fiscalPosition.countryId !== partner.countryId) {
-        errors.push(
-          `Fiscal position '${fiscalPosition.name}' does not match partner country`
-        );
-      }
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+  return { valid: errors.length === 0, errors };
 }

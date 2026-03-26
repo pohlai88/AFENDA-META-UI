@@ -169,6 +169,27 @@ export default {
       description: "Generate or regenerate a commission entry from a sales order",
       roles: ["admin", "sales_manager", "sales_ops"],
     },
+    {
+      path: "/api/sales/consignment/reports/validate",
+      method: "POST",
+      handler: "validateConsignmentStockReport",
+      description: "Validate consignment stock report balances and line totals",
+      roles: ["admin", "sales_manager", "sales_ops"],
+    },
+    {
+      path: "/api/sales/consignment/reports/invoice-draft",
+      method: "POST",
+      handler: "generateConsignmentInvoiceDraft",
+      description: "Generate invoice draft from a confirmed consignment stock report",
+      roles: ["admin", "sales_manager", "sales_ops"],
+    },
+    {
+      path: "/api/sales/consignment/agreements/expire",
+      method: "POST",
+      handler: "expireConsignmentAgreementIfNeeded",
+      description: "Evaluate and transition expired consignment agreements",
+      roles: ["admin", "sales_manager", "sales_ops"],
+    },
   ],
 
   actions: [
@@ -181,6 +202,36 @@ export default {
       icon: "BadgePercent",
       roles: ["admin", "sales_manager", "sales_ops"],
       description: "Generate or refresh commission entries from a sales order",
+    },
+    {
+      name: "validateConsignmentReport",
+      label: "Validate Stock Report",
+      type: "object",
+      models: ["consignment_stock_report"],
+      handler: "validateConsignmentStockReport",
+      icon: "ClipboardCheck",
+      roles: ["admin", "sales_manager", "sales_ops"],
+      description: "Validate stock report balances before invoicing",
+    },
+    {
+      name: "generateConsignmentInvoiceDraft",
+      label: "Generate Invoice Draft",
+      type: "object",
+      models: ["consignment_stock_report"],
+      handler: "generateConsignmentInvoiceDraft",
+      icon: "FileSpreadsheet",
+      roles: ["admin", "sales_manager", "sales_ops"],
+      description: "Generate invoice draft from sold quantities",
+    },
+    {
+      name: "expireConsignmentAgreement",
+      label: "Evaluate Expiry",
+      type: "object",
+      models: ["consignment_agreement"],
+      handler: "expireConsignmentAgreementIfNeeded",
+      icon: "CalendarClock",
+      roles: ["admin", "sales_manager", "sales_ops"],
+      description: "Evaluate agreement expiry and transition status when needed",
     },
   ],
 
@@ -287,6 +338,8 @@ export default {
 // Re-export logic functions for use by other modules
 export * from "./logic/partner-engine.js";
 export * from "./logic/commission-engine.js";
+export * from "./logic/consignment-engine.js";
+export * from "./consignment-service.js";
 export * from "./logic/payment-terms.js";
 export * from "./logic/pricing-engine.js";
 export * from "./logic/product-configurator.js";

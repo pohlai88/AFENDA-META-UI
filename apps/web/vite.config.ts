@@ -54,6 +54,7 @@ export default defineConfig(({ command, mode }) => {
     resolve: {
       alias: {
         "@afenda/meta-types": path.resolve(__dirname, "../../packages/meta-types/src/index.ts"),
+        "@afenda/ui": path.resolve(__dirname, "../../packages/ui/src/index.ts"),
         "~": path.resolve(__dirname, "./src"),
       },
       // Prevent duplicate copies of shared deps in monorepo

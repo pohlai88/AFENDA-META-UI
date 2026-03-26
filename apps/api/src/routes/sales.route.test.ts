@@ -2,12 +2,21 @@ import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { ensureTestEnv, generateCommissionForOrderMock } = vi.hoisted(() => {
+const {
+  ensureTestEnv,
+  generateCommissionForOrderMock,
+  validateConsignmentStockReportMock,
+  generateConsignmentInvoiceDraftMock,
+  expireConsignmentAgreementIfNeededMock,
+} = vi.hoisted(() => {
   process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/afenda_test";
 
   return {
     ensureTestEnv: true,
     generateCommissionForOrderMock: vi.fn(),
+    validateConsignmentStockReportMock: vi.fn(),
+    generateConsignmentInvoiceDraftMock: vi.fn(),
+    expireConsignmentAgreementIfNeededMock: vi.fn(),
   };
 });
 
@@ -15,6 +24,12 @@ void ensureTestEnv;
 
 vi.mock("../modules/sales/commission-service.js", () => ({
   generateCommissionForOrder: generateCommissionForOrderMock,
+}));
+
+vi.mock("../modules/sales/consignment-service.js", () => ({
+  validateConsignmentStockReport: validateConsignmentStockReportMock,
+  generateConsignmentInvoiceDraft: generateConsignmentInvoiceDraftMock,
+  expireConsignmentAgreementIfNeeded: expireConsignmentAgreementIfNeededMock,
 }));
 
 import salesRouter from "./sales.js";
@@ -106,5 +121,101 @@ describe("/api/sales/commissions/generate route", () => {
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
     expect(generateCommissionForOrderMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/sales/consignment/reports/validate route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns report validation payload", async () => {
+    validateConsignmentStockReportMock.mockResolvedValueOnce({
+      report: { id: "report-1" },
+      agreement: { id: "agreement-1" },
+      lines: [{ id: "line-1" }],
+      validation: { valid: true, errors: [], lineChecks: [] },
+    });
+
+    const response = await request(createApp({ uid: "21", roles: ["admin"] }))
+      .post("/api/sales/consignment/reports/validate")
+      .send({ reportId: "00000000-0000-4000-8000-000000000010" });
+
+    expect(response.status).toBe(200);
+    expect(validateConsignmentStockReportMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      reportId: "00000000-0000-4000-8000-000000000010",
+    });
+  });
+
+  it("returns 400 for invalid report id", async () => {
+    const response = await request(createApp({ uid: "21", roles: ["admin"] }))
+      .post("/api/sales/consignment/reports/validate")
+      .send({ reportId: "not-a-uuid" });
+
+    expect(response.status).toBe(400);
+    expect(validateConsignmentStockReportMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/sales/consignment/reports/invoice-draft route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns invoice draft payload", async () => {
+    generateConsignmentInvoiceDraftMock.mockResolvedValueOnce({
+      report: { id: "report-1" },
+      agreement: { id: "agreement-1" },
+      lines: [{ id: "line-1" }],
+      validation: { valid: true, errors: [], lineChecks: [] },
+      draft: { agreementId: "agreement-1", reportId: "report-1", lines: [] },
+    });
+
+    const response = await request(createApp({ uid: "21", roles: ["admin"] }))
+      .post("/api/sales/consignment/reports/invoice-draft")
+      .send({ reportId: "00000000-0000-4000-8000-000000000011" });
+
+    expect(response.status).toBe(200);
+    expect(generateConsignmentInvoiceDraftMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      reportId: "00000000-0000-4000-8000-000000000011",
+    });
+  });
+});
+
+describe("/api/sales/consignment/agreements/expire route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns expiry evaluation payload", async () => {
+    expireConsignmentAgreementIfNeededMock.mockResolvedValueOnce({
+      persistence: "updated",
+      agreement: { id: "agreement-1", status: "expired" },
+      expiry: { shouldTransition: true, nextStatus: "expired" },
+    });
+
+    const response = await request(createApp({ uid: "42", roles: ["admin"] }))
+      .post("/api/sales/consignment/agreements/expire")
+      .send({ agreementId: "00000000-0000-4000-8000-000000000012" });
+
+    expect(response.status).toBe(200);
+    expect(expireConsignmentAgreementIfNeededMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 7,
+        actorId: 42,
+        agreementId: "00000000-0000-4000-8000-000000000012",
+      })
+    );
+  });
+
+  it("returns 401 when authentication is missing", async () => {
+    const response = await request(createApp())
+      .post("/api/sales/consignment/agreements/expire")
+      .send({ agreementId: "00000000-0000-4000-8000-000000000012" });
+
+    expect(response.status).toBe(401);
+    expect(expireConsignmentAgreementIfNeededMock).not.toHaveBeenCalled();
   });
 });

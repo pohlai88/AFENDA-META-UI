@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 
 import { salesSchema } from "./_schema.js";
 
-export const orderStatuses = ["draft", "confirmed", "shipped", "done", "cancelled"] as const;
+export const orderStatuses = ["draft", "sent", "sale", "done", "cancel"] as const;
 export const partnerTypes = ["customer", "vendor", "both"] as const;
 export const addressTypes = ["invoice", "delivery", "contact", "other"] as const;
 export const taxTypeUses = ["sale", "purchase", "none"] as const;
@@ -63,6 +63,15 @@ export const productTrackings = ["none", "lot", "serial"] as const;
 export const invoicePolicies = ["ordered", "delivered"] as const;
 export const attributeDisplayTypes = ["radio", "select", "color", "pills"] as const;
 export const createVariantPolicies = ["always", "dynamic", "no_variant"] as const;
+export const invariantStatuses = ["pass", "fail"] as const;
+export const invariantSeverities = ["error", "warning", "info"] as const;
+export const domainEventTypes = [
+  "REPORT_VALIDATED",
+  "REPORT_CONFIRMED",
+  "INVOICE_GENERATED",
+  "AGREEMENT_EXPIRED",
+  "AGREEMENT_ACTIVATED",
+] as const;
 
 export const orderStatusEnum = salesSchema.enum("order_status", [...orderStatuses]);
 export const partnerTypeEnum = salesSchema.enum("partner_type", [...partnerTypes]);
@@ -122,6 +131,13 @@ export const attributeDisplayTypeEnum = salesSchema.enum("attribute_display_type
 export const createVariantPolicyEnum = salesSchema.enum("create_variant_policy", [
   ...createVariantPolicies,
 ]);
+export const invariantStatusEnum = salesSchema.enum("invariant_status", [
+  ...invariantStatuses,
+]);
+export const invariantSeverityEnum = salesSchema.enum("invariant_severity", [
+  ...invariantSeverities,
+]);
+export const domainEventTypeEnum = salesSchema.enum("domain_event_type", [...domainEventTypes]);
 
 export const OrderStatusSchema = z.enum(orderStatuses);
 export const PartnerTypeSchema = z.enum(partnerTypes);
@@ -155,6 +171,9 @@ export const ProductTrackingSchema = z.enum(productTrackings);
 export const InvoicePolicySchema = z.enum(invoicePolicies);
 export const AttributeDisplayTypeSchema = z.enum(attributeDisplayTypes);
 export const CreateVariantPolicySchema = z.enum(createVariantPolicies);
+export const InvariantStatusSchema = z.enum(invariantStatuses);
+export const InvariantSeveritySchema = z.enum(invariantSeverities);
+export const DomainEventTypeSchema = z.enum(domainEventTypes);
 
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 export type PartnerType = z.infer<typeof PartnerTypeSchema>;
@@ -188,3 +207,6 @@ export type ProductTracking = z.infer<typeof ProductTrackingSchema>;
 export type InvoicePolicy = z.infer<typeof InvoicePolicySchema>;
 export type AttributeDisplayType = z.infer<typeof AttributeDisplayTypeSchema>;
 export type CreateVariantPolicy = z.infer<typeof CreateVariantPolicySchema>;
+export type InvariantStatus = z.infer<typeof InvariantStatusSchema>;
+export type InvariantSeverity = z.infer<typeof InvariantSeveritySchema>;
+export type DomainEventType = z.infer<typeof DomainEventTypeSchema>;

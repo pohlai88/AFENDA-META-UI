@@ -19,6 +19,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      "@afenda/ui": path.resolve(__dirname, "../../packages/ui/src/index.ts"),
+      "@afenda/meta-types": path.resolve(__dirname, "../../packages/meta-types/src/index.ts"),
       "~": path.resolve(__dirname, "./src"),
     },
   },

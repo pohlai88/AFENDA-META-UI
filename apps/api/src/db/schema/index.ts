@@ -27,6 +27,8 @@ export {
   consignmentAgreements,
   consignmentStockReportLines,
   consignmentStockReports,
+  domainEventLogs,
+  domainInvariantLogs,
   orderStatusEnum,
   partnerTypeEnum,
   partners,

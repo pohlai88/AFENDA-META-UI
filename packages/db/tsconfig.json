@@ -7,8 +7,8 @@
     "composite": true,
     "incremental": true,
     "paths": {
-      "@afenda/meta-types": ["packages/meta-types/dist/index.d.ts"],
-      "@afenda/meta-types/*": ["packages/meta-types/dist/*"]
+      "@afenda/meta-types": ["../../packages/meta-types/dist/index.d.ts"],
+      "@afenda/meta-types/*": ["../../packages/meta-types/dist/*"]
     }
   },
   "include": ["src/**/*.ts"],

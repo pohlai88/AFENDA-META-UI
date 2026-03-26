@@ -42,109 +42,95 @@ const colors = {
   green: "\x1b[32m",
   yellow: "\x1b[33m",
   blue: "\x1b[34m",
-  cyan: "\x1b[36m",errors, warnings) {
-  log("\n🔍 Checking Turborepo boundaries...", "cyan");
-  
+  cyan: "\x1b[36m",
+};
+
+function log(message, color = "reset") {
+  console.log(`${colors[color]}${message}${colors.reset}`);
+}
+
+function checkTurboBoundaries(errors) {
+  log("\nChecking Turborepo boundaries...", "cyan");
+
   try {
     const output = execSync("pnpm exec turbo boundaries 2>&1", {
       cwd: repoRoot,
       encoding: "utf-8",
       stdio: "pipe",
     });
-    
-    if (VERBOSE) {
+
+    if (VERBOSE && output.trim()) {
       log(output, "dim");
     }
-    
-    log("✅ Turborepo boundaries: PASS", "green");
+
+    log("PASS: Turborepo boundaries", "green");
     return true;
   } catch (error) {
     const output = (error.stdout || error.stderr || error.message || "").toString();
-    
-    // Parse the error output into structured diagnostics
+
     const issues = parseTurboBoundaryErrors(output);
-    
     if (issues.length > 0) {
       errors.push(...issues);
     } else {
-      // Fallback for unparseable errors
       errors.push(
         createIssue({
           level: "error",
           category: "TURBOREPO_BOUNDARY_VIOLATION",
-      `${colors.bright}${colors.blue}Boundaries CI Gate${colors.reset}`);
+          message: "Turborepo boundary check failed",
+          explanation:
+            "The boundaries check reported an error that could not be parsed into a structured violation.",
+          relatedFiles: ["turbo.json", "eslint.config.boundaries.js"],
+          fixes: [
+            "Re-run with --verbose for detailed output",
+            "Review package dependency tags and boundaries rules",
+          ],
+          details: output.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, 20),
+        })
+      );
+    }
+
+    if (VERBOSE && output.trim()) {
+      log(output, "dim");
+    }
+
+    log("FAIL: Turborepo boundaries", "red");
+    return false;
+  }
+}
+
+function main() {
+  log(`\n${colors.bright}${colors.blue}Boundaries CI Gate${colors.reset}`);
   log(`${colors.dim}Checking architectural boundaries...${colors.reset}`);
-  
+
   const errors = [];
   const warnings = [];
-  
-  const turboPassed = checkTurboBoundaries(errors, warnings);
-  
-  // Display errors
+
+  checkTurboBoundaries(errors);
+
   if (errors.length > 0) {
     console.log(formatBoundariesIssues(errors));
   }
-  
-  // Display warnings
   if (warnings.length > 0) {
     console.log(formatBoundariesIssues(warnings));
   }
-  
-  // Display summary
+
   console.log(summarizeBoundariesIssues(errors, warnings));
-  
+
   const failed = errors.length > 0 || (STRICT && warnings.length > 0);
-  
-  log("\n" + `${colors.bright}${colors.blue}${"=".repeat(64)}${colors.reset}`);
+
+  log(`\n${colors.bright}${colors.blue}${"=".repeat(64)}${colors.reset}`);
   log(`${colors.bright}Summary${colors.reset}`);
   log(` - Errors: ${errors.length}`);
   log(` - Warnings: ${warnings.length}`);
   log(` - Strict mode: ${STRICT ? "enabled" : "disabled"}`);
-  
+
   if (failed) {
     log(`\n${colors.red}Boundaries gate failed.${colors.reset}`);
-    log(`\n${colors.cyan}Architectural Boundary Rules:${colors.reset}`);
-    log(`  foundation (meta-types) → no internal deps`, "dim");
-    log(`  data (db)              → foundation only`, "dim");
-    log(`  presentation (ui)       → foundation only`, "dim");
-    log(`  app-server (api)        → data + foundation`, "dim");
-    log(`  app-client (web)        → presentation + foundation`, "dim");
-    log(`  tooling (ci-gate)       → no internal deps`, "dim");
-    log(`\n${colors.cyan}Next steps:${colors.reset}`);
-    log(`  1. Apply the fix suggestions above`, "dim");
-    log(`  2. Re-run ${colors.bright}node tools/ci-gate/boundaries/index.mjs${colors.reset}`, "dim");
-    log(`  3. Re-run ${colors.bright}pnpm ci:gate${colors.reset}\n`, "dim");
     process.exit(1);
   }
-  
-  log(`\n${colors.green}✅ Boundaries gate passed${colors.reset}\n`);
-  process.exit(0);onst turboPassed = checkTurboBoundaries();
-  
-  log("\n" + "=".repeat(60), "bright");
-  
-  if (turboPassed) {
-    log("✅ All boundary checks passed", "green");
-    log("=".repeat(60) + "\n", "bright");
-    process.exit(0);
-  } else {
-    log("❌ Boundary violations detected", "red");
-    log("=".repeat(60) + "\n", "bright");
-    
-    log("\nArchitectural Boundary Rules:", "yellow");
-    log("  foundation (meta-types) → no internal deps", "dim");
-    log("  data (db)              → foundation only", "dim");
-    log("  presentation (ui)       → foundation only", "dim");
-    log("  app-server (api)        → data + foundation", "dim");
-    log("  app-client (web)        → presentation + foundation", "dim");
-    log("  tooling (ci-gate)       → no internal deps", "dim");
-    
-    log("\nTo fix violations:", "yellow");
-    log("  1. Review the import statements flagged above", "dim");
-    log("  2. Move code to appropriate packages or refactor imports", "dim");
-    log("  3. If unsure, consult docs/DEPENDENCY_GOVERNANCE_POLICY.md\n", "dim");
-    
-    process.exit(1);
-  }
+
+  log(`\n${colors.green}Boundaries gate passed${colors.reset}\n`);
+  process.exit(0);
 }
 
 main();

@@ -3,6 +3,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import {
   currencies,
   saleOrderLineTaxes,
+  saleOrderOptionLines,
   saleOrderStatusHistory,
   saleOrderTaxSummary,
   salesOrderLines,
@@ -44,6 +45,9 @@ export async function seedSalesOrdersAndLines(
   const l4 = calcLineSubtotal(1, 1299.99, 0);
   const l5 = calcLineSubtotal(2, 1899.99, 50.0);
   const l6 = calcLineSubtotal(1, 4999.99, 0);
+  const l7 = calcLineSubtotal(1, 1299.99, 15.0); // Order 4 - Laptop with discount
+  const l8 = calcLineSubtotal(1, 599.99, 0);     // Order 4 - Monitor
+  const l9 = calcLineSubtotal(2, 29.99, 0);      // Order 4 - Mouse x2
 
   const lineTaxes = [
     money(Number(l1) * 0.1),
@@ -52,15 +56,20 @@ export async function seedSalesOrdersAndLines(
     money(Number(l4) * 0.1),
     money(Number(l5) * 0.1),
     money(Number(l6) * 0.1),
+    money(Number(l7) * 0.1),
+    money(Number(l8) * 0.1),
+    money(Number(l9) * 0.1),
   ] as const;
 
   const o1 = calcOrderTotals([l1, l2, l3]);
   const o2 = calcOrderTotals([l4]);
   const o3 = calcOrderTotals([l5, l6]);
+  const o4 = calcOrderTotals([l7, l8, l9]);
 
   console.log(`   Order 1: ${o1.amountUntaxed} untaxed → ${o1.amountTotal} total`);
   console.log(`   Order 2: ${o2.amountUntaxed} untaxed → ${o2.amountTotal} total`);
   console.log(`   Order 3: ${o3.amountUntaxed} untaxed → ${o3.amountTotal} total`);
+  console.log(`   Order 4: ${o4.amountUntaxed} untaxed → ${o4.amountTotal} total (quotation)`);
 
   await tx
     .insert(salesOrders)
@@ -70,7 +79,7 @@ export async function seedSalesOrdersAndLines(
         id: SEED_IDS.orderOne,
         name: "SO-2024-001",
         partnerId: SEED_IDS.partnerAccentCorp,
-        status: "confirmed" as const,
+        status: "sale" as const,
         sequenceNumber: "SO-2024-000001",
         quotationDate: new Date("2024-01-10T09:00:00Z"),
         confirmationDate: new Date("2024-01-15T10:15:00Z"),
@@ -113,7 +122,7 @@ export async function seedSalesOrdersAndLines(
         id: SEED_IDS.orderThree,
         name: "SO-2024-003",
         partnerId: SEED_IDS.partnerDeltaInc,
-        status: "shipped" as const,
+        status: "done" as const,
         sequenceNumber: "SO-2024-000003",
         quotationDate: new Date("2024-01-03T12:00:00Z"),
         confirmationDate: new Date("2024-01-05T09:05:00Z"),
@@ -130,9 +139,31 @@ export async function seedSalesOrdersAndLines(
         amountTax: o3.amountTax,
         amountTotal: o3.amountTotal,
       },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.orderFour,
+        name: "SO-2024-004",
+        partnerId: SEED_IDS.partnerBetaTech,
+        status: "sent" as const,
+        sequenceNumber: "SO-2024-000004",
+        quotationDate: new Date("2024-02-10T11:00:00Z"),
+        confirmationDate: null,
+        currencyId: usdCurrency[0].currencyId,
+        pricelistId: SEED_IDS.pricelistUsdStandard,
+        paymentTermId: SEED_IDS.paymentTermNet30,
+        invoiceStatus: "no" as const,
+        deliveryStatus: "no" as const,
+        orderDate: new Date("2024-02-10T11:00:00Z"),
+        deliveryDate: null,
+        assignedToId: null,
+        notes: "Quotation sent - includes optional items",
+        amountUntaxed: o4.amountUntaxed,
+        amountTax: o4.amountTax,
+        amountTotal: o4.amountTotal,
+      },
     ])
     .execute();
-  console.log("✓ Seeded 3 sales orders");
+  console.log("✓ Seeded 4 sales orders");
 
   await tx
     .insert(salesOrderLines)
@@ -293,9 +324,87 @@ export async function seedSalesOrdersAndLines(
         appliedPricelistId: SEED_IDS.pricelistUsdStandard,
         sequence: 20,
       },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.lineSeven,
+        orderId: SEED_IDS.orderFour,
+        productId: SEED_IDS.productLaptop,
+        taxId: taxRateId,
+        productUomId: unitUom[0].uomId,
+        description: "Professional Laptop Pro (qty 1) - 15% quotation discount",
+        quantity: "1",
+        priceUnit: "1299.99",
+        discount: "15.00",
+        subtotal: money(l7),
+        priceSubtotal: money(l7),
+        priceTax: lineTaxes[6],
+        priceTotal: money(Number(l7) + Number(lineTaxes[6])),
+        qtyDelivered: "0",
+        qtyToInvoice: "0",
+        qtyInvoiced: "0",
+        invoiceStatus: "no" as const,
+        customerLead: 7,
+        displayType: "product" as const,
+        priceSource: "pricelist" as const,
+        discountSource: "campaign" as const,
+        appliedPricelistId: SEED_IDS.pricelistUsdStandard,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.lineEight,
+        orderId: SEED_IDS.orderFour,
+        productId: SEED_IDS.productMonitor,
+        taxId: taxRateId,
+        productUomId: unitUom[0].uomId,
+        description: '4K Monitor 27" (qty 1)',
+        quantity: "1",
+        priceUnit: "599.99",
+        discount: "0.00",
+        subtotal: money(l8),
+        priceSubtotal: money(l8),
+        priceTax: lineTaxes[7],
+        priceTotal: money(Number(l8) + Number(lineTaxes[7])),
+        qtyDelivered: "0",
+        qtyToInvoice: "0",
+        qtyInvoiced: "0",
+        invoiceStatus: "no" as const,
+        customerLead: 2,
+        displayType: "product" as const,
+        priceSource: "pricelist" as const,
+        discountSource: "manual" as const,
+        appliedPricelistId: SEED_IDS.pricelistUsdStandard,
+        sequence: 20,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.lineNine,
+        orderId: SEED_IDS.orderFour,
+        productId: SEED_IDS.productMouse,
+        taxId: taxRateId,
+        productUomId: unitUom[0].uomId,
+        description: "Wireless Mouse (qty 2)",
+        quantity: "2",
+        priceUnit: "29.99",
+        discount: "0.00",
+        subtotal: money(l9),
+        priceSubtotal: money(l9),
+        priceTax: lineTaxes[8],
+        priceTotal: money(Number(l9) + Number(lineTaxes[8])),
+        qtyDelivered: "0",
+        qtyToInvoice: "0",
+        qtyInvoiced: "0",
+        invoiceStatus: "no" as const,
+        customerLead: 1,
+        displayType: "product" as const,
+        priceSource: "pricelist" as const,
+        discountSource: "manual" as const,
+        appliedPricelistId: SEED_IDS.pricelistUsdStandard,
+        sequence: 30,
+      },
     ])
     .execute();
-  console.log("✓ Seeded 6 sales order lines");
+  console.log("✓ Seeded 9 sales order lines");
 
   await tx
     .insert(saleOrderLineTaxes)
@@ -306,9 +415,43 @@ export async function seedSalesOrdersAndLines(
       { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxFour, orderLineId: SEED_IDS.lineFour, taxId: taxRateId, sequence: 10 },
       { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxFive, orderLineId: SEED_IDS.lineFive, taxId: taxRateId, sequence: 10 },
       { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxSix, orderLineId: SEED_IDS.lineSix, taxId: taxRateId, sequence: 10 },
+      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxSeven, orderLineId: SEED_IDS.lineSeven, taxId: taxRateId, sequence: 10 },
+      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxEight, orderLineId: SEED_IDS.lineEight, taxId: taxRateId, sequence: 10 },
+      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxNine, orderLineId: SEED_IDS.lineNine, taxId: taxRateId, sequence: 10 },
     ])
     .execute();
-  console.log("✓ Seeded 6 sale order line taxes");
+  console.log("✓ Seeded 9 sale order line taxes");
+
+  await tx
+    .insert(saleOrderOptionLines)
+    .values([
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderOptionLineOne,
+        orderId: SEED_IDS.orderFour,
+        productId: SEED_IDS.productLicense,
+        name: "Extended Warranty (3 years)",
+        quantity: "1",
+        priceUnit: "199.99",
+        discount: "0.00",
+        uomId: unitUom[0].uomId,
+        sequence: 100,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderOptionLineTwo,
+        orderId: SEED_IDS.orderFour,
+        productId: SEED_IDS.productKeyboard,
+        name: "Premium Laptop Bag",
+        quantity: "1",
+        priceUnit: "49.99",
+        discount: "0.00",
+        uomId: unitUom[0].uomId,
+        sequence: 110,
+      },
+    ])
+    .execute();
+  console.log("✓ Seeded 2 sale order optional lines");
 
   await tx
     .insert(saleOrderStatusHistory)
@@ -318,7 +461,7 @@ export async function seedSalesOrdersAndLines(
         id: SEED_IDS.saleOrderStatusHistoryOne,
         orderId: SEED_IDS.orderOne,
         oldStatus: "draft",
-        newStatus: "confirmed",
+        newStatus: "sale",
         changedAt: new Date("2024-01-15T10:15:00Z"),
         reason: "Customer approved quotation",
       },
@@ -326,10 +469,19 @@ export async function seedSalesOrdersAndLines(
         ...seedAuditScope,
         id: SEED_IDS.saleOrderStatusHistoryTwo,
         orderId: SEED_IDS.orderThree,
-        oldStatus: "confirmed",
-        newStatus: "shipped",
+        oldStatus: "sale",
+        newStatus: "done",
         changedAt: new Date("2024-01-12T08:30:00Z"),
         reason: "Warehouse packed and dispatched",
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderStatusHistoryThree,
+        orderId: SEED_IDS.orderFour,
+        oldStatus: "draft",
+        newStatus: "sent",
+        changedAt: new Date("2024-02-10T11:00:00Z"),
+        reason: "Quotation sent to customer for review",
       },
     ])
     .execute();
@@ -368,13 +520,23 @@ export async function seedSalesOrdersAndLines(
         taxAmount: o3.amountTax,
         isTaxIncluded: false,
       },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderTaxSummaryFour,
+        orderId: SEED_IDS.orderFour,
+        taxId: taxRateId,
+        taxGroupId: SEED_IDS.taxGroupSalesStandard,
+        baseAmount: o4.amountUntaxed,
+        taxAmount: o4.amountTax,
+        isTaxIncluded: false,
+      },
     ])
     .execute();
   console.log("✓ Seeded sale order tax summary");
 }
 
 export async function validateSalesPhase6Invariants(tx: Tx): Promise<void> {
-  const seededOrderIds = [SEED_IDS.orderOne, SEED_IDS.orderTwo, SEED_IDS.orderThree] as const;
+  const seededOrderIds = [SEED_IDS.orderOne, SEED_IDS.orderTwo, SEED_IDS.orderThree, SEED_IDS.orderFour] as const;
   const seededLineIds = [
     SEED_IDS.lineOne,
     SEED_IDS.lineTwo,
@@ -382,6 +544,9 @@ export async function validateSalesPhase6Invariants(tx: Tx): Promise<void> {
     SEED_IDS.lineFour,
     SEED_IDS.lineFive,
     SEED_IDS.lineSix,
+    SEED_IDS.lineSeven,
+    SEED_IDS.lineEight,
+    SEED_IDS.lineNine,
   ] as const;
 
   const toCents = (amount: string): number => Math.round(Number(amount) * 100);
@@ -428,9 +593,9 @@ export async function validateSalesPhase6Invariants(tx: Tx): Promise<void> {
     .from(saleOrderStatusHistory)
     .where(inArray(saleOrderStatusHistory.orderId, seededOrderIds));
 
-  if (statusHistoryRows.length < 2) {
+  if (statusHistoryRows.length < 3) {
     throw new Error(
-      `Status history coverage mismatch: expected at least 2 rows, got ${statusHistoryRows.length}`
+      `Status history coverage mismatch: expected at least 3 rows, got ${statusHistoryRows.length}`
     );
   }
 
