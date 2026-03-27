@@ -59,7 +59,7 @@ This section reflects the **actual repository implementation state** as of 2026-
 | `2` Structural Hardening | Done | Runtime moved under `src/runtime/`; backward-compatible re-export retained; subpath exports added; consumer mappings now resolve to `dist`. |
 | `3` Truth Engine Foundations | Done | `invariants.ts`, `state-machine.ts`, `truth-model.ts`, and event transition binding are implemented and exported. |
 | `3.6` Compiler V1 | Done (local gates) | Compiler modules + API invariant enforcer exist; scripts wired; generated artifact is now present and `truth:check` passes locally. |
-| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/pause/resume/cancel/renew, and return-order approve/receive/inspect/credit-note routes. Remaining: migrate more opted-in write paths off generic CRUD and reduce dual-write surface area. |
+| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/pause/resume/cancel/renew, and return-order approve/receive/inspect/credit-note routes. Remaining: reduce dual-write surface area by promoting validated flows toward event-only where parity is proven. |
 | `3.8` Engine V5 Foundations | Partial (runtime hardening in progress) | Projection runtime utilities now exist for deterministic replay, projection checkpoints, and drift diagnostics (version/hash/staleness checks) with focused tests. Persisted checkpoint plumbing is now wired in opted-in command flows (`sales_order`, `subscription`, `return_order`) with checkpoint assertions in command-service tests. Remaining: schema compiler target, replay tooling integration, and broader bounded-context rollout. |
 | `4` Governance & Stability | Partial | Export snapshot test added and `.changeset/config.json` added. Remaining: wire changeset flow into release/CI policy. |
 
@@ -118,7 +118,9 @@ Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Ph
 - Step 10 governance closure increment: focused CI wiring now runs bounded-context command test targets plus projection replay checks in GitHub Actions.
 - Step 11 bounded-context migration increment: sales routes now execute `return_order.inspect`, `return_order.credit-note`, and `subscription.renew` through dedicated command services with dual-write event/checkpoint metadata.
 - Step 12 closure audit pass: strict endpoint inventory confirms opted-in sales write routes are command-owned; sales action metadata now references command handlers for subscription activate/cancel.
-- Next active focus: tighten policy-transition operator docs (`direct -> dual-write -> event-only`) and decide whether actor identity should be mandatory for all return-order write routes.
+- Step 13 governance hardening: policy-transition operator runbook added at `docs/policy-transition-operations.md` with rollout, rollback, parity-window, and CI evidence requirements.
+- Step 14 actor identity hardening: `return_order.inspect` and `return_order.credit-note` now require numeric actor identity in route validation (request or authenticated session), with route regression coverage for required-actor failures.
+- Next active focus: define dual-write reduction criteria and phased promotion checkpoints toward `event-only`.
 
 ### Wave 3 Closure Inventory (Strict)
 
@@ -140,8 +142,13 @@ Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Ph
 
 - Legacy-orchestration endpoint gaps for opted-in sales writes: **none**.
 - CI governance gaps for command + replay checks: **none** (focused jobs wired).
-- Residual operational gap (non-blocking): policy-transition playbook requires final operator documentation hardening.
-- Residual behavioral decision (non-blocking): return `inspect`/`credit-note` routes currently allow optional actor identity; evaluate whether to enforce mandatory actor for full audit uniformity.
+- Residual operational gap (non-blocking): **none**.
+- Residual behavioral decision (non-blocking): **resolved** (`return_order.inspect` and `return_order.credit-note` require numeric actor identity).
+
+### Wave 3 Closure Verdict
+
+- Wave 3 closure criteria are satisfied for opted-in sales bounded contexts.
+- Follow-up work is now governance and rollout hardening, not endpoint migration.
 
 ## Next Wave of Development (Wave 3)
 
@@ -160,13 +167,13 @@ Goal: turn the current sales-order bounded-context slice into a repeatable runti
   - [x] Add projection drift diagnostics (stale projection detection and actionable error payloads).
 
 3. **Generic CRUD de-scope for opted-in models**
-  - For models under `event-only`/`dual-write` rollout, route writes through command services by default.
-  - Keep read paths unchanged; only write orchestration moves.
-  - Add explicit guardrail tests proving unsupported bulk writes remain blocked.
+  - [x] For models under `event-only`/`dual-write` rollout, route writes through command services by default.
+  - [x] Keep read paths unchanged; only write orchestration moves.
+  - [x] Add explicit guardrail tests proving unsupported bulk writes remain blocked.
 
 4. **Governance + CI closure for runtime rollout**
-  - Add focused CI test targets for bounded-context command services and projection replay checks.
-  - Wire release/change documentation for runtime policy transitions (`direct -> dual-write -> event-only`).
+  - [x] Add focused CI test targets for bounded-context command services and projection replay checks.
+  - [x] Wire release/change documentation for runtime policy transitions (`direct -> dual-write -> event-only`).
 
 ### Definition of Done for Wave 3
 
@@ -175,6 +182,23 @@ Goal: turn the current sales-order bounded-context slice into a repeatable runti
 - Generic CRUD no longer owns write orchestration for opted-in models.
 - CI includes bounded-context command + projection replay checks.
 - Runtime policy transition guidance is documented for operators.
+
+### Next Dev Preparation (Post-Wave 3)
+
+1. Policy-transition operations guide
+  - [x] Author a runbook for `direct -> dual-write -> event-only` transitions per bounded context.
+  - [x] Include rollback, parity validation window, SLO/error-budget guardrails, and required observability signals.
+  - [x] Attach CI policy checks to the runbook where automation is possible.
+
+2. Actor identity policy hardening for return write routes
+  - [x] Decide and document whether `return_order.inspect` and `return_order.credit-note` require mandatory actor identity.
+  - [x] If mandatory: enforce in route validators and add regression tests.
+  - [x] If optional: document rationale and audit implications explicitly.
+
+3. Dual-write reduction plan
+  - Define objective entry criteria for promoting each opted-in sales flow from `dual-write` to `event-only`.
+  - Add parity checkpoints: projection correctness, latency budget, and incident-free observation window.
+  - Schedule phased cutover by aggregate with a single rollback command path per phase.
 
 ### Suggested Execution Sequence (Low-Risk)
 

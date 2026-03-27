@@ -1202,11 +1202,18 @@ router.post(
       );
     }
 
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
     const result = await inspectReturnOrderCommand({
       tenantId,
       returnOrderId,
       inspectionResults: parsed.data.inspectionResults,
-      actorId: parsed.data.actorId,
+      actorId,
     });
 
     res.status(200).json(result);
@@ -1237,11 +1244,18 @@ router.post(
       );
     }
 
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
     const result = await inspectReturnOrderCommand({
       tenantId,
       returnOrderId,
       inspectionResults: parsed.data.inspectionResults,
-      actorId: parsed.data.actorId,
+      actorId,
     });
 
     res.status(200).json(result);
@@ -1272,10 +1286,17 @@ router.post(
       );
     }
 
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
     const result = await generateReturnCreditNoteCommand({
       tenantId,
       returnOrderId,
-      actorId: parsed.data.actorId,
+      actorId,
     });
 
     res.status(200).json(result);
@@ -1306,10 +1327,17 @@ router.post(
       );
     }
 
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
     const result = await generateReturnCreditNoteCommand({
       tenantId,
       returnOrderId,
-      actorId: parsed.data.actorId,
+      actorId,
     });
 
     res.status(200).json(result);

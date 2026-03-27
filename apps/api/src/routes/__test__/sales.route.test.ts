@@ -365,10 +365,29 @@ describe("/api/sales/returns/inspect route", () => {
           condition: "used",
         },
       ],
-      actorId: undefined,
+      actorId: 23,
     });
     expect(response.body.mutationPolicy).toBe("dual-write");
     expect(response.body.event.eventType).toBe("return_order.inspected");
+  });
+
+  it("returns 400 when actor identity is missing", async () => {
+    const response = await request(createApp({ uid: "ops-user", roles: ["admin"] }))
+      .post("/api/sales/returns/inspect")
+      .send({
+        returnOrderId: "00000000-0000-4000-8000-000000000043",
+        inspectionResults: [
+          {
+            lineId: "00000000-0000-4000-8000-000000000004",
+            condition: "used",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+    expect(response.body.message).toContain("actorId is required");
+    expect(inspectReturnOrderCommandMock).not.toHaveBeenCalled();
   });
 });
 
@@ -397,10 +416,23 @@ describe("/api/sales/returns/credit-note route", () => {
     expect(generateReturnCreditNoteCommandMock).toHaveBeenCalledWith({
       tenantId: 7,
       returnOrderId: "00000000-0000-4000-8000-000000000044",
-      actorId: undefined,
+      actorId: 24,
     });
     expect(response.body.mutationPolicy).toBe("dual-write");
     expect(response.body.event.eventType).toBe("return_order.credited");
+  });
+
+  it("returns 400 when actor identity is missing", async () => {
+    const response = await request(createApp({ uid: "ops-user", roles: ["admin"] }))
+      .post("/api/sales/returns/credit-note")
+      .send({
+        returnOrderId: "00000000-0000-4000-8000-000000000044",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+    expect(response.body.message).toContain("actorId is required");
+    expect(generateReturnCreditNoteCommandMock).not.toHaveBeenCalled();
   });
 });
 
