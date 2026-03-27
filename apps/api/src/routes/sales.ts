@@ -4,11 +4,13 @@ import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler, ValidationError } from "../middleware/errorHandler.js";
 import {
-  approveCommissionEntries,
-  generateCommissionForOrder,
-  getCommissionReport,
-  payCommissionEntries,
-} from "../modules/sales/commission-service.js";
+  approveCommissionEntryCommand,
+  approveCommissionEntriesCommand,
+  generateCommissionForOrderCommand,
+  payCommissionEntryCommand,
+  payCommissionEntriesCommand,
+} from "../modules/sales/commission-command-service.js";
+import { getCommissionReport } from "../modules/sales/commission-service.js";
 import {
   expireConsignmentAgreementIfNeeded,
   generateConsignmentInvoiceDraft,
@@ -458,7 +460,7 @@ router.post(
       );
     }
 
-    const result = await generateCommissionForOrder({
+    const result = await generateCommissionForOrderCommand({
       tenantId,
       actorId,
       orderId,
@@ -507,7 +509,7 @@ router.post(
       );
     }
 
-    const result = await generateCommissionForOrder({
+    const result = await generateCommissionForOrderCommand({
       tenantId,
       actorId,
       orderId,
@@ -553,13 +555,14 @@ router.post(
 
     const entryId = parsed.data.entryId ?? parsed.data.id;
 
-    const result = await approveCommissionEntries({
+    if (!entryId) {
+      throw new ValidationError("entryId is required.");
+    }
+
+    const result = await approveCommissionEntryCommand({
       tenantId,
       actorId,
-      entryIds: entryId ? [entryId] : undefined,
-      salespersonId: parsed.data.salespersonId,
-      periodStart: parsed.data.periodStart,
-      periodEnd: parsed.data.periodEnd,
+      entryId,
     });
 
     res.status(200).json(result);
@@ -594,7 +597,7 @@ router.post(
 
     const entryId = parsed.data.entryId ?? parsed.data.id;
 
-    const result = await approveCommissionEntries({
+    const result = await approveCommissionEntriesCommand({
       tenantId,
       actorId,
       entryIds: entryId ? [entryId] : undefined,
@@ -635,13 +638,14 @@ router.post(
 
     const entryId = parsed.data.entryId ?? parsed.data.id;
 
-    const result = await payCommissionEntries({
+    if (!entryId) {
+      throw new ValidationError("entryId is required.");
+    }
+
+    const result = await payCommissionEntryCommand({
       tenantId,
       actorId,
-      entryIds: entryId ? [entryId] : undefined,
-      salespersonId: parsed.data.salespersonId,
-      periodStart: parsed.data.periodStart,
-      periodEnd: parsed.data.periodEnd,
+      entryId,
       paidDate: parsed.data.paidDate,
     });
 
@@ -677,7 +681,7 @@ router.post(
 
     const entryId = parsed.data.entryId ?? parsed.data.id;
 
-    const result = await payCommissionEntries({
+    const result = await payCommissionEntriesCommand({
       tenantId,
       actorId,
       entryIds: entryId ? [entryId] : undefined,

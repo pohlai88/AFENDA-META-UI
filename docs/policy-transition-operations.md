@@ -1,7 +1,7 @@
 # Mutation Policy Transition Operations Guide
 
 **Phase**: Wave 3 Governance Hardening  
-**Scope**: `sales_order`, `subscription`, `return_order`  
+**Scope**: `sales_order`, `subscription`, `return_order`, `commission_entry`  
 **Runtime States**: `direct -> dual-write -> event-only`  
 **Last Updated**: March 28, 2026
 
@@ -22,6 +22,7 @@ Current bounded-context defaults in this repository:
 - `sales_order`: command-owned writes under `event-only` command policy.
 - `subscription`: command-owned writes under `event-only` command policy.
 - `return_order`: command-owned writes under `event-only` command policy.
+- `commission_entry`: command-owned approve/pay routes under route-scoped `event-only`, command-owned generation under route-scoped `dual-write`, shared registry still `direct`.
 
 ---
 
@@ -32,12 +33,14 @@ Current bounded-context defaults in this repository:
 | `sales_order` | `event-only` | Maintain | `dual-write` only if append-and-project degrades | Runtime owners | command tests, replay checks, stale-checkpoint guard |
 | `subscription` | `event-only` | Maintain | `dual-write` | Runtime owners | command tests, route tests, checkpoint persistence, stale-checkpoint guard |
 | `return_order` | `event-only` | Maintain | `dual-write` | Runtime owners | command tests, route tests, checkpoint persistence, stale-checkpoint guard, actor-identity enforcement |
+| `commission_entry` | `direct` in shared registry; route-scoped pilot active | Promote after parity window | `direct` | Runtime owners | command tests for single and bulk approve/pay, generation command coverage, route tests |
 
 Promotion note:
 
 - `sales_order` is the reference baseline for `event-only` operation.
 - `subscription` is now the first completed promotion after `sales_order` and is the reference cutover shape for future aggregates.
 - `return_order` now uses the same append-and-project promotion shape, so all opted-in sales aggregates are aligned on `event-only` execution.
+- `commission_entry` is the first post-sales promotion candidate, but it remains a route-scoped pilot until bulk semantics and generation parity hold across an observation window.
 
 ---
 
@@ -190,6 +193,22 @@ Evidence commands:
 2. `pnpm --filter @afenda/api typecheck`
 3. `pnpm ci:api:projection-replay`
 
+### `commission_entry`
+
+Promotion evidence required before shared-registry promotion:
+
+1. Single-entry and bulk approve/pay routes report `mutationPolicy = event-only` with one appended event per updated entry.
+2. Bulk pay preflight blocks all appends when any selected entry is still `draft`.
+3. Generation route is command-owned and emits dual-write command metadata for both create and regenerate paths.
+4. Stale projection checkpoints fail before append-and-project execution on entry-scoped approve/pay commands.
+5. A parity window confirms route-scoped command flows are stable before the shared registry blocks direct writes for `commission_entry`.
+
+Evidence commands:
+
+1. `pnpm --filter @afenda/api test -- --run src/modules/sales/__test__/commission-command-service.test.ts src/routes/__test__/sales.route.test.ts`
+2. `pnpm --filter @afenda/api typecheck`
+3. `pnpm ci:api:projection-replay`
+
 Checklist rule:
 
 - Do not promote an aggregate unless every checklist item is backed by current test or operational evidence.
@@ -246,7 +265,7 @@ Use this exact checklist in the promotion PR description:
 
 Completed promotions: `sales_order`, `subscription`, `return_order`
 
-Next promotion target: none within the current opted-in sales aggregates
+Next promotion candidate: `commission_entry` after route-scoped pilot evidence and parity window complete
 
 Why there is no remaining sales aggregate cutover in this slice:
 
@@ -256,8 +275,8 @@ Why there is no remaining sales aggregate cutover in this slice:
 
 Recommended next follow-up scope:
 
-1. Expand the event-only promotion pattern to the next bounded context outside the current opted-in sales slice.
-2. Keep rollback one-step: `event-only -> dual-write` where future aggregates are promoted.
+1. Close `commission_entry` parity evidence and observation window, then promote the shared registry from `direct` to the chosen command-backed policy.
+2. Keep rollback one-step: shared promotion should fall back to `direct` until the aggregate has a stable model-wide command policy.
 3. Maintain shared replay and checkpoint diagnostics as the promotion baseline.
 
 ---

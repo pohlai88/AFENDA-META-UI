@@ -15,9 +15,11 @@ const {
   renewSubscriptionCommandMock,
   resumeSubscriptionCommandMock,
   cancelSubscriptionCommandMock,
-  generateCommissionForOrderMock,
-  approveCommissionEntriesMock,
-  payCommissionEntriesMock,
+  approveCommissionEntryCommandMock,
+  approveCommissionEntriesCommandMock,
+  generateCommissionForOrderCommandMock,
+  payCommissionEntryCommandMock,
+  payCommissionEntriesCommandMock,
   getCommissionReportMock,
   validateConsignmentStockReportMock,
   generateConsignmentInvoiceDraftMock,
@@ -46,9 +48,11 @@ const {
     renewSubscriptionCommandMock: vi.fn(),
     resumeSubscriptionCommandMock: vi.fn(),
     cancelSubscriptionCommandMock: vi.fn(),
-    generateCommissionForOrderMock: vi.fn(),
-    approveCommissionEntriesMock: vi.fn(),
-    payCommissionEntriesMock: vi.fn(),
+    approveCommissionEntryCommandMock: vi.fn(),
+    approveCommissionEntriesCommandMock: vi.fn(),
+    generateCommissionForOrderCommandMock: vi.fn(),
+    payCommissionEntryCommandMock: vi.fn(),
+    payCommissionEntriesCommandMock: vi.fn(),
     getCommissionReportMock: vi.fn(),
     validateConsignmentStockReportMock: vi.fn(),
     generateConsignmentInvoiceDraftMock: vi.fn(),
@@ -86,10 +90,15 @@ vi.mock("../../modules/sales/subscription-command-service.js", () => ({
   cancelSubscriptionCommand: cancelSubscriptionCommandMock,
 }));
 
+vi.mock("../../modules/sales/commission-command-service.js", () => ({
+  approveCommissionEntryCommand: approveCommissionEntryCommandMock,
+  approveCommissionEntriesCommand: approveCommissionEntriesCommandMock,
+  generateCommissionForOrderCommand: generateCommissionForOrderCommandMock,
+  payCommissionEntryCommand: payCommissionEntryCommandMock,
+  payCommissionEntriesCommand: payCommissionEntriesCommandMock,
+}));
+
 vi.mock("../../modules/sales/commission-service.js", () => ({
-  generateCommissionForOrder: generateCommissionForOrderMock,
-  approveCommissionEntries: approveCommissionEntriesMock,
-  payCommissionEntries: payCommissionEntriesMock,
   getCommissionReport: getCommissionReportMock,
 }));
 
@@ -137,13 +146,16 @@ describe("/api/sales/commissions/generate route", () => {
   });
 
   it("returns 201 for newly generated commissions", async () => {
-    generateCommissionForOrderMock.mockResolvedValueOnce({
+    generateCommissionForOrderCommandMock.mockResolvedValueOnce({
       persistence: "created",
       calculation: { commissionAmount: "240.00" },
       entry: { id: "entry-1" },
       order: { id: "order-1" },
       plan: { id: "plan-1" },
       metrics: { revenue: "2400.00" },
+      assignment: { salespersonId: 21, selectedBy: "order_user", territoryMatch: null },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-generate", eventType: "commission_entry.generated" },
     });
 
     const response = await request(createApp({ uid: "21", roles: ["admin"] }))
@@ -154,7 +166,7 @@ describe("/api/sales/commissions/generate route", () => {
       });
 
     expect(response.status).toBe(201);
-    expect(generateCommissionForOrderMock).toHaveBeenCalledWith(
+    expect(generateCommissionForOrderCommandMock).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 7,
         actorId: 21,
@@ -162,16 +174,21 @@ describe("/api/sales/commissions/generate route", () => {
         planId: "00000000-0000-4000-8000-000000000002",
       })
     );
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("commission_entry.generated");
   });
 
   it("returns 200 when an existing commission is regenerated", async () => {
-    generateCommissionForOrderMock.mockResolvedValueOnce({
+    generateCommissionForOrderCommandMock.mockResolvedValueOnce({
       persistence: "updated",
       calculation: { commissionAmount: "240.00" },
       entry: { id: "entry-1" },
       order: { id: "order-1" },
       plan: { id: "plan-1" },
       metrics: { revenue: "2400.00" },
+      assignment: { salespersonId: 21, selectedBy: "order_user", territoryMatch: null },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-regenerate", eventType: "commission_entry.recalculated" },
     });
 
     const response = await request(createApp({ uid: "21", roles: ["admin"] }))
@@ -191,7 +208,7 @@ describe("/api/sales/commissions/generate route", () => {
       .send({ orderId: "00000000-0000-4000-8000-000000000001" });
 
     expect(response.status).toBe(401);
-    expect(generateCommissionForOrderMock).not.toHaveBeenCalled();
+    expect(generateCommissionForOrderCommandMock).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid payloads", async () => {
@@ -201,7 +218,7 @@ describe("/api/sales/commissions/generate route", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
-    expect(generateCommissionForOrderMock).not.toHaveBeenCalled();
+    expect(generateCommissionForOrderCommandMock).not.toHaveBeenCalled();
   });
 });
 
@@ -700,11 +717,38 @@ describe("/api/sales/commissions/approve route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns approval summary", async () => {
-    approveCommissionEntriesMock.mockResolvedValueOnce({
+  it("routes single-entry approval through the command service", async () => {
+    approveCommissionEntryCommandMock.mockResolvedValueOnce({
       updatedCount: 1,
       unchangedCount: 0,
       entries: [{ id: "entry-1", status: "approved" }],
+      mutationPolicy: "event-only",
+      event: { id: "evt-approve", eventType: "commission_entry.approved" },
+    });
+
+    const response = await request(createApp({ uid: "21", roles: ["admin"] }))
+      .post("/api/sales/commissions/approve/00000000-0000-4000-8000-000000000121")
+      .send({});
+
+    expect(response.status).toBe(200);
+    expect(approveCommissionEntryCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      actorId: 21,
+      entryId: "00000000-0000-4000-8000-000000000121",
+    });
+    expect(response.body.mutationPolicy).toBe("event-only");
+    expect(response.body.event.eventType).toBe("commission_entry.approved");
+    expect(approveCommissionEntriesCommandMock).not.toHaveBeenCalled();
+  });
+
+  it("returns approval summary", async () => {
+    approveCommissionEntriesCommandMock.mockResolvedValueOnce({
+      updatedCount: 1,
+      unchangedCount: 0,
+      entries: [{ id: "entry-1", status: "approved" }],
+      mutationPolicy: "event-only",
+      events: [{ id: "evt-approve-bulk", eventType: "commission_entry.approved" }],
+      matchedCount: 1,
     });
 
     const response = await request(createApp({ uid: "21", roles: ["admin"] }))
@@ -712,13 +756,15 @@ describe("/api/sales/commissions/approve route", () => {
       .send({ entryId: "00000000-0000-4000-8000-000000000021" });
 
     expect(response.status).toBe(200);
-    expect(approveCommissionEntriesMock).toHaveBeenCalledWith(
+    expect(approveCommissionEntriesCommandMock).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 7,
         actorId: 21,
         entryIds: ["00000000-0000-4000-8000-000000000021"],
       })
     );
+    expect(response.body.mutationPolicy).toBe("event-only");
+    expect(response.body.events).toHaveLength(1);
   });
 
   it("returns 400 for invalid approval payload", async () => {
@@ -727,7 +773,7 @@ describe("/api/sales/commissions/approve route", () => {
       .send({ entryId: "bad-uuid" });
 
     expect(response.status).toBe(400);
-    expect(approveCommissionEntriesMock).not.toHaveBeenCalled();
+    expect(approveCommissionEntriesCommandMock).not.toHaveBeenCalled();
   });
 });
 
@@ -736,14 +782,45 @@ describe("/api/sales/commissions/pay route", () => {
     vi.clearAllMocks();
   });
 
+  it("routes single-entry payment through the command service", async () => {
+    payCommissionEntryCommandMock.mockResolvedValueOnce({
+      updatedCount: 1,
+      unchangedCount: 0,
+      entries: [{ id: "entry-1", status: "paid" }],
+      mutationPolicy: "event-only",
+      event: { id: "evt-pay", eventType: "commission_entry.paid" },
+    });
+
+    const response = await request(createApp({ uid: "42", roles: ["admin"] }))
+      .post("/api/sales/commissions/pay/00000000-0000-4000-8000-000000000122")
+      .send({ paidDate: "2026-03-26T00:00:00.000Z" });
+
+    expect(response.status).toBe(200);
+    expect(payCommissionEntryCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      actorId: 42,
+      entryId: "00000000-0000-4000-8000-000000000122",
+      paidDate: new Date("2026-03-26T00:00:00.000Z"),
+    });
+    expect(response.body.mutationPolicy).toBe("event-only");
+    expect(response.body.event.eventType).toBe("commission_entry.paid");
+    expect(payCommissionEntriesCommandMock).not.toHaveBeenCalled();
+  });
+
   it("returns payment summary", async () => {
-    payCommissionEntriesMock.mockResolvedValueOnce({
+    payCommissionEntriesCommandMock.mockResolvedValueOnce({
       updatedCount: 2,
       unchangedCount: 0,
       entries: [
         { id: "entry-1", status: "paid" },
         { id: "entry-2", status: "paid" },
       ],
+      mutationPolicy: "event-only",
+      events: [
+        { id: "evt-pay-1", eventType: "commission_entry.paid" },
+        { id: "evt-pay-2", eventType: "commission_entry.paid" },
+      ],
+      matchedCount: 2,
     });
 
     const response = await request(createApp({ uid: "42", roles: ["admin"] }))
@@ -751,13 +828,15 @@ describe("/api/sales/commissions/pay route", () => {
       .send({ salespersonId: 21, paidDate: "2026-03-26T00:00:00.000Z" });
 
     expect(response.status).toBe(200);
-    expect(payCommissionEntriesMock).toHaveBeenCalledWith(
+    expect(payCommissionEntriesCommandMock).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 7,
         actorId: 42,
         salespersonId: 21,
       })
     );
+    expect(response.body.mutationPolicy).toBe("event-only");
+    expect(response.body.events).toHaveLength(2);
   });
 
   it("returns 400 for invalid payment payload", async () => {
@@ -766,7 +845,7 @@ describe("/api/sales/commissions/pay route", () => {
       .send({ paidDate: "not-a-date" });
 
     expect(response.status).toBe(400);
-    expect(payCommissionEntriesMock).not.toHaveBeenCalled();
+    expect(payCommissionEntriesCommandMock).not.toHaveBeenCalled();
   });
 });
 

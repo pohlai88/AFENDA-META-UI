@@ -49,6 +49,24 @@ export interface GenerateCommissionForOrderResult {
   assignment: CommissionAssignmentResolution;
 }
 
+export interface PreparedCommissionGeneration {
+  persistence: "created" | "updated";
+  existingEntry:
+    | {
+        id: string;
+        status: (typeof commissionEntries.$inferSelect)["status"];
+        createdBy: number | null;
+        notes: string | null;
+      }
+    | undefined;
+  draft: typeof commissionEntries.$inferInsert;
+  calculation: CommissionCalculationResult;
+  order: typeof salesOrders.$inferSelect;
+  plan: typeof commissionPlans.$inferSelect;
+  metrics: CommissionMetrics;
+  assignment: CommissionAssignmentResolution;
+}
+
 export interface CommissionTerritoryMatch {
   ruleId: string;
   priority: number;
@@ -113,6 +131,14 @@ export interface CommissionReportResult {
 export async function generateCommissionForOrder(
   input: GenerateCommissionForOrderInput
 ): Promise<GenerateCommissionForOrderResult> {
+  const prepared = await prepareCommissionGeneration(input);
+
+  return persistPreparedCommissionGeneration(prepared);
+}
+
+export async function prepareCommissionGeneration(
+  input: GenerateCommissionForOrderInput & { entryId?: string }
+): Promise<PreparedCommissionGeneration> {
   const order = await loadOrder(input.tenantId, input.orderId);
   const plan = await loadPlan(input.tenantId, input.planId);
   const tiers = await db
@@ -134,7 +160,12 @@ export async function generateCommissionForOrder(
   const salespersonId = assignment.salespersonId;
 
   const existingEntry = await db
-    .select({ id: commissionEntries.id, status: commissionEntries.status, createdBy: commissionEntries.createdBy, notes: commissionEntries.notes })
+    .select({
+      id: commissionEntries.id,
+      status: commissionEntries.status,
+      createdBy: commissionEntries.createdBy,
+      notes: commissionEntries.notes,
+    })
     .from(commissionEntries)
     .where(
       and(
@@ -166,6 +197,7 @@ export async function generateCommissionForOrder(
   );
 
   const draft = buildCommissionEntryDraft({
+    id: input.entryId,
     tenantId: input.tenantId,
     orderId: order.id,
     salespersonId,
@@ -180,37 +212,52 @@ export async function generateCommissionForOrder(
     status: input.status ?? "draft",
   });
 
-  if (entry) {
-    const [updated] = await db
-      .update(commissionEntries)
-      .set({
-        ...draft,
-        createdBy: entry.createdBy,
-      })
-      .where(eq(commissionEntries.id, entry.id))
-      .returning();
-
-    return {
-      persistence: "updated",
-      calculation,
-      entry: updated,
-      order,
-      plan,
-      metrics,
-      assignment,
-    };
-  }
-
-  const [created] = await db.insert(commissionEntries).values(draft).returning();
-
   return {
-    persistence: "created",
+    persistence: entry ? "updated" : "created",
+    existingEntry: entry,
+    draft,
     calculation,
-    entry: created,
     order,
     plan,
     metrics,
     assignment,
+  };
+}
+
+export async function persistPreparedCommissionGeneration(
+  prepared: PreparedCommissionGeneration
+): Promise<GenerateCommissionForOrderResult> {
+  if (prepared.existingEntry) {
+    const [updated] = await db
+      .update(commissionEntries)
+      .set({
+        ...prepared.draft,
+        createdBy: prepared.existingEntry.createdBy ?? prepared.draft.createdBy,
+      })
+      .where(eq(commissionEntries.id, prepared.existingEntry.id))
+      .returning();
+
+    return {
+      persistence: "updated",
+      calculation: prepared.calculation,
+      entry: updated,
+      order: prepared.order,
+      plan: prepared.plan,
+      metrics: prepared.metrics,
+      assignment: prepared.assignment,
+    };
+  }
+
+  const [created] = await db.insert(commissionEntries).values(prepared.draft).returning();
+
+  return {
+    persistence: "created",
+    calculation: prepared.calculation,
+    entry: created,
+    order: prepared.order,
+    plan: prepared.plan,
+    metrics: prepared.metrics,
+    assignment: prepared.assignment,
   };
 }
 
@@ -570,19 +617,13 @@ async function resolveTerritoryMatch(
 
   if (geography.countryId) {
     conditions.push(
-      or(
-        isNull(territoryRules.countryId),
-        eq(territoryRules.countryId, geography.countryId)
-      )!
+      or(isNull(territoryRules.countryId), eq(territoryRules.countryId, geography.countryId))!
     );
   }
 
   if (geography.stateId) {
     conditions.push(
-      or(
-        isNull(territoryRules.stateId),
-        eq(territoryRules.stateId, geography.stateId)
-      )!
+      or(isNull(territoryRules.stateId), eq(territoryRules.stateId, geography.stateId))!
     );
   }
 
@@ -723,7 +764,7 @@ async function resolveTeamLeader(tenantId: number, teamId: string): Promise<numb
   return members[0]?.userId ?? null;
 }
 
-async function loadCommissionEntriesForMutation(input: {
+export async function loadCommissionEntriesForMutation(input: {
   tenantId: number;
   entryIds?: string[];
   salespersonId?: number;

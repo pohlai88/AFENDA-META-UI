@@ -42,6 +42,7 @@ export interface CommissionCalculationInput {
 }
 
 export interface BuildCommissionEntryDraftInput extends CommissionCalculationInput {
+  id?: NewCommissionEntry["id"];
   tenantId: NewCommissionEntry["tenantId"];
   orderId: NewCommissionEntry["orderId"];
   salespersonId: NewCommissionEntry["salespersonId"];
@@ -118,11 +119,12 @@ export function calculateCommission(
 
 export function buildCommissionEntryDraft(
   input: BuildCommissionEntryDraftInput
-): Omit<NewCommissionEntry, "id"> {
+): NewCommissionEntry {
   const calculation = calculateCommission(input);
   const actorId = input.createdBy ?? input.updatedBy ?? input.salespersonId;
 
   return {
+    id: input.id,
     tenantId: input.tenantId,
     createdBy: input.createdBy ?? actorId,
     updatedBy: input.updatedBy ?? actorId,

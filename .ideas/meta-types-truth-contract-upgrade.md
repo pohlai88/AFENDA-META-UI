@@ -126,7 +126,9 @@ Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Ph
 - Step 14 actor identity hardening: `return_order.inspect` and `return_order.credit-note` now require numeric actor identity in route validation (request or authenticated session), with route regression coverage for required-actor failures.
 - Step 15 subscription promotion: `subscription` activate/cancel/pause/resume/renew command services now execute under `event-only` append-and-project policy with stale-checkpoint drift detection, focused command coverage, and route regression updates.
 - Step 16 return-order promotion: `return_order` approve/receive/inspect/credit-note command services now execute under `event-only` append-and-project policy with stale-checkpoint drift detection while preserving mandatory actor identity on inspect and credit-note routes.
-- Next active focus: extend the event-only promotion pattern beyond the current opted-in sales aggregates and keep the central mutation policy registry aligned with runtime state.
+- Step 17 commission-entry cutover expansion: single-entry and bulk commission approve/pay routes now execute through a dedicated `commission_entry` command service with explicit one-event-per-updated-entry semantics, bulk pay preflight, and stale-checkpoint guard coverage.
+- Step 18 commission generation cutover: `/api/sales/commissions/generate` is now command-owned under a route-scoped `dual-write` policy so create and regenerate flows emit command metadata without promoting the shared registry yet.
+- Next active focus: hold `commission_entry` at route-scoped pilot status until parity evidence and an observation window justify promoting the shared mutation policy registry beyond `direct`.
 
 ### Proposed Next Dev (Immediate)
 
@@ -162,6 +164,7 @@ Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Ph
 | `sales_order` | `event-only` | keep `event-only` | `dual-write` if append-and-project degrades | Baseline | reference implementation for promotion shape |
 | `subscription` | `event-only` | maintain `event-only` | `dual-write` | Promoted | append-and-project path validated with stale-checkpoint guard coverage |
 | `return_order` | `event-only` | maintain `event-only` | `dual-write` | Promoted | append-and-project path validated with stale-checkpoint guard coverage and actor-identity enforcement |
+| `commission_entry` | `direct` | route-scoped mixed pilot (`event-only` approve/pay, `dual-write` generation) | `direct` | In Progress | full route command ownership is in place; shared registry promotion deferred pending parity evidence |
 
 ### Wave 3 Closure Inventory (Strict)
 

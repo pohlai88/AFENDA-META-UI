@@ -236,6 +236,35 @@ function resolveReturnOrderEventType(input: {
   return "return_order.direct_update";
 }
 
+function resolveCommissionEntryEventType(input: {
+  operation: MutationOperation;
+  before?: MutationRecord | null;
+  after?: MutationRecord | null;
+}): string {
+  if (input.operation === "delete") {
+    return "commission_entry.deleted";
+  }
+
+  if (input.operation === "create") {
+    return "commission_entry.generated";
+  }
+
+  const beforeStatus = normalizeStatus(input.before?.status);
+  const afterStatus = normalizeStatus(input.after?.status);
+
+  if (beforeStatus !== undefined && afterStatus === "approved" && beforeStatus !== "approved") {
+    return "commission_entry.approved";
+  }
+
+  if (beforeStatus !== undefined && afterStatus === "paid" && beforeStatus !== "paid") {
+    return "commission_entry.paid";
+  }
+
+  return input.operation === "update"
+    ? "commission_entry.recalculated"
+    : "commission_entry.direct_update";
+}
+
 function resolveCommandEventType(input: {
   model: string;
   operation: MutationOperation;
@@ -260,6 +289,14 @@ function resolveCommandEventType(input: {
 
   if (input.model === "return_order") {
     return resolveReturnOrderEventType({
+      operation: input.operation,
+      before: input.before,
+      after: input.after,
+    });
+  }
+
+  if (input.model === "commission_entry") {
+    return resolveCommissionEntryEventType({
       operation: input.operation,
       before: input.before,
       after: input.after,
