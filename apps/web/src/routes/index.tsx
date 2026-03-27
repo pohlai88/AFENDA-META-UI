@@ -36,6 +36,9 @@ const ErrorCatalogPage = lazy(() => import("../pages/errors"));
 const PurchaseOrdersExamplePage = lazy(() => import("../pages/purchase-orders-example"));
 const PaymentHubPage = lazy(() => import("../pages/payment-hub"));
 const SuggestionsDemoPage = lazy(() => import("../pages/suggestions-demo"));
+const OpsDashboardPage = lazy(() => import("../pages/ops-dashboard"));
+const OpsEventsPage = lazy(() => import("../pages/ops-events"));
+const SandboxPage = lazy(() => import("../pages/sandbox"));
 
 const breadcrumbFromParam =
   (paramName: string) =>
@@ -174,6 +177,27 @@ const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter(
           element: <SuggestionsDemoPage />,
           handle: {
             breadcrumb: "Personalized Suggestions",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: "ops/dashboard",
+          element: <OpsDashboardPage />,
+          handle: {
+            breadcrumb: "Ops Dashboard",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: "ops/events",
+          element: <OpsEventsPage />,
+          handle: {
+            breadcrumb: "Ops Events",
+          } satisfies BreadcrumbHandle,
+        },
+        {
+          path: "ops/sandbox",
+          element: <SandboxPage />,
+          handle: {
+            breadcrumb: "Policy Sandbox",
           } satisfies BreadcrumbHandle,
         },
         {

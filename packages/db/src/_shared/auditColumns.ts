@@ -1,8 +1,8 @@
 import { integer } from "drizzle-orm/pg-core";
 
 export const auditColumns = {
-  createdBy: integer().notNull(),
-  updatedBy: integer().notNull(),
+  createdBy: integer("created_by").notNull(),
+  updatedBy: integer("updated_by").notNull(),
 } as const;
 
 export const AUDIT_FINGERPRINTS = {

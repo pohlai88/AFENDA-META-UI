@@ -59,7 +59,14 @@ export const useSidebarStore = create<SidebarState>()(
           expandedModules: state.expandedModules.filter((item) => item !== moduleName),
         })),
       setExpandedModules: (modules: string[]) =>
-        set({ expandedModules: Array.from(new Set(modules)) }),
+        set((state) => {
+          const next = Array.from(new Set(modules));
+          const unchanged =
+            state.expandedModules.length === next.length &&
+            state.expandedModules.every((moduleName, index) => moduleName === next[index]);
+
+          return unchanged ? state : { expandedModules: next };
+        }),
     }),
     {
       name: "afenda-sidebar",

@@ -71,6 +71,8 @@ describe("sales domain schema contracts", () => {
     expect(cols.isCompany).toBeDefined();
     expect(cols.parentId).toBeDefined();
     expect(cols.creditLimit).toBeDefined();
+    expect(cols.relationshipStart).toBeDefined();
+    expect(cols.relationshipEnd).toBeDefined();
     expect(cols.isActive).toBeDefined();
   });
 
@@ -112,6 +114,13 @@ describe("sales domain schema contracts", () => {
     expect(cols.pricelistId).toBeDefined();
     expect(cols.paymentTermId).toBeDefined();
     expect(cols.fiscalPositionId).toBeDefined();
+    expect(cols.exchangeRateUsed).toBeDefined();
+    expect(cols.exchangeRateSource).toBeDefined();
+    expect(cols.pricelistSnapshotId).toBeDefined();
+    expect(cols.creditCheckPassed).toBeDefined();
+    expect(cols.creditCheckAt).toBeDefined();
+    expect(cols.creditCheckBy).toBeDefined();
+    expect(cols.creditLimitAtCheck).toBeDefined();
     expect(cols.invoiceStatus).toBeDefined();
     expect(cols.deliveryStatus).toBeDefined();
     expect(cols.sequenceNumber).toBeDefined();
@@ -137,7 +146,12 @@ describe("sales domain schema contracts", () => {
     expect(cols.qtyInvoiced).toBeDefined();
     expect(cols.quantity).toBeDefined();
     expect(cols.priceUnit).toBeDefined();
+    expect(cols.priceListedAt).toBeDefined();
+    expect(cols.priceOverrideReason).toBeDefined();
+    expect(cols.priceApprovedBy).toBeDefined();
     expect(cols.costUnit).toBeDefined();
+    expect(cols.taxRuleSnapshot).toBeDefined();
+    expect(cols.discountApprovedAt).toBeDefined();
     expect(cols.subtotal).toBeDefined();
     expect(cols.costSubtotal).toBeDefined();
     expect(cols.profitAmount).toBeDefined();
@@ -155,6 +169,9 @@ describe("sales domain schema contracts", () => {
     expect(getTableColumns(taxGroups).name).toBeDefined();
     expect(getTableColumns(taxRates).typeTaxUse).toBeDefined();
     expect(getTableColumns(taxRates).amountType).toBeDefined();
+    expect(getTableColumns(taxRates).effectiveFrom).toBeDefined();
+    expect(getTableColumns(taxRates).effectiveTo).toBeDefined();
+    expect(getTableColumns(taxRates).replacedBy).toBeDefined();
     expect(getTableColumns(taxRateChildren).parentTaxId).toBeDefined();
     expect(getTableColumns(taxRateChildren).childTaxId).toBeDefined();
     expect(getTableColumns(fiscalPositions).autoApply).toBeDefined();
@@ -181,6 +198,9 @@ describe("sales domain schema contracts", () => {
     expect(getTableColumns(pricelistItems).computePrice).toBeDefined();
     expect(getTableColumns(pricelistItems).base).toBeDefined();
     expect(getTableColumns(pricelistItems).minQuantity).toBeDefined();
+    expect(getTableColumns(pricelistItems).effectiveFrom).toBeDefined();
+    expect(getTableColumns(pricelistItems).effectiveTo).toBeDefined();
+    expect(getTableColumns(pricelistItems).supersededBy).toBeDefined();
   });
 
   it("sale order auxiliary tables capture taxes and status history", () => {
@@ -601,6 +621,9 @@ describe("sales domain schema contracts", () => {
     expect(cols.minQuantity).toBeDefined(); // Quantity break threshold
     expect(cols.dateStart).toBeDefined(); // Optional date range start
     expect(cols.dateEnd).toBeDefined(); // Optional date range end
+    expect(cols.effectiveFrom).toBeDefined(); // Lineage effectivity start
+    expect(cols.effectiveTo).toBeDefined(); // Lineage effectivity end
+    expect(cols.supersededBy).toBeDefined(); // Self-FK to next rule revision
     expect(cols.sequence).toBeDefined(); // Rule priority within pricelist
     expect(cols.isActive).toBeDefined();
   });

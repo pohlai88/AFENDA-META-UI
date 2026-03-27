@@ -90,7 +90,10 @@ describe("TestScenario DSL", () => {
     const edgeScenarios = getScenariosByTag("edge");
     const logisticsScenarios = getScenariosByTag("logistics");
 
-    expect(salesScenarios.map(([name]) => name)).toEqual(["highValueOrder"]);
+    expect(salesScenarios.map(([name]) => name)).toEqual([
+      "highValueOrder",
+      "creditCheckedPriceOverride",
+    ]);
     expect(edgeScenarios.map(([name]) => name)).toEqual(["discountEdgeCase"]);
     expect(logisticsScenarios.map(([name]) => name)).toEqual(["overdueDelivery"]);
   });
@@ -110,5 +113,21 @@ describe("TestScenario DSL", () => {
       expect(result.expectedOutcome.length).toBeGreaterThan(0);
       expect(["highValueOrder", "discountEdgeCase"]).toContain(name);
     }
+  });
+
+  it("creditCheckedPriceOverride enforces governance invariants", () => {
+    const result = runScenario(TestScenario.creditCheckedPriceOverride);
+
+    expect(result.order.creditCheckPassed).toBe(true);
+    expect(result.order.creditCheckAt).toBeInstanceOf(Date);
+    expect(result.order.creditCheckBy).toBe(1);
+    expect(result.order.exchangeRateUsed).toBe("1.000000");
+    expect(result.order.exchangeRateSource).toBeTruthy();
+
+    const listedAt = new Decimal(result.line.priceListedAt ?? "0");
+    const soldAt = new Decimal(result.line.priceUnit);
+    expect(soldAt.lessThan(listedAt)).toBe(true);
+    expect(result.line.priceOverrideReason).toBeTruthy();
+    expect(result.line.priceApprovedBy).toBe(1);
   });
 });

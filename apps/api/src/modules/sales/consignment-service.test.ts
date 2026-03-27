@@ -1,24 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  ensureTestEnv,
-  selectMock,
-  updateMock,
-  queueSelect,
-  setUpdateResult,
-} = vi.hoisted(() => {
+const { ensureTestEnv, selectMock, updateMock, queueSelect, setUpdateResult } = vi.hoisted(() => {
   process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/afenda_test";
 
   const selectQueue: unknown[][] = [];
   let updateResult: unknown[] = [];
 
-  const createSelectChain = (rows: unknown[]) => {
+  const createSelectChain = () => {
     const chain = {
       from: vi.fn(() => chain),
       where: vi.fn(() => chain),
       orderBy: vi.fn(() => chain),
-      limit: vi.fn(async () => rows),
-      then: (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve),
+      limit: vi.fn(() => chain),
+      prepare: vi.fn(() => ({
+        execute: vi.fn(async () => selectQueue.shift() ?? []),
+      })),
+      then: (resolve: (value: unknown[]) => unknown) => {
+        const rows = selectQueue.shift() ?? [];
+        return Promise.resolve(rows).then(resolve);
+      },
     };
 
     return chain;
@@ -26,7 +26,7 @@ const {
 
   return {
     ensureTestEnv: true,
-    selectMock: vi.fn(() => createSelectChain(selectQueue.shift() ?? [])),
+    selectMock: vi.fn(() => createSelectChain()),
     updateMock: vi.fn(() => ({
       set: vi.fn(() => ({
         where: vi.fn(() => ({

@@ -176,6 +176,33 @@ pnpm ci:gate:typescript
 node tools/ci-gate/index.mjs --gate=typescript
 ```
 
+### 5. Shared Column Casing Gate (`casing/`)
+
+Prevents naming drift between Drizzle schema helpers and raw SQL by enforcing
+explicit snake_case physical column mappings.
+
+**Checks:**
+
+- ✅ Shared audit helper maps `createdBy`/`updatedBy` to `created_by`/`updated_by`
+- ✅ Shared timestamp helper maps `createdAt`/`updatedAt`/`deletedAt` to snake_case
+- ✅ Trigger SQL does not reference camelCase physical column tokens
+
+**Commands:**
+
+```bash
+# Run casing gate only
+pnpm ci:gate:casing
+
+# Or from master gate
+node tools/ci-gate/index.mjs --gate=casing
+```
+
+**When to use:**
+
+- After changing shared column helpers in `packages/db/src/_shared`
+- After editing raw SQL trigger files under `packages/db/src/triggers`
+- Before shipping migrations that rename column casing
+
 \*\*Do🔧 Actionable Fix Suggestions
 
 Each error includes:
@@ -902,5 +929,5 @@ For issues or questions:
 
 ---
 
-**Maintained by:** AFENDA Development Team  
+**Maintained by:** AFENDA Development Team
 **Last Updated:** March 24, 2026

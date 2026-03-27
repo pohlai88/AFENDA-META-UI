@@ -9,8 +9,9 @@ dotenv.config({
 });
 
 export default defineConfig({
-  schema: "./src/db/schema/index.ts",
-  out: "./src/db/migrations",
+  // Compatibility shim: db migrations are owned by @afenda/db.
+  schema: "../../packages/db/src/schema/index.ts",
+  out: "../../packages/db/migrations",
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL!,

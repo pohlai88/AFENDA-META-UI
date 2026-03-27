@@ -13,7 +13,7 @@ cp .env.example .env
 
 # Edit .env and set:
 # - JWT_SECRET (generate with: openssl rand -base64 32)
-# - DATABASE_URL
+# - DATABASE_URL (local Docker default: postgresql://afenda:afenda@localhost:5432/afenda)
 # - ALLOWED_ORIGINS
 
 # Push database schema

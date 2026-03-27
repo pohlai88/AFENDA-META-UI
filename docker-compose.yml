@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,11 +5,11 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: afenda
-      POSTGRES_PASSWORD: afenda-dev-password
+      POSTGRES_PASSWORD: afenda
       POSTGRES_DB: afenda
       POSTGRES_INITDB_ARGS: "--locale=en_US.UTF-8"
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

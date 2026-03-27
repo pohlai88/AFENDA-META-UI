@@ -1,0 +1,17 @@
+
+> @afenda/db@0.1.0 ops:partition:plan D:\AFENDA-META-UI\packages\db
+> tsx src/_maintenance/run-sales-partition-plan.ts --dry-run "--years-ahead=3"
+
+Sales partition plan
+generatedAt=2026-03-26T20:46:04.633Z
+parent=sales.sales_orders
+years=2026,2027,2028,2029
+
+- preflight-parent-partitioned: Check whether parent table is declared as partitioned.
+- ensure-partition-2026: Ensure yearly partition exists for 2026.
+- ensure-partition-2027: Ensure yearly partition exists for 2027.
+- ensure-partition-2028: Ensure yearly partition exists for 2028.
+- ensure-partition-2029: Ensure yearly partition exists for 2029.
+- ensure-default-partition: Ensure a default partition exists for out-of-range rows.
+
+Dry run mode: SQL actions were planned but not executed.

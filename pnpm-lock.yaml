@@ -117,6 +117,9 @@ importers:
       globals:
         specifier: ^17.4.0
         version: 17.4.0
+      husky:
+        specifier: ^9.1.7
+        version: 9.1.7
       knip:
         specifier: ^6.0.5
         version: 6.0.5
@@ -455,6 +458,9 @@ importers:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
+      immer:
+        specifier: ^11.1.4
+        version: 11.1.4
       jsdom:
         specifier: ^29.0.1
         version: 29.0.1(@noble/hashes@1.8.0)
@@ -497,9 +503,6 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 1.0.0-beta.19(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)
-      drizzle-zod:
-        specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@1.0.0-beta.19(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))(zod@4.3.6)
       pg:
         specifier: 'catalog:'
         version: 8.20.0
@@ -4504,12 +4507,6 @@ packages:
         optional: true
       zod:
         optional: true
-
-  drizzle-zod@0.8.3:
-    resolution: {integrity: sha512-66yVOuvGhKJnTdiqj1/Xaaz9/qzOdRJADpDa68enqS6g3t0kpNkwNYjUuaeXgZfO/UWuIM9HIhSlJ6C5ZraMww==}
-    peerDependencies:
-      drizzle-orm: '>=0.36.0'
-      zod: ^3.25.0 || ^4.0.0
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -11747,11 +11744,6 @@ snapshots:
     optionalDependencies:
       '@types/pg': 8.20.0
       pg: 8.20.0
-      zod: 4.3.6
-
-  drizzle-zod@0.8.3(drizzle-orm@1.0.0-beta.19(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))(zod@4.3.6):
-    dependencies:
-      drizzle-orm: 1.0.0-beta.19(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)
       zod: 4.3.6
 
   dunder-proto@1.0.1:

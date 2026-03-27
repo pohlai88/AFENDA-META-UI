@@ -28,7 +28,7 @@ import compression from "compression";
 
 // Config
 import config, { validateConfig } from "./config/index.js";
-import { checkDatabaseConnection } from "./db/index.js";
+import { checkDatabaseConnection, getPoolStats, pool } from "./db/index.js";
 
 // Middleware
 import { authMiddleware } from "./middleware/auth.js";
@@ -56,6 +56,8 @@ import expEngineRouter from "./routes/expEngine.js";
 import uploadsRouter from "./routes/uploads.js";
 import searchRouter from "./routes/search.js";
 import salesRouter from "./routes/sales.js";
+import sandboxRouter from "./routes/sandbox.js";
+import opsRouter from "./routes/ops.js";
 import { yoga } from "./graphql/server.js";
 import { UPLOADS_PUBLIC_DIR, shouldServeLocalUploadsStatic } from "./uploads/storage.js";
 import { startUploadRetentionJob } from "./uploads/cleanup.js";
@@ -209,6 +211,7 @@ app.get("/health", (_req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: config.nodeEnv,
+    pool: getPoolStats(),
   });
 });
 
@@ -231,6 +234,8 @@ if (config.rateLimitEnabled) {
   app.use("/api/expressions", apiLimiter); // Expression testing
   app.use("/api/uploads", apiLimiter);
   app.use("/api/sales", apiLimiter);
+  app.use("/api/sandbox", apiLimiter);
+  app.use("/api/ops", apiLimiter);
 }
 app.use("/api/graph", graphRouter);
 app.use("/api/mesh", meshRouter);
@@ -240,6 +245,8 @@ app.use("/api/rules", expEngineRouter);
 app.use("/api/expressions", expEngineRouter);
 app.use("/api", uploadsRouter);
 app.use("/api/sales", salesRouter);
+app.use("/api/sandbox", sandboxRouter);
+app.use("/api/ops", opsRouter);
 
 // Search route (before generic CRUD catch-all)
 if (config.rateLimitEnabled) {
@@ -381,24 +388,28 @@ void startServer();
 // ---------------------------------------------------------------------------
 // Graceful shutdown
 // ---------------------------------------------------------------------------
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM received, shutting down gracefully");
+function handleGracefulShutdown(signal: "SIGTERM" | "SIGINT") {
+  logger.info(`${signal} received, shutting down gracefully`);
   stopUploadRetention?.();
   stopUploadRetention = null;
-  void flushAndStopAuditPersistence().finally(() => {
-    logger.flush();
-    process.exit(0);
-  });
+
+  void (async () => {
+    try {
+      await flushAndStopAuditPersistence();
+      await pool.end();
+    } finally {
+      logger.flush();
+      process.exit(0);
+    }
+  })();
+}
+
+process.on("SIGTERM", () => {
+  handleGracefulShutdown("SIGTERM");
 });
 
 process.on("SIGINT", () => {
-  logger.info("SIGINT received, shutting down gracefully");
-  stopUploadRetention?.();
-  stopUploadRetention = null;
-  void flushAndStopAuditPersistence().finally(() => {
-    logger.flush();
-    process.exit(0);
-  });
+  handleGracefulShutdown("SIGINT");
 });
 
 export { app };

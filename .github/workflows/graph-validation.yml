@@ -1,0 +1,332 @@
+name: Graph Validation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "packages/db/src/graph-validation/**"
+      - "packages/db/package.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/graph-validation.yml"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "packages/db/src/graph-validation/**"
+      - "packages/db/package.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/graph-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: 10.33.0
+  NODE_VERSION: 22.x
+  MIN_STMT_COVERAGE: "100"
+  MIN_BRANCH_COVERAGE: "100"
+  MIN_FUNC_COVERAGE: "100"
+  MIN_LINE_COVERAGE: "100"
+
+  # Phase 3: Automation - Database validation thresholds
+  MIN_HEALTH_SCORE: "70"
+  ALERT_HEALTH_SCORE: "80"
+
+jobs:
+  graph-validation:
+    name: Graph Validation Tests + Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Run graph validation tests
+        run: pnpm run db:test:graph-validation
+
+      - name: Run graph validation coverage
+        run: pnpm run db:test:graph-validation:coverage | tee .reports-graph-validation-coverage.txt
+
+      - name: Parse coverage metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          COVERAGE_LINE=$(grep -E '^All files[[:space:]]*\|' .reports-graph-validation-coverage.txt | tail -n 1 || true)
+          if [ -z "$COVERAGE_LINE" ]; then
+            echo "Unable to find 'All files' coverage row in report output."
+            exit 1
+          fi
+
+          STMT=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/ /, "", $2); print $2}')
+          BRANCH=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/ /, "", $3); print $3}')
+          FUNC=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/ /, "", $4); print $4}')
+          LINE=$(echo "$COVERAGE_LINE" | awk -F'|' '{gsub(/ /, "", $5); print $5}')
+
+          echo "COVERAGE_STMT=$STMT" >> $GITHUB_ENV
+          echo "COVERAGE_BRANCH=$BRANCH" >> $GITHUB_ENV
+          echo "COVERAGE_FUNC=$FUNC" >> $GITHUB_ENV
+          echo "COVERAGE_LINE=$LINE" >> $GITHUB_ENV
+
+      - name: Enforce coverage thresholds
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          awk -v a="$COVERAGE_STMT" -v b="$MIN_STMT_COVERAGE" 'BEGIN { exit (a+0 >= b+0 ? 0 : 1) }' || {
+            echo "Statement coverage gate failed: $COVERAGE_STMT < $MIN_STMT_COVERAGE"
+            exit 1
+          }
+
+          awk -v a="$COVERAGE_BRANCH" -v b="$MIN_BRANCH_COVERAGE" 'BEGIN { exit (a+0 >= b+0 ? 0 : 1) }' || {
+            echo "Branch coverage gate failed: $COVERAGE_BRANCH < $MIN_BRANCH_COVERAGE"
+            exit 1
+          }
+
+          awk -v a="$COVERAGE_FUNC" -v b="$MIN_FUNC_COVERAGE" 'BEGIN { exit (a+0 >= b+0 ? 0 : 1) }' || {
+            echo "Function coverage gate failed: $COVERAGE_FUNC < $MIN_FUNC_COVERAGE"
+            exit 1
+          }
+
+          awk -v a="$COVERAGE_LINE" -v b="$MIN_LINE_COVERAGE" 'BEGIN { exit (a+0 >= b+0 ? 0 : 1) }' || {
+            echo "Line coverage gate failed: $COVERAGE_LINE < $MIN_LINE_COVERAGE"
+            exit 1
+          }
+
+      - name: Upload coverage log
+        uses: actions/upload-artifact@v4
+        with:
+          name: graph-validation-coverage-log
+          path: .reports-graph-validation-coverage.txt
+          retention-days: 14
+
+      - name: Workflow summary
+        run: |
+          echo "## Graph Validation CI" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: pnpm run db:test:graph-validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage: pnpm run db:test:graph-validation:coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage (All files): statements=$COVERAGE_STMT%, branches=$COVERAGE_BRANCH%, functions=$COVERAGE_FUNC%, lines=$COVERAGE_LINE%" >> $GITHUB_STEP_SUMMARY
+          echo "- Thresholds: statements>=$MIN_STMT_COVERAGE%, branches>=$MIN_BRANCH_COVERAGE%, functions>=$MIN_FUNC_COVERAGE%, lines>=$MIN_LINE_COVERAGE%" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifact: graph-validation-coverage-log" >> $GITHUB_STEP_SUMMARY
+
+  # Phase 3: Automation - Daily health check and database validation
+  graph-validation-health:
+    name: Graph Validation Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only run on schedule (daily 2 AM) or manual trigger in production
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref_protected)
+    # This job requires DATABASE_URL secret - configure in GitHub repository settings
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Skip check - DATABASE_URL not configured
+        if: env.DATABASE_URL == ''
+        run: |
+          echo "⚠️  Skipping graph validation health check: DATABASE_URL not configured"
+          echo "To enable: Add DATABASE_URL secret to GitHub repository environment"
+
+      - name: Run health check (quick overview)
+        if: env.DATABASE_URL != ''
+        run: |
+          mkdir -p .reports/graph-validation
+          pnpm --filter @afenda/db graph-validation health | tee .reports/graph-validation/health-check.txt
+
+      - name: Generate detailed validation report
+        if: env.DATABASE_URL != ''
+        run: |
+          pnpm --filter @afenda/db graph-validation report --format=json > .reports/graph-validation/validation-report.json
+
+      - name: Validate P0 (Critical) relationships
+        if: env.DATABASE_URL != ''
+        continue-on-error: true
+        run: |
+          pnpm --filter @afenda/db graph-validation validate --tier=P0 | tee .reports/graph-validation/p0-validation.txt
+
+      - name: Security audit - Check tenant isolation
+        if: env.DATABASE_URL != ''
+        continue-on-error: true
+        run: |
+          pnpm --filter @afenda/db graph-validation tenants | tee .reports/graph-validation/tenant-isolation-audit.txt
+
+      - name: Export FK relationship catalog
+        if: env.DATABASE_URL != ''
+        run: |
+          pnpm --filter @afenda/db graph-validation export-catalog --output=.reports/graph-validation/fk-catalog.json
+
+      - name: Parse health score
+        if: env.DATABASE_URL != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Extract health score from report (looking for "Overall Health Score: X/100")
+          HEALTH_LINE=$(grep -E 'Overall Health Score:|Grade:' .reports/graph-validation/health-check.txt | head -n 1 || true)
+
+          if [ -z "$HEALTH_LINE" ]; then
+            echo "⚠️ Unable to parse health score from report"
+            echo "HEALTH_SCORE=0" >> $GITHUB_ENV
+            echo "HEALTH_STATUS=UNKNOWN" >> $GITHUB_ENV
+          else
+            # Extract numeric health score (e.g., "92" from "Overall Health Score: 92/100")
+            HEALTH_SCORE=$(echo "$HEALTH_LINE" | grep -oE '[0-9]+' | head -n 1 || echo "0")
+
+            if [ "$HEALTH_SCORE" -lt "$MIN_HEALTH_SCORE" ]; then
+              HEALTH_STATUS="CRITICAL"
+            elif [ "$HEALTH_SCORE" -lt "$ALERT_HEALTH_SCORE" ]; then
+              HEALTH_STATUS="WARNING"
+            else
+              HEALTH_STATUS="HEALTHY"
+            fi
+
+            echo "HEALTH_SCORE=$HEALTH_SCORE" >> $GITHUB_ENV
+            echo "HEALTH_STATUS=$HEALTH_STATUS" >> $GITHUB_ENV
+          fi
+
+      - name: Check for P0 violations
+        if: env.DATABASE_URL != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Check if P0 validation detected any violations
+          if grep -q "P0 violations: 0" .reports/graph-validation/p0-validation.txt; then
+            echo "P0_STATUS=PASS" >> $GITHUB_ENV
+          else
+            echo "P0_STATUS=FAIL" >> $GITHUB_ENV
+          fi
+
+      - name: Check tenant isolation security
+        if: env.DATABASE_URL != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Check if tenant isolation is secure
+          if grep -q "SECURE" .reports/graph-validation/tenant-isolation-audit.txt; then
+            echo "TENANT_STATUS=SECURE" >> $GITHUB_ENV
+          else
+            echo "TENANT_STATUS=BREACH" >> $GITHUB_ENV
+          fi
+
+      - name: Upload validation reports
+        if: env.DATABASE_URL != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: graph-validation-reports
+          path: .reports/graph-validation
+          retention-days: 30
+
+      - name: Workflow summary - Health Check Results
+        if: env.DATABASE_URL != ''
+        run: |
+          echo "## Graph Validation Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Overall Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Health Score: **$HEALTH_SCORE/100** (Status: **$HEALTH_STATUS**)" >> $GITHUB_STEP_SUMMARY
+          echo "- P0 Validation: **$P0_STATUS**" >> $GITHUB_STEP_SUMMARY
+          echo "- Tenant Isolation: **$TENANT_STATUS**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generated Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 Health Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Detailed Validation Report (JSON)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 P0 Critical Relationship Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔒 Tenant Isolation Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "- 📁 FK Catalog Export" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Thresholds" >> $GITHUB_STEP_SUMMARY
+          echo "- Minimum Health Score: **$MIN_HEALTH_SCORE/100**" >> $GITHUB_STEP_SUMMARY
+          echo "- Alert Threshold: **$ALERT_HEALTH_SCORE/100**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Download: graph-validation-reports" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail on critical health score
+        if: env.DATABASE_URL != '' && env.HEALTH_STATUS == 'CRITICAL'
+        run: |
+          echo "❌ Graph validation health is CRITICAL (score: $HEALTH_SCORE < $MIN_HEALTH_SCORE)"
+          echo "Action required: Investigate orphaned records, missing indexes, or tenant leaks"
+          echo "See reports artifact: graph-validation-reports"
+          exit 1
+
+      - name: Fail on P0 violations
+        if: env.DATABASE_URL != '' && env.P0_STATUS == 'FAIL'
+        run: |
+          echo "❌ P0 (Critical) relationship violations detected"
+          echo "Action required: Immediate remediation of critical FK violations"
+          echo "See reports artifact: graph-validation-reports"
+          exit 1
+
+      - name: Fail on tenant isolation breach
+        if: env.DATABASE_URL != '' && env.TENANT_STATUS == 'BREACH'
+        run: |
+          echo "🚨 SECURITY INCIDENT: Tenant isolation breach detected"
+          echo "Action required: Immediate security response - escalate to security team"
+          echo "See reports artifact: graph-validation-reports"
+          exit 1

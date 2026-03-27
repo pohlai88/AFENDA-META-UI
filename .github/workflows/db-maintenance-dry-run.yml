@@ -1,0 +1,80 @@
+name: DB Maintenance Dry Run
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+  pull_request:
+    paths:
+      - "packages/db/src/_maintenance/**"
+      - "packages/db/package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 10.33.0
+  NODE_VERSION: 22.x
+
+jobs:
+  maintenance-plan:
+    name: Retention and Partition Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Generate retention dry-run plan
+        run: |
+          mkdir -p .reports/db-maintenance
+          pnpm --filter @afenda/db ops:retention:plan | tee .reports/db-maintenance/retention-plan.txt
+
+      - name: Generate partition dry-run plan
+        run: |
+          pnpm --filter @afenda/db ops:partition:plan -- --years-ahead=3 | tee .reports/db-maintenance/partition-plan.txt
+
+      - name: Upload maintenance plan artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-maintenance-plans
+          path: .reports/db-maintenance
+          retention-days: 14
+
+      - name: Maintenance plan summary
+        run: |
+          echo "## DB Maintenance Dry Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Generated plans:" >> $GITHUB_STEP_SUMMARY
+          echo "- Retention plan" >> $GITHUB_STEP_SUMMARY
+          echo "- Partition plan (3 years ahead)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See artifact: db-maintenance-plans" >> $GITHUB_STEP_SUMMARY

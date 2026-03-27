@@ -8,7 +8,7 @@
     },
     "db:generate": {
       "env": ["DATABASE_URL"],
-      "outputs": ["src/db/migrations/**"]
+      "outputs": ["migrations/**"]
     },
     "test:db": {
       "env": ["DATABASE_URL"],

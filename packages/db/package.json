@@ -22,6 +22,10 @@
       "import": "./dist/_rls/index.js",
       "types": "./dist/_rls/index.d.ts"
     },
+    "./relations": {
+      "import": "./dist/relations.js",
+      "types": "./dist/relations.d.ts"
+    },
     "./schema": {
       "import": "./dist/schema/index.js",
       "types": "./dist/schema/index.d.ts"
@@ -44,17 +48,27 @@
     "typecheck": "pnpm --filter @afenda/meta-types build && tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:trigger:apply": "tsx src/_maintenance/apply-status-triggers.ts",
+    "db:trigger:dry": "tsx src/_maintenance/apply-status-triggers.ts --dry-run",
+    "ops:retention:plan": "tsx src/_maintenance/run-sales-retention.ts --dry-run",
+    "ops:retention:apply": "tsx src/_maintenance/run-sales-retention.ts --apply",
+    "ops:partition:plan": "tsx src/_maintenance/run-sales-partition-plan.ts --dry-run",
+    "ops:partition:apply": "tsx src/_maintenance/run-sales-partition-plan.ts --apply",
     "test:db": "vitest run --passWithNoTests",
+    "test:graph-validation": "vitest run --passWithNoTests src/graph-validation/__tests__",
+    "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__tests__",
     "check:all": "pnpm run typecheck && pnpm run test:db",
     "gate:early": "pnpm run check:all",
-    "seed": "tsx src/_seeds/index.ts"
+    "seed": "tsx src/_seeds/index.ts",
+    "archival": "tsx src/archival/runner.ts",
+    "graph-validation": "tsx src/graph-validation/runner.ts"
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "catalog:",
-    "drizzle-zod": "^0.8.3",
     "pg": "catalog:",
     "zod": "catalog:"
   },

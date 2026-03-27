@@ -220,6 +220,48 @@ export function SidebarNav() {
         Dashboard
       </Link>
 
+      <Link
+        to="/ops/dashboard"
+        aria-current={isPathActive(location.pathname, "/ops/dashboard") ? "page" : undefined}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+          isPathActive(location.pathname, "/ops/dashboard")
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        )}
+      >
+        <FileText className="w-4 h-4" />
+        Ops Dashboard
+      </Link>
+
+      <Link
+        to="/ops/events"
+        aria-current={isPathActive(location.pathname, "/ops/events") ? "page" : undefined}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+          isPathActive(location.pathname, "/ops/events")
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        )}
+      >
+        <FileText className="w-4 h-4" />
+        Ops Events
+      </Link>
+
+      <Link
+        to="/ops/sandbox"
+        aria-current={isPathActive(location.pathname, "/ops/sandbox") ? "page" : undefined}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+          isPathActive(location.pathname, "/ops/sandbox")
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        )}
+      >
+        <FileText className="w-4 h-4" />
+        Policy Sandbox
+      </Link>
+
       {isLoading && (
         <div className="space-y-2 px-2 py-2" aria-live="polite" aria-busy="true">
           <div className="h-7 rounded bg-muted animate-pulse" />

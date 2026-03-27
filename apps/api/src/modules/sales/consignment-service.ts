@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
 import {
@@ -7,10 +7,7 @@ import {
   consignmentStockReports,
 } from "../../db/schema/index.js";
 import { NotFoundError, ValidationError } from "../../middleware/errorHandler.js";
-import {
-  recordDomainEvent,
-  recordValidationIssues,
-} from "../../utils/audit-logs.js";
+import { recordDomainEvent, recordValidationIssues } from "../../utils/audit-logs.js";
 import {
   checkAgreementExpiry,
   generateInvoiceFromReport,
@@ -19,6 +16,47 @@ import {
   type ConsignmentInvoiceDraft,
   type StockReportValidationResult,
 } from "./logic/consignment-engine.js";
+
+// ---------------------------------------------------------------------------
+// Prepared Statements (Hot Paths)
+// ---------------------------------------------------------------------------
+
+const loadStockReportPrepared = db
+  .select()
+  .from(consignmentStockReports)
+  .where(
+    and(
+      eq(consignmentStockReports.tenantId, sql.placeholder("tenantId")),
+      eq(consignmentStockReports.id, sql.placeholder("reportId")),
+      isNull(consignmentStockReports.deletedAt)
+    )
+  )
+  .limit(1)
+  .prepare("consignment_load_stock_report");
+
+const loadAgreementPrepared = db
+  .select()
+  .from(consignmentAgreements)
+  .where(
+    and(
+      eq(consignmentAgreements.tenantId, sql.placeholder("tenantId")),
+      eq(consignmentAgreements.id, sql.placeholder("agreementId")),
+      isNull(consignmentAgreements.deletedAt)
+    )
+  )
+  .limit(1)
+  .prepare("consignment_load_agreement");
+
+const loadStockReportLinesPrepared = db
+  .select()
+  .from(consignmentStockReportLines)
+  .where(
+    and(
+      eq(consignmentStockReportLines.tenantId, sql.placeholder("tenantId")),
+      eq(consignmentStockReportLines.reportId, sql.placeholder("reportId"))
+    )
+  )
+  .prepare("consignment_load_stock_report_lines");
 
 export interface ValidateConsignmentStockReportInput {
   tenantId: number;
@@ -193,37 +231,19 @@ export async function expireConsignmentAgreementIfNeeded(
 }
 
 async function loadStockReport(tenantId: number, reportId: string) {
-  const [report] = await db
-    .select()
-    .from(consignmentStockReports)
-    .where(
-      and(
-        eq(consignmentStockReports.tenantId, tenantId),
-        eq(consignmentStockReports.id, reportId),
-        isNull(consignmentStockReports.deletedAt)
-      )
-    )
-    .limit(1);
+  const [report] = await loadStockReportPrepared.execute({ tenantId, reportId });
 
   if (!report) {
-    throw new NotFoundError(`Consignment stock report ${reportId} was not found for tenant ${tenantId}.`);
+    throw new NotFoundError(
+      `Consignment stock report ${reportId} was not found for tenant ${tenantId}.`
+    );
   }
 
   return report;
 }
 
 async function loadAgreement(tenantId: number, agreementId: string) {
-  const [agreement] = await db
-    .select()
-    .from(consignmentAgreements)
-    .where(
-      and(
-        eq(consignmentAgreements.tenantId, tenantId),
-        eq(consignmentAgreements.id, agreementId),
-        isNull(consignmentAgreements.deletedAt)
-      )
-    )
-    .limit(1);
+  const [agreement] = await loadAgreementPrepared.execute({ tenantId, agreementId });
 
   if (!agreement) {
     throw new NotFoundError(
@@ -235,13 +255,5 @@ async function loadAgreement(tenantId: number, agreementId: string) {
 }
 
 async function loadStockReportLines(tenantId: number, reportId: string) {
-  return db
-    .select()
-    .from(consignmentStockReportLines)
-    .where(
-      and(
-        eq(consignmentStockReportLines.tenantId, tenantId),
-        eq(consignmentStockReportLines.reportId, reportId)
-      )
-    );
+  return loadStockReportLinesPrepared.execute({ tenantId, reportId });
 }

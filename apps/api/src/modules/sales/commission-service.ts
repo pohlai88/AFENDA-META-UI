@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
 import {
@@ -134,7 +134,7 @@ export async function generateCommissionForOrder(
   const salespersonId = assignment.salespersonId;
 
   const existingEntry = await db
-    .select()
+    .select({ id: commissionEntries.id, status: commissionEntries.status, createdBy: commissionEntries.createdBy, notes: commissionEntries.notes })
     .from(commissionEntries)
     .where(
       and(
@@ -313,39 +313,58 @@ export async function payCommissionEntries(
 export async function getCommissionReport(
   input: CommissionReportInput
 ): Promise<CommissionReportResult> {
-  const allEntries = await db
+  // Build SQL WHERE conditions for filtering
+  const conditions = [
+    eq(commissionEntries.tenantId, input.tenantId),
+    isNull(commissionEntries.deletedAt),
+  ];
+
+  if (input.salespersonId !== undefined) {
+    conditions.push(eq(commissionEntries.salespersonId, input.salespersonId));
+  }
+
+  if (input.status) {
+    conditions.push(eq(commissionEntries.status, input.status));
+  }
+
+  if (input.periodStart) {
+    conditions.push(gte(commissionEntries.periodEnd, input.periodStart));
+  }
+
+  if (input.periodEnd) {
+    conditions.push(lte(commissionEntries.periodStart, input.periodEnd));
+  }
+
+  // Fetch total count for summary (separate query)
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(commissionEntries)
+    .where(and(...conditions));
+
+  const totalCount = countResult?.count ?? 0;
+
+  // Fetch paginated entries
+  const offset = Math.max(0, input.offset ?? 0);
+  const limit = input.limit ? Math.max(1, input.limit) : totalCount;
+
+  const entries = await db
     .select()
     .from(commissionEntries)
-    .where(and(eq(commissionEntries.tenantId, input.tenantId), isNull(commissionEntries.deletedAt)))
+    .where(and(...conditions))
+    .orderBy(desc(commissionEntries.periodStart), desc(commissionEntries.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  // Fetch all entries for summary calculation
+  const allEntriesForSummary = await db
+    .select()
+    .from(commissionEntries)
+    .where(and(...conditions))
     .orderBy(desc(commissionEntries.periodStart), desc(commissionEntries.createdAt));
-
-  const filtered = allEntries.filter((entry) => {
-    if (input.salespersonId !== undefined && entry.salespersonId !== input.salespersonId) {
-      return false;
-    }
-
-    if (input.status && entry.status !== input.status) {
-      return false;
-    }
-
-    if (input.periodStart && entry.periodEnd < input.periodStart) {
-      return false;
-    }
-
-    if (input.periodEnd && entry.periodStart > input.periodEnd) {
-      return false;
-    }
-
-    return true;
-  });
-
-  const offset = Math.max(0, input.offset ?? 0);
-  const limit = input.limit ? Math.max(1, input.limit) : filtered.length;
-  const entries = filtered.slice(offset, offset + limit);
 
   return {
     entries,
-    summary: summarizeCommissionEntries(filtered),
+    summary: summarizeCommissionEntries(allEntriesForSummary),
   };
 }
 
@@ -542,16 +561,35 @@ async function resolveTerritoryMatch(
 
   const geography = await resolveOrderGeography(tenantId, order);
 
+  // Build SQL WHERE conditions for territory rule filtering
+  const conditions = [
+    eq(territoryRules.tenantId, tenantId),
+    eq(territoryRules.isActive, true),
+    isNull(territoryRules.deletedAt),
+  ];
+
+  if (geography.countryId) {
+    conditions.push(
+      or(
+        isNull(territoryRules.countryId),
+        eq(territoryRules.countryId, geography.countryId)
+      )!
+    );
+  }
+
+  if (geography.stateId) {
+    conditions.push(
+      or(
+        isNull(territoryRules.stateId),
+        eq(territoryRules.stateId, geography.stateId)
+      )!
+    );
+  }
+
   const rules = await db
     .select()
     .from(territoryRules)
-    .where(
-      and(
-        eq(territoryRules.tenantId, tenantId),
-        eq(territoryRules.isActive, true),
-        isNull(territoryRules.deletedAt)
-      )
-    )
+    .where(and(...conditions))
     .orderBy(desc(territoryRules.priority), territoryRules.id);
 
   const matchedRules = rules.filter((rule) => {

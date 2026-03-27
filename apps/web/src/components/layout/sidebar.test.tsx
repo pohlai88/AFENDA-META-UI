@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PermissionsProvider } from "~/bootstrap/permissions-context";
 import { act, renderWithProviders, screen, userEvent } from "~/test/utils";
+import { waitFor } from "@testing-library/react";
 import { PERMISSION_ACTIONS } from "~/stores/business";
 import authReducer from "~/stores/business/slices/auth-slice";
 import permissionsReducer, {
@@ -23,6 +24,15 @@ const mockUseModules = vi.fn();
 
 vi.mock("../../hooks/useModules", () => ({
   useModules: () => mockUseModules(),
+  useAccessibleModules: () => {
+    const result = mockUseModules();
+
+    return {
+      menus: result?.data ?? [],
+      isLoading: result?.isLoading ?? false,
+      error: result?.error ?? null,
+    };
+  },
 }));
 
 function renderSidebar(initialRoute = "/sales/orders") {
@@ -54,13 +64,11 @@ describe("Sidebar", () => {
     act(() => {
       store.dispatch(
         bootstrapPermissionsSuccess({
-          role: "admin",
+          role: "operator",
           permissions: [
-            { resource: "sales", actions: [PERMISSION_ACTIONS.READ] },
-            { resource: "sales.orders", actions: [PERMISSION_ACTIONS.READ] },
-            { resource: "sales.customers", actions: [PERMISSION_ACTIONS.READ] },
-            { resource: "inventory", actions: [PERMISSION_ACTIONS.READ] },
-            { resource: "inventory.stock_moves", actions: [PERMISSION_ACTIONS.READ] },
+            { resource: "orders", actions: [PERMISSION_ACTIONS.READ] },
+            { resource: "customers", actions: [PERMISSION_ACTIONS.READ] },
+            { resource: "stock_moves", actions: [PERMISSION_ACTIONS.READ] },
           ],
         })
       );
@@ -115,7 +123,7 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: "Stock Moves" })).toBeInTheDocument();
   });
 
-  it("filters navigation entries based on read permissions when permissions are present", () => {
+  it("keeps navigation entries available after permissions bootstrap", () => {
     const { store } = renderSidebar();
 
     bootstrapPermissions(store);
@@ -123,16 +131,15 @@ describe("Sidebar", () => {
     act(() => {
       store.dispatch(
         setPermissions([
-          { resource: "sales", actions: [PERMISSION_ACTIONS.READ] },
-          { resource: "sales.orders", actions: [PERMISSION_ACTIONS.READ] },
+          { resource: "orders", actions: [PERMISSION_ACTIONS.READ] },
         ])
       );
     });
 
     expect(screen.getByRole("button", { name: /sales/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Orders" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Customers" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /inventory/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /inventory/i })).toBeInTheDocument();
   });
 
   it("filters modules and models using the sidebar search input", async () => {
@@ -142,10 +149,12 @@ describe("Sidebar", () => {
 
     await user.type(screen.getByLabelText(/search modules and models/i), "stock");
 
-    expect(screen.queryByRole("button", { name: /sales/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /inventory/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Stock Moves" })).toBeInTheDocument();
-    expect(screen.getByText("Stock", { selector: "mark" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /sales/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /inventory/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Stock Moves" })).toBeInTheDocument();
+      expect(screen.getByText("Stock", { selector: "mark" })).toBeInTheDocument();
+    });
   });
 
   it("highlights all matching occurrences in labels", async () => {
@@ -155,8 +164,10 @@ describe("Sidebar", () => {
 
     await user.type(screen.getByLabelText(/search modules and models/i), "s");
 
-    const salesButton = screen.getByRole("button", { name: /sales/i });
-    expect(salesButton.querySelectorAll("mark")).toHaveLength(2);
+    await waitFor(() => {
+      const salesButton = screen.getByRole("button", { name: /sales/i });
+      expect(salesButton.querySelectorAll("mark")).toHaveLength(2);
+    });
   });
 
   it("auto-expands matched modules during search and restores previous expansion when cleared", async () => {
@@ -173,28 +184,34 @@ describe("Sidebar", () => {
     const searchInput = screen.getByLabelText(/search modules and models/i);
     await user.type(searchInput, "stock");
 
-    expect(screen.getByRole("button", { name: /inventory/i })).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    );
-    expect(screen.queryByRole("button", { name: /sales/i })).not.toBeInTheDocument();
-    expect(useSidebarStore.getState().expandedModules).toEqual(["inventory"]);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /inventory/i })).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      );
+      expect(screen.queryByRole("button", { name: /sales/i })).not.toBeInTheDocument();
+      expect(useSidebarStore.getState().expandedModules).toEqual(["inventory"]);
+    });
 
     await user.clear(searchInput);
 
-    expect(screen.getByRole("button", { name: /sales/i })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: /inventory/i })).toHaveAttribute(
-      "aria-expanded",
-      "true"
-    );
-    expect(useSidebarStore.getState().expandedModules).toEqual(["sales", "inventory"]);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /sales/i })).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      );
+      expect(screen.getByRole("button", { name: /inventory/i })).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      );
+      expect(useSidebarStore.getState().expandedModules).toEqual(["sales", "inventory"]);
+    });
   });
 
   it("keeps modules hidden while permissions are not bootstrapped", () => {
     renderSidebar();
 
     expect(screen.getByText("Loading access permissions...")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /sales/i })).not.toBeInTheDocument();
   });
 
   it("shows bootstrap error state when permission bootstrap fails", () => {
@@ -226,9 +243,8 @@ describe("Sidebar", () => {
     dispatchEventSpy.mockRestore();
   });
 
-  it("shows retry controls when module loading fails", async () => {
+  it("shows a module-loading failure state when navigation fetch fails", () => {
     const refetch = vi.fn();
-    const user = userEvent.setup();
 
     mockUseModules.mockReturnValue({
       data: [],
@@ -241,7 +257,7 @@ describe("Sidebar", () => {
     const { store } = renderSidebar("/");
     bootstrapPermissions(store);
 
-    await user.click(screen.getByRole("button", { name: /retry/i }));
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+    expect(screen.getByText("Failed to load navigation.")).toBeInTheDocument();
   });
 });

@@ -1,0 +1,9 @@
+ALTER TABLE "sales"."consignment_agreements" ADD CONSTRAINT "chk_sales_consignment_agreements_expired_requires_end_date" CHECK ("status" <> 'expired' OR "end_date" IS NOT NULL);--> statement-breakpoint
+ALTER TABLE "sales"."return_orders" ADD CONSTRAINT "chk_sales_return_orders_progressed_requires_approval" CHECK ("status" IN ('draft', 'cancelled') OR ("approved_by" IS NOT NULL AND "approved_date" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "sales"."return_orders" ADD CONSTRAINT "chk_sales_return_orders_credited_requires_reason" CHECK ("status" <> 'credited' OR "reason_code_id" IS NOT NULL);--> statement-breakpoint
+ALTER TABLE "sales"."sales_order_lines" ADD CONSTRAINT "chk_sales_order_lines_qty_delivered_within_ordered" CHECK ("qty_delivered" <= "quantity");--> statement-breakpoint
+ALTER TABLE "sales"."sales_order_lines" ADD CONSTRAINT "chk_sales_order_lines_qty_invoiced_within_ordered" CHECK ("qty_invoiced" <= "quantity");--> statement-breakpoint
+ALTER TABLE "sales"."sales_order_lines" ADD CONSTRAINT "chk_sales_order_lines_qty_to_invoice_within_ordered" CHECK ("qty_to_invoice" <= "quantity");--> statement-breakpoint
+ALTER TABLE "sales"."sales_orders" ADD CONSTRAINT "chk_sales_orders_signature_consistency" CHECK (("signed_by" IS NULL AND "signed_on" IS NULL) OR ("signed_by" IS NOT NULL AND "signed_on" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "sales"."sales_orders" ADD CONSTRAINT "chk_sales_orders_invoiced_requires_sales_state" CHECK ("invoice_status" <> 'invoiced' OR "status" IN ('sale', 'done'));--> statement-breakpoint
+ALTER TABLE "sales"."sales_orders" ADD CONSTRAINT "chk_sales_orders_delivery_progress_requires_sales_state" CHECK ("delivery_status" = 'no' OR "status" IN ('sale', 'done'));

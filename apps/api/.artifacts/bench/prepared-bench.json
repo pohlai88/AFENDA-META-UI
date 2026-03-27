@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-03-26T22:49:13.521Z",
+  "mode": "synthetic",
+  "iterations": 50,
+  "summary": [
+    {
+      "name": "audit failures",
+      "dynamicAvgMs": 1.806666,
+      "preparedAvgMs": 1.07221,
+      "speedup": 1.6849926786730212,
+      "deltaPct": 40.65256112640632
+    },
+    {
+      "name": "user trail",
+      "dynamicAvgMs": 1.1820139999999992,
+      "preparedAvgMs": 0.9811779999999999,
+      "speedup": 1.204688649765893,
+      "deltaPct": 16.991000106597678
+    },
+    {
+      "name": "stats",
+      "dynamicAvgMs": 1.1369920000000002,
+      "preparedAvgMs": 1.0256179999999995,
+      "speedup": 1.108592087892374,
+      "deltaPct": 9.795495482817886
+    },
+    {
+      "name": "aggregate events",
+      "dynamicAvgMs": 8.771982000000003,
+      "preparedAvgMs": 7.734171999999998,
+      "speedup": 1.134185016831796,
+      "deltaPct": 11.830963629428384
+    }
+  ]
+}

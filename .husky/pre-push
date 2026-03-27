@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+# Run the V2 Business Truth Engine gate before pushing.
+# This catches schema violations locally instead of waiting for CI.
+node tools/ci-gate/index.mjs --gate=postgres-schema

@@ -40,6 +40,7 @@ export async function seedPartners(tx: Tx, seedAuditScope: SeedAuditScope): Prom
         countryId: usCountryId ?? null,
         stateId: stateCA?.stateId ?? null,
         creditLimit: "50000.00",
+        relationshipStart: new Date("2021-01-10T00:00:00Z"),
         website: "https://accent-corp.com",
         industry: "Technology",
         totalInvoiced: "0",
@@ -58,6 +59,7 @@ export async function seedPartners(tx: Tx, seedAuditScope: SeedAuditScope): Prom
         countryId: usCountryId ?? null,
         stateId: stateNY?.stateId ?? null,
         creditLimit: "0",
+        relationshipStart: new Date("2022-05-01T00:00:00Z"),
         website: "https://betatech.io",
         industry: "Software",
         totalInvoiced: "0",
@@ -75,6 +77,7 @@ export async function seedPartners(tx: Tx, seedAuditScope: SeedAuditScope): Prom
         vat: "GB123456789",
         countryId: gbCountryId ?? null,
         creditLimit: "75000.00",
+        relationshipStart: new Date("2020-09-15T00:00:00Z"),
         website: "https://gamma-services.co.uk",
         industry: "Consulting",
         totalInvoiced: "0",
@@ -92,6 +95,7 @@ export async function seedPartners(tx: Tx, seedAuditScope: SeedAuditScope): Prom
         vat: "US456789123",
         countryId: usCountryId ?? null,
         creditLimit: "25000.00",
+        relationshipStart: new Date("2023-03-20T00:00:00Z"),
         website: "https://delta-inc.us",
         industry: "Retail",
         totalInvoiced: "0",
@@ -226,10 +230,30 @@ export async function seedPartners(tx: Tx, seedAuditScope: SeedAuditScope): Prom
   await tx
     .insert(partnerTags)
     .values([
-      { ...seedAuditScope, id: "30000001-0000-4000-8000-000000000001", name: "VIP", color: "#FFD700" },
-      { ...seedAuditScope, id: "30000002-0000-4000-8000-000000000002", name: "Wholesale", color: "#4169E1" },
-      { ...seedAuditScope, id: "30000003-0000-4000-8000-000000000003", name: "Retail", color: "#32CD32" },
-      { ...seedAuditScope, id: "30000004-0000-4000-8000-000000000004", name: "Enterprise", color: "#800080" },
+      {
+        ...seedAuditScope,
+        id: "30000001-0000-4000-8000-000000000001",
+        name: "VIP",
+        color: "#FFD700",
+      },
+      {
+        ...seedAuditScope,
+        id: "30000002-0000-4000-8000-000000000002",
+        name: "Wholesale",
+        color: "#4169E1",
+      },
+      {
+        ...seedAuditScope,
+        id: "30000003-0000-4000-8000-000000000003",
+        name: "Retail",
+        color: "#32CD32",
+      },
+      {
+        ...seedAuditScope,
+        id: "30000004-0000-4000-8000-000000000004",
+        name: "Enterprise",
+        color: "#800080",
+      },
     ])
     .execute();
 
@@ -238,10 +262,30 @@ export async function seedPartners(tx: Tx, seedAuditScope: SeedAuditScope): Prom
   await tx
     .insert(partnerTagAssignments)
     .values([
-      { ...seedAuditScope, id: "40000001-0000-4000-8000-000000000001", partnerId: SEED_IDS.partnerAccentCorp, tagId: "30000001-0000-4000-8000-000000000001" },
-      { ...seedAuditScope, id: "40000002-0000-4000-8000-000000000002", partnerId: SEED_IDS.partnerAccentCorp, tagId: "30000004-0000-4000-8000-000000000004" },
-      { ...seedAuditScope, id: "40000003-0000-4000-8000-000000000003", partnerId: SEED_IDS.partnerBetaTech, tagId: "30000002-0000-4000-8000-000000000002" },
-      { ...seedAuditScope, id: "40000004-0000-4000-8000-000000000004", partnerId: SEED_IDS.partnerDeltaInc, tagId: "30000003-0000-4000-8000-000000000003" },
+      {
+        ...seedAuditScope,
+        id: "40000001-0000-4000-8000-000000000001",
+        partnerId: SEED_IDS.partnerAccentCorp,
+        tagId: "30000001-0000-4000-8000-000000000001",
+      },
+      {
+        ...seedAuditScope,
+        id: "40000002-0000-4000-8000-000000000002",
+        partnerId: SEED_IDS.partnerAccentCorp,
+        tagId: "30000004-0000-4000-8000-000000000004",
+      },
+      {
+        ...seedAuditScope,
+        id: "40000003-0000-4000-8000-000000000003",
+        partnerId: SEED_IDS.partnerBetaTech,
+        tagId: "30000002-0000-4000-8000-000000000002",
+      },
+      {
+        ...seedAuditScope,
+        id: "40000004-0000-4000-8000-000000000004",
+        partnerId: SEED_IDS.partnerDeltaInc,
+        tagId: "30000003-0000-4000-8000-000000000003",
+      },
     ])
     .execute();
 

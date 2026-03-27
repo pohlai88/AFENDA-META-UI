@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-orm/zod";
 import {
   boolean,
   check,
@@ -178,6 +178,10 @@ export const partners = salesSchema.table(
     vat: text("vat"),
     website: text("website"),
     industry: text("industry"),
+    relationshipStart: timestamp("relationship_start", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    relationshipEnd: timestamp("relationship_end", { withTimezone: true }),
     countryId: integer("country_id"),
     stateId: integer("state_id"),
     lang: text("lang"),
@@ -206,6 +210,10 @@ export const partners = salesSchema.table(
     check("chk_sales_partners_credit_limit_non_negative", sql`${table.creditLimit} >= 0`),
     check("chk_sales_partners_total_invoiced_non_negative", sql`${table.totalInvoiced} >= 0`),
     check("chk_sales_partners_total_due_non_negative", sql`${table.totalDue} >= 0`),
+    check(
+      "chk_sales_partners_relationship_dates",
+      sql`${table.relationshipEnd} IS NULL OR ${table.relationshipEnd} >= ${table.relationshipStart}`
+    ),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.tenantId],
@@ -838,6 +846,13 @@ export const salesOrders = salesSchema.table(
     deliveryAddressId: uuid("delivery_address_id"),
     warehouseId: text("warehouse_id"),
     companyCurrencyRate: numeric("company_currency_rate", { precision: 14, scale: 6 }),
+    exchangeRateUsed: numeric("exchange_rate_used", { precision: 14, scale: 6 }),
+    exchangeRateSource: text("exchange_rate_source"),
+    pricelistSnapshotId: uuid("pricelist_snapshot_id"),
+    creditCheckPassed: boolean("credit_check_passed").notNull().default(false),
+    creditCheckAt: timestamp("credit_check_at", { withTimezone: true }),
+    creditCheckBy: integer("credit_check_by"),
+    creditLimitAtCheck: numeric("credit_limit_at_check", { precision: 14, scale: 2 }),
     invoiceStatus: invoiceStatusEnum("invoice_status").notNull().default("no"),
     deliveryStatus: deliveryStatusEnum("delivery_status").notNull().default("no"),
     signedBy: text("signed_by"),
@@ -865,8 +880,15 @@ export const salesOrders = salesSchema.table(
     index("idx_sales_orders_tenant").on(table.tenantId),
     index("idx_sales_orders_partner").on(table.tenantId, table.partnerId),
     index("idx_sales_orders_status").on(table.tenantId, table.status, table.orderDate),
+    index("idx_sales_orders_credit_check").on(
+      table.tenantId,
+      table.creditCheckPassed,
+      table.orderDate
+    ),
     index("idx_sales_orders_currency").on(table.tenantId, table.currencyId),
     index("idx_sales_orders_pricelist").on(table.tenantId, table.pricelistId),
+    index("idx_sales_orders_pricelist_snapshot").on(table.tenantId, table.pricelistSnapshotId),
+    index("idx_sales_orders_credit_check_by").on(table.tenantId, table.creditCheckBy),
     index("idx_sales_orders_payment_term").on(table.tenantId, table.paymentTermId),
     index("idx_sales_orders_fiscal_position").on(table.tenantId, table.fiscalPositionId),
     index("idx_sales_orders_invoice_status").on(
@@ -906,6 +928,34 @@ export const salesOrders = salesSchema.table(
       "chk_sales_orders_company_currency_rate_positive",
       sql`${table.companyCurrencyRate} IS NULL OR ${table.companyCurrencyRate} > 0`
     ),
+    check(
+      "chk_sales_orders_exchange_rate_used_positive",
+      sql`${table.exchangeRateUsed} IS NULL OR ${table.exchangeRateUsed} > 0`
+    ),
+    check(
+      "chk_sales_orders_exchange_rate_source_required",
+      sql`${table.exchangeRateUsed} IS NULL OR ${table.exchangeRateSource} IS NOT NULL`
+    ),
+    check(
+      "chk_sales_orders_credit_limit_at_check_non_negative",
+      sql`${table.creditLimitAtCheck} IS NULL OR ${table.creditLimitAtCheck} >= 0`
+    ),
+    check(
+      "chk_sales_orders_credit_check_consistency",
+      sql`NOT ${table.creditCheckPassed} OR (${table.creditCheckAt} IS NOT NULL AND ${table.creditCheckBy} IS NOT NULL)`
+    ),
+    check(
+      "chk_sales_orders_signature_consistency",
+      sql`(${table.signedBy} IS NULL AND ${table.signedOn} IS NULL) OR (${table.signedBy} IS NOT NULL AND ${table.signedOn} IS NOT NULL)`
+    ),
+    check(
+      "chk_sales_orders_invoiced_requires_sales_state",
+      sql`${table.invoiceStatus} <> 'invoiced' OR ${table.status} IN ('sale', 'done')`
+    ),
+    check(
+      "chk_sales_orders_delivery_progress_requires_sales_state",
+      sql`${table.deliveryStatus} = 'no' OR ${table.status} IN ('sale', 'done')`
+    ),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.tenantId],
@@ -942,6 +992,20 @@ export const salesOrders = salesSchema.table(
       .onDelete("set null")
       .onUpdate("cascade"),
     foreignKey({
+      columns: [table.pricelistSnapshotId],
+      foreignColumns: [pricelists.id],
+      name: "fk_sales_orders_pricelist_snapshot",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.creditCheckBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_orders_credit_check_by",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
       columns: [table.invoiceAddressId],
       foreignColumns: [partnerAddresses.id],
       name: "fk_sales_orders_invoice_address",
@@ -974,6 +1038,9 @@ export const salesOrderLines = salesSchema.table(
     quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull().default("1"),
     priceUnit: numeric("price_unit", { precision: 12, scale: 2 }).notNull(),
     discount: numeric("discount", { precision: 5, scale: 2 }).notNull().default("0"),
+    priceListedAt: numeric("price_listed_at", { precision: 14, scale: 2 }),
+    priceOverrideReason: text("price_override_reason"),
+    priceApprovedBy: integer("price_approved_by"),
     costUnit: numeric("cost_unit", { precision: 12, scale: 2 }).notNull().default("0"),
     subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
     priceSubtotal: numeric("price_subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
@@ -992,7 +1059,9 @@ export const salesOrderLines = salesSchema.table(
     discountSource: discountSourceEnum("discount_source").notNull().default("manual"),
     appliedPricelistId: uuid("applied_pricelist_id"),
     appliedFiscalPositionId: uuid("applied_fiscal_position_id"),
+    taxRuleSnapshot: text("tax_rule_snapshot"),
     discountAuthorityUserId: integer("discount_authority_user_id"),
+    discountApprovedAt: timestamp("discount_approved_at", { withTimezone: true }),
     sequence: integer("sequence").notNull().default(10),
     ...timestampColumns,
     ...softDeleteColumns,
@@ -1006,11 +1075,24 @@ export const salesOrderLines = salesSchema.table(
     index("idx_sales_order_lines_invoice_status").on(table.tenantId, table.invoiceStatus),
     index("idx_sales_order_lines_price_source").on(table.tenantId, table.priceSource),
     index("idx_sales_order_lines_tax").on(table.tenantId, table.taxId),
+    index("idx_sales_order_lines_price_approved_by").on(table.tenantId, table.priceApprovedBy),
     check("chk_sales_order_lines_quantity_positive", sql`${table.quantity} > 0`),
     check("chk_sales_order_lines_price_unit_non_negative", sql`${table.priceUnit} >= 0`),
     check(
+      "chk_sales_order_lines_price_listed_at_non_negative",
+      sql`${table.priceListedAt} IS NULL OR ${table.priceListedAt} >= 0`
+    ),
+    check(
       "chk_sales_order_lines_discount_range",
       sql`${table.discount} >= 0 AND ${table.discount} <= 100`
+    ),
+    check(
+      "chk_sales_order_lines_price_override_reason_required",
+      sql`${table.priceListedAt} IS NULL OR ${table.priceUnit} >= ${table.priceListedAt} OR ${table.priceOverrideReason} IS NOT NULL`
+    ),
+    check(
+      "chk_sales_order_lines_price_override_approval_required",
+      sql`${table.priceListedAt} IS NULL OR ${table.priceUnit} >= ${table.priceListedAt} OR ${table.priceApprovedBy} IS NOT NULL`
     ),
     check("chk_sales_order_lines_cost_unit_non_negative", sql`${table.costUnit} >= 0`),
     check("chk_sales_order_lines_subtotal_non_negative", sql`${table.subtotal} >= 0`),
@@ -1037,6 +1119,18 @@ export const salesOrderLines = salesSchema.table(
     check("chk_sales_order_lines_qty_delivered_non_negative", sql`${table.qtyDelivered} >= 0`),
     check("chk_sales_order_lines_qty_to_invoice_non_negative", sql`${table.qtyToInvoice} >= 0`),
     check("chk_sales_order_lines_qty_invoiced_non_negative", sql`${table.qtyInvoiced} >= 0`),
+    check(
+      "chk_sales_order_lines_qty_delivered_within_ordered",
+      sql`${table.qtyDelivered} <= ${table.quantity}`
+    ),
+    check(
+      "chk_sales_order_lines_qty_invoiced_within_ordered",
+      sql`${table.qtyInvoiced} <= ${table.quantity}`
+    ),
+    check(
+      "chk_sales_order_lines_qty_to_invoice_within_ordered",
+      sql`${table.qtyToInvoice} <= ${table.quantity}`
+    ),
     check("chk_sales_order_lines_customer_lead_non_negative", sql`${table.customerLead} >= 0`),
     foreignKey({
       columns: [table.tenantId],
@@ -1077,6 +1171,13 @@ export const salesOrderLines = salesSchema.table(
       columns: [table.discountAuthorityUserId],
       foreignColumns: [users.userId],
       name: "fk_sales_order_lines_discount_authority_user",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.priceApprovedBy],
+      foreignColumns: [users.userId],
+      name: "fk_sales_order_lines_price_approved_by",
     })
       .onDelete("set null")
       .onUpdate("cascade"),
@@ -1226,6 +1327,9 @@ export const pricelistItems = salesSchema.table(
     minQuantity: numeric("min_quantity", { precision: 12, scale: 4 }).notNull().default("1"),
     dateStart: timestamp("date_start", { withTimezone: true }),
     dateEnd: timestamp("date_end", { withTimezone: true }),
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull().defaultNow(),
+    effectiveTo: timestamp("effective_to", { withTimezone: true }),
+    supersededBy: uuid("superseded_by"),
     computePrice: pricelistComputeTypeEnum("compute_price").notNull().default("fixed"),
     fixedPrice: numeric("fixed_price", { precision: 14, scale: 4 }),
     percentPrice: numeric("percent_price", { precision: 9, scale: 4 }),
@@ -1252,6 +1356,12 @@ export const pricelistItems = salesSchema.table(
     index("idx_sales_pricelist_items_scope").on(table.tenantId, table.appliedOn, table.isActive),
     index("idx_sales_pricelist_items_product").on(table.tenantId, table.productId),
     index("idx_sales_pricelist_items_category").on(table.tenantId, table.categId),
+    index("idx_sales_pricelist_items_effective").on(
+      table.tenantId,
+      table.pricelistId,
+      table.effectiveFrom
+    ),
+    index("idx_sales_pricelist_items_superseded_by").on(table.tenantId, table.supersededBy),
     check("chk_sales_pricelist_items_min_quantity_positive", sql`${table.minQuantity} > 0`),
     check(
       "chk_sales_pricelist_items_percent_price_range",
@@ -1264,6 +1374,10 @@ export const pricelistItems = salesSchema.table(
     check(
       "chk_sales_pricelist_items_date_range",
       sql`${table.dateEnd} IS NULL OR ${table.dateStart} IS NULL OR ${table.dateEnd} >= ${table.dateStart}`
+    ),
+    check(
+      "chk_sales_pricelist_items_effective_order",
+      sql`${table.effectiveTo} IS NULL OR ${table.effectiveTo} >= ${table.effectiveFrom}`
     ),
     check(
       "chk_sales_pricelist_items_margins_non_negative",
@@ -1302,6 +1416,13 @@ export const pricelistItems = salesSchema.table(
       columns: [table.basePricelistId],
       foreignColumns: [pricelists.id],
       name: "fk_sales_pricelist_items_base_pricelist",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.supersededBy],
+      foreignColumns: [table.id],
+      name: "fk_sales_pricelist_items_superseded_by",
     })
       .onDelete("set null")
       .onUpdate("cascade"),
@@ -1357,6 +1478,9 @@ export const taxRates = salesSchema.table(
     typeTaxUse: taxTypeUseEnum("type_tax_use").notNull().default("sale"),
     amountType: taxAmountTypeEnum("amount_type").notNull().default("percent"),
     amount: numeric("amount", { precision: 9, scale: 4 }).notNull().default("0"),
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull().defaultNow(),
+    effectiveTo: timestamp("effective_to", { withTimezone: true }),
+    replacedBy: uuid("replaced_by"),
     taxGroupId: uuid("tax_group_id"),
     priceInclude: boolean("price_include").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
@@ -1370,6 +1494,8 @@ export const taxRates = salesSchema.table(
     index("idx_sales_tax_rates_tenant").on(table.tenantId),
     index("idx_sales_tax_rates_type").on(table.tenantId, table.typeTaxUse, table.amountType),
     index("idx_sales_tax_rates_group").on(table.tenantId, table.taxGroupId),
+    index("idx_sales_tax_rates_effective").on(table.tenantId, table.effectiveFrom),
+    index("idx_sales_tax_rates_replaced_by").on(table.tenantId, table.replacedBy),
     uniqueIndex("uq_sales_tax_rates_name")
       .on(table.tenantId, sql`lower(${table.name})`)
       .where(sql`${table.deletedAt} IS NULL`),
@@ -1377,6 +1503,10 @@ export const taxRates = salesSchema.table(
     check(
       "chk_sales_tax_rates_percent_range",
       sql`${table.amountType} <> 'percent' OR ${table.amount} <= 100`
+    ),
+    check(
+      "chk_sales_tax_rates_effective_order",
+      sql`${table.effectiveTo} IS NULL OR ${table.effectiveTo} >= ${table.effectiveFrom}`
     ),
     check("chk_sales_tax_rates_sequence_non_negative", sql`${table.sequence} >= 0`),
     foreignKey({
@@ -1397,6 +1527,13 @@ export const taxRates = salesSchema.table(
       columns: [table.countryId],
       foreignColumns: [countries.countryId],
       name: "fk_sales_tax_rates_country",
+    })
+      .onDelete("set null")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.replacedBy],
+      foreignColumns: [table.id],
+      name: "fk_sales_tax_rates_replaced_by",
     })
       .onDelete("set null")
       .onUpdate("cascade"),
@@ -1865,6 +2002,10 @@ export const consignmentAgreements = salesSchema.table(
       "chk_sales_consignment_agreements_review_period_positive",
       sql`${table.reviewPeriodDays} > 0`
     ),
+    check(
+      "chk_sales_consignment_agreements_expired_requires_end_date",
+      sql`${table.status} <> 'expired' OR ${table.endDate} IS NOT NULL`
+    ),
     foreignKey({
       columns: [table.tenantId],
       foreignColumns: [tenants.tenantId],
@@ -2139,6 +2280,14 @@ export const returnOrders = salesSchema.table(
     check(
       "chk_sales_return_orders_approved_requires_actor",
       sql`${table.status} <> 'approved' OR (${table.approvedBy} IS NOT NULL AND ${table.approvedDate} IS NOT NULL)`
+    ),
+    check(
+      "chk_sales_return_orders_progressed_requires_approval",
+      sql`${table.status} IN ('draft', 'cancelled') OR (${table.approvedBy} IS NOT NULL AND ${table.approvedDate} IS NOT NULL)`
+    ),
+    check(
+      "chk_sales_return_orders_credited_requires_reason",
+      sql`${table.status} <> 'credited' OR ${table.reasonCodeId} IS NOT NULL`
     ),
     foreignKey({
       columns: [table.tenantId],

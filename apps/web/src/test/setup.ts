@@ -6,7 +6,10 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
+import { enableMapSet } from "immer";
 import { afterEach } from "vitest";
+
+enableMapSet();
 
 // Cleanup after each test
 afterEach(() => {

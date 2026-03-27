@@ -14,6 +14,7 @@
 
 import {
   approvalLogs,
+  auditLogs,
   banks,
   commissionEntries,
   commissionPlanTiers,
@@ -25,10 +26,18 @@ import {
   countries,
   currencies,
   currencyRates,
+  decisionAuditChains,
+  decisionAuditEntries,
   documentAttachments,
+  entities,
+  events,
+  fields,
   fiscalPositionAccountMaps,
   fiscalPositionTaxMaps,
   fiscalPositions,
+  industryTemplates,
+  layouts,
+  metadataOverrides,
   partners,
   partnerAddresses,
   partnerBankAccounts,
@@ -36,6 +45,7 @@ import {
   partnerTags,
   paymentTermLines,
   paymentTerms,
+  policies,
   pricelistItems,
   pricelists,
   productAttributeValues,
@@ -67,6 +77,7 @@ import {
   taxGroups,
   taxRateChildren,
   taxRates,
+  tenantDefinitions,
   territories,
   territoryRules,
   uomCategories,
@@ -76,6 +87,21 @@ import { type Tx } from "./seed-types.js";
 
 export async function clearExistingData(tx: Tx): Promise<void> {
   // Delete in reverse FK order to maintain referential integrity.
+  // ── Phase 11: Metadata Configuration ──────────────────────────────────────
+  // Decision Audit (decisionAuditEntries → decisionAuditChains FK)
+  await tx.delete(decisionAuditEntries).execute();
+  await tx.delete(decisionAuditChains).execute();
+  // Tenant Overrides (metadataOverrides → tenantDefinitions FK)
+  await tx.delete(metadataOverrides).execute();
+  await tx.delete(industryTemplates).execute();
+  await tx.delete(tenantDefinitions).execute();
+  // Core Metadata (policies, auditLogs, events, layouts, fields → entities FKs)
+  await tx.delete(policies).execute();
+  await tx.delete(auditLogs).execute();
+  await tx.delete(events).execute();
+  await tx.delete(layouts).execute();
+  await tx.delete(fields).execute();
+  await tx.delete(entities).execute();
   // ── Phase 10: Commissions & Teams ─────────────────────────────────────────
   await tx.delete(approvalLogs).execute();
   await tx.delete(documentAttachments).execute();

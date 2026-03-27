@@ -34,7 +34,11 @@ export function runScenario<T extends ScenarioResult>(scenarioFn: () => T): T {
 export const TestScenario = {
   highValueOrder() {
     const desktopSubtotal = calcLineSubtotal(new Decimal(5), new Decimal(1899.99), new Decimal(50));
-    const licenseSubtotal = calcLineSubtotal(new Decimal(1), new Decimal(4999.99), new Decimal(100));
+    const licenseSubtotal = calcLineSubtotal(
+      new Decimal(1),
+      new Decimal(4999.99),
+      new Decimal(100)
+    );
 
     const lines = [
       SeedFactory.orderLine.desktopLine({
@@ -54,11 +58,11 @@ export const TestScenario = {
     const order = SeedFactory.salesOrder.build({
       template: "three",
       overrides: {
-      amountUntaxed,
-      amountTax,
-      amountTotal,
-      status: "confirmed",
-      notes: "High-value scenario with adjusted discount and quantity",
+        amountUntaxed,
+        amountTax,
+        amountTotal,
+        status: "confirmed",
+        notes: "High-value scenario with adjusted discount and quantity",
       },
     });
 
@@ -103,6 +107,36 @@ export const TestScenario = {
       tags: ["delivery", "logistics"] as const,
       expectedOutcome: "Past delivery date is represented for SLA and alerting tests.",
       order,
+    };
+  },
+
+  creditCheckedPriceOverride() {
+    const order = SeedFactory.salesOrder.one({
+      creditCheckPassed: true,
+      creditCheckAt: new Date("2024-03-01T08:30:00Z"),
+      creditCheckBy: 1,
+      creditLimitAtCheck: "50000.00",
+      exchangeRateUsed: "1.000000",
+      exchangeRateSource: "system_daily",
+      notes: "Credit-approved deal with justified price override",
+    });
+
+    const line = SeedFactory.orderLine.monitorLine({
+      priceListedAt: "699.99",
+      priceUnit: "649.99",
+      discount: "0.00",
+      priceOverrideReason: "Strategic retention discount",
+      priceApprovedBy: 1,
+      subtotal: money(calcLineSubtotal(new Decimal(2), new Decimal(649.99), new Decimal(0))),
+    });
+
+    return {
+      scenarioName: "Credit-Checked Price Override",
+      tags: ["sales", "credit", "pricing", "approval"] as const,
+      expectedOutcome:
+        "Order and line satisfy credit-check and price-override governance constraints.",
+      order,
+      line,
     };
   },
 } as const;

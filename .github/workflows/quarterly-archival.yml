@@ -1,0 +1,249 @@
+name: Quarterly Cold Archival
+
+# Runs quarterly on the 1st of Jan/Apr/Jul/Oct at 3 AM UTC
+# Archives partitions from warm storage (archive schema) to R2 cold storage
+# Automated data lifecycle management for compliance and cost optimization
+
+on:
+  schedule:
+    # Quarterly: Jan 1, Apr 1, Jul 1, Oct 1 at 3 AM UTC
+    - cron: '0 3 1 1,4,7,10 *'
+
+  # Manual trigger for testing or ad-hoc archival
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no actual archival)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      limit:
+        description: 'Max partitions to archive'
+        required: false
+        default: '10'
+        type: string
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+
+jobs:
+  archive-to-r2:
+    name: Archive Old Partitions to R2
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # 2 hours max for large archives
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate environment
+        run: |
+          echo "Validating required environment variables..."
+          if [ -z "${{ secrets.PRODUCTION_DATABASE_URL }}" ]; then
+            echo "❌ PRODUCTION_DATABASE_URL secret not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.R2_ACCOUNT_ID }}" ]; then
+            echo "❌ R2_ACCOUNT_ID secret not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.R2_ACCESS_KEY_ID }}" ]; then
+            echo "❌ R2_ACCESS_KEY_ID secret not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.R2_SECRET_ACCESS_KEY }}" ]; then
+            echo "❌ R2_SECRET_ACCESS_KEY secret not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+
+      - name: Check archive health (pre-archival)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "🏥 Running pre-archival health check..."
+          pnpm --filter @afenda/db archival health
+
+      - name: Identify archival candidates
+        id: candidates
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "🔍 Identifying partitions eligible for cold archival..."
+          pnpm --filter @afenda/db archival archive --dry-run=true --limit=${{ github.event.inputs.limit || '10' }} | tee candidates.log
+
+          # Extract candidate count
+          CANDIDATE_COUNT=$(grep -c "Would detach and archive" candidates.log || echo "0")
+          echo "candidates_count=$CANDIDATE_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$CANDIDATE_COUNT" -eq 0 ]; then
+            echo "✅ No partitions need archival at this time"
+            echo "has_candidates=false" >> $GITHUB_OUTPUT
+          else
+            echo "📋 Found $CANDIDATE_COUNT partitions to archive"
+            echo "has_candidates=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Archive to R2
+        if: steps.candidates.outputs.has_candidates == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || 'afenda-archive' }}
+          R2_JURISDICTION: ${{ secrets.R2_JURISDICTION || '' }}
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+          LIMIT="${{ github.event.inputs.limit || '10' }}"
+
+          echo "❄️  Starting R2 archival..."
+          echo "   Dry run: $DRY_RUN"
+          echo "   Limit: $LIMIT"
+          echo ""
+
+          pnpm --filter @afenda/db archival archive --dry-run=$DRY_RUN --limit=$LIMIT | tee archival.log
+
+          # Extract success/failure counts
+          SUCCESS_COUNT=$(grep -c "✅ Archived successfully" archival.log || echo "0")
+          FAILED_COUNT=$(grep -c "❌ Archival failed" archival.log || echo "0")
+
+          echo ""
+          echo "📊 Archival Results:"
+          echo "   Success: $SUCCESS_COUNT"
+          echo "   Failed: $FAILED_COUNT"
+
+          if [ "$FAILED_COUNT" -gt 0 ]; then
+            echo "⚠️  Some partitions failed to archive. Check logs for details."
+            exit 1
+          fi
+
+      - name: Check archive health (post-archival)
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "🏥 Running post-archival health check..."
+          pnpm --filter @afenda/db archival health
+
+      - name: List cold storage inventory
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "📋 Cold storage inventory (last 20 partitions)..."
+          pnpm --filter @afenda/db archival list --tier=cold | head -n 25
+
+      - name: Calculate storage metrics
+        if: always()
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "💾 Storage Metrics:"
+          echo ""
+
+          # Total cold storage size
+          psql "$DATABASE_URL" -c "
+            SELECT
+              COUNT(*) as partition_count,
+              SUM(row_count) as total_rows,
+              pg_size_pretty(SUM(r2_object_size_bytes)) as total_size,
+              ROUND(AVG(compression_ratio * 100), 1) || '%' as avg_compression
+            FROM cold_storage.r2_archive_catalog;
+          "
+
+          echo ""
+          echo "🗂️  Archive breakdown by table:"
+          psql "$DATABASE_URL" -c "
+            SELECT
+              table_name,
+              COUNT(*) as partition_count,
+              SUM(row_count) as total_rows,
+              pg_size_pretty(SUM(r2_object_size_bytes)) as total_size
+            FROM cold_storage.r2_archive_catalog
+            GROUP BY table_name
+            ORDER BY table_name;
+          "
+
+      - name: Upload archival logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: archival-logs-${{ github.run_id }}
+          path: |
+            candidates.log
+            archival.log
+          retention-days: 90
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `❌ Quarterly archival failed: ${new Date().toISOString().split('T')[0]}`,
+              body: `
+              ## Archival Failure Report
+
+              **Workflow**: [${context.workflow}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              **Date**: ${new Date().toISOString()}
+              **Run ID**: ${context.runId}
+
+              ### Details
+
+              The quarterly archival process failed. Please investigate:
+
+              1. Review the [workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              2. Check R2 access credentials
+              3. Verify database connectivity
+              4. Review partition health: \`pnpm --filter @afenda/db archival health\`
+
+              ### Recovery Steps
+
+              \`\`\`bash
+              # Retry archival manually (dry run first)
+              pnpm --filter @afenda/db archival archive --dry-run
+
+              # Execute archival
+              pnpm --filter @afenda/db archival archive --dry-run=false --limit=10
+              \`\`\`
+
+              **Labels**: bug, automation, archival
+              `,
+              labels: ['bug', 'automation', 'archival'],
+            });
+
+            console.log(`Created issue #${issue.data.number}`);
+
+  notify-success:
+    name: Notify Success
+    runs-on: ubuntu-latest
+    needs: archive-to-r2
+    if: success()
+
+    steps:
+      - name: Success notification
+        run: |
+          echo "✅ Quarterly archival completed successfully"
+          echo "📅 Next archival: Automatically scheduled on 1st of next quarter"
+          echo "📊 View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

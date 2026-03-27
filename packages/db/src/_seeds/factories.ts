@@ -57,6 +57,12 @@ export interface SalesOrderShape {
   name: string;
   partnerId: string;
   status: OrderStatus;
+  exchangeRateUsed?: string;
+  exchangeRateSource?: string;
+  creditCheckPassed?: boolean;
+  creditCheckAt?: Date | null;
+  creditCheckBy?: number | null;
+  creditLimitAtCheck?: string | null;
   orderDate: Date;
   deliveryDate: Date | null;
   notes: string;
@@ -71,6 +77,9 @@ export interface OrderLineShape {
   productId: string;
   description: string;
   quantity: string;
+  priceListedAt?: string | null;
+  priceOverrideReason?: string | null;
+  priceApprovedBy?: number | null;
   priceUnit: string;
   discount: string;
   subtotal: string;
@@ -90,6 +99,9 @@ export interface TaxRateShape {
   typeTaxUse: "sale" | "purchase" | "none";
   amountType: "percent" | "fixed" | "group" | "code";
   amount: string;
+  effectiveFrom?: Date;
+  effectiveTo?: Date | null;
+  replacedBy?: string | null;
   taxGroupId: string;
   priceInclude: boolean;
   isActive: boolean;
@@ -132,7 +144,11 @@ const LINE_SUBTOTALS = {
 } as const;
 
 const ORDER_TOTALS = {
-  orderOne: calcOrderTotals([LINE_SUBTOTALS.lineOne, LINE_SUBTOTALS.lineTwo, LINE_SUBTOTALS.lineThree]),
+  orderOne: calcOrderTotals([
+    LINE_SUBTOTALS.lineOne,
+    LINE_SUBTOTALS.lineTwo,
+    LINE_SUBTOTALS.lineThree,
+  ]),
   orderTwo: calcOrderTotals([LINE_SUBTOTALS.lineFour]),
   orderThree: calcOrderTotals([LINE_SUBTOTALS.lineFive, LINE_SUBTOTALS.lineSix]),
 } as const;
@@ -354,6 +370,12 @@ const salesOrderFactory = {
       name: "SO-2024-001",
       partnerId: SEED_IDS.partnerAccentCorp,
       status: "confirmed",
+      exchangeRateUsed: "1.000000",
+      exchangeRateSource: "system_daily",
+      creditCheckPassed: true,
+      creditCheckAt: new Date("2024-01-15T09:50:00Z"),
+      creditCheckBy: 1,
+      creditLimitAtCheck: "50000.00",
       orderDate: new Date("2024-01-15T10:00:00Z"),
       deliveryDate: new Date("2024-01-20T00:00:00Z"),
       notes: "Urgent delivery requested",
@@ -371,6 +393,12 @@ const salesOrderFactory = {
       name: "SO-2024-002",
       partnerId: SEED_IDS.partnerGammaServices,
       status: "draft",
+      exchangeRateUsed: "1.000000",
+      exchangeRateSource: "manual_override",
+      creditCheckPassed: false,
+      creditCheckAt: null,
+      creditCheckBy: null,
+      creditLimitAtCheck: "75000.00",
       orderDate: new Date("2024-02-01T14:30:00Z"),
       deliveryDate: null,
       notes: "Pending approval from stakeholders",
@@ -388,6 +416,12 @@ const salesOrderFactory = {
       name: "SO-2024-003",
       partnerId: SEED_IDS.partnerDeltaInc,
       status: "shipped",
+      exchangeRateUsed: "1.000000",
+      exchangeRateSource: "system_daily",
+      creditCheckPassed: true,
+      creditCheckAt: new Date("2024-01-05T08:45:00Z"),
+      creditCheckBy: 1,
+      creditLimitAtCheck: "25000.00",
       orderDate: new Date("2024-01-05T09:00:00Z"),
       deliveryDate: new Date("2024-01-12T00:00:00Z"),
       notes: "Shipped via standard delivery",
@@ -436,6 +470,7 @@ const orderLineFactory = {
       productId: SEED_IDS.productMonitor,
       description: '4K Monitor 27" (qty 2)',
       quantity: "2",
+      priceListedAt: "599.99",
       priceUnit: "599.99",
       discount: "10.00",
       subtotal: money(LINE_SUBTOTALS.lineOne),
@@ -451,6 +486,7 @@ const orderLineFactory = {
       productId: SEED_IDS.productMouse,
       description: "Wireless Mouse (qty 2)",
       quantity: "2",
+      priceListedAt: "29.99",
       priceUnit: "29.99",
       discount: "0.00",
       subtotal: money(LINE_SUBTOTALS.lineTwo),
@@ -466,6 +502,7 @@ const orderLineFactory = {
       productId: SEED_IDS.productKeyboard,
       description: "Mechanical Keyboard (qty 1)",
       quantity: "1",
+      priceListedAt: "149.99",
       priceUnit: "149.99",
       discount: "0.00",
       subtotal: money(LINE_SUBTOTALS.lineThree),
@@ -481,6 +518,7 @@ const orderLineFactory = {
       productId: SEED_IDS.productLaptop,
       description: "Professional Laptop Pro (qty 1)",
       quantity: "1",
+      priceListedAt: "1299.99",
       priceUnit: "1299.99",
       discount: "0.00",
       subtotal: money(LINE_SUBTOTALS.lineFour),
@@ -496,6 +534,7 @@ const orderLineFactory = {
       productId: SEED_IDS.productDesktop,
       description: "Workstation Desktop (qty 2)",
       quantity: "2",
+      priceListedAt: "1899.99",
       priceUnit: "1899.99",
       discount: "50.00",
       subtotal: money(LINE_SUBTOTALS.lineFive),
@@ -511,6 +550,7 @@ const orderLineFactory = {
       productId: SEED_IDS.productLicense,
       description: "Enterprise Software License (qty 1)",
       quantity: "1",
+      priceListedAt: "4999.99",
       priceUnit: "4999.99",
       discount: "0.00",
       subtotal: money(LINE_SUBTOTALS.lineSix),
@@ -595,6 +635,9 @@ const taxRateFactory = {
       typeTaxUse: "sale",
       amountType: "percent",
       amount: "10",
+      effectiveFrom: new Date("2024-01-01T00:00:00Z"),
+      effectiveTo: null,
+      replacedBy: null,
       taxGroupId: SEED_IDS.taxGroupSalesStandard,
       priceInclude: false,
       isActive: true,
@@ -611,6 +654,9 @@ const taxRateFactory = {
       typeTaxUse: "sale",
       amountType: "percent",
       amount: "20",
+      effectiveFrom: new Date("2024-01-01T00:00:00Z"),
+      effectiveTo: null,
+      replacedBy: null,
       taxGroupId: SEED_IDS.taxGroupVat,
       priceInclude: true,
       isActive: true,
@@ -627,6 +673,9 @@ const taxRateFactory = {
       typeTaxUse: "sale",
       amountType: "percent",
       amount: "9",
+      effectiveFrom: new Date("2024-01-01T00:00:00Z"),
+      effectiveTo: null,
+      replacedBy: null,
       taxGroupId: SEED_IDS.taxGroupGst,
       priceInclude: false,
       isActive: true,
@@ -643,6 +692,9 @@ const taxRateFactory = {
       typeTaxUse: "sale",
       amountType: "percent",
       amount: "9",
+      effectiveFrom: new Date("2024-01-01T00:00:00Z"),
+      effectiveTo: null,
+      replacedBy: null,
       taxGroupId: SEED_IDS.taxGroupGst,
       priceInclude: false,
       isActive: true,
@@ -659,6 +711,9 @@ const taxRateFactory = {
       typeTaxUse: "sale",
       amountType: "group",
       amount: "0",
+      effectiveFrom: new Date("2024-01-01T00:00:00Z"),
+      effectiveTo: null,
+      replacedBy: null,
       taxGroupId: SEED_IDS.taxGroupGst,
       priceInclude: false,
       isActive: true,
@@ -675,6 +730,9 @@ const taxRateFactory = {
       typeTaxUse: "sale",
       amountType: "percent",
       amount: "2",
+      effectiveFrom: new Date("2023-01-01T00:00:00Z"),
+      effectiveTo: new Date("2023-12-31T23:59:59Z"),
+      replacedBy: SEED_IDS.taxRateSalesStandard10,
       taxGroupId: SEED_IDS.taxGroupSalesStandard,
       priceInclude: false,
       isActive: true,

@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 import * as schema from "./schema/index.js";
+import { relations } from "./relations.js";
 
 const DEFAULT_LOCAL_TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/afenda_test";
 
@@ -17,12 +18,57 @@ function resolveDatabaseUrl(): string {
   throw new Error("DATABASE_URL is required for @afenda/db");
 }
 
+// ---------------------------------------------------------------------------
+// Pool configuration — production-hardened
+// ---------------------------------------------------------------------------
 export const pool = new Pool({
   connectionString: resolveDatabaseUrl(),
+  max: Number(process.env.DB_POOL_MAX ?? 10),
+  idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS ?? 10_000),
+  connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS ?? 5_000),
+  statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT_MS ?? 30_000),
+  idle_in_transaction_session_timeout: 60_000,
 });
 
-const _db = drizzle({ client: pool, schema, casing: "camelCase" });
+// ---------------------------------------------------------------------------
+// Pool event monitoring
+// ---------------------------------------------------------------------------
+pool.on("error", (err) => {
+  // Using console.error since we don't have logger in packages/db
+  // Consumers (like apps/api) should monitor pool events at their level
+  console.error("[DB Pool Error]", err);
+});
+
+pool.on("connect", () => {
+  if (process.env.DB_POOL_DEBUG === "true") {
+    console.debug("[DB Pool]", {
+      total: pool.totalCount,
+      idle: pool.idleCount,
+      waiting: pool.waitingCount,
+    });
+  }
+});
+
+const _db = drizzle({ client: pool, schema, relations, casing: "camelCase" });
 
 export const db: typeof _db = _db;
 
 export type Database = typeof db;
+
+/**
+ * Pool health stats — useful for health check endpoints
+ */
+export function getPoolStats() {
+  return {
+    totalCount: pool.totalCount,
+    idleCount: pool.idleCount,
+    waitingCount: pool.waitingCount,
+  };
+}
+
+/**
+ * Check database connectivity
+ */
+export async function checkDatabaseConnection(): Promise<void> {
+  await pool.query("SELECT 1");
+}

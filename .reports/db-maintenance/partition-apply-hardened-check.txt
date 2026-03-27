@@ -1,0 +1,26 @@
+
+> @afenda/db@0.1.0 ops:partition:apply D:\AFENDA-META-UI\packages\db
+> tsx src/_maintenance/run-sales-partition-plan.ts --apply "--years-ahead=3"
+
+Sales partition plan
+generatedAt=2026-03-26T20:57:39.124Z
+parent=sales.sales_orders
+years=2026,2027,2028,2029
+
+- preflight-parent-table-exists: Check whether parent table exists.
+- preflight-parent-partitioned: Check whether parent table is declared as partitioned.
+- guard-parent-table-exists: Fail apply if parent table does not exist.
+- ensure-parent-partitioned: Convert empty parent table to partitioned form when safe; fail with actionable error otherwise.
+- ensure-partition-2026: Ensure yearly partition exists for 2026.
+- ensure-partition-2027: Ensure yearly partition exists for 2027.
+- ensure-partition-2028: Ensure yearly partition exists for 2028.
+- ensure-partition-2029: Ensure yearly partition exists for 2029.
+- ensure-default-partition: Ensure a default partition exists for out-of-range rows.
+
+Apply mode: executing partition actions in a single transaction...
+  executing preflight-parent-table-exists
+  executing preflight-parent-partitioned
+  executing guard-parent-table-exists
+D:\AFENDA-META-UI\packages\db:
+ΓÇëERR_PNPM_RECURSIVE_RUN_FIRST_FAILΓÇë @afenda/db@0.1.0 ops:partition:apply: `tsx src/_maintenance/run-sales-partition-plan.ts --apply "--years-ahead=3"`
+Exit status 1

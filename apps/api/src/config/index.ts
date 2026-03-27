@@ -66,6 +66,12 @@ export const config = {
   // Database
   databaseUrl: requireEnv("DATABASE_URL"),
 
+  // Database pool
+  dbPoolMax: Number(process.env.DB_POOL_MAX ?? 10),
+  dbIdleTimeoutMs: Number(process.env.DB_IDLE_TIMEOUT_MS ?? 10_000),
+  dbConnectionTimeoutMs: Number(process.env.DB_CONNECTION_TIMEOUT_MS ?? 5_000),
+  dbStatementTimeoutMs: Number(process.env.DB_STATEMENT_TIMEOUT_MS ?? 30_000),
+
   // Rate limiting
   rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== "false",
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),

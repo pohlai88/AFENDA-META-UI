@@ -1,0 +1,59 @@
+=== STEP2 PRECHECK: is_partitioned ===
+ is_partitioned 
+----------------
+ f
+(1 row)
+
+=== STEP2 PRECHECK: partitions ===
+ schema_name | parent_table | partition_table | partition_bound 
+-------------+--------------+-----------------+-----------------
+(0 rows)
+
+=== STEP2 PRECHECK: default partition ===
+ has_default_partition 
+-----------------------
+ f
+(1 row)
+
+=== STEP3 APPLY ===
+
+> @afenda/db@0.1.0 ops:partition:apply D:\AFENDA-META-UI\packages\db
+> tsx src/_maintenance/run-sales-partition-plan.ts --apply "--years-ahead=3"
+
+Sales partition plan
+generatedAt=2026-03-26T20:53:38.146Z
+parent=sales.sales_orders
+years=2026,2027,2028,2029
+
+- preflight-parent-partitioned: Check whether parent table is declared as partitioned.
+- ensure-partition-2026: Ensure yearly partition exists for 2026.
+- ensure-partition-2027: Ensure yearly partition exists for 2027.
+- ensure-partition-2028: Ensure yearly partition exists for 2028.
+- ensure-partition-2029: Ensure yearly partition exists for 2029.
+- ensure-default-partition: Ensure a default partition exists for out-of-range rows.
+
+Apply mode: executing partition actions in a single transaction...
+  executing preflight-parent-partitioned
+  executing ensure-partition-2026
+  executing ensure-partition-2027
+  executing ensure-partition-2028
+  executing ensure-partition-2029
+  executing ensure-default-partition
+Partition actions executed successfully.
+=== STEP4 POSTCHECK: is_partitioned ===
+ is_partitioned 
+----------------
+ f
+(1 row)
+
+=== STEP4 POSTCHECK: partitions ===
+ schema_name | parent_table | partition_table | partition_bound 
+-------------+--------------+-----------------+-----------------
+(0 rows)
+
+=== STEP4 POSTCHECK: default partition ===
+ has_default_partition 
+-----------------------
+ f
+(1 row)
+

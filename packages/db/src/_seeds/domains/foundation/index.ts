@@ -10,8 +10,18 @@ import {
   tenants,
   uomCategories,
   unitsOfMeasure,
+  users,
 } from "../../../schema/index.js";
-import { type SeedAuditScope, type Tx, DEFAULT_TENANT_CODE, DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME } from "../../seed-types.js";
+import {
+  type SeedAuditScope,
+  type Tx,
+  DEFAULT_SYSTEM_USER_EMAIL,
+  DEFAULT_SYSTEM_USER_NAME,
+  DEFAULT_TENANT_CODE,
+  DEFAULT_TENANT_ID,
+  DEFAULT_TENANT_NAME,
+  SYSTEM_ACTOR_ID,
+} from "../../seed-types.js";
 
 export async function seedReferenceData(tx: Tx, seedAuditScope: SeedAuditScope): Promise<void> {
   const insertedCountries = await tx
@@ -289,4 +299,35 @@ export async function ensureDefaultTenant(tx: Tx): Promise<number> {
     .returning({ tenantId: tenants.tenantId });
 
   return inserted[0]?.tenantId ?? DEFAULT_TENANT_ID;
+}
+
+export async function ensureSystemUser(tx: Tx, tenantId: number): Promise<number> {
+  const existing = await tx
+    .select({ userId: users.userId })
+    .from(users)
+    .where(
+      sql`${eq(users.tenantId, tenantId)} AND ${eq(users.email, DEFAULT_SYSTEM_USER_EMAIL)} AND ${isNull(users.deletedAt)}`
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0].userId;
+  }
+
+  const inserted = await tx
+    .insert(users)
+    .values({
+      tenantId,
+      email: DEFAULT_SYSTEM_USER_EMAIL,
+      displayName: DEFAULT_SYSTEM_USER_NAME,
+      status: "ACTIVE",
+      emailVerified: true,
+      locale: "en_US",
+      timezone: "UTC",
+      createdBy: SYSTEM_ACTOR_ID,
+      updatedBy: SYSTEM_ACTOR_ID,
+    })
+    .returning({ userId: users.userId });
+
+  return inserted[0]?.userId ?? SYSTEM_ACTOR_ID;
 }

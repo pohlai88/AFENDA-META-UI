@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-orm/zod";
 import { index, integer, jsonb, pgSchema, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 

@@ -14,6 +14,23 @@ import { calcLineSubtotal, calcOrderTotals, money } from "../../money.js";
 import { SEED_IDS } from "../../seed-ids.js";
 import { type SeedAuditScope, type Tx } from "../../seed-types.js";
 
+function buildZeroCostOrderFinancials(amountUntaxed: string) {
+  return {
+    amountCost: "0.00",
+    amountProfit: amountUntaxed,
+    marginPercent: Number(amountUntaxed) === 0 ? "0.0000" : "100.0000",
+  };
+}
+
+function buildZeroCostLineFinancials(priceSubtotal: string) {
+  return {
+    costUnit: "0.00",
+    costSubtotal: "0.00",
+    profitAmount: priceSubtotal,
+    marginPercent: Number(priceSubtotal) === 0 ? "0.0000" : "100.0000",
+  };
+}
+
 export async function seedSalesOrdersAndLines(
   tx: Tx,
   seedAuditScope: SeedAuditScope
@@ -46,8 +63,8 @@ export async function seedSalesOrdersAndLines(
   const l5 = calcLineSubtotal(2, 1899.99, 50.0);
   const l6 = calcLineSubtotal(1, 4999.99, 0);
   const l7 = calcLineSubtotal(1, 1299.99, 15.0); // Order 4 - Laptop with discount
-  const l8 = calcLineSubtotal(1, 599.99, 0);     // Order 4 - Monitor
-  const l9 = calcLineSubtotal(2, 29.99, 0);      // Order 4 - Mouse x2
+  const l8 = calcLineSubtotal(1, 599.99, 0); // Order 4 - Monitor
+  const l9 = calcLineSubtotal(2, 29.99, 0); // Order 4 - Mouse x2
 
   const lineTaxes = [
     money(Number(l1) * 0.1),
@@ -65,6 +82,20 @@ export async function seedSalesOrdersAndLines(
   const o2 = calcOrderTotals([l4]);
   const o3 = calcOrderTotals([l5, l6]);
   const o4 = calcOrderTotals([l7, l8, l9]);
+  const o1Financials = buildZeroCostOrderFinancials(o1.amountUntaxed);
+  const o2Financials = buildZeroCostOrderFinancials(o2.amountUntaxed);
+  const o3Financials = buildZeroCostOrderFinancials(o3.amountUntaxed);
+  const o4Financials = buildZeroCostOrderFinancials(o4.amountUntaxed);
+
+  const l1Financials = buildZeroCostLineFinancials(money(l1));
+  const l2Financials = buildZeroCostLineFinancials(money(l2));
+  const l3Financials = buildZeroCostLineFinancials(money(l3));
+  const l4Financials = buildZeroCostLineFinancials(money(l4));
+  const l5Financials = buildZeroCostLineFinancials(money(l5));
+  const l6Financials = buildZeroCostLineFinancials(money(l6));
+  const l7Financials = buildZeroCostLineFinancials(money(l7));
+  const l8Financials = buildZeroCostLineFinancials(money(l8));
+  const l9Financials = buildZeroCostLineFinancials(money(l9));
 
   console.log(`   Order 1: ${o1.amountUntaxed} untaxed → ${o1.amountTotal} total`);
   console.log(`   Order 2: ${o2.amountUntaxed} untaxed → ${o2.amountTotal} total`);
@@ -84,8 +115,15 @@ export async function seedSalesOrdersAndLines(
         quotationDate: new Date("2024-01-10T09:00:00Z"),
         confirmationDate: new Date("2024-01-15T10:15:00Z"),
         currencyId: usdCurrency[0].currencyId,
+        exchangeRateUsed: "1.000000",
+        exchangeRateSource: "system_daily",
         pricelistId: SEED_IDS.pricelistUsdStandard,
+        pricelistSnapshotId: SEED_IDS.pricelistUsdStandard,
         paymentTermId: SEED_IDS.paymentTermNet30,
+        creditCheckPassed: true,
+        creditCheckAt: new Date("2024-01-15T09:50:00Z"),
+        creditCheckBy: seedAuditScope.createdBy,
+        creditLimitAtCheck: "50000.00",
         invoiceStatus: "to_invoice" as const,
         deliveryStatus: "partial" as const,
         orderDate: new Date("2024-01-15T10:00:00Z"),
@@ -93,6 +131,7 @@ export async function seedSalesOrdersAndLines(
         assignedToId: null,
         notes: "Urgent delivery requested",
         amountUntaxed: o1.amountUntaxed,
+        ...o1Financials,
         amountTax: o1.amountTax,
         amountTotal: o1.amountTotal,
       },
@@ -105,8 +144,15 @@ export async function seedSalesOrdersAndLines(
         sequenceNumber: "SO-2024-000002",
         quotationDate: new Date("2024-02-01T10:00:00Z"),
         currencyId: usdCurrency[0].currencyId,
+        exchangeRateUsed: "1.000000",
+        exchangeRateSource: "manual_override",
         pricelistId: SEED_IDS.pricelistUsdVip,
+        pricelistSnapshotId: SEED_IDS.pricelistUsdVip,
         paymentTermId: SEED_IDS.paymentTermSplit,
+        creditCheckPassed: false,
+        creditCheckAt: null,
+        creditCheckBy: null,
+        creditLimitAtCheck: "75000.00",
         invoiceStatus: "no" as const,
         deliveryStatus: "no" as const,
         orderDate: new Date("2024-02-01T14:30:00Z"),
@@ -114,6 +160,7 @@ export async function seedSalesOrdersAndLines(
         assignedToId: null,
         notes: "Pending approval from stakeholders",
         amountUntaxed: o2.amountUntaxed,
+        ...o2Financials,
         amountTax: o2.amountTax,
         amountTotal: o2.amountTotal,
       },
@@ -127,8 +174,15 @@ export async function seedSalesOrdersAndLines(
         quotationDate: new Date("2024-01-03T12:00:00Z"),
         confirmationDate: new Date("2024-01-05T09:05:00Z"),
         currencyId: usdCurrency[0].currencyId,
+        exchangeRateUsed: "1.000000",
+        exchangeRateSource: "system_daily",
         pricelistId: SEED_IDS.pricelistUsdStandard,
+        pricelistSnapshotId: SEED_IDS.pricelistUsdStandard,
         paymentTermId: SEED_IDS.paymentTermNet30,
+        creditCheckPassed: true,
+        creditCheckAt: new Date("2024-01-05T08:45:00Z"),
+        creditCheckBy: seedAuditScope.createdBy,
+        creditLimitAtCheck: "25000.00",
         invoiceStatus: "invoiced" as const,
         deliveryStatus: "full" as const,
         orderDate: new Date("2024-01-05T09:00:00Z"),
@@ -136,6 +190,7 @@ export async function seedSalesOrdersAndLines(
         assignedToId: null,
         notes: "Shipped via standard delivery",
         amountUntaxed: o3.amountUntaxed,
+        ...o3Financials,
         amountTax: o3.amountTax,
         amountTotal: o3.amountTotal,
       },
@@ -149,8 +204,15 @@ export async function seedSalesOrdersAndLines(
         quotationDate: new Date("2024-02-10T11:00:00Z"),
         confirmationDate: null,
         currencyId: usdCurrency[0].currencyId,
+        exchangeRateUsed: "1.000000",
+        exchangeRateSource: "system_daily",
         pricelistId: SEED_IDS.pricelistUsdStandard,
+        pricelistSnapshotId: SEED_IDS.pricelistUsdStandard,
         paymentTermId: SEED_IDS.paymentTermNet30,
+        creditCheckPassed: true,
+        creditCheckAt: new Date("2024-02-10T10:45:00Z"),
+        creditCheckBy: seedAuditScope.createdBy,
+        creditLimitAtCheck: "0.00",
         invoiceStatus: "no" as const,
         deliveryStatus: "no" as const,
         orderDate: new Date("2024-02-10T11:00:00Z"),
@@ -158,6 +220,7 @@ export async function seedSalesOrdersAndLines(
         assignedToId: null,
         notes: "Quotation sent - includes optional items",
         amountUntaxed: o4.amountUntaxed,
+        ...o4Financials,
         amountTax: o4.amountTax,
         amountTotal: o4.amountTotal,
       },
@@ -179,6 +242,10 @@ export async function seedSalesOrdersAndLines(
         quantity: "2",
         priceUnit: "599.99",
         discount: "10.00",
+        priceListedAt: "599.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-01"}',
+        ...l1Financials,
+        discountApprovedAt: new Date("2024-01-15T10:10:00Z"),
         subtotal: money(l1),
         priceSubtotal: money(l1),
         priceTax: lineTaxes[0],
@@ -205,6 +272,9 @@ export async function seedSalesOrdersAndLines(
         quantity: "2",
         priceUnit: "29.99",
         discount: "0.00",
+        priceListedAt: "29.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-01"}',
+        ...l2Financials,
         subtotal: money(l2),
         priceSubtotal: money(l2),
         priceTax: lineTaxes[1],
@@ -231,6 +301,9 @@ export async function seedSalesOrdersAndLines(
         quantity: "1",
         priceUnit: "149.99",
         discount: "0.00",
+        priceListedAt: "149.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-01"}',
+        ...l3Financials,
         subtotal: money(l3),
         priceSubtotal: money(l3),
         priceTax: lineTaxes[2],
@@ -257,6 +330,9 @@ export async function seedSalesOrdersAndLines(
         quantity: "1",
         priceUnit: "1299.99",
         discount: "0.00",
+        priceListedAt: "1299.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-02"}',
+        ...l4Financials,
         subtotal: money(l4),
         priceSubtotal: money(l4),
         priceTax: lineTaxes[3],
@@ -283,6 +359,10 @@ export async function seedSalesOrdersAndLines(
         quantity: "2",
         priceUnit: "1899.99",
         discount: "50.00",
+        priceListedAt: "1899.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-01"}',
+        ...l5Financials,
+        discountApprovedAt: new Date("2024-01-05T09:00:00Z"),
         subtotal: money(l5),
         priceSubtotal: money(l5),
         priceTax: lineTaxes[4],
@@ -309,6 +389,9 @@ export async function seedSalesOrdersAndLines(
         quantity: "1",
         priceUnit: "4999.99",
         discount: "0.00",
+        priceListedAt: "4999.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-01"}',
+        ...l6Financials,
         subtotal: money(l6),
         priceSubtotal: money(l6),
         priceTax: lineTaxes[5],
@@ -335,6 +418,12 @@ export async function seedSalesOrdersAndLines(
         quantity: "1",
         priceUnit: "1299.99",
         discount: "15.00",
+        priceListedAt: "1499.99",
+        priceOverrideReason: "Strategic quotation discount for enterprise conversion",
+        priceApprovedBy: seedAuditScope.createdBy,
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-02"}',
+        ...l7Financials,
+        discountApprovedAt: new Date("2024-02-10T10:50:00Z"),
         subtotal: money(l7),
         priceSubtotal: money(l7),
         priceTax: lineTaxes[6],
@@ -361,6 +450,9 @@ export async function seedSalesOrdersAndLines(
         quantity: "1",
         priceUnit: "599.99",
         discount: "0.00",
+        priceListedAt: "599.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-02"}',
+        ...l8Financials,
         subtotal: money(l8),
         priceSubtotal: money(l8),
         priceTax: lineTaxes[7],
@@ -387,6 +479,9 @@ export async function seedSalesOrdersAndLines(
         quantity: "2",
         priceUnit: "29.99",
         discount: "0.00",
+        priceListedAt: "29.99",
+        taxRuleSnapshot: '{"rule":"sales_standard_10","version":"2024-02"}',
+        ...l9Financials,
         subtotal: money(l9),
         priceSubtotal: money(l9),
         priceTax: lineTaxes[8],
@@ -409,15 +504,69 @@ export async function seedSalesOrdersAndLines(
   await tx
     .insert(saleOrderLineTaxes)
     .values([
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxOne, orderLineId: SEED_IDS.lineOne, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxTwo, orderLineId: SEED_IDS.lineTwo, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxThree, orderLineId: SEED_IDS.lineThree, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxFour, orderLineId: SEED_IDS.lineFour, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxFive, orderLineId: SEED_IDS.lineFive, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxSix, orderLineId: SEED_IDS.lineSix, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxSeven, orderLineId: SEED_IDS.lineSeven, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxEight, orderLineId: SEED_IDS.lineEight, taxId: taxRateId, sequence: 10 },
-      { ...seedAuditScope, id: SEED_IDS.saleOrderLineTaxNine, orderLineId: SEED_IDS.lineNine, taxId: taxRateId, sequence: 10 },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxOne,
+        orderLineId: SEED_IDS.lineOne,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxTwo,
+        orderLineId: SEED_IDS.lineTwo,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxThree,
+        orderLineId: SEED_IDS.lineThree,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxFour,
+        orderLineId: SEED_IDS.lineFour,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxFive,
+        orderLineId: SEED_IDS.lineFive,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxSix,
+        orderLineId: SEED_IDS.lineSix,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxSeven,
+        orderLineId: SEED_IDS.lineSeven,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxEight,
+        orderLineId: SEED_IDS.lineEight,
+        taxId: taxRateId,
+        sequence: 10,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.saleOrderLineTaxNine,
+        orderLineId: SEED_IDS.lineNine,
+        taxId: taxRateId,
+        sequence: 10,
+      },
     ])
     .execute();
   console.log("✓ Seeded 9 sale order line taxes");
@@ -536,7 +685,12 @@ export async function seedSalesOrdersAndLines(
 }
 
 export async function validateSalesPhase6Invariants(tx: Tx): Promise<void> {
-  const seededOrderIds = [SEED_IDS.orderOne, SEED_IDS.orderTwo, SEED_IDS.orderThree, SEED_IDS.orderFour] as const;
+  const seededOrderIds = [
+    SEED_IDS.orderOne,
+    SEED_IDS.orderTwo,
+    SEED_IDS.orderThree,
+    SEED_IDS.orderFour,
+  ] as const;
   const seededLineIds = [
     SEED_IDS.lineOne,
     SEED_IDS.lineTwo,

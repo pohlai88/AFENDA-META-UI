@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-orm/zod";
 import {
   boolean,
   check,

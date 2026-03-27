@@ -208,6 +208,6 @@ describe("MetaListV2", () => {
     await user.click(screen.getByLabelText("Select row PO-1"));
 
     expect(screen.getByRole("button", { name: "Export selected" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Set status: Approved" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Bulk Actions" })).not.toBeInTheDocument();
   });
 });

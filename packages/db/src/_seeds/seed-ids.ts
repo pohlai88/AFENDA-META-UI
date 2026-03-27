@@ -196,6 +196,66 @@ export const SEED_IDS = {
   packagingTshirtBox: "00001517-0000-4000-8000-000000001517",
   packagingLaptopPallet: "00001518-0000-4000-8000-000000001518",
 
+  // ── Metadata Configuration (Phase 11) ─────────────────────────────────────
+  // Entities
+  entityPartner: "00001601-0000-4000-8000-000000001601",
+  entityProduct: "00001602-0000-4000-8000-000000001602",
+  entitySalesOrder: "00001603-0000-4000-8000-000000001603",
+  entityInvoice: "00001604-0000-4000-8000-000000001604",
+
+  // Fields - Partner (5)
+  fieldPartnerName: "00001605-0000-4000-8000-000000001605",
+  fieldPartnerEmail: "00001606-0000-4000-8000-000000001606",
+  fieldPartnerPhone: "00001607-0000-4000-8000-000000001607",
+  fieldPartnerTaxId: "00001608-0000-4000-8000-000000001608",
+  fieldPartnerCreditLimit: "00001609-0000-4000-8000-000000001609",
+
+  // Fields - Product (4)
+  fieldProductName: "0000160A-0000-4000-8000-00000000160A",
+  fieldProductPrice: "0000160B-0000-4000-8000-00000000160B",
+  fieldProductSku: "0000160C-0000-4000-8000-00000000160C",
+  fieldProductActive: "0000160D-0000-4000-8000-00000000160D",
+
+  // Fields - SalesOrder (6)
+  fieldOrderName: "0000160E-0000-4000-8000-00000000160E",
+  fieldOrderPartnerId: "0000160F-0000-4000-8000-00000000160F",
+  fieldOrderTotal: "00001610-0000-4000-8000-000000001610",
+  fieldOrderStatus: "00001611-0000-4000-8000-000000001611",
+  fieldOrderDate: "00001612-0000-4000-8000-000000001612",
+  fieldOrderNotes: "00001613-0000-4000-8000-000000001613",
+
+  // Fields - Invoice (5)
+  fieldInvoiceNumber: "00001614-0000-4000-8000-000000001614",
+  fieldInvoicePartnerId: "00001615-0000-4000-8000-000000001615",
+  fieldInvoiceAmount: "00001616-0000-4000-8000-000000001616",
+  fieldInvoiceStatus: "00001617-0000-4000-8000-000000001617",
+  fieldInvoiceDueDate: "00001618-0000-4000-8000-000000001618",
+
+  // Layouts (3)
+  layoutPartnerForm: "00001619-0000-4000-8000-000000001619",
+  layoutOrderForm: "0000161A-0000-4000-8000-00000000161A",
+  layoutOrderList: "0000161B-0000-4000-8000-00000000161B",
+
+  // Policies (3)
+  policyOrderMinimumAmount: "0000161C-0000-4000-8000-00000000161C",
+  policyPartnerCreditCheck: "0000161D-0000-4000-8000-00000000161D",
+  policyProductPricePositive: "0000161E-0000-4000-8000-00000000161E",
+
+  // Tenant Definitions (2)
+  tenantAcmeCorp: "0000161F-0000-4000-8000-00000000161F",
+  tenantRetailCo: "00001620-0000-4000-8000-000000001620",
+
+  // Metadata Overrides (3)
+  overrideGlobalOrderMinimum: "00001621-0000-4000-8000-000000001621",
+  overrideTenantAcmeLabels: "00001622-0000-4000-8000-000000001622",
+  overrideTenantRetailLabels: "00001623-0000-4000-8000-000000001623",
+
+  // Decision Audit (4)
+  decisionChainMetadataResolution: "00001624-0000-4000-8000-000000001624",
+  decisionMetadataGlobal: "00001625-0000-4000-8000-000000001625",
+  decisionMetadataIndustry: "00001626-0000-4000-8000-000000001626",
+  decisionMetadataTenant: "00001627-0000-4000-8000-000000001627",
+
   // ── HRM (future) ── append block here ─────────────────────────────────────
   // ── CRM (future) ── append block here ─────────────────────────────────────
   // ── Manufacturing (future) ── append block here ───────────────────────────

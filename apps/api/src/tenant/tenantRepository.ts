@@ -8,19 +8,51 @@
  * Reads stay fast via in-memory cache; writes flow through to DB.
  */
 
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { tenantDefinitions, metadataOverrides, industryTemplates } from "../db/schema/index.js";
 import type { TenantDefinition, MetadataOverride } from "@afenda/meta-types";
 
+// ---------------------------------------------------------------------------
+// Prepared Statements (Hot Paths)
+// ---------------------------------------------------------------------------
+
+const getTenantPrepared = db
+  .select()
+  .from(tenantDefinitions)
+  .where(eq(tenantDefinitions.id, sql.placeholder("id")))
+  .limit(1)
+  .prepare("tenant_get_tenant");
+
+const getOverridesForModelPrepared = db
+  .select()
+  .from(metadataOverrides)
+  .where(
+    and(
+      eq(metadataOverrides.model, sql.placeholder("model")),
+      eq(metadataOverrides.enabled, true)
+    )
+  )
+  .orderBy(asc(metadataOverrides.scope))
+  .prepare("tenant_get_overrides_for_model");
+
+const getOverridesForTenantPrepared = db
+  .select()
+  .from(metadataOverrides)
+  .where(eq(metadataOverrides.tenantId, sql.placeholder("tenantId")))
+  .prepare("tenant_get_overrides_for_tenant");
+
+const getIndustryTemplatePrepared = db
+  .select()
+  .from(industryTemplates)
+  .where(eq(industryTemplates.industry, sql.placeholder("industry")))
+  .limit(1)
+  .prepare("tenant_get_industry_template");
+
 // ── Tenant Definitions ─────────────────────────────────────────────────────
 
 export async function dbGetTenant(id: string): Promise<TenantDefinition | null> {
-  const rows = await db
-    .select()
-    .from(tenantDefinitions)
-    .where(eq(tenantDefinitions.id, id))
-    .limit(1);
+  const rows = await getTenantPrepared.execute({ id });
   return rows.length ? rowToTenant(rows[0]) : null;
 }
 
@@ -33,28 +65,9 @@ export async function dbListTenants(enabledOnly = false): Promise<TenantDefiniti
 }
 
 export async function dbUpsertTenant(tenant: TenantDefinition): Promise<void> {
-  const existing = await db
-    .select({ id: tenantDefinitions.id })
-    .from(tenantDefinitions)
-    .where(eq(tenantDefinitions.id, tenant.id))
-    .limit(1);
-
-  if (existing.length) {
-    await db
-      .update(tenantDefinitions)
-      .set({
-        name: tenant.name,
-        industry: tenant.industry ?? null,
-        isolationStrategy: tenant.isolationStrategy,
-        enabled: tenant.enabled,
-        branding: tenant.branding ?? null,
-        features: tenant.features ?? {},
-        locale: tenant.locale ?? null,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenantDefinitions.id, tenant.id));
-  } else {
-    await db.insert(tenantDefinitions).values({
+  await db
+    .insert(tenantDefinitions)
+    .values({
       id: tenant.id,
       name: tenant.name,
       industry: tenant.industry ?? null,
@@ -63,8 +76,20 @@ export async function dbUpsertTenant(tenant: TenantDefinition): Promise<void> {
       branding: tenant.branding ?? null,
       features: tenant.features ?? {},
       locale: tenant.locale ?? null,
+    })
+    .onConflictDoUpdate({
+      target: tenantDefinitions.id,
+      set: {
+        name: tenant.name,
+        industry: tenant.industry ?? null,
+        isolationStrategy: tenant.isolationStrategy,
+        enabled: tenant.enabled,
+        branding: tenant.branding ?? null,
+        features: tenant.features ?? {},
+        locale: tenant.locale ?? null,
+        updatedAt: new Date(),
+      },
     });
-  }
 }
 
 export async function dbRemoveTenant(id: string): Promise<boolean> {
@@ -75,28 +100,9 @@ export async function dbRemoveTenant(id: string): Promise<boolean> {
 // ── Metadata Overrides ─────────────────────────────────────────────────────
 
 export async function dbUpsertOverride(override: MetadataOverride): Promise<void> {
-  const existing = await db
-    .select({ id: metadataOverrides.id })
-    .from(metadataOverrides)
-    .where(eq(metadataOverrides.id, override.id))
-    .limit(1);
-
-  if (existing.length) {
-    await db
-      .update(metadataOverrides)
-      .set({
-        scope: override.scope,
-        tenantId: override.tenantId ?? null,
-        departmentId: override.departmentId ?? null,
-        userId: override.userId ?? null,
-        model: override.model,
-        patch: override.patch,
-        enabled: override.enabled,
-        updatedAt: new Date(),
-      })
-      .where(eq(metadataOverrides.id, override.id));
-  } else {
-    await db.insert(metadataOverrides).values({
+  await db
+    .insert(metadataOverrides)
+    .values({
       id: override.id,
       scope: override.scope,
       tenantId: override.tenantId ?? null,
@@ -105,8 +111,20 @@ export async function dbUpsertOverride(override: MetadataOverride): Promise<void
       model: override.model,
       patch: override.patch,
       enabled: override.enabled,
+    })
+    .onConflictDoUpdate({
+      target: metadataOverrides.id,
+      set: {
+        scope: override.scope,
+        tenantId: override.tenantId ?? null,
+        departmentId: override.departmentId ?? null,
+        userId: override.userId ?? null,
+        model: override.model,
+        patch: override.patch,
+        enabled: override.enabled,
+        updatedAt: new Date(),
+      },
     });
-  }
 }
 
 export async function dbRemoveOverride(id: string): Promise<boolean> {
@@ -115,19 +133,12 @@ export async function dbRemoveOverride(id: string): Promise<boolean> {
 }
 
 export async function dbGetOverridesForModel(model: string): Promise<MetadataOverride[]> {
-  const rows = await db
-    .select()
-    .from(metadataOverrides)
-    .where(and(eq(metadataOverrides.model, model), eq(metadataOverrides.enabled, true)))
-    .orderBy(asc(metadataOverrides.scope));
+  const rows = await getOverridesForModelPrepared.execute({ model });
   return rows.map(rowToOverride);
 }
 
 export async function dbGetOverridesForTenant(tenantId: string): Promise<MetadataOverride[]> {
-  const rows = await db
-    .select()
-    .from(metadataOverrides)
-    .where(eq(metadataOverrides.tenantId, tenantId));
+  const rows = await getOverridesForTenantPrepared.execute({ tenantId });
   return rows.map(rowToOverride);
 }
 
@@ -136,11 +147,7 @@ export async function dbGetOverridesForTenant(tenantId: string): Promise<Metadat
 export async function dbGetIndustryTemplate(
   industry: string
 ): Promise<Record<string, unknown> | null> {
-  const rows = await db
-    .select()
-    .from(industryTemplates)
-    .where(eq(industryTemplates.industry, industry))
-    .limit(1);
+  const rows = await getIndustryTemplatePrepared.execute({ industry });
   return rows.length ? (rows[0].template as Record<string, unknown>) : null;
 }
 
@@ -148,20 +155,13 @@ export async function dbUpsertIndustryTemplate(
   industry: string,
   template: Record<string, unknown>
 ): Promise<void> {
-  const existing = await db
-    .select({ industry: industryTemplates.industry })
-    .from(industryTemplates)
-    .where(eq(industryTemplates.industry, industry))
-    .limit(1);
-
-  if (existing.length) {
-    await db
-      .update(industryTemplates)
-      .set({ template, updatedAt: new Date() })
-      .where(eq(industryTemplates.industry, industry));
-  } else {
-    await db.insert(industryTemplates).values({ industry, template });
-  }
+  await db
+    .insert(industryTemplates)
+    .values({ industry, template })
+    .onConflictDoUpdate({
+      target: industryTemplates.industry,
+      set: { template, updatedAt: new Date() },
+    });
 }
 
 // ── Bulk Load (startup cache warm) ─────────────────────────────────────────

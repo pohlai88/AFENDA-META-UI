@@ -98,4 +98,26 @@ export const queryKeys = {
     _def: ["purchaseOrders"] as const,
     list: () => [...queryKeys.purchaseOrders._def, "list"] as const,
   },
+
+  /**
+   * Sandbox simulation actions
+   */
+  sandbox: {
+    _def: ["sandbox"] as const,
+    simulate: () => [...queryKeys.sandbox._def, "simulate"] as const,
+    blastRadius: () => [...queryKeys.sandbox._def, "blast-radius"] as const,
+    batch: () => [...queryKeys.sandbox._def, "batch"] as const,
+  },
+
+  /**
+   * Operations telemetry (invariants + domain events)
+   */
+  ops: {
+    _def: ["ops"] as const,
+    violations: (filters?: Record<string, unknown>) =>
+      [...queryKeys.ops._def, "invariant-violations", JSON.stringify(filters ?? {})] as const,
+    violationStats: () => [...queryKeys.ops._def, "invariant-violations", "stats"] as const,
+    events: (filters?: Record<string, unknown>) =>
+      [...queryKeys.ops._def, "domain-events", JSON.stringify(filters ?? {})] as const,
+  },
 } as const;

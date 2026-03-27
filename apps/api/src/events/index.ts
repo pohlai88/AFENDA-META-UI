@@ -1,3 +1,4 @@
+// In-memory event store (tests / dev — sync API)
 export {
   appendEvent,
   queryEvents,
@@ -10,3 +11,12 @@ export {
   getEventStoreStats,
   clearEventStore,
 } from "./eventStore.js";
+
+// DB-backed event store (production — async API)
+export {
+  dbAppendEvent,
+  dbQueryEvents,
+  dbGetAggregateEvents,
+  dbRebuildAggregate,
+  dbGetEventStoreStats,
+} from "./dbEventStore.js";

@@ -14,16 +14,23 @@ import {
 import { SEED_IDS } from "../../seed-ids.js";
 import { type SeedAuditScope, type Tx } from "../../seed-types.js";
 
-export async function seedProductCategories(
-  tx: Tx,
-  seedAuditScope: SeedAuditScope
-): Promise<void> {
+export async function seedProductCategories(tx: Tx, seedAuditScope: SeedAuditScope): Promise<void> {
   await tx
     .insert(productCategories)
     .values([
       { ...seedAuditScope, id: SEED_IDS.categoryHardware, name: "Hardware", parentId: null },
-      { ...seedAuditScope, id: SEED_IDS.categoryComputers, name: "Computers", parentId: SEED_IDS.categoryHardware },
-      { ...seedAuditScope, id: SEED_IDS.categoryPeripherals, name: "Peripherals", parentId: SEED_IDS.categoryHardware },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.categoryComputers,
+        name: "Computers",
+        parentId: SEED_IDS.categoryHardware,
+      },
+      {
+        ...seedAuditScope,
+        id: SEED_IDS.categoryPeripherals,
+        name: "Peripherals",
+        parentId: SEED_IDS.categoryHardware,
+      },
       { ...seedAuditScope, id: SEED_IDS.categorySoftware, name: "Software", parentId: null },
       { ...seedAuditScope, id: SEED_IDS.categoryServices, name: "Services", parentId: null },
     ])
@@ -377,11 +384,14 @@ export async function seedProductConfiguration(
   console.log("✓ Seeded 2 product packaging units");
 }
 
-export async function validateProductConfigurationInvariants(tx: Tx): Promise<void> {
+export async function validateProductConfigurationInvariants(
+  tx: Tx,
+  tenantId: number
+): Promise<void> {
   const [templateStats] = await tx
     .select({ count: sql<number>`count(*)` })
     .from(productTemplates)
-    .where(eq(productTemplates.tenantId, 1));
+    .where(eq(productTemplates.tenantId, tenantId));
 
   if (!templateStats || Number(templateStats.count) < 2) {
     throw new Error(
@@ -392,7 +402,7 @@ export async function validateProductConfigurationInvariants(tx: Tx): Promise<vo
   const [variantStats] = await tx
     .select({ count: sql<number>`count(*)` })
     .from(productVariants)
-    .where(eq(productVariants.tenantId, 1));
+    .where(eq(productVariants.tenantId, tenantId));
 
   if (!variantStats || Number(variantStats.count) < 6) {
     throw new Error(

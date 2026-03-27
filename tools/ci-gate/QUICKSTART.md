@@ -215,6 +215,7 @@ Add to root `package.json`:
 | `pnpm ci:gate:fix`     | Run all with auto-fix       | Master + --fix (NEW)         |
 | `pnpm ci:gate:verbose` | Run all with verbose output | Master + --verbose (NEW)     |
 | `pnpm ci:gate:logger`  | Run logger gate via master  | Master + --gate=logger (NEW) |
+| `pnpm ci:gate:casing`  | Run casing gate via master  | Master + --gate=casing (NEW) |
 | `pnpm ci:logger`       | Run logger gate directly    | Direct execution (existing)  |
 | `pnpm ci:logger:fix`   | Run logger with auto-fix    | Direct + --fix (existing)    |
 
@@ -435,6 +436,6 @@ AVAILABLE GATES:
 
 ---
 
-**Created:** March 24, 2026  
-**Version:** 1.0.0  
+**Created:** March 24, 2026
+**Version:** 1.0.0
 **Total Implementation:** 4 files, ~1,251 lines

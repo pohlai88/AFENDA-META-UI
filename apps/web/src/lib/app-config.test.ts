@@ -90,9 +90,8 @@ describe("getAppConfig", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       getAppConfig({ DEV: true, VITE_NOTIFICATION_TOAST_DEDUPE_MS: "not-a-number" });
       expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("VITE_NOTIFICATION_TOAST_DEDUPE_MS")
-      );
+      const [firstArg] = warnSpy.mock.calls[0] ?? [];
+      expect(String(firstArg)).toContain("VITE_NOTIFICATION_TOAST_DEDUPE_MS");
     });
 
     it("does not warn in production mode for invalid dedupe ms", () => {

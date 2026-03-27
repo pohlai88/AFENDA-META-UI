@@ -18,7 +18,81 @@ import type {
   DecisionAuditQuery,
   DecisionAuditChain,
 } from "@afenda/meta-types";
-import { logger } from '../logging/logger.js';
+import { logger } from "../logging/logger.js";
+
+const dbGetDecisionChainSummaryPrepared = db
+  .select()
+  .from(decisionAuditChains)
+  .where(eq(decisionAuditChains.rootId, sql.placeholder("chainId")))
+  .limit(1)
+  .prepare("decision_audit_chain_summary");
+
+const dbGetDecisionChainEntriesPrepared = db
+  .select()
+  .from(decisionAuditEntries)
+  .where(eq(decisionAuditEntries.chainId, sql.placeholder("chainId")))
+  .orderBy(decisionAuditEntries.timestamp)
+  .prepare("decision_audit_chain_entries");
+
+const dbGetDecisionStatsPrepared = db
+  .select({
+    count: sql<number>`count(*)::int`,
+    avgDuration: sql<number>`coalesce(avg(${decisionAuditEntries.durationMs}), 0)`,
+    minDuration: sql<number>`coalesce(min(${decisionAuditEntries.durationMs}), 0)`,
+    maxDuration: sql<number>`coalesce(max(${decisionAuditEntries.durationMs}), 0)`,
+    errorCount: sql<number>`count(*) filter (where ${decisionAuditEntries.status} = 'error')::int`,
+  })
+  .from(decisionAuditEntries)
+  .where(
+    and(
+      eq(decisionAuditEntries.tenantId, sql.placeholder("tenantId")),
+      eq(
+        decisionAuditEntries.eventType,
+        sql.placeholder("eventType"),
+      ),
+      gte(decisionAuditEntries.timestamp, sql.placeholder("cutoff")),
+    ),
+  )
+  .prepare("decision_audit_stats");
+
+const dbGetSlowDecisionsPrepared = db
+  .select()
+  .from(decisionAuditEntries)
+  .where(
+    and(
+      eq(decisionAuditEntries.tenantId, sql.placeholder("tenantId")),
+      gte(decisionAuditEntries.durationMs, sql.placeholder("thresholdMs")),
+    ),
+  )
+  .orderBy(desc(decisionAuditEntries.durationMs))
+  .limit(10)
+  .prepare("decision_audit_slow_default_limit");
+
+const dbGetAuditFailuresPrepared = db
+  .select()
+  .from(decisionAuditEntries)
+  .where(
+    and(
+      eq(decisionAuditEntries.tenantId, sql.placeholder("tenantId")),
+      eq(decisionAuditEntries.status, "error"),
+    ),
+  )
+  .orderBy(desc(decisionAuditEntries.timestamp))
+  .limit(50)
+  .prepare("decision_audit_failures_default_limit");
+
+const dbGetUserAuditTrailPrepared = db
+  .select()
+  .from(decisionAuditEntries)
+  .where(
+    and(
+      eq(decisionAuditEntries.tenantId, sql.placeholder("tenantId")),
+      eq(decisionAuditEntries.userId, sql.placeholder("userId")),
+    ),
+  )
+  .orderBy(desc(decisionAuditEntries.timestamp))
+  .limit(100)
+  .prepare("decision_audit_user_trail_default_limit");
 
 // ── Write Buffer ───────────────────────────────────────────────────────────
 
@@ -92,17 +166,19 @@ export function dbLogDecisionAuditBatch(entries: DecisionAuditEntry[]): void {
 export async function dbLinkToChain(chainId: string, entry: DecisionAuditEntry): Promise<void> {
   dbLogDecisionAudit(entry, chainId);
 
-  // Upsert chain summary
-  const existing = await db
-    .select()
-    .from(decisionAuditChains)
-    .where(eq(decisionAuditChains.rootId, chainId))
-    .limit(1);
-
-  if (existing.length) {
-    await db
-      .update(decisionAuditChains)
-      .set({
+  // Atomic upsert avoids race conditions under concurrent chain updates.
+  await db
+    .insert(decisionAuditChains)
+    .values({
+      rootId: chainId,
+      totalDurationMs: entry.durationMs,
+      entryCount: 1,
+      errorCount: entry.status === "error" ? 1 : 0,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: decisionAuditChains.rootId,
+      set: {
         totalDurationMs: sql`${decisionAuditChains.totalDurationMs} + ${entry.durationMs}`,
         entryCount: sql`${decisionAuditChains.entryCount} + 1`,
         errorCount:
@@ -110,16 +186,8 @@ export async function dbLinkToChain(chainId: string, entry: DecisionAuditEntry):
             ? sql`${decisionAuditChains.errorCount} + 1`
             : decisionAuditChains.errorCount,
         updatedAt: new Date(),
-      })
-      .where(eq(decisionAuditChains.rootId, chainId));
-  } else {
-    await db.insert(decisionAuditChains).values({
-      rootId: chainId,
-      totalDurationMs: entry.durationMs,
-      entryCount: 1,
-      errorCount: entry.status === "error" ? 1 : 0,
+      },
     });
-  }
 }
 
 // ── Query Operations ───────────────────────────────────────────────────────
@@ -164,19 +232,11 @@ export async function dbQueryDecisionAuditLog(
 export async function dbGetDecisionChain(chainId: string): Promise<DecisionAuditChain | null> {
   await flushBuffer(); // ensure pending writes are committed
 
-  const chainRows = await db
-    .select()
-    .from(decisionAuditChains)
-    .where(eq(decisionAuditChains.rootId, chainId))
-    .limit(1);
+  const chainRows = await dbGetDecisionChainSummaryPrepared.execute({ chainId });
 
   if (!chainRows.length) return null;
 
-  const entries = await db
-    .select()
-    .from(decisionAuditEntries)
-    .where(eq(decisionAuditEntries.chainId, chainId))
-    .orderBy(decisionAuditEntries.timestamp);
+  const entries = await dbGetDecisionChainEntriesPrepared.execute({ chainId });
 
   const chain = chainRows[0];
   return {
@@ -202,25 +262,11 @@ export async function dbGetDecisionStats(
 }> {
   const cutoff = new Date(Date.now() - timeWindowMs);
 
-  const result = await db
-    .select({
-      count: sql<number>`count(*)::int`,
-      avgDuration: sql<number>`coalesce(avg(${decisionAuditEntries.durationMs}), 0)`,
-      minDuration: sql<number>`coalesce(min(${decisionAuditEntries.durationMs}), 0)`,
-      maxDuration: sql<number>`coalesce(max(${decisionAuditEntries.durationMs}), 0)`,
-      errorCount: sql<number>`count(*) filter (where ${decisionAuditEntries.status} = 'error')::int`,
-    })
-    .from(decisionAuditEntries)
-    .where(
-      and(
-        eq(decisionAuditEntries.tenantId, tenantId),
-        eq(
-          decisionAuditEntries.eventType,
-          eventType as (typeof decisionAuditEntries.$inferInsert)["eventType"]
-        ),
-        gte(decisionAuditEntries.timestamp, cutoff)
-      )
-    );
+  const result = await dbGetDecisionStatsPrepared.execute({
+    tenantId,
+    eventType: eventType as (typeof decisionAuditEntries.$inferInsert)["eventType"],
+    cutoff,
+  });
 
   const row = result[0];
   return {
@@ -237,6 +283,11 @@ export async function dbGetSlowDecisions(
   thresholdMs: number,
   limit = 10
 ): Promise<DecisionAuditEntry[]> {
+  if (limit === 10) {
+    const preparedRows = await dbGetSlowDecisionsPrepared.execute({ tenantId, thresholdMs });
+    return preparedRows.map(rowToEntry);
+  }
+
   const rows = await db
     .select()
     .from(decisionAuditEntries)
@@ -255,6 +306,11 @@ export async function dbGetAuditFailures(
   tenantId: string,
   limit = 50
 ): Promise<DecisionAuditEntry[]> {
+  if (limit === 50) {
+    const preparedRows = await dbGetAuditFailuresPrepared.execute({ tenantId });
+    return preparedRows.map(rowToEntry);
+  }
+
   const rows = await db
     .select()
     .from(decisionAuditEntries)
@@ -271,6 +327,11 @@ export async function dbGetUserAuditTrail(
   userId: string,
   limit = 100
 ): Promise<DecisionAuditEntry[]> {
+  if (limit === 100) {
+    const preparedRows = await dbGetUserAuditTrailPrepared.execute({ tenantId, userId });
+    return preparedRows.map(rowToEntry);
+  }
+
   const rows = await db
     .select()
     .from(decisionAuditEntries)

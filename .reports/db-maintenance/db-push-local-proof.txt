@@ -1,0 +1,12 @@
+No config path provided, using default 'drizzle.config.ts'
+Reading config file 'D:\AFENDA-META-UI\packages\db\drizzle.config.ts'
+Reading schema files:
+D:\AFENDA-META-UI\packages\db\src\schema\index.ts
+
+Using 'pg' driver for database querying
+[Γú╖] Pulling schema from database...
+[2K[1G[Γ£ô] Pulling schema from database...
+Error  Interactive prompts require a TTY terminal (process.stdin.isTTY or process.stdout.isTTY is false). This can happen when running in CI, piped input, or non-interactive shells.
+undefined
+D:\AFENDA-META-UI\packages\db:
+ΓÇëERR_PNPM_RECURSIVE_EXEC_FIRST_FAILΓÇë Command failed with exit code 1: drizzle-kit push --force

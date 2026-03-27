@@ -5,7 +5,9 @@
  *
  * Core principle: State = Replay(Events)
  *
- * In production, swap the in-memory store for the `events` Drizzle table.
+ * For production DB-backed persistence, use `dbEventStore.ts` which writes
+ * to the `events` Drizzle table. The pure functions (replayEvents, etc.)
+ * are shared by both implementations.
  */
 
 import type {
