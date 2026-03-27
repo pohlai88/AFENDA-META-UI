@@ -39,6 +39,8 @@
     "ci:gate:truth": "node tools/ci-gate/index.mjs --gate=truth-score",
     "ci:gate:dependencies": "node tools/ci-gate/index.mjs --gate=dependencies",
     "ci:gate:typescript": "node tools/ci-gate/index.mjs --gate=typescript",
+    "ci:api:command-bounded-context": "pnpm --filter @afenda/api test:command-bounded-context",
+    "ci:api:projection-replay": "pnpm --filter @afenda/api test:projection-replay",
     "ci:gate:bundle": "node tools/ci-gate/bundle/index.mjs",
     "ci:gate:bundle:update": "node tools/ci-gate/bundle/index.mjs --update",
     "ci:gate:bundle:report": "node tools/ci-gate/bundle/index.mjs --report",

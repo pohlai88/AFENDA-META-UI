@@ -104,6 +104,14 @@ jobs:
         run: pnpm ci:gate
         continue-on-error: false
 
+      - name: Bounded-context command tests
+        run: pnpm ci:api:command-bounded-context
+        continue-on-error: false
+
+      - name: Projection replay checks
+        run: pnpm ci:api:projection-replay
+        continue-on-error: false
+
   lint:
     name: Lint & Type Check
     needs: setup

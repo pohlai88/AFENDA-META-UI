@@ -4,8 +4,12 @@ const {
   ensureTestEnv,
   selectMock,
   dbAppendEventMock,
+  upsertProjectionCheckpointMock,
   activateSubscriptionMock,
   cancelSubscriptionMock,
+  pauseSubscriptionMock,
+  renewSubscriptionMock,
+  resumeSubscriptionMock,
   queueSelect,
 } = vi.hoisted(() => {
   process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/afenda_test";
@@ -36,8 +40,12 @@ const {
       version: 1,
       timestamp: new Date("2026-01-10T00:00:00.000Z").toISOString(),
     })),
+    upsertProjectionCheckpointMock: vi.fn(),
     activateSubscriptionMock: vi.fn(),
     cancelSubscriptionMock: vi.fn(),
+    pauseSubscriptionMock: vi.fn(),
+    renewSubscriptionMock: vi.fn(),
+    resumeSubscriptionMock: vi.fn(),
     queueSelect: (...rows: unknown[][]) => {
       selectQueue.push(...rows);
     },
@@ -56,9 +64,16 @@ vi.mock("../../../events/dbEventStore.js", () => ({
   dbAppendEvent: dbAppendEventMock,
 }));
 
+vi.mock("../../../events/projectionCheckpointStore.js", () => ({
+  upsertProjectionCheckpoint: upsertProjectionCheckpointMock,
+}));
+
 vi.mock("../subscription-service.js", () => ({
   activateSubscription: activateSubscriptionMock,
   cancelSubscription: cancelSubscriptionMock,
+  pauseSubscription: pauseSubscriptionMock,
+  renewSubscription: renewSubscriptionMock,
+  resumeSubscription: resumeSubscriptionMock,
 }));
 
 vi.mock("../../../db/schema/index.js", () => ({
@@ -72,6 +87,9 @@ vi.mock("../../../db/schema/index.js", () => ({
 import {
   activateSubscriptionCommand,
   cancelSubscriptionCommand,
+  pauseSubscriptionCommand,
+  renewSubscriptionCommand,
+  resumeSubscriptionCommand,
 } from "../subscription-command-service.js";
 
 const baseSubscription = {
@@ -114,6 +132,15 @@ describe("subscription command service", () => {
         source: "api.sales.subscriptions.activate",
       })
     );
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectionName: "subscription.read_model",
+        aggregateType: "subscription",
+        aggregateId: "sub-1",
+        lastAppliedVersion: 1,
+      })
+    );
   });
 
   it("runs cancel command under dual-write policy and appends event", async () => {
@@ -140,6 +167,127 @@ describe("subscription command service", () => {
       expect.objectContaining({
         actor: "51",
         source: "api.sales.subscriptions.cancel",
+      })
+    );
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectionName: "subscription.read_model",
+        aggregateType: "subscription",
+        aggregateId: "sub-1",
+        lastAppliedVersion: 1,
+      })
+    );
+  });
+
+  it("runs pause command under dual-write policy and appends event", async () => {
+    queueSelect([{ ...baseSubscription, status: "active" }]);
+    pauseSubscriptionMock.mockResolvedValueOnce({
+      subscription: { ...baseSubscription, status: "paused" },
+    });
+
+    const result = await pauseSubscriptionCommand({
+      tenantId: 7,
+      subscriptionId: "sub-1",
+      actorId: 53,
+      reason: "past due",
+    });
+
+    expect(result.subscription.status).toBe("paused");
+    expect(result.mutationPolicy).toBe("dual-write");
+    expect(result.event?.eventType).toBe("subscription.paused");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "subscription",
+      "sub-1",
+      "subscription.paused",
+      expect.any(Object),
+      expect.objectContaining({
+        actor: "53",
+        source: "api.sales.subscriptions.pause",
+      })
+    );
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectionName: "subscription.read_model",
+        aggregateType: "subscription",
+        aggregateId: "sub-1",
+        lastAppliedVersion: 1,
+      })
+    );
+  });
+
+  it("runs resume command under dual-write policy and appends event", async () => {
+    queueSelect([{ ...baseSubscription, status: "paused" }]);
+    resumeSubscriptionMock.mockResolvedValueOnce({
+      subscription: { ...baseSubscription, status: "active" },
+    });
+
+    const result = await resumeSubscriptionCommand({
+      tenantId: 7,
+      subscriptionId: "sub-1",
+      actorId: 54,
+      reason: "payment resolved",
+      paymentResolved: true,
+    });
+
+    expect(result.subscription.status).toBe("active");
+    expect(result.mutationPolicy).toBe("dual-write");
+    expect(result.event?.eventType).toBe("subscription.activated");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "subscription",
+      "sub-1",
+      "subscription.activated",
+      expect.any(Object),
+      expect.objectContaining({
+        actor: "54",
+        source: "api.sales.subscriptions.resume",
+      })
+    );
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectionName: "subscription.read_model",
+        aggregateType: "subscription",
+        aggregateId: "sub-1",
+        lastAppliedVersion: 1,
+      })
+    );
+  });
+
+  it("runs renew command under dual-write policy and appends event", async () => {
+    queueSelect([{ ...baseSubscription, status: "active" }]);
+    renewSubscriptionMock.mockResolvedValueOnce({
+      subscription: { ...baseSubscription, status: "active" },
+    });
+
+    const result = await renewSubscriptionCommand({
+      tenantId: 7,
+      subscriptionId: "sub-1",
+      actorId: 55,
+      reason: "manual renewal",
+    });
+
+    expect(result.subscription.status).toBe("active");
+    expect(result.mutationPolicy).toBe("dual-write");
+    expect(result.event?.eventType).toBe("subscription.direct_update");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "subscription",
+      "sub-1",
+      "subscription.direct_update",
+      expect.any(Object),
+      expect.objectContaining({
+        actor: "55",
+        source: "api.sales.subscriptions.renew",
+      })
+    );
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
+    expect(upsertProjectionCheckpointMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectionName: "subscription.read_model",
+        aggregateType: "subscription",
+        aggregateId: "sub-1",
+        lastAppliedVersion: 1,
       })
     );
   });

@@ -7,7 +7,13 @@ const {
   confirmSalesOrderMock,
   cancelSalesOrderMock,
   approveReturnOrderCommandMock,
+  generateReturnCreditNoteCommandMock,
+  inspectReturnOrderCommandMock,
+  receiveReturnOrderCommandMock,
   activateSubscriptionCommandMock,
+  pauseSubscriptionCommandMock,
+  renewSubscriptionCommandMock,
+  resumeSubscriptionCommandMock,
   cancelSubscriptionCommandMock,
   generateCommissionForOrderMock,
   approveCommissionEntriesMock,
@@ -32,7 +38,13 @@ const {
     confirmSalesOrderMock: vi.fn(),
     cancelSalesOrderMock: vi.fn(),
     approveReturnOrderCommandMock: vi.fn(),
+    generateReturnCreditNoteCommandMock: vi.fn(),
+    inspectReturnOrderCommandMock: vi.fn(),
+    receiveReturnOrderCommandMock: vi.fn(),
     activateSubscriptionCommandMock: vi.fn(),
+    pauseSubscriptionCommandMock: vi.fn(),
+    renewSubscriptionCommandMock: vi.fn(),
+    resumeSubscriptionCommandMock: vi.fn(),
     cancelSubscriptionCommandMock: vi.fn(),
     generateCommissionForOrderMock: vi.fn(),
     approveCommissionEntriesMock: vi.fn(),
@@ -61,10 +73,16 @@ vi.mock("../../modules/sales/sales-order-command-service.js", () => ({
 
 vi.mock("../../modules/sales/return-order-command-service.js", () => ({
   approveReturnOrderCommand: approveReturnOrderCommandMock,
+  generateReturnCreditNoteCommand: generateReturnCreditNoteCommandMock,
+  inspectReturnOrderCommand: inspectReturnOrderCommandMock,
+  receiveReturnOrderCommand: receiveReturnOrderCommandMock,
 }));
 
 vi.mock("../../modules/sales/subscription-command-service.js", () => ({
   activateSubscriptionCommand: activateSubscriptionCommandMock,
+  pauseSubscriptionCommand: pauseSubscriptionCommandMock,
+  renewSubscriptionCommand: renewSubscriptionCommandMock,
+  resumeSubscriptionCommand: resumeSubscriptionCommandMock,
   cancelSubscriptionCommand: cancelSubscriptionCommandMock,
 }));
 
@@ -282,6 +300,110 @@ describe("/api/sales/returns/approve route", () => {
   });
 });
 
+describe("/api/sales/returns/receive route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns command result with dual-write event metadata", async () => {
+    receiveReturnOrderCommandMock.mockResolvedValueOnce({
+      returnOrder: { id: "return-2", status: "received" },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-receive", eventType: "return_order.received" },
+    });
+
+    const response = await request(createApp({ uid: "22", roles: ["admin"] }))
+      .post("/api/sales/returns/receive")
+      .send({
+        returnOrderId: "00000000-0000-4000-8000-000000000042",
+      });
+
+    expect(response.status).toBe(200);
+    expect(receiveReturnOrderCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      returnOrderId: "00000000-0000-4000-8000-000000000042",
+      actorId: 22,
+    });
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("return_order.received");
+  });
+});
+
+describe("/api/sales/returns/inspect route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns command result with dual-write event metadata", async () => {
+    inspectReturnOrderCommandMock.mockResolvedValueOnce({
+      returnOrder: { id: "return-3", status: "inspected" },
+      returnLines: [],
+      inspection: { linesInspected: 1, conditionUpdates: [] },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-inspect", eventType: "return_order.inspected" },
+    });
+
+    const response = await request(createApp({ uid: "23", roles: ["admin"] }))
+      .post("/api/sales/returns/inspect")
+      .send({
+        returnOrderId: "00000000-0000-4000-8000-000000000043",
+        inspectionResults: [
+          {
+            lineId: "00000000-0000-4000-8000-000000000004",
+            condition: "used",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(inspectReturnOrderCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      returnOrderId: "00000000-0000-4000-8000-000000000043",
+      inspectionResults: [
+        {
+          lineId: "00000000-0000-4000-8000-000000000004",
+          condition: "used",
+        },
+      ],
+      actorId: undefined,
+    });
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("return_order.inspected");
+  });
+});
+
+describe("/api/sales/returns/credit-note route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns command result with dual-write event metadata", async () => {
+    generateReturnCreditNoteCommandMock.mockResolvedValueOnce({
+      returnOrder: { id: "return-4", status: "credited" },
+      returnLines: [],
+      validation: { valid: true, errors: [], issues: [] },
+      creditNote: { reference: "CN-200" },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-credit", eventType: "return_order.credited" },
+    });
+
+    const response = await request(createApp({ uid: "24", roles: ["admin"] }))
+      .post("/api/sales/returns/credit-note")
+      .send({
+        returnOrderId: "00000000-0000-4000-8000-000000000044",
+      });
+
+    expect(response.status).toBe(200);
+    expect(generateReturnCreditNoteCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      returnOrderId: "00000000-0000-4000-8000-000000000044",
+      actorId: undefined,
+    });
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("return_order.credited");
+  });
+});
+
 describe("/api/sales/subscriptions/activate route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -345,6 +467,103 @@ describe("/api/sales/subscriptions/cancel route", () => {
     });
     expect(response.body.mutationPolicy).toBe("dual-write");
     expect(response.body.event.eventType).toBe("subscription.cancelled");
+  });
+});
+
+describe("/api/sales/subscriptions/pause route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("routes pause through command service with event metadata", async () => {
+    pauseSubscriptionCommandMock.mockResolvedValueOnce({
+      subscription: { id: "sub-2", status: "paused" },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-pause", eventType: "subscription.paused" },
+    });
+
+    const response = await request(createApp({ uid: "43", roles: ["admin"] }))
+      .post("/api/sales/subscriptions/pause")
+      .send({
+        subscriptionId: "00000000-0000-4000-8000-000000000053",
+        reason: "payment issue",
+      });
+
+    expect(response.status).toBe(200);
+    expect(pauseSubscriptionCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      subscriptionId: "00000000-0000-4000-8000-000000000053",
+      actorId: 43,
+      reason: "payment issue",
+    });
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("subscription.paused");
+  });
+});
+
+describe("/api/sales/subscriptions/resume route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("routes resume through command service with event metadata", async () => {
+    resumeSubscriptionCommandMock.mockResolvedValueOnce({
+      subscription: { id: "sub-3", status: "active" },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-resume", eventType: "subscription.activated" },
+    });
+
+    const response = await request(createApp({ uid: "44", roles: ["admin"] }))
+      .post("/api/sales/subscriptions/resume")
+      .send({
+        subscriptionId: "00000000-0000-4000-8000-000000000054",
+        paymentResolved: true,
+        reason: "card updated",
+      });
+
+    expect(response.status).toBe(200);
+    expect(resumeSubscriptionCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      subscriptionId: "00000000-0000-4000-8000-000000000054",
+      actorId: 44,
+      resumeDate: undefined,
+      paymentResolved: true,
+      reason: "card updated",
+    });
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("subscription.activated");
+  });
+});
+
+describe("/api/sales/subscriptions/renew route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("routes renew through command service with event metadata", async () => {
+    renewSubscriptionCommandMock.mockResolvedValueOnce({
+      subscription: { id: "sub-4", status: "active" },
+      mutationPolicy: "dual-write",
+      event: { id: "evt-renew", eventType: "subscription.direct_update" },
+    });
+
+    const response = await request(createApp({ uid: "45", roles: ["admin"] }))
+      .post("/api/sales/subscriptions/renew")
+      .send({
+        subscriptionId: "00000000-0000-4000-8000-000000000055",
+        reason: "period rollover",
+      });
+
+    expect(response.status).toBe(200);
+    expect(renewSubscriptionCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      subscriptionId: "00000000-0000-4000-8000-000000000055",
+      actorId: 45,
+      renewalDate: undefined,
+      reason: "period rollover",
+    });
+    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.event.eventType).toBe("subscription.direct_update");
   });
 });
 

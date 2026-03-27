@@ -45,6 +45,8 @@ This section reflects the **actual repository implementation state** as of 2026-
 - `pnpm --filter @afenda/db truth:check` -> passed
 - `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/sales-order-command-service.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`2 files`, `29 tests`)
 - `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/events/__test__/projectionRuntime.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`4 files`, `37 tests`)
+- `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/modules/sales/__test__/sales-order-command-service.test.ts src/events/__test__/projectionRuntime.test.ts` -> passed (`4 files`, `12 tests`)
+- `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/sales-order-command-service.test.ts src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`4 files`, `48 tests`)
 - `pnpm --dir apps/api typecheck` -> passed
 - `pnpm run build` (workspace root) -> passed
 
@@ -57,8 +59,8 @@ This section reflects the **actual repository implementation state** as of 2026-
 | `2` Structural Hardening | Done | Runtime moved under `src/runtime/`; backward-compatible re-export retained; subpath exports added; consumer mappings now resolve to `dist`. |
 | `3` Truth Engine Foundations | Done | `invariants.ts`, `state-machine.ts`, `truth-model.ts`, and event transition binding are implemented and exported. |
 | `3.6` Compiler V1 | Done (local gates) | Compiler modules + API invariant enforcer exist; scripts wired; generated artifact is now present and `truth:check` passes locally. |
-| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/cancel, and return-order approve routes. Remaining: migrate more opted-in write paths off generic CRUD and reduce dual-write surface area. |
-| `3.8` Engine V5 Foundations | Partial (runtime hardening in progress) | Projection runtime utilities now exist for deterministic replay, projection checkpoints, and drift diagnostics (version/hash/staleness checks) with focused tests. Bounded-context command services cover sales orders plus initial subscription/return-order rollout under explicit mutation policy contracts. Remaining: schema compiler target, persisted projection checkpoint plumbing, replay tooling integration, and broader bounded-context rollout. |
+| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/pause/resume/cancel/renew, and return-order approve/receive/inspect/credit-note routes. Remaining: migrate more opted-in write paths off generic CRUD and reduce dual-write surface area. |
+| `3.8` Engine V5 Foundations | Partial (runtime hardening in progress) | Projection runtime utilities now exist for deterministic replay, projection checkpoints, and drift diagnostics (version/hash/staleness checks) with focused tests. Persisted checkpoint plumbing is now wired in opted-in command flows (`sales_order`, `subscription`, `return_order`) with checkpoint assertions in command-service tests. Remaining: schema compiler target, replay tooling integration, and broader bounded-context rollout. |
 | `4` Governance & Stability | Partial | Export snapshot test added and `.changeset/config.json` added. Remaining: wire changeset flow into release/CI policy. |
 
 ### Baseline Drift Note
@@ -111,7 +113,35 @@ Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Ph
 - Step 5 bounded-context runtime path: `/api/sales/orders/confirm` and `/api/sales/orders/cancel` now execute through a dedicated sales-order command service that loads projection state, appends command-specific events, and persists the refreshed sales-order projection.
 - Step 6 bounded-context expansion: `/api/sales/subscriptions/activate`, `/api/sales/subscriptions/cancel`, and `/api/sales/returns/approve` now execute through dedicated command services with explicit `dual-write` policy enforcement and command-specific event typing.
 - Step 7 projection runtime hardening: added deterministic replay/checkpoint/drift helpers (`projectionRuntime`) and focused tests for replay determinism, non-monotonic version rejection, and drift diagnostics.
-- Next active focus: persist projection checkpoints in opted-in command flows, then continue migration of remaining opted-in write paths off generic CRUD.
+- Step 8 checkpoint persistence rollout: opted-in command services now persist projection checkpoints for `sales_order`, `subscription`, and `return_order`, with stale-projection guard coverage on event-only sales-order execution.
+- Step 9 bounded-context migration increment: sales routes now execute `subscription.pause`, `subscription.resume`, and `return_order.receive` through dedicated command services with dual-write event/checkpoint metadata.
+- Step 10 governance closure increment: focused CI wiring now runs bounded-context command test targets plus projection replay checks in GitHub Actions.
+- Step 11 bounded-context migration increment: sales routes now execute `return_order.inspect`, `return_order.credit-note`, and `subscription.renew` through dedicated command services with dual-write event/checkpoint metadata.
+- Step 12 closure audit pass: strict endpoint inventory confirms opted-in sales write routes are command-owned; sales action metadata now references command handlers for subscription activate/cancel.
+- Next active focus: tighten policy-transition operator docs (`direct -> dual-write -> event-only`) and decide whether actor identity should be mandatory for all return-order write routes.
+
+### Wave 3 Closure Inventory (Strict)
+
+| Endpoint | Aggregate | Write | Orchestration Owner | Status | Verification |
+| ----- | ------ | ----- | ----- | ----- | ----- |
+| `/api/sales/orders/confirm` | `sales_order` | yes | `confirmSalesOrder` command flow | Closed (commandized) | route + command tests green |
+| `/api/sales/orders/cancel` | `sales_order` | yes | `cancelSalesOrder` command flow | Closed (commandized) | route + command tests green |
+| `/api/sales/subscriptions/activate` | `subscription` | yes | `activateSubscriptionCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/subscriptions/pause` | `subscription` | yes | `pauseSubscriptionCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/subscriptions/resume` | `subscription` | yes | `resumeSubscriptionCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/subscriptions/cancel` | `subscription` | yes | `cancelSubscriptionCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/subscriptions/renew` | `subscription` | yes | `renewSubscriptionCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/returns/approve` | `return_order` | yes | `approveReturnOrderCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/returns/receive` | `return_order` | yes | `receiveReturnOrderCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/returns/inspect` | `return_order` | yes | `inspectReturnOrderCommand` | Closed (commandized) | route + command tests green |
+| `/api/sales/returns/credit-note` | `return_order` | yes | `generateReturnCreditNoteCommand` | Closed (commandized) | route + command tests green |
+
+### Wave 3 Gap Report
+
+- Legacy-orchestration endpoint gaps for opted-in sales writes: **none**.
+- CI governance gaps for command + replay checks: **none** (focused jobs wired).
+- Residual operational gap (non-blocking): policy-transition playbook requires final operator documentation hardening.
+- Residual behavioral decision (non-blocking): return `inspect`/`credit-note` routes currently allow optional actor identity; evaluate whether to enforce mandatory actor for full audit uniformity.
 
 ## Next Wave of Development (Wave 3)
 

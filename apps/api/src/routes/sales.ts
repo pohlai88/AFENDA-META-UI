@@ -14,24 +14,20 @@ import {
   generateConsignmentInvoiceDraft,
   validateConsignmentStockReport,
 } from "../modules/sales/consignment-service.js";
+import { validateReturnOrder } from "../modules/sales/returns-service.js";
 import {
-  generateReturnCreditNote,
-  inspectReturnOrder,
-  receiveReturn,
-  validateReturnOrder,
-} from "../modules/sales/returns-service.js";
-import { approveReturnOrderCommand } from "../modules/sales/return-order-command-service.js";
-import {
-  activateSubscription,
-  cancelSubscription,
-  pauseSubscription,
-  renewSubscription,
-  resumeSubscription,
-  validateSubscription,
-} from "../modules/sales/subscription-service.js";
+  approveReturnOrderCommand,
+  generateReturnCreditNoteCommand,
+  inspectReturnOrderCommand,
+  receiveReturnOrderCommand,
+} from "../modules/sales/return-order-command-service.js";
+import { validateSubscription } from "../modules/sales/subscription-service.js";
 import {
   activateSubscriptionCommand,
   cancelSubscriptionCommand,
+  pauseSubscriptionCommand,
+  renewSubscriptionCommand,
+  resumeSubscriptionCommand,
 } from "../modules/sales/subscription-command-service.js";
 import {
   approveDocument,
@@ -1124,10 +1120,17 @@ router.post(
       );
     }
 
-    const result = await receiveReturn({
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const result = await receiveReturnOrderCommand({
       tenantId,
       returnOrderId,
-      actorId: parsed.data.actorId,
+      actorId,
     });
 
     res.status(200).json(result);
@@ -1158,10 +1161,17 @@ router.post(
       );
     }
 
-    const result = await receiveReturn({
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const result = await receiveReturnOrderCommand({
       tenantId,
       returnOrderId,
-      actorId: parsed.data.actorId,
+      actorId,
     });
 
     res.status(200).json(result);
@@ -1192,7 +1202,7 @@ router.post(
       );
     }
 
-    const result = await inspectReturnOrder({
+    const result = await inspectReturnOrderCommand({
       tenantId,
       returnOrderId,
       inspectionResults: parsed.data.inspectionResults,
@@ -1227,7 +1237,7 @@ router.post(
       );
     }
 
-    const result = await inspectReturnOrder({
+    const result = await inspectReturnOrderCommand({
       tenantId,
       returnOrderId,
       inspectionResults: parsed.data.inspectionResults,
@@ -1262,7 +1272,7 @@ router.post(
       );
     }
 
-    const result = await generateReturnCreditNote({
+    const result = await generateReturnCreditNoteCommand({
       tenantId,
       returnOrderId,
       actorId: parsed.data.actorId,
@@ -1296,7 +1306,7 @@ router.post(
       );
     }
 
-    const result = await generateReturnCreditNote({
+    const result = await generateReturnCreditNoteCommand({
       tenantId,
       returnOrderId,
       actorId: parsed.data.actorId,
@@ -1493,7 +1503,7 @@ router.post(
       );
     }
 
-    const result = await pauseSubscription({
+    const result = await pauseSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1535,7 +1545,7 @@ router.post(
       );
     }
 
-    const result = await pauseSubscription({
+    const result = await pauseSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1577,7 +1587,7 @@ router.post(
       );
     }
 
-    const result = await resumeSubscription({
+    const result = await resumeSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1621,7 +1631,7 @@ router.post(
       );
     }
 
-    const result = await resumeSubscription({
+    const result = await resumeSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1753,7 +1763,7 @@ router.post(
       );
     }
 
-    const result = await renewSubscription({
+    const result = await renewSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1796,7 +1806,7 @@ router.post(
       );
     }
 
-    const result = await renewSubscription({
+    const result = await renewSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,

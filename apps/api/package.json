@@ -23,6 +23,8 @@
     "bench:db:prepared": "tsx src/db/benchmarkPreparedQueries.ts",
     "bench:db:assert": "tsx src/db/assertPreparedBenchmark.ts",
     "bench:db:ci": "pnpm bench:db:prepared -- --iterations=50 --synthetic --output=.artifacts/bench/prepared-bench.json && pnpm bench:db:assert -- --input=.artifacts/bench/prepared-bench.json --min-speedup=1 --require=user-trail,stats,aggregate-events",
+    "test:command-bounded-context": "vitest run src/modules/sales/__test__/sales-order-command-service.test.ts src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/routes/__test__/sales.route.test.ts",
+    "test:projection-replay": "vitest run src/events/__test__/projectionRuntime.test.ts",
     "test": "vitest run"
   },
   "dependencies": {
