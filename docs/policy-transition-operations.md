@@ -3,7 +3,7 @@
 **Phase**: Wave 3 Governance Hardening  
 **Scope**: `sales_order`, `subscription`, `return_order`  
 **Runtime States**: `direct -> dual-write -> event-only`  
-**Last Updated**: March 27, 2026
+**Last Updated**: March 28, 2026
 
 ---
 
@@ -20,8 +20,24 @@ Goals:
 Current bounded-context defaults in this repository:
 
 - `sales_order`: command-owned writes under `event-only` command policy.
-- `subscription`: command-owned writes under `dual-write` rollout policy.
-- `return_order`: command-owned writes under `dual-write` rollout policy.
+- `subscription`: command-owned writes under `event-only` command policy.
+- `return_order`: command-owned writes under `event-only` command policy.
+
+---
+
+## Aggregate Inventory
+
+| Aggregate | Current Policy | Target Policy | Rollback Target | Readiness Owner | Current Evidence |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| `sales_order` | `event-only` | Maintain | `dual-write` only if append-and-project degrades | Runtime owners | command tests, replay checks, stale-checkpoint guard |
+| `subscription` | `event-only` | Maintain | `dual-write` | Runtime owners | command tests, route tests, checkpoint persistence, stale-checkpoint guard |
+| `return_order` | `event-only` | Maintain | `dual-write` | Runtime owners | command tests, route tests, checkpoint persistence, stale-checkpoint guard, actor-identity enforcement |
+
+Promotion note:
+
+- `sales_order` is the reference baseline for `event-only` operation.
+- `subscription` is now the first completed promotion after `sales_order` and is the reference cutover shape for future aggregates.
+- `return_order` now uses the same append-and-project promotion shape, so all opted-in sales aggregates are aligned on `event-only` execution.
 
 ---
 
@@ -139,6 +155,47 @@ Promotion rule:
 
 ---
 
+## 4.1 Promotion-Readiness Checklists
+
+### `subscription`
+
+Promotion evidence captured:
+
+1. All command paths now report `mutationPolicy = event-only` in focused tests.
+2. Each command path persists checkpoint metadata derived from the appended event version/timestamp.
+3. Stale projection checkpoints fail before append-and-project execution.
+4. Projection replay checks stay green for the shared runtime.
+5. Rollback target remains explicitly documented as `event-only -> dual-write`.
+
+Evidence commands:
+
+1. `pnpm --filter @afenda/api test -- --run src/modules/sales/__test__/subscription-command-service.test.ts src/routes/__test__/sales.route.test.ts`
+2. `pnpm --filter @afenda/api typecheck`
+3. `pnpm ci:api:projection-replay`
+
+### `return_order`
+
+Promotion evidence captured:
+
+1. All command paths now report `mutationPolicy = event-only` in focused tests.
+2. Each command path persists checkpoint metadata derived from the appended event version/timestamp.
+3. Route-level actor identity remains mandatory for inspect and credit-note.
+4. Stale projection checkpoints fail before append-and-project execution.
+5. Projection replay checks stay green for the shared runtime.
+6. Rollback target remains explicitly documented as `event-only -> dual-write`.
+
+Evidence commands:
+
+1. `pnpm --filter @afenda/api test -- --run src/modules/sales/__test__/return-order-command-service.test.ts src/routes/__test__/sales.route.test.ts`
+2. `pnpm --filter @afenda/api typecheck`
+3. `pnpm ci:api:projection-replay`
+
+Checklist rule:
+
+- Do not promote an aggregate unless every checklist item is backed by current test or operational evidence.
+
+---
+
 ## 5. SLO And Error-Budget Guardrails
 
 Use these guardrails during and after transition:
@@ -168,6 +225,40 @@ Use this change ticket template for each aggregate transition:
    - `pnpm ci:api:command-bounded-context`
    - `pnpm ci:api:projection-replay`
 6. Final decision: promoted, paused, or rolled back.
+
+---
+
+## 6.1 Promotion Approval Checklist
+
+Use this exact checklist in the promotion PR description:
+
+- [ ] Aggregate inventory row is up to date.
+- [ ] Focused command-service tests are attached as evidence.
+- [ ] Route-level regressions are attached as evidence.
+- [ ] Projection replay check result is attached.
+- [ ] Observation window start/end is recorded.
+- [ ] Rollback owner is assigned.
+- [ ] Rollback target is confirmed as one step.
+
+---
+
+## 6.2 Current Promotion Status
+
+Completed promotions: `sales_order`, `subscription`, `return_order`
+
+Next promotion target: none within the current opted-in sales aggregates
+
+Why there is no remaining sales aggregate cutover in this slice:
+
+1. `subscription` already proved the first cutover from `dual-write` to `event-only` using append-and-project semantics.
+2. `return_order` now carries the same event-only projection and stale-checkpoint guard behavior across approve, receive, inspect, and credit-note.
+3. Actor identity remains mandatory on inspect and credit-note after promotion.
+
+Recommended next follow-up scope:
+
+1. Expand the event-only promotion pattern to the next bounded context outside the current opted-in sales slice.
+2. Keep rollback one-step: `event-only -> dual-write` where future aggregates are promoted.
+3. Maintain shared replay and checkpoint diagnostics as the promotion baseline.
 
 ---
 

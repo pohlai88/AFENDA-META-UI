@@ -274,11 +274,11 @@ describe("/api/sales/returns/approve route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns command result with dual-write event metadata", async () => {
+  it("returns command result with event-only event metadata", async () => {
     approveReturnOrderCommandMock.mockResolvedValueOnce({
       returnOrder: { id: "return-1", status: "approved" },
       validation: { valid: true, errors: [], issues: [] },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-approve", eventType: "return_order.approved" },
     });
 
@@ -295,7 +295,7 @@ describe("/api/sales/returns/approve route", () => {
       actorId: 21,
       approvedDate: undefined,
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("return_order.approved");
   });
 });
@@ -305,10 +305,10 @@ describe("/api/sales/returns/receive route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns command result with dual-write event metadata", async () => {
+  it("returns command result with event-only event metadata", async () => {
     receiveReturnOrderCommandMock.mockResolvedValueOnce({
       returnOrder: { id: "return-2", status: "received" },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-receive", eventType: "return_order.received" },
     });
 
@@ -324,7 +324,7 @@ describe("/api/sales/returns/receive route", () => {
       returnOrderId: "00000000-0000-4000-8000-000000000042",
       actorId: 22,
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("return_order.received");
   });
 });
@@ -334,12 +334,12 @@ describe("/api/sales/returns/inspect route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns command result with dual-write event metadata", async () => {
+  it("returns command result with event-only event metadata", async () => {
     inspectReturnOrderCommandMock.mockResolvedValueOnce({
       returnOrder: { id: "return-3", status: "inspected" },
       returnLines: [],
       inspection: { linesInspected: 1, conditionUpdates: [] },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-inspect", eventType: "return_order.inspected" },
     });
 
@@ -367,7 +367,7 @@ describe("/api/sales/returns/inspect route", () => {
       ],
       actorId: 23,
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("return_order.inspected");
   });
 
@@ -396,13 +396,13 @@ describe("/api/sales/returns/credit-note route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns command result with dual-write event metadata", async () => {
+  it("returns command result with event-only event metadata", async () => {
     generateReturnCreditNoteCommandMock.mockResolvedValueOnce({
       returnOrder: { id: "return-4", status: "credited" },
       returnLines: [],
       validation: { valid: true, errors: [], issues: [] },
       creditNote: { reference: "CN-200" },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-credit", eventType: "return_order.credited" },
     });
 
@@ -418,7 +418,7 @@ describe("/api/sales/returns/credit-note route", () => {
       returnOrderId: "00000000-0000-4000-8000-000000000044",
       actorId: 24,
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("return_order.credited");
   });
 
@@ -441,12 +441,12 @@ describe("/api/sales/subscriptions/activate route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns command result with dual-write event metadata", async () => {
+  it("returns command result with event-only event metadata", async () => {
     activateSubscriptionCommandMock.mockResolvedValueOnce({
       subscription: { id: "sub-1", status: "active" },
       lines: [],
       validation: { valid: true, errors: [], issues: [] },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-activate", eventType: "subscription.activated" },
     });
 
@@ -463,7 +463,7 @@ describe("/api/sales/subscriptions/activate route", () => {
       actorId: 21,
       activationDate: undefined,
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("subscription.activated");
   });
 });
@@ -473,10 +473,10 @@ describe("/api/sales/subscriptions/cancel route", () => {
     vi.clearAllMocks();
   });
 
-  it("returns command result with dual-write event metadata", async () => {
+  it("returns command result with event-only event metadata", async () => {
     cancelSubscriptionCommandMock.mockResolvedValueOnce({
       subscription: { id: "sub-1", status: "cancelled" },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-cancel", eventType: "subscription.cancelled" },
     });
 
@@ -497,7 +497,7 @@ describe("/api/sales/subscriptions/cancel route", () => {
       cancelledAt: undefined,
       reason: "Customer closed account",
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("subscription.cancelled");
   });
 });
@@ -507,10 +507,10 @@ describe("/api/sales/subscriptions/pause route", () => {
     vi.clearAllMocks();
   });
 
-  it("routes pause through command service with event metadata", async () => {
+  it("routes pause through command service with event-only metadata", async () => {
     pauseSubscriptionCommandMock.mockResolvedValueOnce({
       subscription: { id: "sub-2", status: "paused" },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-pause", eventType: "subscription.paused" },
     });
 
@@ -528,7 +528,7 @@ describe("/api/sales/subscriptions/pause route", () => {
       actorId: 43,
       reason: "payment issue",
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("subscription.paused");
   });
 });
@@ -538,10 +538,10 @@ describe("/api/sales/subscriptions/resume route", () => {
     vi.clearAllMocks();
   });
 
-  it("routes resume through command service with event metadata", async () => {
+  it("routes resume through command service with event-only metadata", async () => {
     resumeSubscriptionCommandMock.mockResolvedValueOnce({
       subscription: { id: "sub-3", status: "active" },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-resume", eventType: "subscription.activated" },
     });
 
@@ -562,7 +562,7 @@ describe("/api/sales/subscriptions/resume route", () => {
       paymentResolved: true,
       reason: "card updated",
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("subscription.activated");
   });
 });
@@ -572,10 +572,10 @@ describe("/api/sales/subscriptions/renew route", () => {
     vi.clearAllMocks();
   });
 
-  it("routes renew through command service with event metadata", async () => {
+  it("routes renew through command service with event-only metadata", async () => {
     renewSubscriptionCommandMock.mockResolvedValueOnce({
       subscription: { id: "sub-4", status: "active" },
-      mutationPolicy: "dual-write",
+      mutationPolicy: "event-only",
       event: { id: "evt-renew", eventType: "subscription.direct_update" },
     });
 
@@ -594,7 +594,7 @@ describe("/api/sales/subscriptions/renew route", () => {
       renewalDate: undefined,
       reason: "period rollover",
     });
-    expect(response.body.mutationPolicy).toBe("dual-write");
+    expect(response.body.mutationPolicy).toBe("event-only");
     expect(response.body.event.eventType).toBe("subscription.direct_update");
   });
 });

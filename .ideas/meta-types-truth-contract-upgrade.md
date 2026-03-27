@@ -31,9 +31,9 @@ All sections below follow this canonical vocabulary.
 
 ---
 
-## Implementation Status Update (2026-03-27)
+## Implementation Status Update (2026-03-28)
 
-This section reflects the **actual repository implementation state** as of 2026-03-27.
+This section reflects the **actual repository implementation state** as of 2026-03-28.
 
 ### Verified Signals
 
@@ -47,7 +47,11 @@ This section reflects the **actual repository implementation state** as of 2026-
 - `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/events/__test__/projectionRuntime.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`4 files`, `37 tests`)
 - `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/modules/sales/__test__/sales-order-command-service.test.ts src/events/__test__/projectionRuntime.test.ts` -> passed (`4 files`, `12 tests`)
 - `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/sales-order-command-service.test.ts src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`4 files`, `48 tests`)
+- `pnpm --filter @afenda/api test -- --run src/modules/sales/__test__/subscription-command-service.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`2 files`, `44 tests`)
+- `pnpm --filter @afenda/api test -- --run src/modules/sales/__test__/return-order-command-service.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`2 files`, `43 tests`)
+- `pnpm --filter @afenda/api test -- src/routes/__test__/sales.route.test.ts` -> passed (`1 file`, `37 tests`)
 - `pnpm --dir apps/api typecheck` -> passed
+- `pnpm --filter @afenda/api typecheck` -> passed
 - `pnpm run build` (workspace root) -> passed
 
 ### Phase Progress Matrix
@@ -59,8 +63,8 @@ This section reflects the **actual repository implementation state** as of 2026-
 | `2` Structural Hardening | Done | Runtime moved under `src/runtime/`; backward-compatible re-export retained; subpath exports added; consumer mappings now resolve to `dist`. |
 | `3` Truth Engine Foundations | Done | `invariants.ts`, `state-machine.ts`, `truth-model.ts`, and event transition binding are implemented and exported. |
 | `3.6` Compiler V1 | Done (local gates) | Compiler modules + API invariant enforcer exist; scripts wired; generated artifact is now present and `truth:check` passes locally. |
-| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/pause/resume/cancel/renew, and return-order approve/receive/inspect/credit-note routes. Remaining: reduce dual-write surface area by promoting validated flows toward event-only where parity is proven. |
-| `3.8` Engine V5 Foundations | Partial (runtime hardening in progress) | Projection runtime utilities now exist for deterministic replay, projection checkpoints, and drift diagnostics (version/hash/staleness checks) with focused tests. Persisted checkpoint plumbing is now wired in opted-in command flows (`sales_order`, `subscription`, `return_order`) with checkpoint assertions in command-service tests. Remaining: schema compiler target, replay tooling integration, and broader bounded-context rollout. |
+| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/pause/resume/cancel/renew, and return-order approve/receive/inspect/credit-note routes. All opted-in sales bounded contexts now operate on validated `event-only` execution. Remaining: extend the same runtime pattern beyond the current sales slice where parity is proven. |
+| `3.8` Engine V5 Foundations | Partial (runtime hardening in progress) | Projection runtime utilities now exist for deterministic replay, projection checkpoints, and drift diagnostics (version/hash/staleness checks) with focused tests. Persisted checkpoint plumbing is now wired in opted-in command flows (`sales_order`, `subscription`, `return_order`) with checkpoint assertions in command-service tests, and both `subscription` and `return_order` now reject stale projection checkpoints before append-and-project execution. Remaining: schema compiler target, replay tooling integration, and broader bounded-context rollout. |
 | `4` Governance & Stability | Partial | Export snapshot test added and `.changeset/config.json` added. Remaining: wire changeset flow into release/CI policy. |
 
 ### Baseline Drift Note
@@ -120,7 +124,44 @@ Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Ph
 - Step 12 closure audit pass: strict endpoint inventory confirms opted-in sales write routes are command-owned; sales action metadata now references command handlers for subscription activate/cancel.
 - Step 13 governance hardening: policy-transition operator runbook added at `docs/policy-transition-operations.md` with rollout, rollback, parity-window, and CI evidence requirements.
 - Step 14 actor identity hardening: `return_order.inspect` and `return_order.credit-note` now require numeric actor identity in route validation (request or authenticated session), with route regression coverage for required-actor failures.
-- Next active focus: define dual-write reduction criteria and phased promotion checkpoints toward `event-only`.
+- Step 15 subscription promotion: `subscription` activate/cancel/pause/resume/renew command services now execute under `event-only` append-and-project policy with stale-checkpoint drift detection, focused command coverage, and route regression updates.
+- Step 16 return-order promotion: `return_order` approve/receive/inspect/credit-note command services now execute under `event-only` append-and-project policy with stale-checkpoint drift detection while preserving mandatory actor identity on inspect and credit-note routes.
+- Next active focus: extend the event-only promotion pattern beyond the current opted-in sales aggregates and keep the central mutation policy registry aligned with runtime state.
+
+### Proposed Next Dev (Immediate)
+
+**Theme**: post-sales event-only rollout expansion
+
+**Objective**: carry the now-validated event-only command runtime shape into the next bounded context while keeping the shared mutation policy registry, replay diagnostics, and rollback guidance consistent.
+
+**Implementation slice**:
+
+1. Pick the next bounded context outside the current sales slice.
+  - Reuse the sales-order/subscription/return-order append-and-project helper pattern.
+  - Require route-level identity and rollback semantics before cutover.
+
+2. Keep compiler/runtime policy state aligned.
+  - Treat `packages/db/src/truth-compiler/truth-config.ts` as the shared policy registry and update it in the same PR as runtime cutovers.
+  - Keep focused tests proving the promoted aggregate reports `event-only` plus stale-checkpoint behavior.
+
+3. Keep rollback one-step and operator-visible.
+  - Leave the rollback target as `event-only -> dual-write`.
+  - Update the runbook inventory and approval checklist after the promotion lands.
+
+**Definition of done for next dev**:
+
+- The next bounded context has an explicit event-only promotion plan.
+- Shared mutation policy registry and runtime policy state stay aligned in the same change.
+- Rollback remains one-step and documented.
+- Existing sales aggregates remain fully validated baselines for the cutover shape.
+
+### Aggregate Promotion Inventory
+
+| Aggregate | Current Policy | Target Policy | Rollback Target | Readiness Status | Notes |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| `sales_order` | `event-only` | keep `event-only` | `dual-write` if append-and-project degrades | Baseline | reference implementation for promotion shape |
+| `subscription` | `event-only` | maintain `event-only` | `dual-write` | Promoted | append-and-project path validated with stale-checkpoint guard coverage |
+| `return_order` | `event-only` | maintain `event-only` | `dual-write` | Promoted | append-and-project path validated with stale-checkpoint guard coverage and actor-identity enforcement |
 
 ### Wave 3 Closure Inventory (Strict)
 
@@ -196,9 +237,15 @@ Goal: turn the current sales-order bounded-context slice into a repeatable runti
   - [x] If optional: document rationale and audit implications explicitly.
 
 3. Dual-write reduction plan
-  - Define objective entry criteria for promoting each opted-in sales flow from `dual-write` to `event-only`.
-  - Add parity checkpoints: projection correctness, latency budget, and incident-free observation window.
-  - Schedule phased cutover by aggregate with a single rollback command path per phase.
+  - [x] Define objective entry criteria for promoting each opted-in sales flow from `dual-write` to `event-only`.
+  - [x] Add parity checkpoints: projection correctness, latency budget, and incident-free observation window.
+  - [x] Schedule phased cutover by aggregate with a single rollback command path per phase.
+
+### Current Promotion Outcome
+
+- `subscription` is now promoted to `event-only` with append-and-project execution, stale-checkpoint drift detection, focused route coverage, and API typecheck evidence.
+- `return_order` is now promoted to `event-only` with the same append-and-project and stale-checkpoint protection shape while keeping actor identity mandatory on inspect and credit-note.
+- All opted-in sales aggregates now share the same event-only baseline, and the next implementation slice can move to a new bounded context instead of finishing sales parity work.
 
 ### Suggested Execution Sequence (Low-Risk)
 

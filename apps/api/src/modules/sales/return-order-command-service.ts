@@ -2,10 +2,18 @@ import type { MutationPolicyDefinition } from "@afenda/meta-types";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
+import { dbGetAggregateEvents } from "../../events/dbEventStore.js";
+import {
+  getProjectionCheckpoint,
+  upsertProjectionCheckpoint,
+} from "../../events/projectionCheckpointStore.js";
+import {
+  assertNoProjectionDrift,
+  buildProjectionCheckpoint,
+  detectProjectionDrift,
+} from "../../events/projectionRuntime.js";
 import { returnOrders } from "../../db/schema/index.js";
 import { NotFoundError } from "../../middleware/errorHandler.js";
-import { buildProjectionCheckpoint } from "../../events/projectionRuntime.js";
-import { upsertProjectionCheckpoint } from "../../events/projectionCheckpointStore.js";
 import {
   executeMutationCommand,
   type ExecuteMutationCommandResult,
@@ -27,9 +35,9 @@ import {
 
 type ReturnOrderRecord = typeof returnOrders.$inferSelect;
 
-const RETURN_ORDER_DUAL_WRITE_POLICY: MutationPolicyDefinition = {
-  id: "sales.return_order.dual_write_rollout",
-  mutationPolicy: "dual-write",
+const RETURN_ORDER_EVENT_ONLY_POLICY: MutationPolicyDefinition = {
+  id: "sales.return_order.command_projection",
+  mutationPolicy: "event-only",
   appliesTo: ["return_order"],
   requiredEvents: [
     "return_order.approved",
@@ -39,7 +47,15 @@ const RETURN_ORDER_DUAL_WRITE_POLICY: MutationPolicyDefinition = {
   ],
   directMutationOperations: ["update"],
   description:
-    "Return-order command routes execute transactional writes while appending policy-aware domain events.",
+    "Return-order command routes append events first and refresh the read model through projection persistence.",
+};
+
+const RETURN_ORDER_PROJECTION_DEFINITION = {
+  name: "return_order.read_model",
+  version: {
+    version: 1,
+    schemaHash: "return_order_read_model_v1",
+  },
 };
 
 export interface ApproveReturnOrderCommandInput extends ApproveReturnInput {
@@ -84,46 +100,24 @@ export async function approveReturnOrderCommand(
   const existing = await loadReturnOrder(input.tenantId, input.returnOrderId);
   let serviceResult: ApproveReturnResult | undefined;
 
-  const commandResult = await executeMutationCommand<ReturnOrderRecord>({
-    model: "return_order",
-    operation: "update",
-    recordId: input.returnOrderId,
-    actorId: String(input.actorId),
+  const commandResult = await executeReturnOrderCommand({
+    tenantId: input.tenantId,
+    returnOrderId: input.returnOrderId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.returns.approve",
-    policies: [RETURN_ORDER_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
+    nextReturnOrder: {
       ...existing,
       status: "approved",
       approvedBy: input.actorId,
       approvedDate: input.approvedDate ?? new Date(),
     },
-    mutate: async () => {
+    persistProjection: async () => {
       serviceResult = await approveReturn(input);
-      return serviceResult.returnOrder;
     },
   });
 
   if (!serviceResult) {
     throw new Error("return-order-command-service: approve mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "return_order.read_model",
-          version: {
-            version: 1,
-            schemaHash: "return_order_read_model_v1",
-          },
-        },
-        aggregateType: "return_order",
-        aggregateId: input.returnOrderId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -139,44 +133,22 @@ export async function receiveReturnOrderCommand(
   const existing = await loadReturnOrder(input.tenantId, input.returnOrderId);
   let serviceResult: ReceiveReturnResult | undefined;
 
-  const commandResult = await executeMutationCommand<ReturnOrderRecord>({
-    model: "return_order",
-    operation: "update",
-    recordId: input.returnOrderId,
-    actorId: typeof input.actorId === "number" ? String(input.actorId) : undefined,
+  const commandResult = await executeReturnOrderCommand({
+    tenantId: input.tenantId,
+    returnOrderId: input.returnOrderId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.returns.receive",
-    policies: [RETURN_ORDER_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
+    nextReturnOrder: {
       ...existing,
       status: "received",
     },
-    mutate: async () => {
+    persistProjection: async () => {
       serviceResult = await receiveReturn(input);
-      return serviceResult.returnOrder;
     },
   });
 
   if (!serviceResult) {
     throw new Error("return-order-command-service: receive mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "return_order.read_model",
-          version: {
-            version: 1,
-            schemaHash: "return_order_read_model_v1",
-          },
-        },
-        aggregateType: "return_order",
-        aggregateId: input.returnOrderId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -192,44 +164,22 @@ export async function inspectReturnOrderCommand(
   const existing = await loadReturnOrder(input.tenantId, input.returnOrderId);
   let serviceResult: InspectReturnResult | undefined;
 
-  const commandResult = await executeMutationCommand<ReturnOrderRecord>({
-    model: "return_order",
-    operation: "update",
-    recordId: input.returnOrderId,
-    actorId: typeof input.actorId === "number" ? String(input.actorId) : undefined,
+  const commandResult = await executeReturnOrderCommand({
+    tenantId: input.tenantId,
+    returnOrderId: input.returnOrderId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.returns.inspect",
-    policies: [RETURN_ORDER_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
+    nextReturnOrder: {
       ...existing,
       status: "inspected",
     },
-    mutate: async () => {
+    persistProjection: async () => {
       serviceResult = await inspectReturnOrder(input);
-      return serviceResult.returnOrder;
     },
   });
 
   if (!serviceResult) {
     throw new Error("return-order-command-service: inspect mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "return_order.read_model",
-          version: {
-            version: 1,
-            schemaHash: "return_order_read_model_v1",
-          },
-        },
-        aggregateType: "return_order",
-        aggregateId: input.returnOrderId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -245,44 +195,22 @@ export async function generateReturnCreditNoteCommand(
   const existing = await loadReturnOrder(input.tenantId, input.returnOrderId);
   let serviceResult: GenerateCreditNoteResult | undefined;
 
-  const commandResult = await executeMutationCommand<ReturnOrderRecord>({
-    model: "return_order",
-    operation: "update",
-    recordId: input.returnOrderId,
-    actorId: typeof input.actorId === "number" ? String(input.actorId) : undefined,
+  const commandResult = await executeReturnOrderCommand({
+    tenantId: input.tenantId,
+    returnOrderId: input.returnOrderId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.returns.credit_note",
-    policies: [RETURN_ORDER_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
+    nextReturnOrder: {
       ...existing,
       status: "credited",
     },
-    mutate: async () => {
+    persistProjection: async () => {
       serviceResult = await generateReturnCreditNote(input);
-      return serviceResult.returnOrder;
     },
   });
 
   if (!serviceResult) {
     throw new Error("return-order-command-service: credit-note mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "return_order.read_model",
-          version: {
-            version: 1,
-            schemaHash: "return_order_read_model_v1",
-          },
-        },
-        aggregateType: "return_order",
-        aggregateId: input.returnOrderId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -313,4 +241,69 @@ async function loadReturnOrder(
   }
 
   return record;
+}
+
+async function executeReturnOrderCommand(input: {
+  tenantId: number;
+  returnOrderId: string;
+  actorId?: number;
+  source: string;
+  nextReturnOrder: ReturnOrderRecord;
+  persistProjection: () => Promise<void>;
+}): Promise<ExecuteMutationCommandResult<ReturnOrderRecord>> {
+  return executeMutationCommand({
+    model: "return_order",
+    operation: "update",
+    recordId: input.returnOrderId,
+    actorId: typeof input.actorId === "number" ? String(input.actorId) : undefined,
+    source: input.source,
+    policies: [RETURN_ORDER_EVENT_ONLY_POLICY],
+    nextRecord: input.nextReturnOrder,
+    mutate: async () => input.nextReturnOrder,
+    loadProjectionState: async () =>
+      loadReturnOrderProjectionState({
+        tenantId: input.tenantId,
+        returnOrderId: input.returnOrderId,
+      }),
+    projectEvent: ({ currentState, nextRecord }) => nextRecord ?? currentState,
+    persistProjectionState: async ({ event }) => {
+      await input.persistProjection();
+      upsertProjectionCheckpoint(
+        buildProjectionCheckpoint({
+          definition: RETURN_ORDER_PROJECTION_DEFINITION,
+          aggregateType: "return_order",
+          aggregateId: input.returnOrderId,
+          lastAppliedVersion: event.version,
+          updatedAt: event.timestamp,
+        })
+      );
+    },
+  });
+}
+
+async function loadReturnOrderProjectionState(input: {
+  tenantId: number;
+  returnOrderId: string;
+}): Promise<ReturnOrderRecord> {
+  const returnOrder = await loadReturnOrder(input.tenantId, input.returnOrderId);
+  const checkpoint = getProjectionCheckpoint({
+    projectionName: RETURN_ORDER_PROJECTION_DEFINITION.name,
+    aggregateType: "return_order",
+    aggregateId: input.returnOrderId,
+  });
+
+  if (!checkpoint) {
+    return returnOrder;
+  }
+
+  const events = await dbGetAggregateEvents("return_order", input.returnOrderId);
+  const latestEventVersion = events.at(-1)?.version ?? 0;
+  const driftReport = detectProjectionDrift({
+    definition: RETURN_ORDER_PROJECTION_DEFINITION,
+    checkpoint,
+    latestEventVersion,
+  });
+
+  assertNoProjectionDrift(driftReport);
+  return returnOrder;
 }

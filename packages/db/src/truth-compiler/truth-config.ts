@@ -226,25 +226,30 @@ export const SALES_STATE_MACHINES: StateMachineDefinition[] = [
 
 export const SALES_MUTATION_POLICIES: MutationPolicyDefinition[] = [
   {
-    id: "sales.sales_order.dual_write_rollout",
-    mutationPolicy: "dual-write",
+    id: "sales.sales_order.command_projection",
+    mutationPolicy: "event-only",
     appliesTo: ["sales_order"],
     requiredEvents: ["sales_order.submitted", "sales_order.confirmed", "sales_order.cancelled"],
     description:
-      "Sales orders emit append-only domain events while legacy direct writes remain enabled.",
+      "Sales-order command routes append events first and refresh the read model through projection persistence.",
   },
   {
-    id: "sales.subscription.dual_write_rollout",
-    mutationPolicy: "dual-write",
+    id: "sales.subscription.command_projection",
+    mutationPolicy: "event-only",
     appliesTo: ["subscription"],
-    requiredEvents: ["subscription.activated", "subscription.cancelled", "subscription.paused"],
+    requiredEvents: [
+      "subscription.activated",
+      "subscription.cancelled",
+      "subscription.paused",
+      "subscription.direct_update",
+    ],
     directMutationOperations: ["update"],
     description:
-      "Subscription commands emit policy-aware lifecycle events while retaining direct updates during rollout.",
+      "Subscription command routes append events first and refresh the read model through projection persistence.",
   },
   {
-    id: "sales.return_order.dual_write_rollout",
-    mutationPolicy: "dual-write",
+    id: "sales.return_order.command_projection",
+    mutationPolicy: "event-only",
     appliesTo: ["return_order"],
     requiredEvents: [
       "return_order.approved",
@@ -254,7 +259,7 @@ export const SALES_MUTATION_POLICIES: MutationPolicyDefinition[] = [
     ],
     directMutationOperations: ["update"],
     description:
-      "Return-order commands append domain events while preserving direct writes for phased runtime migration.",
+      "Return-order command routes append events first and refresh the read model through projection persistence.",
   },
 ];
 

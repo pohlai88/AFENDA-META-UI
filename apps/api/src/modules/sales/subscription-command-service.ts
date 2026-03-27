@@ -2,14 +2,34 @@ import type { MutationPolicyDefinition } from "@afenda/meta-types";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
-import { subscriptions } from "../../db/schema/index.js";
-import { NotFoundError } from "../../middleware/errorHandler.js";
-import { buildProjectionCheckpoint } from "../../events/projectionRuntime.js";
-import { upsertProjectionCheckpoint } from "../../events/projectionCheckpointStore.js";
+import {
+  subscriptionCloseReasons,
+  subscriptionLines,
+  subscriptionTemplates,
+  subscriptions,
+} from "../../db/schema/index.js";
+import { dbGetAggregateEvents } from "../../events/dbEventStore.js";
+import {
+  getProjectionCheckpoint,
+  upsertProjectionCheckpoint,
+} from "../../events/projectionCheckpointStore.js";
+import {
+  assertNoProjectionDrift,
+  buildProjectionCheckpoint,
+  detectProjectionDrift,
+} from "../../events/projectionRuntime.js";
+import { NotFoundError, ValidationError } from "../../middleware/errorHandler.js";
 import {
   executeMutationCommand,
   type ExecuteMutationCommandResult,
 } from "../../policy/mutation-command-gateway.js";
+import {
+  computeMRR,
+  computeNextInvoiceDate,
+  subscriptionStateMachine,
+  validateSubscription as validateSubscriptionInvariants,
+  type SubscriptionValidationResult,
+} from "./logic/subscription-engine.js";
 import {
   activateSubscription,
   cancelSubscription,
@@ -29,15 +49,30 @@ import {
 } from "./subscription-service.js";
 
 type SubscriptionRecord = typeof subscriptions.$inferSelect;
+type SubscriptionTemplateRecord = typeof subscriptionTemplates.$inferSelect;
+type SubscriptionLineRecord = typeof subscriptionLines.$inferSelect;
 
-const SUBSCRIPTION_DUAL_WRITE_POLICY: MutationPolicyDefinition = {
-  id: "sales.subscription.dual_write_rollout",
-  mutationPolicy: "dual-write",
+const SUBSCRIPTION_EVENT_ONLY_POLICY: MutationPolicyDefinition = {
+  id: "sales.subscription.command_projection",
+  mutationPolicy: "event-only",
   appliesTo: ["subscription"],
-  requiredEvents: ["subscription.activated", "subscription.cancelled", "subscription.paused"],
+  requiredEvents: [
+    "subscription.activated",
+    "subscription.cancelled",
+    "subscription.paused",
+    "subscription.direct_update",
+  ],
   directMutationOperations: ["update"],
   description:
-    "Subscription command routes execute domain mutations and append policy-aware events during rollout.",
+    "Subscription command routes append events first and refresh the read model through projection persistence.",
+};
+
+const SUBSCRIPTION_PROJECTION_DEFINITION = {
+  name: "subscription.read_model",
+  version: {
+    version: 1,
+    schemaHash: "subscription_read_model_v1",
+  },
 };
 
 export interface ActivateSubscriptionCommandInput extends ActivateSubscriptionInput {
@@ -84,46 +119,59 @@ export async function activateSubscriptionCommand(
   input: ActivateSubscriptionCommandInput
 ): Promise<ActivateSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
-  let serviceResult: ActivateSubscriptionResult | undefined;
+  const template = await loadSubscriptionTemplate(input.tenantId, existing.templateId);
+  const lines = await loadSubscriptionLines(input.tenantId, input.subscriptionId);
+  const validation = validateSubscriptionInvariants({
+    subscription: existing,
+    lines,
+    template,
+  });
 
-  const commandResult = await executeMutationCommand<SubscriptionRecord>({
-    model: "subscription",
-    operation: "update",
-    recordId: input.subscriptionId,
-    actorId: String(input.actorId),
+  if (!validation.valid) {
+    throw new ValidationError(formatValidationErrors(validation));
+  }
+
+  const activationDate = input.activationDate ?? new Date();
+  subscriptionStateMachine.assertTransition(existing.status, "active", {
+    hasLines: lines.length > 0,
+    startDateValid: !existing.dateEnd || existing.dateStart.getTime() < existing.dateEnd.getTime(),
+  });
+
+  const mrrResult = computeMRR({
+    lines,
+    billingPeriod: template.billingPeriod,
+  });
+
+  const nextSubscription: SubscriptionRecord = {
+    ...existing,
+    status: "active",
+    dateStart: existing.status === "draft" ? activationDate : existing.dateStart,
+    nextInvoiceDate: computeNextInvoiceDate({
+      currentDate: activationDate,
+      billingPeriod: template.billingPeriod,
+      billingDay: template.billingDay,
+    }),
+    recurringTotal: mrrResult.lineTotal.toDecimalPlaces(2).toString(),
+    mrr: mrrResult.mrr.toString(),
+    arr: mrrResult.arr.toString(),
+    closeReasonId: null,
+    updatedBy: input.actorId,
+  };
+
+  let serviceResult: ActivateSubscriptionResult | undefined;
+  const commandResult = await executeSubscriptionCommand({
+    tenantId: input.tenantId,
+    subscriptionId: input.subscriptionId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.activate",
-    policies: [SUBSCRIPTION_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
-      ...existing,
-      status: "active",
-    },
-    mutate: async () => {
+    nextSubscription,
+    persistProjection: async () => {
       serviceResult = await activateSubscription(input);
-      return serviceResult.subscription;
     },
   });
 
   if (!serviceResult) {
     throw new Error("subscription-command-service: activate mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "subscription.read_model",
-          version: {
-            version: 1,
-            schemaHash: "subscription_read_model_v1",
-          },
-        },
-        aggregateType: "subscription",
-        aggregateId: input.subscriptionId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -137,46 +185,36 @@ export async function cancelSubscriptionCommand(
   input: CancelSubscriptionCommandInput
 ): Promise<CancelSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
-  let serviceResult: CancelSubscriptionResult | undefined;
+  await ensureCloseReason(input.tenantId, input.closeReasonId);
+  subscriptionStateMachine.assertTransition(existing.status, "cancelled", {
+    hasCloseReason: true,
+  });
 
-  const commandResult = await executeMutationCommand<SubscriptionRecord>({
-    model: "subscription",
-    operation: "update",
-    recordId: input.subscriptionId,
-    actorId: String(input.actorId),
+  const cancelledAt = input.cancelledAt ?? new Date();
+  const nextSubscription: SubscriptionRecord = {
+    ...existing,
+    status: "cancelled",
+    dateEnd: cancelledAt,
+    closeReasonId: input.closeReasonId,
+    mrr: "0.00",
+    arr: "0.00",
+    updatedBy: input.actorId,
+  };
+
+  let serviceResult: CancelSubscriptionResult | undefined;
+  const commandResult = await executeSubscriptionCommand({
+    tenantId: input.tenantId,
+    subscriptionId: input.subscriptionId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.cancel",
-    policies: [SUBSCRIPTION_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
-      ...existing,
-      status: "cancelled",
-    },
-    mutate: async () => {
+    nextSubscription,
+    persistProjection: async () => {
       serviceResult = await cancelSubscription(input);
-      return serviceResult.subscription;
     },
   });
 
   if (!serviceResult) {
     throw new Error("subscription-command-service: cancel mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "subscription.read_model",
-          version: {
-            version: 1,
-            schemaHash: "subscription_read_model_v1",
-          },
-        },
-        aggregateType: "subscription",
-        aggregateId: input.subscriptionId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -190,46 +228,26 @@ export async function pauseSubscriptionCommand(
   input: PauseSubscriptionCommandInput
 ): Promise<PauseSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
-  let serviceResult: PauseSubscriptionResult | undefined;
+  subscriptionStateMachine.assertTransition(existing.status, "paused");
 
-  const commandResult = await executeMutationCommand<SubscriptionRecord>({
-    model: "subscription",
-    operation: "update",
-    recordId: input.subscriptionId,
-    actorId: String(input.actorId),
+  let serviceResult: PauseSubscriptionResult | undefined;
+  const commandResult = await executeSubscriptionCommand({
+    tenantId: input.tenantId,
+    subscriptionId: input.subscriptionId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.pause",
-    policies: [SUBSCRIPTION_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
+    nextSubscription: {
       ...existing,
       status: "paused",
+      updatedBy: input.actorId,
     },
-    mutate: async () => {
+    persistProjection: async () => {
       serviceResult = await pauseSubscription(input);
-      return serviceResult.subscription;
     },
   });
 
   if (!serviceResult) {
     throw new Error("subscription-command-service: pause mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "subscription.read_model",
-          version: {
-            version: 1,
-            schemaHash: "subscription_read_model_v1",
-          },
-        },
-        aggregateType: "subscription",
-        aggregateId: input.subscriptionId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -243,46 +261,42 @@ export async function resumeSubscriptionCommand(
   input: ResumeSubscriptionCommandInput
 ): Promise<ResumeSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
-  let serviceResult: ResumeSubscriptionResult | undefined;
+  const template = await loadSubscriptionTemplate(input.tenantId, existing.templateId);
+  if (existing.status === "past_due") {
+    subscriptionStateMachine.assertTransition(existing.status, "active", {
+      paymentResolved: input.paymentResolved === true,
+    });
+  } else {
+    subscriptionStateMachine.assertTransition(existing.status, "active");
+  }
 
-  const commandResult = await executeMutationCommand<SubscriptionRecord>({
-    model: "subscription",
-    operation: "update",
-    recordId: input.subscriptionId,
-    actorId: String(input.actorId),
+  const resumeDate = input.resumeDate ?? new Date();
+  const nextSubscription: SubscriptionRecord = {
+    ...existing,
+    status: "active",
+    nextInvoiceDate: computeNextInvoiceDate({
+      currentDate: resumeDate,
+      lastInvoiced: existing.lastInvoicedAt ?? undefined,
+      billingPeriod: template.billingPeriod,
+      billingDay: template.billingDay,
+    }),
+    updatedBy: input.actorId,
+  };
+
+  let serviceResult: ResumeSubscriptionResult | undefined;
+  const commandResult = await executeSubscriptionCommand({
+    tenantId: input.tenantId,
+    subscriptionId: input.subscriptionId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.resume",
-    policies: [SUBSCRIPTION_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
-      ...existing,
-      status: "active",
-    },
-    mutate: async () => {
+    nextSubscription,
+    persistProjection: async () => {
       serviceResult = await resumeSubscription(input);
-      return serviceResult.subscription;
     },
   });
 
   if (!serviceResult) {
     throw new Error("subscription-command-service: resume mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "subscription.read_model",
-          version: {
-            version: 1,
-            schemaHash: "subscription_read_model_v1",
-          },
-        },
-        aggregateType: "subscription",
-        aggregateId: input.subscriptionId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -296,46 +310,50 @@ export async function renewSubscriptionCommand(
   input: RenewSubscriptionCommandInput
 ): Promise<RenewSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
-  let serviceResult: RenewSubscriptionResult | undefined;
+  const template = await loadSubscriptionTemplate(input.tenantId, existing.templateId);
+  const lines = await loadSubscriptionLines(input.tenantId, input.subscriptionId);
+  if (existing.status !== "active") {
+    throw new ValidationError(
+      `Subscription ${existing.id} must be active to renew (current status: ${existing.status}).`
+    );
+  }
 
-  const commandResult = await executeMutationCommand<SubscriptionRecord>({
-    model: "subscription",
-    operation: "update",
-    recordId: input.subscriptionId,
-    actorId: String(input.actorId),
+  const renewalDate = input.renewalDate ?? new Date();
+  const mrrResult = computeMRR({
+    lines,
+    billingPeriod: template.billingPeriod,
+  });
+
+  const nextSubscription: SubscriptionRecord = {
+    ...existing,
+    lastInvoicedAt: renewalDate,
+    nextInvoiceDate: computeNextInvoiceDate({
+      currentDate: renewalDate,
+      lastInvoiced: existing.lastInvoicedAt ?? existing.nextInvoiceDate,
+      billingPeriod: template.billingPeriod,
+      billingDay: template.billingDay,
+    }),
+    dateEnd: extendDateEnd(existing.dateEnd, template.billingPeriod, template.renewalPeriod),
+    recurringTotal: mrrResult.lineTotal.toDecimalPlaces(2).toString(),
+    mrr: mrrResult.mrr.toString(),
+    arr: mrrResult.arr.toString(),
+    updatedBy: input.actorId,
+  };
+
+  let serviceResult: RenewSubscriptionResult | undefined;
+  const commandResult = await executeSubscriptionCommand({
+    tenantId: input.tenantId,
+    subscriptionId: input.subscriptionId,
+    actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.renew",
-    policies: [SUBSCRIPTION_DUAL_WRITE_POLICY],
-    existingRecord: existing,
-    nextRecord: {
-      ...existing,
-      status: "active",
-    },
-    mutate: async () => {
+    nextSubscription,
+    persistProjection: async () => {
       serviceResult = await renewSubscription(input);
-      return serviceResult.subscription;
     },
   });
 
   if (!serviceResult) {
     throw new Error("subscription-command-service: renew mutation returned no result");
-  }
-
-  if (commandResult.event) {
-    upsertProjectionCheckpoint(
-      buildProjectionCheckpoint({
-        definition: {
-          name: "subscription.read_model",
-          version: {
-            version: 1,
-            schemaHash: "subscription_read_model_v1",
-          },
-        },
-        aggregateType: "subscription",
-        aggregateId: input.subscriptionId,
-        lastAppliedVersion: commandResult.event.version,
-        updatedAt: commandResult.event.timestamp,
-      })
-    );
   }
 
   return {
@@ -366,4 +384,168 @@ async function loadSubscription(
   }
 
   return record;
+}
+
+async function executeSubscriptionCommand(input: {
+  tenantId: number;
+  subscriptionId: string;
+  actorId: number;
+  source: string;
+  nextSubscription: SubscriptionRecord;
+  persistProjection: () => Promise<void>;
+}): Promise<ExecuteMutationCommandResult<SubscriptionRecord>> {
+  return executeMutationCommand({
+    model: "subscription",
+    operation: "update",
+    recordId: input.subscriptionId,
+    actorId: String(input.actorId),
+    source: input.source,
+    policies: [SUBSCRIPTION_EVENT_ONLY_POLICY],
+    nextRecord: input.nextSubscription,
+    mutate: async () => input.nextSubscription,
+    loadProjectionState: async () =>
+      loadSubscriptionProjectionState({
+        tenantId: input.tenantId,
+        subscriptionId: input.subscriptionId,
+      }),
+    projectEvent: ({ currentState, nextRecord }) => nextRecord ?? currentState,
+    persistProjectionState: async ({ event }) => {
+      await input.persistProjection();
+      upsertProjectionCheckpoint(
+        buildProjectionCheckpoint({
+          definition: SUBSCRIPTION_PROJECTION_DEFINITION,
+          aggregateType: "subscription",
+          aggregateId: input.subscriptionId,
+          lastAppliedVersion: event.version,
+          updatedAt: event.timestamp,
+        })
+      );
+    },
+  });
+}
+
+async function loadSubscriptionProjectionState(input: {
+  tenantId: number;
+  subscriptionId: string;
+}): Promise<SubscriptionRecord> {
+  const subscription = await loadSubscription(input.tenantId, input.subscriptionId);
+  const checkpoint = getProjectionCheckpoint({
+    projectionName: SUBSCRIPTION_PROJECTION_DEFINITION.name,
+    aggregateType: "subscription",
+    aggregateId: input.subscriptionId,
+  });
+
+  if (!checkpoint) {
+    return subscription;
+  }
+
+  const events = await dbGetAggregateEvents("subscription", input.subscriptionId);
+  const latestEventVersion = events.at(-1)?.version ?? 0;
+  const driftReport = detectProjectionDrift({
+    definition: SUBSCRIPTION_PROJECTION_DEFINITION,
+    checkpoint,
+    latestEventVersion,
+  });
+
+  assertNoProjectionDrift(driftReport);
+  return subscription;
+}
+
+async function loadSubscriptionTemplate(
+  tenantId: number,
+  templateId: string
+): Promise<SubscriptionTemplateRecord> {
+  const [template] = await db
+    .select()
+    .from(subscriptionTemplates)
+    .where(
+      and(
+        eq(subscriptionTemplates.tenantId, tenantId),
+        eq(subscriptionTemplates.id, templateId),
+        isNull(subscriptionTemplates.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!template) {
+    throw new NotFoundError(
+      `Subscription template ${templateId} was not found for tenant ${tenantId}.`
+    );
+  }
+
+  return template;
+}
+
+async function loadSubscriptionLines(
+  tenantId: number,
+  subscriptionId: string
+): Promise<SubscriptionLineRecord[]> {
+  return db
+    .select()
+    .from(subscriptionLines)
+    .where(
+      and(
+        eq(subscriptionLines.tenantId, tenantId),
+        eq(subscriptionLines.subscriptionId, subscriptionId)
+      )
+    );
+}
+
+async function ensureCloseReason(tenantId: number, closeReasonId: string): Promise<void> {
+  const [closeReason] = await db
+    .select()
+    .from(subscriptionCloseReasons)
+    .where(
+      and(
+        eq(subscriptionCloseReasons.tenantId, tenantId),
+        eq(subscriptionCloseReasons.id, closeReasonId),
+        isNull(subscriptionCloseReasons.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!closeReason) {
+    throw new ValidationError(`Close reason ${closeReasonId} is invalid for tenant ${tenantId}.`);
+  }
+}
+
+function formatValidationErrors(validation: SubscriptionValidationResult): string {
+  const issueSummary = validation.issues
+    .filter((issue) => issue.severity === "error")
+    .map((issue) => `${issue.code}: ${issue.message}`)
+    .join("; ");
+
+  return issueSummary.length > 0
+    ? `Subscription validation failed: ${issueSummary}`
+    : "Subscription validation failed due to invariant errors.";
+}
+
+function extendDateEnd(
+  currentDateEnd: Date | null,
+  billingPeriod: SubscriptionTemplateRecord["billingPeriod"],
+  renewalPeriod: number
+): Date | null {
+  if (!currentDateEnd) {
+    return null;
+  }
+
+  const next = new Date(currentDateEnd);
+
+  if (billingPeriod === "weekly") {
+    next.setDate(next.getDate() + renewalPeriod * 7);
+    return next;
+  }
+
+  if (billingPeriod === "monthly") {
+    next.setMonth(next.getMonth() + renewalPeriod);
+    return next;
+  }
+
+  if (billingPeriod === "quarterly") {
+    next.setMonth(next.getMonth() + renewalPeriod * 3);
+    return next;
+  }
+
+  next.setFullYear(next.getFullYear() + renewalPeriod);
+  return next;
 }
