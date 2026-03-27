@@ -1,7 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalEnv": ["NODE_ENV"],
-  "globalDependencies": ["tsconfig.base.json"],
+  "globalDependencies": [
+    "tsconfig.base.json",
+    ".env.example",
+    ".env",
+    "apps/api/.env",
+    "apps/web/.env.development",
+    "apps/web/.env.production"
+  ],
   "boundaries": {
     "tags": {
       "foundation": {

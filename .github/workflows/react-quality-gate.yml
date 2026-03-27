@@ -65,19 +65,19 @@ jobs:
 
       # GATE 1: TypeScript Strict Type Checking
       - name: 🔍 TypeScript Check
-        run: pnpm turbo run typecheck --filter=@afenda/web
+        run: pnpm turbo run typecheck --filter=@afenda/web...
 
       # GATE 2: ESLint with React Hooks Rules (CRITICAL)
       - name: 🧹 ESLint (React Hooks + Best Practices)
-        run: pnpm --filter web lint --max-warnings 0
+        run: pnpm turbo run lint --filter=@afenda/web... -- --max-warnings=0 --no-warn-ignored
 
       # GATE 3: Unit Tests
       - name: 🧪 Unit Tests
-        run: pnpm --filter web test:run
+        run: pnpm --filter @afenda/web run test:run
 
       # GATE 4: Production Build Verification
       - name: 🏗️ Production Build
-        run: pnpm turbo run build --filter=@afenda/web
+        run: pnpm turbo run build --filter=@afenda/web...
 
       # GATE 5: Bundle Size Analysis
       - name: 📊 Bundle Size Check
@@ -114,7 +114,7 @@ jobs:
       # GATE 6: Check for React Runtime Warnings in Tests
       - name: ⚠️  Check React Warnings
         run: |
-          pnpm --filter web test:run 2>&1 | tee test-output.log
+          pnpm --filter @afenda/web run test:run 2>&1 | tee test-output.log
 
           # Exclude node_modules warnings
           if grep -iE "Warning:" test-output.log | grep -v "node_modules" | grep -v "deprecated"; then

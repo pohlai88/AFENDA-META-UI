@@ -41,7 +41,7 @@ let pool: Pool;
 
 function connectDatabase(): void {
   pool = new Pool({ connectionString: process.env.DATABASE_URL! });
-  db = drizzle(pool, { schema });
+  db = drizzle({ client: pool, schema, casing: "camelCase" });
   console.log("✅ Connected to database");
 }
 

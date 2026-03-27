@@ -40,10 +40,7 @@ import { type SeedAuditScope, type Tx } from "../../seed-types.js";
 
 // ── Metadata Core Seeding ────────────────────────────────────────────────────
 
-export async function seedMetadata(
-  tx: Tx,
-  seedAuditScope: SeedAuditScope
-): Promise<void> {
+export async function seedMetadata(tx: Tx, seedAuditScope: SeedAuditScope): Promise<void> {
   // ── 1. Entities (Business Models) ──────────────────────────────────────────
   await tx.insert(entities).values([
     {
@@ -433,7 +430,9 @@ export async function seedMetadata(
     },
   ]);
 
-  console.log("   ✓ Seeded 20 fields across 4 entities (Partner: 5, Product: 4, SalesOrder: 6, Invoice: 5)");
+  console.log(
+    "   ✓ Seeded 20 fields across 4 entities (Partner: 5, Product: 4, SalesOrder: 6, Invoice: 5)"
+  );
 
   // ── 3. Layouts (UI Definitions) ────────────────────────────────────────────
   const partnerFormLayout: LayoutNode = {
@@ -575,12 +574,9 @@ export async function seedMetadata(
 
 // ── Tenant Overrides Seeding ─────────────────────────────────────────────────
 
-export async function seedTenantOverrides(
-  tx: Tx,
-  seedAuditScope: SeedAuditScope
-): Promise<void> {
+export async function seedTenantOverrides(tx: Tx, seedAuditScope: SeedAuditScope): Promise<void> {
   // ── 1. Tenant Definitions ──────────────────────────────────────────────────
-  await tx.insert(tenantDefinitions).values([
+  const tenantRows: Array<typeof tenantDefinitions.$inferInsert> = [
     {
       id: SEED_IDS.tenantAcmeCorp,
       name: "Acme Corporation",
@@ -588,16 +584,16 @@ export async function seedTenantOverrides(
       isolationStrategy: "logical",
       enabled: true,
       branding: {
-        logo: "https://example.com/acme-logo.png",
+        logoUrl: "https://example.com/acme-logo.png",
         primaryColor: "#003366",
         secondaryColor: "#66CCFF",
-        accentColor: "#FF6633",
-        fontFamily: "Arial, sans-serif",
+        appName: "Acme ERP",
       },
       features: {
         advanced_reporting: true,
         multi_currency: true,
         consignment: false,
+        pos_integration: false,
       },
       locale: {
         timezone: "America/New_York",
@@ -613,15 +609,15 @@ export async function seedTenantOverrides(
       isolationStrategy: "logical",
       enabled: true,
       branding: {
-        logo: "https://example.com/retailco-logo.png",
+        logoUrl: "https://example.com/retailco-logo.png",
         primaryColor: "#FF3366",
         secondaryColor: "#FFCC66",
-        accentColor: "#33CCFF",
-        fontFamily: "Helvetica, sans-serif",
+        appName: "RetailCo ERP",
       },
       features: {
         advanced_reporting: false,
         multi_currency: false,
+        consignment: false,
         pos_integration: true,
       },
       locale: {
@@ -631,7 +627,11 @@ export async function seedTenantOverrides(
         dateFormat: "YYYY-MM-DD",
       },
     },
-  ]);
+  ];
+
+  for (const row of tenantRows) {
+    await tx.insert(tenantDefinitions).values(row).execute();
+  }
 
   console.log("   ✓ Seeded 2 tenant definitions (Acme Corp - manufacturing, RetailCo - retail)");
 
@@ -684,7 +684,7 @@ export async function seedTenantOverrides(
   console.log("   ✓ Seeded 2 industry templates (Manufacturing, Retail)");
 
   // ── 3. Metadata Overrides ──────────────────────────────────────────────────
-  await tx.insert(metadataOverrides).values([
+  const overrideRows: Array<typeof metadataOverrides.$inferInsert> = [
     {
       id: SEED_IDS.overrideGlobalOrderMinimum,
       scope: "global",
@@ -747,11 +747,13 @@ export async function seedTenantOverrides(
       ],
       enabled: true,
     },
-  ]);
+  ];
 
-  console.log(
-    "   ✓ Seeded 3 metadata overrides (1 global, 2 tenant-specific for Acme & RetailCo)"
-  );
+  for (const row of overrideRows) {
+    await tx.insert(metadataOverrides).values(row).execute();
+  }
+
+  console.log("   ✓ Seeded 3 metadata overrides (1 global, 2 tenant-specific for Acme & RetailCo)");
 }
 
 // ── Decision Audit Seeding (Sample Decisions) ────────────────────────────────
@@ -768,16 +770,20 @@ export async function seedDecisionAuditSamples(
     errorCount: 0,
   });
 
-  await tx.insert(decisionAuditEntries).values([
+  const decisionRows: Array<typeof decisionAuditEntries.$inferInsert> = [
     {
       id: SEED_IDS.decisionMetadataGlobal,
       timestamp: new Date(),
       tenantId: SEED_IDS.tenantAcmeCorp,
-      userId: seedAuditScope.createdBy,
+      userId: String(seedAuditScope.createdBy),
       eventType: "metadata_resolved",
       scope: "global",
-      context: { model: "sales_orders", step: "global_base" },
-      decision: { overrides_applied: 0 },
+      context: { model: "sales_orders", eventId: "global_base" },
+      decision: {
+        input: { model: "sales_orders", layer: "global" },
+        output: { overridesApplied: 0 },
+        appliedLayers: ["global"],
+      },
       durationMs: 5.2,
       status: "success",
       error: null,
@@ -787,15 +793,18 @@ export async function seedDecisionAuditSamples(
       id: SEED_IDS.decisionMetadataIndustry,
       timestamp: new Date(Date.now() + 6),
       tenantId: SEED_IDS.tenantAcmeCorp,
-      userId: seedAuditScope.createdBy,
+      userId: String(seedAuditScope.createdBy),
       eventType: "metadata_resolved",
       scope: "industry",
       context: {
         model: "sales_orders",
-        step: "industry_template",
-        industry: "manufacturing",
+        eventId: "industry_template",
       },
-      decision: { overrides_applied: 2, fields_added: 2 },
+      decision: {
+        input: { model: "sales_orders", layer: "industry", industry: "manufacturing" },
+        output: { overridesApplied: 2, fieldsAdded: 2 },
+        appliedLayers: ["global", "industry"],
+      },
       durationMs: 12.1,
       status: "success",
       error: null,
@@ -805,25 +814,28 @@ export async function seedDecisionAuditSamples(
       id: SEED_IDS.decisionMetadataTenant,
       timestamp: new Date(Date.now() + 19),
       tenantId: SEED_IDS.tenantAcmeCorp,
-      userId: seedAuditScope.createdBy,
+      userId: String(seedAuditScope.createdBy),
       eventType: "metadata_resolved",
       scope: "tenant",
       context: {
         model: "sales_orders",
-        step: "tenant_override",
-        tenantId: SEED_IDS.tenantAcmeCorp,
+        eventId: "tenant_override",
       },
       decision: {
-        overrides_applied: 2,
-        labels_updated: 1,
-        fields_added: 1,
+        input: { model: "sales_orders", layer: "tenant", tenantId: SEED_IDS.tenantAcmeCorp },
+        output: { overridesApplied: 2, labelsUpdated: 1, fieldsAdded: 1 },
+        appliedLayers: ["global", "industry", "tenant"],
       },
       durationMs: 11.2,
       status: "success",
       error: null,
       chainId: SEED_IDS.decisionChainMetadataResolution,
     },
-  ]);
+  ];
+
+  for (const row of decisionRows) {
+    await tx.insert(decisionAuditEntries).values(row).execute();
+  }
 
   console.log(
     "   ✓ Seeded 1 decision audit chain with 3 entries (metadata resolution: global→industry→tenant)"
@@ -876,10 +888,7 @@ export async function validateMetadataInvariants(tx: Tx): Promise<void> {
   const orphanedOverrides = await tx
     .select({ overrideId: metadataOverrides.id })
     .from(metadataOverrides)
-    .leftJoin(
-      tenantDefinitions,
-      eq(metadataOverrides.tenantId, tenantDefinitions.id)
-    )
+    .leftJoin(tenantDefinitions, eq(metadataOverrides.tenantId, tenantDefinitions.id))
     .where(
       sql`${metadataOverrides.scope} IN ('tenant', 'department', 'user') AND ${tenantDefinitions.id} IS NULL`
     );
@@ -894,17 +903,12 @@ export async function validateMetadataInvariants(tx: Tx): Promise<void> {
   const entitiesWithoutDefaultLayout = await tx
     .select({ entityId: entities.id, entityName: entities.name })
     .from(entities)
-    .leftJoin(
-      layouts,
-      sql`${layouts.entityId} = ${entities.id} AND ${layouts.isDefault} = true`
-    )
+    .leftJoin(layouts, sql`${layouts.entityId} = ${entities.id} AND ${layouts.isDefault} = true`)
     .where(isNull(layouts.id))
     .groupBy(entities.id, entities.name);
 
   if (entitiesWithoutDefaultLayout.length > 0) {
-    const missingEntities = entitiesWithoutDefaultLayout
-      .map((e) => e.entityName)
-      .join(", ");
+    const missingEntities = entitiesWithoutDefaultLayout.map((e) => e.entityName).join(", ");
     console.warn(
       `⚠️  Warning: ${entitiesWithoutDefaultLayout.length} entities missing default layout: ${missingEntities}`
     );

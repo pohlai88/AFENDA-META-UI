@@ -60,7 +60,7 @@ export const metadataOverrides = pgTable(
     departmentId: text("department_id"),
     userId: text("user_id"),
     model: text("model").notNull(),
-    patch: jsonb("patch").$type<Record<string, unknown>>().notNull(),
+    patch: jsonb("patch").$type<unknown>().notNull(),
     enabled: boolean("enabled").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

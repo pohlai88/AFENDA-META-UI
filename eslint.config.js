@@ -66,13 +66,37 @@ export default [
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
-        project: true,
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
       // =========================================================================
       // TYPESCRIPT - CORRECTNESS
       // =========================================================================
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          args: "after-used",
+          ignoreRestSiblings: true,
+        },
+      ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/consistent-type-imports": "warn",
+
+      // =========================================================================
+      // CODE QUALITY
+      // =========================================================================
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-debugger": "warn",
+      "no-constant-binary-expression": "error",
+      "no-useless-assignment": "warn",
+    },
+  },
+
   // =============================================================================
   {
     files: ["apps/web/**/*.{ts,tsx}"],

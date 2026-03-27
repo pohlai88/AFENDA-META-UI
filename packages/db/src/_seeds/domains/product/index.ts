@@ -386,12 +386,27 @@ export async function seedProductConfiguration(
 
 export async function validateProductConfigurationInvariants(
   tx: Tx,
-  tenantId: number
+  tenantId?: number
 ): Promise<void> {
+  let effectiveTenantId = tenantId;
+
+  if (effectiveTenantId === undefined) {
+    const [firstTemplate] = await tx
+      .select({ tenantId: productTemplates.tenantId })
+      .from(productTemplates)
+      .limit(1);
+
+    if (!firstTemplate) {
+      throw new Error("Product configuration invariant: no product templates found");
+    }
+
+    effectiveTenantId = firstTemplate.tenantId;
+  }
+
   const [templateStats] = await tx
     .select({ count: sql<number>`count(*)` })
     .from(productTemplates)
-    .where(eq(productTemplates.tenantId, tenantId));
+    .where(eq(productTemplates.tenantId, effectiveTenantId));
 
   if (!templateStats || Number(templateStats.count) < 2) {
     throw new Error(
@@ -402,7 +417,7 @@ export async function validateProductConfigurationInvariants(
   const [variantStats] = await tx
     .select({ count: sql<number>`count(*)` })
     .from(productVariants)
-    .where(eq(productVariants.tenantId, tenantId));
+    .where(eq(productVariants.tenantId, effectiveTenantId));
 
   if (!variantStats || Number(variantStats.count) < 6) {
     throw new Error(

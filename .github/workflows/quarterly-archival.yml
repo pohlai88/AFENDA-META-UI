@@ -7,28 +7,28 @@ name: Quarterly Cold Archival
 on:
   schedule:
     # Quarterly: Jan 1, Apr 1, Jul 1, Oct 1 at 3 AM UTC
-    - cron: '0 3 1 1,4,7,10 *'
+    - cron: "0 3 1 1,4,7,10 *"
 
   # Manual trigger for testing or ad-hoc archival
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (no actual archival)'
+        description: "Dry run (no actual archival)"
         required: false
-        default: 'false'
+        default: "false"
         type: choice
         options:
-          - 'true'
-          - 'false'
+          - "true"
+          - "false"
       limit:
-        description: 'Max partitions to archive'
+        description: "Max partitions to archive"
         required: false
-        default: '10'
+        default: "10"
         type: string
 
 env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '9'
+  NODE_VERSION: "22.x"
+  PNPM_VERSION: "10.33.0"
 
 jobs:
   archive-to-r2:
@@ -38,21 +38,33 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Validate environment
         run: |

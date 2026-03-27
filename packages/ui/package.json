@@ -18,6 +18,9 @@
   "scripts": {
     "build": "tsc && node -e \"require('fs').copyFileSync('src/styles.css', 'dist/styles.css')\"",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src --cache --cache-location .cache/eslint/.eslintcache --cache-strategy content --concurrency auto",
+    "lint:strict": "eslint src --max-warnings=0 --no-warn-ignored --concurrency auto",
+    "lint:fix": "eslint src --fix --cache --cache-location .cache/eslint/.eslintcache --cache-strategy content --concurrency auto",
     "dev": "tsc --watch"
   },
   "dependencies": {

@@ -17,34 +17,40 @@
  * @version 1.0.0
  */
 
-import { parseArgs } from 'node:util';
-import { db } from '../client';
-import { sql } from 'drizzle-orm';
+import { parseArgs } from "node:util";
+import { db } from "../db.js";
+import { sql } from "drizzle-orm";
 import {
   R2Client,
   batchArchiveToR2,
   restorePartitionFromR2,
   type ArchivalResult,
   type RestorationResult,
-} from './r2-integration';
+} from "./r2-integration.js";
 
 // =====================================================================
 // ENVIRONMENT VALIDATION
 // =====================================================================
 
 function validateEnvironment(): void {
-  const required = ['DATABASE_URL', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME'];
-  const missing = required.filter(key => !process.env[key]);
+  const required = [
+    "DATABASE_URL",
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET_NAME",
+  ];
+  const missing = required.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:');
-    missing.forEach(key => console.error(`   - ${key}`));
-    console.error('\nSet these in .env or .env.local:');
-    console.error('   DATABASE_URL=postgresql://user:pass@host:5432/db');
-    console.error('   R2_ACCOUNT_ID=your_cloudflare_account_id');
-    console.error('   R2_ACCESS_KEY_ID=your_r2_access_key_id');
-    console.error('   R2_SECRET_ACCESS_KEY=your_r2_secret_access_key');
-    console.error('   R2_BUCKET_NAME=afenda-archive');
+    console.error("❌ Missing required environment variables:");
+    missing.forEach((key) => console.error(`   - ${key}`));
+    console.error("\nSet these in .env or .env.local:");
+    console.error("   DATABASE_URL=postgresql://user:pass@host:5432/db");
+    console.error("   R2_ACCOUNT_ID=your_cloudflare_account_id");
+    console.error("   R2_ACCESS_KEY_ID=your_r2_access_key_id");
+    console.error("   R2_SECRET_ACCESS_KEY=your_r2_secret_access_key");
+    console.error("   R2_BUCKET_NAME=afenda-archive");
     process.exit(1);
   }
 }
@@ -55,7 +61,7 @@ function getR2Client(): R2Client {
     accessKeyId: process.env.R2_ACCESS_KEY_ID!,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     bucketName: process.env.R2_BUCKET_NAME!,
-    jurisdiction: process.env.R2_JURISDICTION as 'eu' | 'fedramp' | undefined,
+    jurisdiction: process.env.R2_JURISDICTION as "eu" | "fedramp" | undefined,
   });
 }
 
@@ -63,12 +69,16 @@ function getR2Client(): R2Client {
 // COMMAND: PROMOTE (Hot → Warm)
 // =====================================================================
 
-async function commandPromote(dryRun: boolean, vacuumFull: boolean, retentionMonths: number): Promise<void> {
-  console.log('🔄 Running Hot → Warm Promotion');
+async function commandPromote(
+  dryRun: boolean,
+  vacuumFull: boolean,
+  retentionMonths: number
+): Promise<void> {
+  console.log("🔄 Running Hot → Warm Promotion");
   console.log(`   Retention: ${retentionMonths} months`);
   console.log(`   Dry run: ${dryRun}`);
   console.log(`   VACUUM FULL: ${vacuumFull}`);
-  console.log('');
+  console.log("");
 
   const result = await db.execute(sql`
     SELECT * FROM sales.promote_to_warm_storage(
@@ -80,10 +90,10 @@ async function commandPromote(dryRun: boolean, vacuumFull: boolean, retentionMon
   `);
 
   // Print results
-  console.log('📊 Promotion Results:\n');
+  console.log("📊 Promotion Results:\n");
   console.table(result.rows);
 
-  const promotedCount = result.rows.filter((r: any) => r.action === 'PROMOTED').length;
+  const promotedCount = result.rows.filter((r: any) => r.action === "PROMOTED").length;
   const totalSpaceSaved = result.rows
     .filter((r: any) => r.space_saved)
     .reduce((sum: number, r: any) => {
@@ -92,8 +102,8 @@ async function commandPromote(dryRun: boolean, vacuumFull: boolean, retentionMon
         const value = parseFloat(match[1]);
         const unit = match[2];
         // Convert to bytes for aggregation
-        const multiplier = unit === 'GB' ? 1e9 : unit === 'MB' ? 1e6 : unit === 'kB' ? 1e3 : 1;
-        return sum + (value * multiplier);
+        const multiplier = unit === "GB" ? 1e9 : unit === "MB" ? 1e6 : unit === "kB" ? 1e3 : 1;
+        return sum + value * multiplier;
       }
       return sum;
     }, 0);
@@ -104,7 +114,7 @@ async function commandPromote(dryRun: boolean, vacuumFull: boolean, retentionMon
   }
 
   if (dryRun) {
-    console.log('\n⚠️  This was a dry run. Run without --dry-run to execute.');
+    console.log("\n⚠️  This was a dry run. Run without --dry-run to execute.");
   }
 }
 
@@ -113,20 +123,20 @@ async function commandPromote(dryRun: boolean, vacuumFull: boolean, retentionMon
 // =====================================================================
 
 async function commandArchive(dryRun: boolean, limit: number): Promise<void> {
-  console.log('❄️  Running Warm → Cold Archival (R2 Export)');
+  console.log("❄️  Running Warm → Cold Archival (R2 Export)");
   console.log(`   Limit: ${limit} partitions`);
   console.log(`   Dry run: ${dryRun}`);
-  console.log('');
+  console.log("");
 
   // Identify candidates
-  console.log('🔍 Identifying archival candidates...');
+  console.log("🔍 Identifying archival candidates...");
   const candidates = await db.execute(sql`
     SELECT * FROM archive.identify_cold_candidates(7, 10)
     LIMIT ${limit}
   `);
 
   if (candidates.rows.length === 0) {
-    console.log('✅ No partitions eligible for cold archival');
+    console.log("✅ No partitions eligible for cold archival");
     return;
   }
 
@@ -134,7 +144,7 @@ async function commandArchive(dryRun: boolean, limit: number): Promise<void> {
   console.table(candidates.rows);
 
   if (dryRun) {
-    console.log('\n⚠️  This was a dry run. Run without --dry-run to archive to R2.');
+    console.log("\n⚠️  This was a dry run. Run without --dry-run to archive to R2.");
     return;
   }
 
@@ -147,25 +157,27 @@ async function commandArchive(dryRun: boolean, limit: number): Promise<void> {
     partitionName: row.partition_name,
   }));
 
-  console.log('\n📤 Starting R2 archival...\n');
+  console.log("\n📤 Starting R2 archival...\n");
   const results = await batchArchiveToR2(db, r2Client, partitions);
 
   // Summary
-  const successCount = results.filter(r => r.success).length;
+  const successCount = results.filter((r) => r.success).length;
   const failedCount = results.length - successCount;
 
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 Archival Summary:');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 Archival Summary:");
+  console.log("=".repeat(60));
   console.log(`   Total partitions: ${results.length}`);
   console.log(`   ✅ Success: ${successCount}`);
   console.log(`   ❌ Failed: ${failedCount}`);
 
   if (failedCount > 0) {
-    console.log('\n❌ Failed partitions:');
-    results.filter(r => !r.success).forEach(r => {
-      console.log(`   - ${r.partitionName}: ${r.error}`);
-    });
+    console.log("\n❌ Failed partitions:");
+    results
+      .filter((r) => !r.success)
+      .forEach((r) => {
+        console.log(`   - ${r.partitionName}: ${r.error}`);
+      });
   }
 }
 
@@ -174,10 +186,10 @@ async function commandArchive(dryRun: boolean, limit: number): Promise<void> {
 // =====================================================================
 
 async function commandRestore(r2ObjectKey: string, attachAsPartition: boolean): Promise<void> {
-  console.log('♻️  Restoring partition from R2 cold storage');
+  console.log("♻️  Restoring partition from R2 cold storage");
   console.log(`   R2 key: ${r2ObjectKey}`);
   console.log(`   Attach as partition: ${attachAsPartition}`);
-  console.log('');
+  console.log("");
 
   validateEnvironment();
   const r2Client = getR2Client();
@@ -196,21 +208,21 @@ async function commandRestore(r2ObjectKey: string, attachAsPartition: boolean): 
   const metadata = catalogEntry.rows[0] as any;
 
   // Restore
-  console.log('📥 Downloading from R2...');
+  console.log("📥 Downloading from R2...");
   const result = await restorePartitionFromR2(db, r2Client, {
     r2ObjectKey,
-    targetSchema: 'archive',
+    targetSchema: "archive",
     attachAsPartition,
     parentTableName: metadata.table_name,
   });
 
   if (result.success) {
-    console.log('\n✅ Restoration complete:');
+    console.log("\n✅ Restoration complete:");
     console.log(`   Target table: ${result.targetTable}`);
     console.log(`   Rows restored: ${result.rowCount.toLocaleString()}`);
     console.log(`   Downloaded: ${(result.downloadedSizeBytes / 1024 / 1024).toFixed(2)} MB`);
     console.log(`   Duration: ${result.durationSeconds.toFixed(2)}s`);
-    console.log(`   Attached as partition: ${result.attachedAsPartition ? 'Yes' : 'No'}`);
+    console.log(`   Attached as partition: ${result.attachedAsPartition ? "Yes" : "No"}`);
   } else {
     console.error(`\n❌ Restoration failed: ${result.error}`);
     process.exit(1);
@@ -222,7 +234,7 @@ async function commandRestore(r2ObjectKey: string, attachAsPartition: boolean): 
 // =====================================================================
 
 async function commandHealth(): Promise<void> {
-  console.log('🏥 Running Archive Health Check\n');
+  console.log("🏥 Running Archive Health Check\n");
 
   const result = await db.execute(sql`
     SELECT * FROM sales.check_archive_health()
@@ -230,28 +242,28 @@ async function commandHealth(): Promise<void> {
 
   console.table(result.rows);
 
-  const criticalCount = result.rows.filter((r: any) => r.status?.includes('CRITICAL')).length;
-  const warningCount = result.rows.filter((r: any) => r.status?.includes('WARNING')).length;
+  const criticalCount = result.rows.filter((r: any) => r.status?.includes("CRITICAL")).length;
+  const warningCount = result.rows.filter((r: any) => r.status?.includes("WARNING")).length;
 
-  console.log('\n' + '='.repeat(60));
+  console.log("\n" + "=".repeat(60));
   if (criticalCount > 0) {
     console.log(`❌ CRITICAL: ${criticalCount} issues require immediate attention`);
   } else if (warningCount > 0) {
     console.log(`⚠️  WARNING: ${warningCount} issues detected`);
   } else {
-    console.log('✅ All systems healthy');
+    console.log("✅ All systems healthy");
   }
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 }
 
 // =====================================================================
 // COMMAND: LIST INVENTORY
 // =====================================================================
 
-async function commandList(tier: 'hot' | 'warm' | 'cold'): Promise<void> {
+async function commandList(tier: "hot" | "warm" | "cold"): Promise<void> {
   console.log(`📋 Listing ${tier.toUpperCase()} storage inventory\n`);
 
-  if (tier === 'hot') {
+  if (tier === "hot") {
     const result = await db.execute(sql`
       SELECT
         tablename AS partition_name,
@@ -265,12 +277,12 @@ async function commandList(tier: 'hot' | 'warm' | 'cold'): Promise<void> {
       LIMIT 50
     `);
     console.table(result.rows);
-  } else if (tier === 'warm') {
+  } else if (tier === "warm") {
     const result = await db.execute(sql`
       SELECT * FROM archive.list_warm_storage_inventory()
     `);
     console.table(result.rows);
-  } else if (tier === 'cold') {
+  } else if (tier === "cold") {
     const result = await db.execute(sql`
       SELECT
         table_name,
@@ -295,7 +307,7 @@ async function commandList(tier: 'hot' | 'warm' | 'cold'): Promise<void> {
     console.log(`\n📊 Cold Storage Summary:`);
     console.log(`   Total partitions: ${result.rows.length}`);
     console.log(`   Total rows: ${totalRows.toLocaleString()}`);
-    console.log(`   Total size: ${totalSize.rows[0]?.total_size || 'N/A'}`);
+    console.log(`   Total size: ${totalSize.rows[0]?.total_size || "N/A"}`);
   }
 }
 
@@ -307,55 +319,52 @@ async function main() {
   const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
     options: {
-      'dry-run': { type: 'boolean', default: true },
-      'vacuum-full': { type: 'boolean', default: false },
-      'retention-months': { type: 'string', default: '24' },
-      'limit': { type: 'string', default: '10' },
-      'key': { type: 'string' },
-      'attach': { type: 'boolean', default: false },
-      'tier': { type: 'string', default: 'warm' },
+      "dry-run": { type: "boolean", default: true },
+      "vacuum-full": { type: "boolean", default: false },
+      "retention-months": { type: "string", default: "24" },
+      limit: { type: "string", default: "10" },
+      key: { type: "string" },
+      attach: { type: "boolean", default: false },
+      tier: { type: "string", default: "warm" },
     },
     allowPositionals: true,
   });
 
   const command = positionals[0];
 
-  if (!command || command === 'help') {
+  if (!command || command === "help") {
     printUsage();
     return;
   }
 
   try {
     switch (command) {
-      case 'promote':
+      case "promote":
         await commandPromote(
-          values['dry-run'] as boolean,
-          values['vacuum-full'] as boolean,
-          parseInt(values['retention-months'] as string)
+          values["dry-run"] as boolean,
+          values["vacuum-full"] as boolean,
+          parseInt(values["retention-months"] as string)
         );
         break;
 
-      case 'archive':
-        await commandArchive(
-          values['dry-run'] as boolean,
-          parseInt(values['limit'] as string)
-        );
+      case "archive":
+        await commandArchive(values["dry-run"] as boolean, parseInt(values["limit"] as string));
         break;
 
-      case 'restore':
+      case "restore":
         if (!values.key) {
-          console.error('❌ --key is required for restore command');
+          console.error("❌ --key is required for restore command");
           process.exit(1);
         }
         await commandRestore(values.key as string, values.attach as boolean);
         break;
 
-      case 'health':
+      case "health":
         await commandHealth();
         break;
 
-      case 'list':
-        await commandList(values.tier as 'hot' | 'warm' | 'cold');
+      case "list":
+        await commandList(values.tier as "hot" | "warm" | "cold");
         break;
 
       default:
@@ -364,7 +373,7 @@ async function main() {
         process.exit(1);
     }
   } catch (error) {
-    console.error('\n❌ Error:', error instanceof Error ? error.message : String(error));
+    console.error("\n❌ Error:", error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
@@ -438,7 +447,7 @@ DOCUMENTATION:
 // EXECUTION
 // =====================================================================
 
-main().catch(error => {
-  console.error('Fatal error:', error);
+main().catch((error) => {
+  console.error("Fatal error:", error);
   process.exit(1);
 });

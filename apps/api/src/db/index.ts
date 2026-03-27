@@ -38,7 +38,7 @@ pool.on("error", (err) => {
   log.error({ err }, "Unexpected pool client error");
 });
 
-pool.on("connect", (client) => {
+pool.on("connect", () => {
   log.debug(
     { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount },
     "New pool client connected"
@@ -73,8 +73,9 @@ pool.query = async function queryWithTiming(
   const duration = performance.now() - start;
 
   // Extract query text from args (first arg can be string or QueryConfig)
-  const queryText = typeof args[0] === "string" ? args[0] : args[0]?.text ?? "unknown";
-  const params = typeof args[0] === "string" ? args[1] : args[0]?.values;
+  const firstArg = args[0] as string | { text?: string; values?: unknown[] } | undefined;
+  const queryText = typeof firstArg === "string" ? firstArg : (firstArg?.text ?? "unknown");
+  const params = typeof firstArg === "string" ? args[1] : firstArg?.values;
 
   drizzleLogger.logSlowQuery(queryText, params ?? [], duration);
   return result;

@@ -9,12 +9,13 @@
  * @since 2026-03-28
  */
 
-import { createHash } from 'node:crypto';
-import { pipeline } from 'node:stream/promises';
-import { createWriteStream, createReadStream, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import type { Readable } from 'node:stream';
+import { createHash } from "node:crypto";
+import { pipeline } from "node:stream/promises";
+import { createWriteStream, createReadStream, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Readable } from "node:stream";
+import { sql } from "drizzle-orm";
 
 // =====================================================================
 // TYPE DEFINITIONS
@@ -30,7 +31,7 @@ export interface R2Config {
   /** R2 Bucket Name */
   bucketName: string;
   /** R2 Jurisdiction (optional: 'eu', 'fedramp', etc.) */
-  jurisdiction?: 'eu' | 'fedramp';
+  jurisdiction?: "eu" | "fedramp";
 }
 
 export interface PartitionExportOptions {
@@ -41,9 +42,9 @@ export interface PartitionExportOptions {
   /** Schema name (default: 'archive') */
   schemaName?: string;
   /** Export format (default: 'parquet') */
-  format?: 'parquet' | 'csv' | 'jsonl';
+  format?: "parquet" | "csv" | "jsonl";
   /** Compression (default: 'snappy' for Parquet, 'gzip' for CSV/JSONL) */
-  compression?: 'snappy' | 'gzip' | 'zstd' | 'uncompressed';
+  compression?: "snappy" | "gzip" | "zstd" | "uncompressed";
   /** Batch size for streaming export (default: 10000) */
   batchSize?: number;
 }
@@ -121,29 +122,33 @@ export class R2Client {
     this.config = config;
 
     // R2 endpoint format: https://<account-id>.r2.cloudflarestorage.com/<bucket-name>
-    const jurisdiction = config.jurisdiction ? `.${config.jurisdiction}` : '';
+    const jurisdiction = config.jurisdiction ? `.${config.jurisdiction}` : "";
     this.baseUrl = `https://${config.accountId}${jurisdiction}.r2.cloudflarestorage.com/${config.bucketName}`;
   }
 
   /**
    * Upload object to R2
    */
-  async putObject(key: string, body: Buffer | Readable, metadata: Record<string, string>): Promise<{ etag: string }> {
+  async putObject(
+    key: string,
+    body: Buffer | Readable,
+    metadata: Record<string, string>
+  ): Promise<{ etag: string }> {
     const url = `${this.baseUrl}/${key}`;
 
     // Generate AWS Signature V4 (simplified for R2)
-    const headers = await this.signRequest('PUT', key, {
-      'x-amz-meta-row-count': metadata.rowCount || '0',
-      'x-amz-meta-table': metadata.table || '',
-      'x-amz-meta-partition': metadata.partition || '',
-      'x-amz-meta-checksum': metadata.checksum || '',
-      'x-amz-meta-export-date': metadata.exportDate || new Date().toISOString(),
+    const headers = await this.signRequest("PUT", key, {
+      "x-amz-meta-row-count": metadata.rowCount || "0",
+      "x-amz-meta-table": metadata.table || "",
+      "x-amz-meta-partition": metadata.partition || "",
+      "x-amz-meta-checksum": metadata.checksum || "",
+      "x-amz-meta-export-date": metadata.exportDate || new Date().toISOString(),
     });
 
     const response = await fetch(url, {
-      method: 'PUT',
+      method: "PUT",
       headers,
-      body: body instanceof Buffer ? body : await this.streamToBuffer(body),
+      body: Buffer.isBuffer(body) ? body : await this.streamToBuffer(body),
     });
 
     if (!response.ok) {
@@ -151,7 +156,7 @@ export class R2Client {
     }
 
     return {
-      etag: response.headers.get('etag') || '',
+      etag: response.headers.get("etag") || "",
     };
   }
 
@@ -160,10 +165,10 @@ export class R2Client {
    */
   async getObject(key: string): Promise<{ body: Readable; metadata: Record<string, string> }> {
     const url = `${this.baseUrl}/${key}`;
-    const headers = await this.signRequest('GET', key, {});
+    const headers = await this.signRequest("GET", key, {});
 
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers,
     });
 
@@ -177,8 +182,8 @@ export class R2Client {
     // Extract custom metadata
     const metadata: Record<string, string> = {};
     for (const [key, value] of response.headers.entries()) {
-      if (key.startsWith('x-amz-meta-')) {
-        metadata[key.replace('x-amz-meta-', '')] = value;
+      if (key.startsWith("x-amz-meta-")) {
+        metadata[key.replace("x-amz-meta-", "")] = value;
       }
     }
 
@@ -193,10 +198,10 @@ export class R2Client {
    */
   async deleteObject(key: string): Promise<void> {
     const url = `${this.baseUrl}/${key}`;
-    const headers = await this.signRequest('DELETE', key, {});
+    const headers = await this.signRequest("DELETE", key, {});
 
     const response = await fetch(url, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
     });
 
@@ -210,10 +215,10 @@ export class R2Client {
    */
   async objectExists(key: string): Promise<boolean> {
     const url = `${this.baseUrl}/${key}`;
-    const headers = await this.signRequest('HEAD', key, {});
+    const headers = await this.signRequest("HEAD", key, {});
 
     const response = await fetch(url, {
-      method: 'HEAD',
+      method: "HEAD",
       headers,
     });
 
@@ -224,15 +229,19 @@ export class R2Client {
    * Generate AWS Signature V4 for R2 requests
    * (Simplified implementation - for production, use aws4fetch or @aws-sdk/signature-v4)
    */
-  private async signRequest(method: string, key: string, customHeaders: Record<string, string>): Promise<HeadersInit> {
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  private async signRequest(
+    method: string,
+    key: string,
+    customHeaders: Record<string, string>
+  ): Promise<Record<string, string>> {
+    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
     const date = timestamp.substring(0, 8);
 
     // Basic headers (in production, implement full AWS Signature V4)
     return {
-      'Authorization': `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${date}/auto/s3/aws4_request`,
-      'x-amz-date': timestamp,
-      'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+      Authorization: `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${date}/auto/s3/aws4_request`,
+      "x-amz-date": timestamp,
+      "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
       ...customHeaders,
     };
   }
@@ -264,7 +273,7 @@ export async function exportPartitionToParquet(
 ): Promise<{ filePath: string; rowCount: number; sizeBytes: number; checksum: string }> {
   const startTime = Date.now();
 
-  const schemaName = options.schemaName || 'archive';
+  const schemaName = options.schemaName || "archive";
   const tableName = options.tableName;
   const partitionName = options.partitionName;
   const archiveTableName = `${tableName}_${partitionName}_archived`;
@@ -306,7 +315,7 @@ export async function exportPartitionToParquet(
     SELECT
       COUNT(*) as row_count,
       pg_total_relation_size(${schemaName}.${archiveTableName}) as size_bytes
-    FROM ${sql.identifier(schemaName, archiveTableName)}
+    FROM ${sql.raw(`${schemaName}.${archiveTableName}`)}
   `);
 
   const rowCount = Number(result.rows[0]?.row_count || 0);
@@ -335,7 +344,9 @@ export async function importParquetToPostgres(
   targetSchema: string,
   targetTableName: string
 ): Promise<{ rowCount: number }> {
-  console.log(`[Parquet Import] Importing ${parquetFilePath} to ${targetSchema}.${targetTableName}`);
+  console.log(
+    `[Parquet Import] Importing ${parquetFilePath} to ${targetSchema}.${targetTableName}`
+  );
 
   // TODO: Implement actual Parquet import
   /**
@@ -403,7 +414,7 @@ export async function archivePartitionToR2(
     // Step 3: Verify upload
     const exists = await r2Client.objectExists(r2ObjectKey);
     if (!exists) {
-      throw new Error('R2 upload verification failed: object not found');
+      throw new Error("R2 upload verification failed: object not found");
     }
 
     // Step 4: Update cold storage catalog
@@ -426,8 +437,8 @@ export async function archivePartitionToR2(
       ) VALUES (
         ${options.tableName},
         ${options.partitionName},
-        ${options.schemaName || 'archive'},
-        ${r2Client['config'].bucketName},
+        ${options.schemaName || "archive"},
+        ${r2Client["config"].bucketName},
         ${r2ObjectKey},
         ${exportResult.sizeBytes},
         ${uploadResult.etag},
@@ -443,7 +454,9 @@ export async function archivePartitionToR2(
 
     // Step 5: Drop archive table (data is safely in R2)
     const archiveTableName = `${options.tableName}_${options.partitionName}_archived`;
-    await db.execute(sql`DROP TABLE IF EXISTS ${sql.identifier(options.schemaName || 'archive', archiveTableName)}`);
+    await db.execute(
+      sql`DROP TABLE IF EXISTS ${sql.raw(`${options.schemaName || "archive"}.${archiveTableName}`)}`
+    );
 
     // Step 6: Clean up temp file
     unlinkSync(exportResult.filePath);
@@ -467,12 +480,12 @@ export async function archivePartitionToR2(
     return {
       success: false,
       partitionName: options.partitionName,
-      r2ObjectKey: '',
+      r2ObjectKey: "",
       rowCount: 0,
       originalSizeBytes: 0,
       exportedSizeBytes: 0,
       compressionRatio: 0,
-      checksum: '',
+      checksum: "",
       durationSeconds,
       error: error instanceof Error ? error.message : String(error),
     };
@@ -500,21 +513,27 @@ export async function restorePartitionFromR2(
     const writeStream = createWriteStream(tempFilePath);
     await pipeline(body, writeStream);
 
-    const downloadedSize = (await import('node:fs')).statSync(tempFilePath).size;
+    const downloadedSize = (await import("node:fs")).statSync(tempFilePath).size;
 
     // Step 3: Import to PostgreSQL
-    const targetSchema = options.targetSchema || 'archive';
-    const targetTableName = options.targetTableName || `${metadata.table}_${metadata.partition}_restored`;
+    const targetSchema = options.targetSchema || "archive";
+    const targetTableName =
+      options.targetTableName || `${metadata.table}_${metadata.partition}_restored`;
 
-    const importResult = await importParquetToPostgres(db, tempFilePath, targetSchema, targetTableName);
+    const importResult = await importParquetToPostgres(
+      db,
+      tempFilePath,
+      targetSchema,
+      targetTableName
+    );
 
     // Step 4: Optionally attach as partition
     let attachedAsPartition = false;
     if (options.attachAsPartition && options.parentTableName) {
       await db.execute(sql`
-        ALTER TABLE ${sql.identifier('sales', options.parentTableName)}
-        ATTACH PARTITION ${sql.identifier(targetSchema, targetTableName)}
-        FOR VALUES FROM (${metadata['date-range-start']}) TO (${metadata['date-range-end']})
+        ALTER TABLE ${sql.raw(`sales.${options.parentTableName}`)}
+        ATTACH PARTITION ${sql.raw(`${targetSchema}.${targetTableName}`)}
+        FOR VALUES FROM (${metadata["date-range-start"]}) TO (${metadata["date-range-end"]})
       `);
       attachedAsPartition = true;
     }
@@ -546,7 +565,7 @@ export async function restorePartitionFromR2(
     return {
       success: false,
       r2ObjectKey: options.r2ObjectKey,
-      targetTable: '',
+      targetTable: "",
       rowCount: 0,
       downloadedSizeBytes: 0,
       durationSeconds,
@@ -564,21 +583,21 @@ export async function restorePartitionFromR2(
  * Calculate SHA-256 checksum of a file
  */
 async function calculateFileChecksum(filePath: string): Promise<string> {
-  const hash = createHash('sha256');
+  const hash = createHash("sha256");
   const stream = createReadStream(filePath);
 
   for await (const chunk of stream) {
     hash.update(chunk);
   }
 
-  return hash.digest('hex');
+  return hash.digest("hex");
 }
 
 /**
  * Read file to Buffer
  */
 async function readFileToBuffer(filePath: string): Promise<Buffer> {
-  const { readFile } = await import('node:fs/promises');
+  const { readFile } = await import("node:fs/promises");
   return readFile(filePath);
 }
 
@@ -587,14 +606,14 @@ async function readFileToBuffer(filePath: string): Promise<Buffer> {
  */
 function parsePartitionDateRange(partitionName: string): { start: string; end: string } {
   // Example: '2020_01' → { start: '2020-01-01', end: '2020-02-01' }
-  const [year, month] = partitionName.split('_');
+  const [year, month] = partitionName.split("_");
   const startDate = new Date(`${year}-${month}-01`);
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + 1);
 
   return {
-    start: startDate.toISOString().split('T')[0],
-    end: endDate.toISOString().split('T')[0],
+    start: startDate.toISOString().split("T")[0],
+    end: endDate.toISOString().split("T")[0],
   };
 }
 
@@ -618,25 +637,27 @@ export async function batchArchiveToR2(
     const result = await archivePartitionToR2(db, r2Client, {
       tableName: table.tableName,
       partitionName: table.partitionName,
-      schemaName: 'archive',
-      format: 'parquet',
-      compression: 'snappy',
+      schemaName: "archive",
+      format: "parquet",
+      compression: "snappy",
     });
 
     results.push(result);
 
     if (result.success) {
-      console.log(`✅ Archived successfully: ${result.rowCount} rows, ${(result.compressionRatio * 100).toFixed(1)}% compression`);
+      console.log(
+        `✅ Archived successfully: ${result.rowCount} rows, ${(result.compressionRatio * 100).toFixed(1)}% compression`
+      );
     } else {
       console.error(`❌ Archival failed: ${result.error}`);
     }
 
     // Rate limiting: wait 1 second between archives
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   // Print summary
-  const successCount = results.filter(r => r.success).length;
+  const successCount = results.filter((r) => r.success).length;
   const totalRows = results.reduce((sum, r) => sum + r.rowCount, 0);
   const totalOriginalSize = results.reduce((sum, r) => sum + r.originalSizeBytes, 0);
   const totalExportedSize = results.reduce((sum, r) => sum + r.exportedSizeBytes, 0);
@@ -651,19 +672,6 @@ export async function batchArchiveToR2(
 
   return results;
 }
-
-// =====================================================================
-// EXPORTS
-// =====================================================================
-
-export {
-  R2Client,
-  exportPartitionToParquet,
-  importParquetToPostgres,
-  archivePartitionToR2,
-  restorePartitionFromR2,
-  batchArchiveToR2,
-};
 
 /**
  * Example Usage:

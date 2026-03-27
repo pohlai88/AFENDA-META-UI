@@ -19,7 +19,7 @@ import {
   fields,
   metadataOverrides,
   tenantDefinitions,
-  industryTemplates
+  industryTemplates,
 } from "../../schema/index.js";
 
 // ============================================================================
@@ -28,7 +28,7 @@ import {
 
 interface ResolutionTiming {
   entityName: string;
-  tenantId: number | null;
+  tenantId: string | null;
   industryId: string | null;
   durationMs: number;
   levelsTraversed: number;
@@ -56,18 +56,14 @@ interface StressTestResult {
  */
 async function resolveEntityMetadata(
   entityName: string,
-  tenantId: number | null = null,
+  tenantId: string | null = null,
   industryId: string | null = null
 ): Promise<ResolutionTiming> {
   const start = performance.now();
   let levelsTraversed = 0;
 
   // Level 1: Get base entity definition
-  const entity = await db
-    .select()
-    .from(entities)
-    .where(eq(entities.entityName, entityName))
-    .limit(1);
+  const entity = await db.select().from(entities).where(eq(entities.name, entityName)).limit(1);
 
   if (!entity[0]) {
     throw new Error(`Entity ${entityName} not found`);
@@ -89,7 +85,7 @@ async function resolveEntityMetadata(
     const industryOverrides = await db
       .select()
       .from(industryTemplates)
-      .where(eq(industryTemplates.industryCode, industryId))
+      .where(eq(industryTemplates.industry, industryId))
       .execute();
 
     if (industryOverrides.length > 0) levelsTraversed++;
@@ -100,7 +96,7 @@ async function resolveEntityMetadata(
     const tenantDef = await db
       .select()
       .from(tenantDefinitions)
-      .where(eq(tenantDefinitions.tenantId, tenantId))
+      .where(eq(tenantDefinitions.id, tenantId))
       .limit(1);
 
     if (tenantDef[0]) levelsTraversed++;
@@ -111,12 +107,7 @@ async function resolveEntityMetadata(
     const overrides = await db
       .select()
       .from(metadataOverrides)
-      .where(
-        and(
-          eq(metadataOverrides.tenantId, tenantId),
-          eq(metadataOverrides.scope, "tenant")
-        )
-      )
+      .where(and(eq(metadataOverrides.tenantId, tenantId), eq(metadataOverrides.scope, "tenant")))
       .execute();
 
     if (overrides.length > 0) levelsTraversed++;
@@ -143,7 +134,7 @@ async function resolveEntityMetadata(
 async function runStressTest(
   iterations: number,
   entityName: string,
-  tenantId: number | null = null,
+  tenantId: string | null = null,
   industryId: string | null = null
 ): Promise<StressTestResult> {
   const timings: number[] = [];
@@ -186,7 +177,9 @@ function formatResult(name: string, result: StressTestResult): void {
   console.log(`\n${name}:`);
   console.log(`  Resolutions:  ${result.totalResolutions.toLocaleString()}`);
   console.log(`  Total Time:   ${result.totalDurationMs.toFixed(2)}ms`);
-  console.log(`  Throughput:   ${Math.floor(result.throughputPerSec).toLocaleString()} resolutions/sec`);
+  console.log(
+    `  Throughput:   ${Math.floor(result.throughputPerSec).toLocaleString()} resolutions/sec`
+  );
   console.log(`  Latency:`);
   console.log(`    Avg:        ${result.avgMs.toFixed(3)}ms`);
   console.log(`    P50:        ${result.p50Ms.toFixed(3)}ms`);
@@ -201,22 +194,25 @@ function formatResult(name: string, result: StressTestResult): void {
 // ============================================================================
 
 describe("Metadata Override Resolution Stress Tests", () => {
-  let testTenantId: number;
+  let testTenantId: string;
   let testEntityName: string;
 
   beforeAll(async () => {
     // Get a tenant and entity for testing
-    const entity = await db
-      .select()
-      .from(entities)
-      .limit(1);
+    const entity = await db.select().from(entities).limit(1);
 
     if (!entity[0]) {
       throw new Error("No entities found - run seed first");
     }
 
-    testEntityName = entity[0].entityName;
-    testTenantId = 1; // Default tenant
+    const tenant = await db.select({ id: tenantDefinitions.id }).from(tenantDefinitions).limit(1);
+
+    if (!tenant[0]?.id) {
+      throw new Error("No tenants found - run seed first");
+    }
+
+    testEntityName = entity[0].name;
+    testTenantId = tenant[0].id;
   });
 
   it("should resolve single entity metadata quickly", async () => {

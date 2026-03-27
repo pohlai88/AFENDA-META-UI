@@ -128,7 +128,10 @@ function printSummary(results: BenchmarkResult[]): void {
 /**
  * Compare two benchmark results and calculate speedup
  */
-function compareResults(baseline: BenchmarkResult, optimized: BenchmarkResult): {
+function compareResults(
+  baseline: BenchmarkResult,
+  optimized: BenchmarkResult
+): {
   speedup: number;
   improvement: number;
   message: string;
@@ -136,9 +139,10 @@ function compareResults(baseline: BenchmarkResult, optimized: BenchmarkResult): 
   const speedup = baseline.avgMs / optimized.avgMs;
   const improvement = ((baseline.avgMs - optimized.avgMs) / baseline.avgMs) * 100;
 
-  const message = speedup >= 1
-    ? `✅ ${speedup.toFixed(2)}x faster (${improvement.toFixed(1)}% improvement)`
-    : `❌ ${(1 / speedup).toFixed(2)}x slower (${Math.abs(improvement).toFixed(1)}% regression)`;
+  const message =
+    speedup >= 1
+      ? `✅ ${speedup.toFixed(2)}x faster (${improvement.toFixed(1)}% improvement)`
+      : `❌ ${(1 / speedup).toFixed(2)}x slower (${Math.abs(improvement).toFixed(1)}% regression)`;
 
   return { speedup, improvement, message };
 }
@@ -171,34 +175,24 @@ describe("Partition Performance Benchmarks", () => {
 
   it("should demonstrate partition pruning benefits", async () => {
     // Query with date range (partition pruning active)
-    const withPruning = await benchmark(
-      "Single-month query (partition pruning)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              gte(salesOrders.orderDate, new Date("2022-06-01")),
-              lte(salesOrders.orderDate, new Date("2022-06-30"))
-            )
+    const withPruning = await benchmark("Single-month query (partition pruning)", async () => {
+      await db
+        .select()
+        .from(salesOrders)
+        .where(
+          and(
+            eq(salesOrders.tenantId, tenantId),
+            gte(salesOrders.orderDate, new Date("2022-06-01")),
+            lte(salesOrders.orderDate, new Date("2022-06-30"))
           )
-          .limit(100);
-      }
-    );
+        )
+        .limit(100);
+    });
 
     // Query without date range (full table scan)
-    const withoutPruning = await benchmark(
-      "Full table scan (no partition pruning)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(eq(salesOrders.tenantId, tenantId))
-          .limit(100);
-      }
-    );
+    const withoutPruning = await benchmark("Full table scan (no partition pruning)", async () => {
+      await db.select().from(salesOrders).where(eq(salesOrders.tenantId, tenantId)).limit(100);
+    });
 
     const comparison = compareResults(withoutPruning, withPruning);
 
@@ -212,39 +206,33 @@ describe("Partition Performance Benchmarks", () => {
   });
 
   it("should benchmark quarter-based queries", async () => {
-    const q1Query = await benchmark(
-      "Q1 2022 query (3 partitions)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              gte(salesOrders.orderDate, new Date("2022-01-01")),
-              lte(salesOrders.orderDate, new Date("2022-03-31"))
-            )
+    const q1Query = await benchmark("Q1 2022 query (3 partitions)", async () => {
+      await db
+        .select()
+        .from(salesOrders)
+        .where(
+          and(
+            eq(salesOrders.tenantId, tenantId),
+            gte(salesOrders.orderDate, new Date("2022-01-01")),
+            lte(salesOrders.orderDate, new Date("2022-03-31"))
           )
-          .limit(1000);
-      }
-    );
+        )
+        .limit(1000);
+    });
 
-    const yearQuery = await benchmark(
-      "Full year 2022 query (12 partitions)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              gte(salesOrders.orderDate, new Date("2022-01-01")),
-              lte(salesOrders.orderDate, new Date("2022-12-31"))
-            )
+    const yearQuery = await benchmark("Full year 2022 query (12 partitions)", async () => {
+      await db
+        .select()
+        .from(salesOrders)
+        .where(
+          and(
+            eq(salesOrders.tenantId, tenantId),
+            gte(salesOrders.orderDate, new Date("2022-01-01")),
+            lte(salesOrders.orderDate, new Date("2022-12-31"))
           )
-          .limit(1000);
-      }
-    );
+        )
+        .limit(1000);
+    });
 
     console.log("\n📊 Multi-Partition Query Performance:");
     console.log(`   Q1 (3 partitions): ${q1Query.avgMs.toFixed(2)}ms (avg)`);
@@ -257,47 +245,41 @@ describe("Partition Performance Benchmarks", () => {
   });
 
   it("should benchmark partition-wise aggregation", async () => {
-    const singlePartitionAgg = await benchmark(
-      "Single-month aggregation",
-      async () => {
-        await db
-          .select({
-            status: salesOrders.status,
-            count: sql<number>`count(*)`,
-            totalAmount: sql<string>`sum(${salesOrders.amountTotal})`,
-          })
-          .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              gte(salesOrders.orderDate, new Date("2022-06-01")),
-              lte(salesOrders.orderDate, new Date("2022-06-30"))
-            )
+    const singlePartitionAgg = await benchmark("Single-month aggregation", async () => {
+      await db
+        .select({
+          status: salesOrders.status,
+          count: sql<number>`count(*)`,
+          totalAmount: sql<string>`sum(${salesOrders.amountTotal})`,
+        })
+        .from(salesOrders)
+        .where(
+          and(
+            eq(salesOrders.tenantId, tenantId),
+            gte(salesOrders.orderDate, new Date("2022-06-01")),
+            lte(salesOrders.orderDate, new Date("2022-06-30"))
           )
-          .groupBy(salesOrders.status);
-      }
-    );
+        )
+        .groupBy(salesOrders.status);
+    });
 
-    const multiPartitionAgg = await benchmark(
-      "Full-year aggregation",
-      async () => {
-        await db
-          .select({
-            status: salesOrders.status,
-            count: sql<number>`count(*)`,
-            totalAmount: sql<string>`sum(${salesOrders.amountTotal})`,
-          })
-          .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              gte(salesOrders.orderDate, new Date("2022-01-01")),
-              lte(salesOrders.orderDate, new Date("2022-12-31"))
-            )
+    const multiPartitionAgg = await benchmark("Full-year aggregation", async () => {
+      await db
+        .select({
+          status: salesOrders.status,
+          count: sql<number>`count(*)`,
+          totalAmount: sql<string>`sum(${salesOrders.amountTotal})`,
+        })
+        .from(salesOrders)
+        .where(
+          and(
+            eq(salesOrders.tenantId, tenantId),
+            gte(salesOrders.orderDate, new Date("2022-01-01")),
+            lte(salesOrders.orderDate, new Date("2022-12-31"))
           )
-          .groupBy(salesOrders.status);
-      }
-    );
+        )
+        .groupBy(salesOrders.status);
+    });
 
     console.log("\n📊 Partition-Wise Aggregation Performance:");
     console.log(`   Single month: ${singlePartitionAgg.avgMs.toFixed(2)}ms (avg)`);
@@ -334,16 +316,9 @@ describe("Index Performance Benchmarks", () => {
 
   it("should benchmark indexed vs non-indexed queries", async () => {
     // Query using tenant index (idx_sales_orders_tenant)
-    const indexedQuery = await benchmark(
-      "Tenant filter (indexed)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(eq(salesOrders.tenantId, tenantId))
-          .limit(100);
-      }
-    );
+    const indexedQuery = await benchmark("Tenant filter (indexed)", async () => {
+      await db.select().from(salesOrders).where(eq(salesOrders.tenantId, tenantId)).limit(100);
+    });
 
     // Query using composite index (idx_sales_orders_partner)
     const compositeIndex = await benchmark(
@@ -352,12 +327,7 @@ describe("Index Performance Benchmarks", () => {
         await db
           .select()
           .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              eq(salesOrders.partnerId, partnerId)
-            )
-          )
+          .where(and(eq(salesOrders.tenantId, tenantId), eq(salesOrders.partnerId, partnerId)))
           .limit(100);
       }
     );
@@ -372,24 +342,16 @@ describe("Index Performance Benchmarks", () => {
 
   it("should benchmark covering index queries", async () => {
     // Query that can use index-only scan (covering index)
-    const coveringIndex = await benchmark(
-      "Covering index (no table access)",
-      async () => {
-        await db
-          .select({
-            tenantId: salesOrders.tenantId,
-            partnerId: salesOrders.partnerId,
-          })
-          .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              eq(salesOrders.partnerId, partnerId)
-            )
-          )
-          .limit(100);
-      }
-    );
+    const coveringIndex = await benchmark("Covering index (no table access)", async () => {
+      await db
+        .select({
+          tenantId: salesOrders.tenantId,
+          partnerId: salesOrders.partnerId,
+        })
+        .from(salesOrders)
+        .where(and(eq(salesOrders.tenantId, tenantId), eq(salesOrders.partnerId, partnerId)))
+        .limit(100);
+    });
 
     // Query that requires table access (non-covering index)
     const nonCoveringIndex = await benchmark(
@@ -398,12 +360,7 @@ describe("Index Performance Benchmarks", () => {
         await db
           .select()
           .from(salesOrders)
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              eq(salesOrders.partnerId, partnerId)
-            )
-          )
+          .where(and(eq(salesOrders.tenantId, tenantId), eq(salesOrders.partnerId, partnerId)))
           .limit(100);
       }
     );
@@ -418,30 +375,24 @@ describe("Index Performance Benchmarks", () => {
 
   it("should benchmark sort performance with indexes", async () => {
     // Sort by indexed column (uses index for ordering)
-    const indexedSort = await benchmark(
-      "Sort by indexed column (order_date)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(eq(salesOrders.tenantId, tenantId))
-          .orderBy(asc(salesOrders.orderDate))
-          .limit(100);
-      }
-    );
+    const indexedSort = await benchmark("Sort by indexed column (order_date)", async () => {
+      await db
+        .select()
+        .from(salesOrders)
+        .where(eq(salesOrders.tenantId, tenantId))
+        .orderBy(asc(salesOrders.orderDate))
+        .limit(100);
+    });
 
     // Sort by non-indexed column (requires in-memory sort)
-    const nonIndexedSort = await benchmark(
-      "Sort by non-indexed column (name)",
-      async () => {
-        await db
-          .select()
-          .from(salesOrders)
-          .where(eq(salesOrders.tenantId, tenantId))
-          .orderBy(asc(salesOrders.name))
-          .limit(100);
-      }
-    );
+    const nonIndexedSort = await benchmark("Sort by non-indexed column (name)", async () => {
+      await db
+        .select()
+        .from(salesOrders)
+        .where(eq(salesOrders.tenantId, tenantId))
+        .orderBy(asc(salesOrders.name))
+        .limit(100);
+    });
 
     console.log("\n📊 Sort Performance:");
     console.log(`   Indexed sort: ${indexedSort.avgMs.toFixed(2)}ms (avg)`);
@@ -459,10 +410,7 @@ describe("Join Performance Benchmarks", () => {
   let tenantId: number;
 
   beforeAll(async () => {
-    const result = await db
-      .select({ tenantId: salesOrders.tenantId })
-      .from(salesOrders)
-      .limit(1);
+    const result = await db.select({ tenantId: salesOrders.tenantId }).from(salesOrders).limit(1);
 
     if (!result[0]) {
       throw new Error("No sales orders found");
@@ -472,33 +420,27 @@ describe("Join Performance Benchmarks", () => {
   });
 
   it("should benchmark order + lines join", async () => {
-    const joinQuery = await benchmark(
-      "Order + Lines join (1:N)",
-      async () => {
-        await db
-          .select({
-            orderId: salesOrders.id,
-            orderName: salesOrders.name,
-            orderTotal: salesOrders.amountTotal,
-            lineId: salesOrderLines.id,
-            lineDescription: salesOrderLines.description,
-            lineSubtotal: salesOrderLines.subtotal,
-          })
-          .from(salesOrders)
-          .innerJoin(
-            salesOrderLines,
-            eq(salesOrders.id, salesOrderLines.orderId)
+    const joinQuery = await benchmark("Order + Lines join (1:N)", async () => {
+      await db
+        .select({
+          orderId: salesOrders.id,
+          orderName: salesOrders.name,
+          orderTotal: salesOrders.amountTotal,
+          lineId: salesOrderLines.id,
+          lineDescription: salesOrderLines.description,
+          lineSubtotal: salesOrderLines.subtotal,
+        })
+        .from(salesOrders)
+        .innerJoin(salesOrderLines, eq(salesOrders.id, salesOrderLines.orderId))
+        .where(
+          and(
+            eq(salesOrders.tenantId, tenantId),
+            gte(salesOrders.orderDate, new Date("2022-06-01")),
+            lte(salesOrders.orderDate, new Date("2022-06-30"))
           )
-          .where(
-            and(
-              eq(salesOrders.tenantId, tenantId),
-              gte(salesOrders.orderDate, new Date("2022-06-01")),
-              lte(salesOrders.orderDate, new Date("2022-06-30"))
-            )
-          )
-          .limit(500);
-      }
-    );
+        )
+        .limit(500);
+    });
 
     console.log("\n📊 Join Performance:");
     console.log(`   Order + Lines join: ${joinQuery.avgMs.toFixed(2)}ms (avg)`);
@@ -512,33 +454,27 @@ describe("Join Performance Benchmarks", () => {
 // ============================================================================
 
 describe("Metadata Override Resolution Benchmarks", () => {
-  let tenantId: number;
+  let tenantId: string;
 
   beforeAll(async () => {
     const result = await db
-      .select({ tenantId: salesOrders.tenantId })
-      .from(salesOrders)
+      .select({ tenantId: metadataOverrides.tenantId })
+      .from(metadataOverrides)
+      .where(sql`${metadataOverrides.tenantId} IS NOT NULL`)
       .limit(1);
 
-    if (!result[0]) {
-      throw new Error("No sales orders found");
+    if (!result[0]?.tenantId) {
+      throw new Error("No metadata overrides with tenant scope found");
     }
 
     tenantId = result[0].tenantId;
   });
 
   it("should benchmark single entity metadata resolution", async () => {
-    const singleResolution = await benchmark(
-      "Single entity metadata resolution",
-      async () => {
-        // Simulates resolving metadata for one entity
-        await db
-          .select()
-          .from(entities)
-          .where(eq(entities.entityName, "SalesOrder"))
-          .limit(1);
-      }
-    );
+    const singleResolution = await benchmark("Single entity metadata resolution", async () => {
+      // Simulates resolving metadata for one entity
+      await db.select().from(entities).where(eq(entities.name, "SalesOrder")).limit(1);
+    });
 
     console.log("\n📊 Metadata Resolution Performance:");
     console.log(`   Single entity: ${singleResolution.avgMs.toFixed(2)}ms (avg)`);
@@ -586,13 +522,10 @@ describe("Bulk Operation Benchmarks", () => {
         `Batch insert (${batchSize} rows)`,
         async () => {
           // Simulate batch insert (just select to avoid actual inserts in benchmark)
-          await db
-            .select()
-            .from(salesOrders)
-            .limit(batchSize);
+          await db.select().from(salesOrders).limit(batchSize);
         },
         10, // Fewer iterations for bulk ops
-        2   // Minimal warmup
+        2 // Minimal warmup
       );
 
       results.push(result);

@@ -42,7 +42,6 @@ const createMockCatalog = (totalRelationships = 279): FkValidationCatalog => ({
     P2: [],
     P3: [],
   },
-  byTable: new Map(),
 });
 
 const createMockOrphans = (
@@ -733,7 +732,9 @@ describe("Health Report Formatting", () => {
         tenantScore: 25,
         cascadeScore: 10,
       },
-      recommendations: ["⚠️  Overall health WARNING. Schedule cleanup within 1 week to prevent degradation."],
+      recommendations: [
+        "⚠️  Overall health WARNING. Schedule cleanup within 1 week to prevent degradation.",
+      ],
     };
 
     const report = formatHealthReport(score);

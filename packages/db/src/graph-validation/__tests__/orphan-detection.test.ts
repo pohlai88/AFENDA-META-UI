@@ -189,7 +189,9 @@ describe("Orphan Detection", () => {
     });
 
     it("does not assign priority bucket when returned FK identity has no relationship match", async () => {
-      const relationships: FkRelationship[] = [createMockRelationship({ validationPriority: "P0" })];
+      const relationships: FkRelationship[] = [
+        createMockRelationship({ validationPriority: "P0" }),
+      ];
 
       mockDb._executeMock.mockResolvedValueOnce({
         rows: [
@@ -312,7 +314,7 @@ describe("Orphan Detection", () => {
         parentTable: "sales_orders",
         fkColumn: "order_id",
         orphanCount: 150,
-        sampleIds: [1001, 1002, 1003],
+        sampleIds: ["1001", "1002", "1003"],
       };
 
       const sql = generateCleanupSQL(orphanResult, false);
@@ -330,7 +332,7 @@ describe("Orphan Detection", () => {
         parentTable: "sales_orders",
         fkColumn: "order_id",
         orphanCount: 150,
-        sampleIds: [1001, 1002, 1003],
+        sampleIds: ["1001", "1002", "1003"],
       };
 
       const sql = generateCleanupSQL(orphanResult, true);

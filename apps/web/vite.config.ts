@@ -28,11 +28,14 @@ export default defineConfig(({ command, mode }) => {
   const isDev = command === "serve";
   const isProd = mode === "production";
   const isAnalyze = mode === "analyze";
-  const env = loadEnv(mode, __dirname, "");
+  const env = loadEnv(mode, process.cwd(), "");
   const devApiTarget = env.VITE_API_URL || "http://localhost:4001";
 
   // ── Shared configuration ────────────────────────────────────────────
   const config: UserConfig = {
+    // Keep client env exposure explicit and predictable
+    envPrefix: "VITE_",
+
     // Base public path for deployment
     // For non-root deployments, set explicitly: base: '/my-app/'
     // Affects asset paths, router basename, and manifest URLs

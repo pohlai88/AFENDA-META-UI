@@ -100,5 +100,16 @@ export default [
       },
     },
   },
+  {
+    files: [
+      "src/db/benchmarkPreparedQueries.ts",
+      "src/db/assertPreparedBenchmark.ts",
+      "src/db/*Benchmark*.ts",
+    ],
+    rules: {
+      // Benchmark CLI scripts intentionally print tabular output.
+      "no-console": "off",
+    },
+  },
   prettierConfig,
 ];
