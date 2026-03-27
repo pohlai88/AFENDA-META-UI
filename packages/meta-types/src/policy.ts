@@ -1,4 +1,11 @@
 /**
+ * @module policy
+ * @description Declarative policy contracts for cross-module validation and decision rules.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Validation Policy Engine Types
  * ===============================
  * Cross-module business rules that go beyond field-level validation.

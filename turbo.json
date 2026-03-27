@@ -81,6 +81,10 @@
       "dependsOn": ["^transit"],
       "outputs": ["coverage/**"]
     },
+    "truth:check": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "check:all": {
       "dependsOn": ["^build"],
       "outputs": []

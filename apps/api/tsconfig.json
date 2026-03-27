@@ -7,9 +7,10 @@
     "declaration": false,
     "declarationMap": false,
     "paths": {
-      "@afenda/meta-types": ["../../packages/meta-types/src/index.ts"],
-      "@afenda/meta-types/*": ["../../packages/meta-types/src/*"],
+      "@afenda/meta-types": ["../../packages/meta-types/dist/index.d.ts"],
+      "@afenda/meta-types/*": ["../../packages/meta-types/dist/*"],
       "@afenda/db": ["../../packages/db/src/index.ts"],
+      "@afenda/db/truth-compiler": ["../../packages/db/src/truth-compiler/index.ts"],
       "@afenda/db/*": ["../../packages/db/src/*"],
       "@afenda/db/schema-meta": ["../../packages/db/src/schema-meta/index.ts"],
       "@afenda/db/schema-domain": ["../../packages/db/src/schema-domain/index.ts"],

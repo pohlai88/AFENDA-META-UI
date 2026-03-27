@@ -1,4 +1,6 @@
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import { Pool } from "pg";
 
 import * as schema from "./schema/index.js";
@@ -49,9 +51,23 @@ pool.on("connect", () => {
   }
 });
 
-const _db = drizzle({ client: pool, schema, relations, casing: "camelCase" });
+// ---------------------------------------------------------------------------
+// Drizzle instances
+// ---------------------------------------------------------------------------
 
-export const db: typeof _db = _db;
+// Pool-based connection (for traditional server environments)
+const _dbPool = drizzlePg({ client: pool, schema, relations, casing: "camelCase" });
+
+// Serverless connection (for edge/serverless environments and migrations)
+// Uses HTTP-based Neon driver - no persistent connections
+const sql = neon(resolveDatabaseUrl());
+const _dbServerless = drizzleNeon({ client: sql, schema, relations, casing: "camelCase" });
+
+// Default export uses pool for backward compatibility
+export const db: typeof _dbPool = _dbPool;
+
+// Serverless export for edge functions and migrations
+export const dbServerless: typeof _dbServerless = _dbServerless;
 
 export type Database = typeof db;
 

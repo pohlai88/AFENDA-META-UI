@@ -1,4 +1,11 @@
 /**
+ * @module mesh
+ * @description Event mesh contracts for pub/sub communication and stream processing.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * ERP Event Mesh Types
  * ====================
  * Pub/sub nervous system for cross-module real-time communication.

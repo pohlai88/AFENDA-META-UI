@@ -1,4 +1,11 @@
 /**
+ * @module graph
+ * @description Business Truth Graph contracts for cross-entity node/edge relationships and resolution.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Business Truth Graph Types
  * ===========================
  * Unified graph model for cross-module ERP entities.

@@ -1,4 +1,11 @@
 /**
+ * @module events
+ * @description Domain event and reducer contracts for event-sourced truth flows.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Event-Sourcing Types
  * ====================
  * Every business event is stored as truth. State = Replay(Events).
@@ -39,6 +46,19 @@ export interface EventMetadata {
   source?: string;
   /** Arbitrary extra context */
   [key: string]: unknown;
+}
+
+/**
+ * Bridge between domain events and state-machine transition events.
+ * This keeps causality (event) and lifecycle transitions explicitly linked.
+ */
+export interface EventTransitionBinding {
+  /** Domain event type, e.g. "consignment.closed" */
+  eventType: string;
+  /** State machine model identifier */
+  model: string;
+  /** Transition event key in the target state machine */
+  transitionEvent: string;
 }
 
 // ---------------------------------------------------------------------------

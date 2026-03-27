@@ -13,6 +13,9 @@
     "test:db": {
       "env": ["DATABASE_URL"],
       "outputs": ["coverage/**"]
+    },
+    "truth:check": {
+      "outputs": []
     }
   }
 }

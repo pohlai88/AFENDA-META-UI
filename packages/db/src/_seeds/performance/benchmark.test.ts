@@ -16,6 +16,8 @@ import { performance } from "node:perf_hooks";
 import { db, pool } from "../../index.js";
 import { salesOrders, salesOrderLines, entities, metadataOverrides } from "../../schema/index.js";
 
+const skipDbBenchmarks = !process.env.DATABASE_URL;
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -151,7 +153,7 @@ function compareResults(
 // Benchmark 1: Partition Pruning Performance
 // ============================================================================
 
-describe("Partition Performance Benchmarks", () => {
+describe.skipIf(skipDbBenchmarks)("Partition Performance Benchmarks", () => {
   let tenantId: number;
   let testOrderId: string;
 
@@ -293,7 +295,7 @@ describe("Partition Performance Benchmarks", () => {
 // Benchmark 2: Index Effectiveness
 // ============================================================================
 
-describe("Index Performance Benchmarks", () => {
+describe.skipIf(skipDbBenchmarks)("Index Performance Benchmarks", () => {
   let tenantId: number;
   let partnerId: string;
 
@@ -406,7 +408,7 @@ describe("Index Performance Benchmarks", () => {
 // Benchmark 3: Join Performance
 // ============================================================================
 
-describe("Join Performance Benchmarks", () => {
+describe.skipIf(skipDbBenchmarks)("Join Performance Benchmarks", () => {
   let tenantId: number;
 
   beforeAll(async () => {
@@ -453,7 +455,7 @@ describe("Join Performance Benchmarks", () => {
 // Benchmark 4: Metadata Override Resolution
 // ============================================================================
 
-describe("Metadata Override Resolution Benchmarks", () => {
+describe.skipIf(skipDbBenchmarks)("Metadata Override Resolution Benchmarks", () => {
   let tenantId: string;
 
   beforeAll(async () => {
@@ -512,7 +514,7 @@ describe("Metadata Override Resolution Benchmarks", () => {
 // Benchmark 5: Bulk Operations
 // ============================================================================
 
-describe("Bulk Operation Benchmarks", () => {
+describe.skipIf(skipDbBenchmarks)("Bulk Operation Benchmarks", () => {
   it("should benchmark batch insert performance", async () => {
     const batchSizes = [100, 500, 1000];
     const results: BenchmarkResult[] = [];
@@ -541,7 +543,7 @@ describe("Bulk Operation Benchmarks", () => {
 // ============================================================================
 
 describe("Performance Summary", () => {
-  it("should generate comprehensive performance report", async () => {
+  it.skipIf(skipDbBenchmarks)("should generate comprehensive performance report", async () => {
     console.log("\n" + "=".repeat(80));
     console.log("SALES DOMAIN PERFORMANCE SUMMARY");
     console.log("=".repeat(80));

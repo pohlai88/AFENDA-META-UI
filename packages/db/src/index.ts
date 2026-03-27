@@ -7,6 +7,11 @@
 
 export { db, pool, getPoolStats, checkDatabaseConnection, type Database } from "./db.js";
 export { relations } from "./relations.js";
+export {
+  SALES_INVARIANT_REGISTRIES,
+  SALES_STATE_MACHINES,
+  SALES_TRUTH_MODEL,
+} from "./truth-compiler/truth-config.js";
 
 export * from "./_shared/index.js";
 export * from "./_session/index.js";

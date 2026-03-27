@@ -1,4 +1,11 @@
 /**
+ * @module tenant
+ * @description Multi-tenant override contracts for isolation, resolution context, and governance.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Multi-Tenant Customization Layer Types
  * ========================================
  * One platform, infinite enterprise variations.

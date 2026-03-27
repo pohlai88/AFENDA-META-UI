@@ -1,4 +1,11 @@
 /**
+ * @module workflow
+ * @description Metadata-driven workflow contracts for process steps, execution state, and transitions.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Metadata-Driven Workflow Engine Types
  * ======================================
  * Business processes defined as data — no code deployments to change workflows.

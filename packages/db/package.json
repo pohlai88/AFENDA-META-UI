@@ -10,6 +10,10 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./truth-compiler": {
+      "import": "./dist/truth-compiler/index.js",
+      "types": "./dist/truth-compiler/index.d.ts"
+    },
     "./shared": {
       "import": "./dist/_shared/index.js",
       "types": "./dist/_shared/index.d.ts"
@@ -49,6 +53,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:manual": "tsx migrate-manual.ts",
     "db:studio": "drizzle-kit studio",
     "db:trigger:apply": "tsx src/_maintenance/apply-status-triggers.ts",
     "db:trigger:dry": "tsx src/_maintenance/apply-status-triggers.ts --dry-run",
@@ -59,11 +64,13 @@
     "test:db": "vitest run --passWithNoTests",
     "test:graph-validation": "vitest run --passWithNoTests src/graph-validation/__tests__",
     "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__tests__",
-    "check:all": "pnpm run typecheck && pnpm run test:db",
+    "check:all": "pnpm run typecheck && pnpm run truth:check && pnpm run test:db",
     "gate:early": "pnpm run check:all",
     "seed": "tsx src/_seeds/index.ts",
     "archival": "tsx src/archival/runner.ts",
-    "graph-validation": "tsx src/graph-validation/runner.ts"
+    "graph-validation": "tsx src/graph-validation/runner.ts",
+    "truth:generate": "tsx src/truth-compiler/generate-truth-sql.ts",
+    "truth:check": "tsx src/truth-compiler/generate-truth-sql.ts --check"
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
@@ -73,8 +80,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "dotenv": "^17.3.1",
     "drizzle-kit": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

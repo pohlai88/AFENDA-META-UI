@@ -26,6 +26,7 @@ import { sql, eq, asc, desc, inArray, and, isNull, type SQL, type Column } from 
 import { db } from "../db/index.js";
 import { getSchema } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
+import { evaluateInvariants } from "../policy/invariant-enforcer.js";
 import { parseFilters, parseSortParams, buildWhereClause } from "../utils/queryBuilder.js";
 import type { SessionContext, MetaField } from "@afenda/meta-types";
 
@@ -47,15 +48,19 @@ type QueryLike = {
   orderBy: (...clauses: unknown[]) => QueryLike;
   limit: (value: number) => QueryLike;
   offset: (value: number) => QueryLike;
-};
+} & PromiseLike<RowRecord[]>;
 
 type DbLike = {
-  select: (...args: unknown[]) => { from: (table: unknown) => QueryLike | PromiseLike<RowRecord[]> };
+  select: (...args: unknown[]) => {
+    from: (table: unknown) => QueryLike | PromiseLike<RowRecord[]>;
+  };
   insert: (table: unknown) => {
     values: (values: RowRecord) => { returning: () => Promise<RowRecord[]> };
   };
   update: (table: unknown) => {
-    set: (values: RowRecord) => { where: (clause: unknown) => { returning: () => Promise<RowRecord[]> } };
+    set: (values: RowRecord) => {
+      where: (clause: unknown) => { returning: () => Promise<RowRecord[]> };
+    };
   };
   delete: (table: unknown) => {
     where: (clause: unknown) => { returning: () => Promise<RowRecord[]> };
@@ -103,6 +108,25 @@ function sendDatabaseUnavailable(res: Response) {
   });
 }
 
+function sendInvariantViolation(
+  res: Response,
+  model: string,
+  operation: string,
+  details: ReturnType<typeof evaluateInvariants>
+) {
+  res.status(400).json({
+    error: "Invariant violation",
+    code: "INVARIANT_VIOLATION",
+    message: `Write rejected by truth invariants for model ${model}`,
+    details: {
+      model,
+      operation,
+      errors: details.errors,
+      warnings: details.warnings,
+    },
+  });
+}
+
 function session(req: Request): SessionContext {
   return (req as Request & { session: SessionContext }).session;
 }
@@ -118,6 +142,19 @@ async function resolveTable(model: string): Promise<Record<string, unknown> | nu
   } catch {
     return null;
   }
+}
+
+async function loadRowById(table: Record<string, unknown>, id: string): Promise<RowRecord | null> {
+  const tableColumns = table as DynamicTableColumns;
+  const query = dbLike.select().from(table) as QueryLike;
+  const rows = await query.where(eq(tableColumns.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+async function loadRowsByIds(table: Record<string, unknown>, ids: string[]): Promise<RowRecord[]> {
+  const tableColumns = table as DynamicTableColumns;
+  const query = dbLike.select().from(table) as QueryLike;
+  return query.where(inArray(tableColumns.id, ids));
 }
 
 function parseCsvQueryParam(value: unknown): string[] {
@@ -176,7 +213,11 @@ function resolveExpandFields({
 
     const alias = normalizeExpandAlias(field.name);
     const relationModel = field.relation?.model;
-    return tokenSet.has(field.name) || tokenSet.has(alias) || (relationModel ? tokenSet.has(relationModel) : false);
+    return (
+      tokenSet.has(field.name) ||
+      tokenSet.has(alias) ||
+      (relationModel ? tokenSet.has(relationModel) : false)
+    );
   });
 }
 
@@ -235,7 +276,10 @@ async function expandManyToOneRows(
       new Set(
         expandedRows
           .map((row) => row[foreignKey])
-          .filter((value): value is string | number => typeof value === "string" || typeof value === "number")
+          .filter(
+            (value): value is string | number =>
+              typeof value === "string" || typeof value === "number"
+          )
       )
     );
 
@@ -248,7 +292,9 @@ async function expandManyToOneRows(
     if (!relatedFieldNames.length) continue;
 
     const projection = buildSelectProjection(relatedColumns, relatedFieldNames);
-    let relatedQuery = dbLike.select(projection).from(relatedTable) as QueryLike | PromiseLike<RowRecord[]>;
+    let relatedQuery = dbLike.select(projection).from(relatedTable) as
+      | QueryLike
+      | PromiseLike<RowRecord[]>;
     relatedQuery = (relatedQuery as QueryLike).where(inArray(valueColumn, relationIds));
     const relatedRows = await (relatedQuery as unknown as PromiseLike<RowRecord[]>);
 
@@ -381,7 +427,10 @@ router.get("/:model", async (req: Request, res: Response) => {
       query = (query as QueryLike).where(effectiveWhereClause);
     }
 
-    query = (query as QueryLike).orderBy(...orderByClauses).limit(limit).offset(offset);
+    query = (query as QueryLike)
+      .orderBy(...orderByClauses)
+      .limit(limit)
+      .offset(offset);
 
     // Execute query
     const rows = await (query as unknown as PromiseLike<RowRecord[]>);
@@ -392,9 +441,9 @@ router.get("/:model", async (req: Request, res: Response) => {
       | PromiseLike<Array<{ count: number | string }>>;
 
     if (effectiveWhereClause) {
-      countQuery = (countQuery as { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }).where(
-        effectiveWhereClause
-      );
+      countQuery = (
+        countQuery as { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }
+      ).where(effectiveWhereClause);
     }
 
     const [{ count }] = await (countQuery as PromiseLike<Array<{ count: number | string }>>);
@@ -576,6 +625,16 @@ router.post("/:model", async (req: Request, res: Response) => {
       return;
     }
 
+    const invariantResult = evaluateInvariants({
+      model,
+      operation: "create",
+      record: safe,
+    });
+    if (!invariantResult.passed) {
+      sendInvariantViolation(res, model, "create", invariantResult);
+      return;
+    }
+
     const [created] = await dbLike.insert(table).values(safe).returning();
     res.status(201).json({ data: created });
   } catch (err) {
@@ -628,6 +687,22 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
     }
 
     const tableColumns = table as DynamicTableColumns;
+    const existing = await loadRowById(table, id);
+
+    if (!existing) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    const invariantResult = evaluateInvariants({
+      model,
+      operation: "update",
+      record: { ...existing, ...safe },
+    });
+    if (!invariantResult.passed) {
+      sendInvariantViolation(res, model, "update", invariantResult);
+      return;
+    }
 
     const [updated] = await dbLike
       .update(table)
@@ -680,6 +755,22 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
 
     const tableColumns = table as DynamicTableColumns;
     const softDeleteColumn = findSoftDeleteColumn(tableColumns);
+    const existing = await loadRowById(table, id);
+
+    if (!existing) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    const invariantResult = evaluateInvariants({
+      model,
+      operation: "delete",
+      record: existing,
+    });
+    if (!invariantResult.passed) {
+      sendInvariantViolation(res, model, "delete", invariantResult);
+      return;
+    }
 
     if (softDeleteColumn) {
       const now = new Date();
@@ -766,13 +857,26 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
       return;
     }
 
+    const existingRows = await loadRowsByIds(table, ids);
+    for (const existing of existingRows) {
+      const invariantResult = evaluateInvariants({
+        model,
+        operation: "update",
+        record: { ...existing, ...safe },
+      });
+      if (!invariantResult.passed) {
+        sendInvariantViolation(res, model, "update", invariantResult);
+        return;
+      }
+    }
+
     // Update all matching IDs
     const tableColumns = table as DynamicTableColumns;
 
     const result = await dbLike
       .update(table)
       .set(safe)
-      .where(sql`${tableColumns.id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
+      .where(inArray(tableColumns.id, ids))
       .returning();
 
     res.json({
@@ -826,13 +930,23 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
       return;
     }
 
+    const existingRows = await loadRowsByIds(table, ids);
+    for (const existing of existingRows) {
+      const invariantResult = evaluateInvariants({
+        model,
+        operation: "delete",
+        record: existing,
+      });
+      if (!invariantResult.passed) {
+        sendInvariantViolation(res, model, "delete", invariantResult);
+        return;
+      }
+    }
+
     // Delete all matching IDs
     const tableColumns = table as DynamicTableColumns;
 
-    const result = await dbLike
-      .delete(table)
-      .where(sql`${tableColumns.id} IN (${sql.raw(ids.map((id) => `'${id}'`).join(", "))})`)
-      .returning();
+    const result = await dbLike.delete(table).where(inArray(tableColumns.id, ids)).returning();
 
     res.json({
       meta: {

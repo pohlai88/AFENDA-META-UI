@@ -1,4 +1,11 @@
 /**
+ * @module sandbox
+ * @description Simulation contracts for testing policy impact and blast radius before activation.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Rule Simulation Sandbox Types
  * ==============================
  * Admin safety lab for testing policies before activation.

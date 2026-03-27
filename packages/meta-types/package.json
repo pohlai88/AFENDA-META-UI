@@ -1,5 +1,6 @@
 {
   "name": "@afenda/meta-types",
+  "description": "Canonical business truth contract — entities, events, invariants, and state transitions for the AFENDA metadata engine",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -8,13 +9,91 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema.js",
+      "types": "./dist/schema.d.ts"
+    },
+    "./rbac": {
+      "import": "./dist/rbac.js",
+      "types": "./dist/rbac.d.ts"
+    },
+    "./module": {
+      "import": "./dist/module.js",
+      "types": "./dist/module.d.ts"
+    },
+    "./layout": {
+      "import": "./dist/layout.js",
+      "types": "./dist/layout.d.ts"
+    },
+    "./policy": {
+      "import": "./dist/policy.js",
+      "types": "./dist/policy.d.ts"
+    },
+    "./audit": {
+      "import": "./dist/audit.js",
+      "types": "./dist/audit.d.ts"
+    },
+    "./events": {
+      "import": "./dist/events.js",
+      "types": "./dist/events.d.ts"
+    },
+    "./entity-def": {
+      "import": "./dist/entity-def.js",
+      "types": "./dist/entity-def.d.ts"
+    },
+    "./invariants": {
+      "import": "./dist/invariants.js",
+      "types": "./dist/invariants.d.ts"
+    },
+    "./sandbox": {
+      "import": "./dist/sandbox.js",
+      "types": "./dist/sandbox.d.ts"
+    },
+    "./graph": {
+      "import": "./dist/graph.js",
+      "types": "./dist/graph.d.ts"
+    },
+    "./mesh": {
+      "import": "./dist/mesh.js",
+      "types": "./dist/mesh.d.ts"
+    },
+    "./state-machine": {
+      "import": "./dist/state-machine.js",
+      "types": "./dist/state-machine.d.ts"
+    },
+    "./truth-model": {
+      "import": "./dist/truth-model.js",
+      "types": "./dist/truth-model.d.ts"
+    },
+    "./workflow": {
+      "import": "./dist/workflow.js",
+      "types": "./dist/workflow.d.ts"
+    },
+    "./tenant": {
+      "import": "./dist/tenant.js",
+      "types": "./dist/tenant.d.ts"
+    },
+    "./resolutionCache": {
+      "import": "./dist/resolutionCache.js",
+      "types": "./dist/resolutionCache.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils.js",
+      "types": "./dist/utils.d.ts"
     }
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "lint:strict": "eslint src/ --max-warnings 0",
+    "lint:fix": "eslint src/ --fix",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "devDependencies": {
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

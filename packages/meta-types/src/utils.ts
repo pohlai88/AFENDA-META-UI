@@ -1,4 +1,11 @@
 /**
+ * @module utils
+ * @description Utility types and JSON/runtime guard helpers shared across truth contract consumers.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * @afenda/meta-types — Shared TypeScript utility types
  *
  * Zero runtime — pure type utilities for the AFENDA monorepo.

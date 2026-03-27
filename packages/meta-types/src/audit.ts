@@ -1,4 +1,11 @@
 /**
+ * @module audit
+ * @description Audit-trail and masking contracts for compliance-grade change history.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Audit Engine Types
  * ==================
  * Change tracking for ERP compliance: SOX, GDPR, ISO.

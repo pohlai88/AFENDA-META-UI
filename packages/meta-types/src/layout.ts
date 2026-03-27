@@ -1,4 +1,11 @@
 /**
+ * @module layout
+ * @description Recursive layout contracts for forms, lists, dashboards, and composable UI structure.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Layout Engine Types
  * ===================
  * Recursive composable tree that decouples field placement from field definition.

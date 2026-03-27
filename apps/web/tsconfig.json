@@ -10,7 +10,7 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "paths": {
-      "@afenda/meta-types": ["../../packages/meta-types/src/index.ts"],
+      "@afenda/meta-types": ["../../packages/meta-types/dist/index.d.ts"],
       "@afenda/ui": ["../../packages/ui/src/index.ts"],
       "~/*": ["./src/*"]
     }

@@ -1,3 +1,10 @@
+/**
+ * @module schema
+ * @description Core metadata model: field contracts, model definitions, condition expressions, views, and permissions.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
 export type FieldType =
   | "string"
   | "text"

@@ -22,6 +22,8 @@ import {
   industryTemplates,
 } from "../../schema/index.js";
 
+const skipDbBenchmarks = !process.env.DATABASE_URL;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -193,7 +195,7 @@ function formatResult(name: string, result: StressTestResult): void {
 // Tests
 // ============================================================================
 
-describe("Metadata Override Resolution Stress Tests", () => {
+describe.skipIf(skipDbBenchmarks)("Metadata Override Resolution Stress Tests", () => {
   let testTenantId: string;
   let testEntityName: string;
 
@@ -324,7 +326,7 @@ describe("Metadata Override Resolution Stress Tests", () => {
 // ============================================================================
 
 describe("Metadata Resolution Performance Summary", () => {
-  it("should generate comprehensive summary", () => {
+  it.skipIf(skipDbBenchmarks)("should generate comprehensive summary", () => {
     console.log("\n" + "=".repeat(80));
     console.log("METADATA OVERRIDE RESOLUTION PERFORMANCE SUMMARY");
     console.log("=".repeat(80));

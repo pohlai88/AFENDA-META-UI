@@ -82,7 +82,14 @@
     "db:test:graph-validation": "pnpm --filter @afenda/db test:graph-validation",
     "db:test:graph-validation:coverage": "pnpm --filter @afenda/db test:graph-validation:coverage",
     "db:check": "pnpm --filter @afenda/db check:all",
-    "db:introspect": "pnpm --filter api meta:introspect"
+    "db:introspect": "pnpm --filter api meta:introspect",
+    "db:generate:demo": "drizzle-kit generate",
+    "db:migrate:demo": "drizzle-kit migrate",
+    "db:crud:demo": "tsx packages/db/demo/index.ts",
+    "neon:branch:create": "node tools/scripts/neon-branch-create.mjs",
+    "neon:branch:switch": "node tools/scripts/neon-branch-switch.mjs",
+    "neon:setup": "node tools/scripts/neon-setup-db.mjs",
+    "neon:setup:no-seed": "node tools/scripts/neon-setup-db.mjs --skip-seed"
   },
   "pnpm": {
     "overrides": {
@@ -96,12 +103,13 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "drizzle-kit": "catalog:",
+    "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
+    "eslint-plugin-boundaries": "^6.0.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "eslint": "catalog:",
-    "eslint-plugin-boundaries": "^6.0.1",
     "glob": "^13.0.6",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
@@ -110,8 +118,14 @@
     "prettier": "catalog:",
     "sherif": "^1.11.0",
     "syncpack": "^14.2.1",
+    "tsx": "catalog:",
     "turbo": "^2.8.20",
     "typescript": "catalog:",
     "typescript-eslint": "^8.57.1"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "catalog:"
   }
 }

@@ -1,4 +1,11 @@
 /**
+ * @module module
+ * @description Module/plugin architecture contracts for models, routes, hooks, actions, widgets, and menus.
+ * @layer truth-contract
+ * @consumers api, web, db
+ */
+
+/**
  * Module System Types
  * ===================
  *
