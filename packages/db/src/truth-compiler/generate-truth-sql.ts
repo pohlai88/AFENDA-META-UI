@@ -14,12 +14,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { buildDependencyGraph } from "./dependency-graph.js";
 import { compileEvents } from "./event-compiler.js";
+import { compileCrossInvariants } from "./cross-invariant-compiler.js";
 import { compileInvariants } from "./invariant-compiler.js";
+import { compileMutationPolicies } from "./mutation-policy-compiler.js";
 import { normalize } from "./normalizer.js";
 import { compileTransitions } from "./transition-compiler.js";
 import { emit } from "./emitter.js";
 import { COMPILER_INPUT } from "./truth-config.js";
+import type { SqlSegment } from "./types.js";
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = resolve(CURRENT_DIR, "../../migrations/generated/truth-v1.sql");
@@ -29,18 +33,33 @@ function normaliseTimestamp(sql: string): string {
   return sql.replace(/^-- Generated at: .+$/m, "-- Generated at: <timestamp>");
 }
 
+function applyDependencyOrder(segments: SqlSegment[], order: string[]): SqlSegment[] {
+  const orderIndex = new Map<string, number>();
+  order.forEach((nodeId, index) => {
+    orderIndex.set(nodeId, index);
+  });
+
+  return segments.map((segment) => ({
+    ...segment,
+    orderIndex: segment.nodeId ? orderIndex.get(segment.nodeId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER,
+  }));
+}
+
 function run(): void {
   const isCheck = process.argv.includes("--check");
 
   // 1. Normalize manifest into concrete resolved model
   const normalized = normalize(COMPILER_INPUT);
+  const dependencyGraph = buildDependencyGraph(normalized);
 
   // 2. Run all compiler stages
-  const segments = [
+  const segments = applyDependencyOrder([
     ...compileInvariants(normalized),
+    ...compileCrossInvariants(normalized, { strict: true }),
+    ...compileMutationPolicies(normalized, { strict: true }),
     ...compileTransitions(normalized),
     ...compileEvents(normalized),
-  ];
+  ], dependencyGraph.order);
 
   // 3. Emit deterministic SQL bundle
   const generated = emit(segments);

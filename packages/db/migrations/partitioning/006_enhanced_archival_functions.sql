@@ -74,7 +74,7 @@ CREATE INDEX idx_r2_catalog_r2_key ON cold_storage.r2_archive_catalog (r2_object
 COMMENT ON TABLE cold_storage.r2_archive_catalog IS 'Catalog of partitions archived to Cloudflare R2 cold storage';
 
 -- =====================================================================
--- TABLE: Archive Promotion Log (tracks hot → warm transitions)
+-- TABLE: Archive Promotion Log (tracks hot ÔåÆ warm transitions)
 -- =====================================================================
 
 CREATE TABLE IF NOT EXISTS archive.promotion_log (
@@ -121,10 +121,10 @@ CREATE TABLE IF NOT EXISTS archive.promotion_log (
 CREATE INDEX idx_promotion_log_promoted_at ON archive.promotion_log (promoted_at DESC);
 CREATE INDEX idx_promotion_log_table_partition ON archive.promotion_log (table_name, partition_name);
 
-COMMENT ON TABLE archive.promotion_log IS 'Audit log for hot → warm storage promotions';
+COMMENT ON TABLE archive.promotion_log IS 'Audit log for hot ÔåÆ warm storage promotions';
 
 -- =====================================================================
--- FUNCTION: Promote to Warm Storage (Hot → Warm)
+-- FUNCTION: Promote to Warm Storage (Hot ÔåÆ Warm)
 -- =====================================================================
 
 CREATE OR REPLACE FUNCTION sales.promote_to_warm_storage(
@@ -522,38 +522,38 @@ BEGIN
     RETURN QUERY SELECT
         'Hot partition count'::TEXT,
         hot_partition_count::TEXT,
-        CASE WHEN hot_partition_count BETWEEN 20 AND 30 THEN '✅ OK' ELSE '⚠️ REVIEW' END,
+        CASE WHEN hot_partition_count BETWEEN 20 AND 30 THEN 'Ô£à OK' ELSE 'ÔÜá´©Å REVIEW' END,
         'Expected: 20-30 partitions (24 months)'::TEXT;
 
     RETURN QUERY SELECT
         'Warm partition count'::TEXT,
         warm_partition_count::TEXT,
-        CASE WHEN warm_partition_count >= 0 THEN '✅ OK' ELSE '❌ ERROR' END,
+        CASE WHEN warm_partition_count >= 0 THEN 'Ô£à OK' ELSE 'ÔØî ERROR' END,
         'Partitions in archive schema'::TEXT;
 
     RETURN QUERY SELECT
         'Cold partition count'::TEXT,
         cold_partition_count::TEXT,
-        CASE WHEN cold_partition_count >= 0 THEN '✅ OK' ELSE '❌ ERROR' END,
+        CASE WHEN cold_partition_count >= 0 THEN 'Ô£à OK' ELSE 'ÔØî ERROR' END,
         'Partitions archived to R2'::TEXT;
 
     RETURN QUERY SELECT
         'Oldest hot partition age'::TEXT,
         COALESCE(oldest_hot_months::TEXT || ' months', 'N/A'),
         CASE
-            WHEN oldest_hot_months IS NULL THEN '✅ OK'
-            WHEN oldest_hot_months <= 25 THEN '✅ OK'
-            WHEN oldest_hot_months <= 27 THEN '⚠️ WARNING'
-            ELSE '❌ CRITICAL' END,
+            WHEN oldest_hot_months IS NULL THEN 'Ô£à OK'
+            WHEN oldest_hot_months <= 25 THEN 'Ô£à OK'
+            WHEN oldest_hot_months <= 27 THEN 'ÔÜá´©Å WARNING'
+            ELSE 'ÔØî CRITICAL' END,
         'Action: Run promote_to_warm_storage() if > 24 months'::TEXT;
 
     RETURN QUERY SELECT
         'Default partition rows'::TEXT,
         default_partition_rows::TEXT,
         CASE
-            WHEN default_partition_rows = 0 THEN '✅ OK'
-            WHEN default_partition_rows <= 100 THEN '⚠️ WARNING'
-            ELSE '❌ CRITICAL' END,
+            WHEN default_partition_rows = 0 THEN 'Ô£à OK'
+            WHEN default_partition_rows <= 100 THEN 'ÔÜá´©Å WARNING'
+            ELSE 'ÔØî CRITICAL' END,
         'Default partition should be empty'::TEXT;
 END;
 $$ LANGUAGE plpgsql;
@@ -578,9 +578,9 @@ GRANT SELECT ON ALL TABLES IN SCHEMA cold_storage TO readonly_role;
 
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Enhanced archival functions installed successfully';
-    RAISE NOTICE '📊 Run: SELECT * FROM sales.check_archive_health();';
-    RAISE NOTICE '🔄 Test: SELECT * FROM sales.promote_to_warm_storage(24, TRUE, FALSE, TRUE);';
-    RAISE NOTICE '📂 List: SELECT * FROM archive.list_warm_storage_inventory();';
-    RAISE NOTICE '❄️ Identify: SELECT * FROM archive.identify_cold_candidates(7, 10);';
+    RAISE NOTICE 'Ô£à Enhanced archival functions installed successfully';
+    RAISE NOTICE '­ƒôè Run: SELECT * FROM sales.check_archive_health();';
+    RAISE NOTICE '­ƒöä Test: SELECT * FROM sales.promote_to_warm_storage(24, TRUE, FALSE, TRUE);';
+    RAISE NOTICE '­ƒôé List: SELECT * FROM archive.list_warm_storage_inventory();';
+    RAISE NOTICE 'ÔØä´©Å Identify: SELECT * FROM archive.identify_cold_candidates(7, 10);';
 END $$;

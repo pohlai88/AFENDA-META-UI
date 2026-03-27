@@ -20,7 +20,7 @@ export const roles = securitySchema.table(
   "roles",
   {
     roleId: integer().primaryKey().generatedAlwaysAsIdentity(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     roleCode: text().notNull(),
     ...nameColumn,
     description: text(),

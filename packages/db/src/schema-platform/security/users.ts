@@ -29,7 +29,7 @@ export const users = securitySchema.table(
   "users",
   {
     userId: integer().primaryKey().generatedAlwaysAsIdentity(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     email: text().notNull(),
     displayName: text().notNull(),
     status: userStatusEnum().notNull().default("PENDING_VERIFICATION"),

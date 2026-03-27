@@ -28,6 +28,12 @@ const HEADER = `-- =============================================================
 
 /** Deterministic comparator for stable SQL bundle ordering. */
 function compareSegments(a: SqlSegment, b: SqlSegment): number {
+  const aOrder = a.orderIndex ?? Number.MAX_SAFE_INTEGER;
+  const bOrder = b.orderIndex ?? Number.MAX_SAFE_INTEGER;
+  if (aOrder !== bOrder) {
+    return aOrder - bOrder;
+  }
+
   const kindDiff = KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
   if (kindDiff !== 0) return kindDiff;
   const modelDiff = a.model.localeCompare(b.model, "en", { sensitivity: "base" });

@@ -20,3 +20,18 @@ export {
   dbRebuildAggregate,
   dbGetEventStoreStats,
 } from "./dbEventStore.js";
+
+export {
+  replayProjectionEvents,
+  buildProjectionCheckpoint,
+  detectProjectionDrift,
+  assertNoProjectionDrift,
+  ProjectionDriftError,
+  ProjectionReplayError,
+} from "./projectionRuntime.js";
+
+export {
+  getProjectionCheckpoint,
+  upsertProjectionCheckpoint,
+  clearProjectionCheckpoints,
+} from "./projectionCheckpointStore.js";

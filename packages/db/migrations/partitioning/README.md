@@ -1,12 +1,12 @@
 # Partition Strategy Implementation
 
-**Status:** ✅ Ready for Deployment
+**Status:** Ô£à Ready for Deployment
 **Created:** 2026-03-27
 **Priority:** Medium (Priority 2 from sales-checklist.md)
 
 ---
 
-## 📋 Overview
+## ­ƒôï Overview
 
 This directory contains SQL migration scripts for implementing PostgreSQL range partitioning on three high-volume tables in the Sales domain:
 
@@ -22,19 +22,19 @@ This directory contains SQL migration scripts for implementing PostgreSQL range 
 
 ---
 
-## 📁 Files
+## ­ƒôü Files
 
 | File | Description | Status |
 |------|-------------|--------|
-| `001_partition_sales_orders.sql` | Convert `sales_orders` to monthly partitions | ✅ Ready |
-| `002_partition_accounting_postings.sql` | Convert `accounting_postings` to monthly partitions | ✅ Ready |
-| `003_partition_domain_event_logs.sql` | Convert `domain_event_logs` to weekly partitions | ✅ Ready |
-| `004_partition_automation_functions.sql` | Auto-create future partitions + health checks | ✅ Ready |
-| `005_partition_maintenance_scripts.sql` | Archive old partitions + pg_cron setup | ✅ Ready |
+| `001_partition_sales_orders.sql` | Convert `sales_orders` to monthly partitions | Ô£à Ready |
+| `002_partition_accounting_postings.sql` | Convert `accounting_postings` to monthly partitions | Ô£à Ready |
+| `003_partition_domain_event_logs.sql` | Convert `domain_event_logs` to weekly partitions | Ô£à Ready |
+| `004_partition_automation_functions.sql` | Auto-create future partitions + health checks | Ô£à Ready |
+| `005_partition_maintenance_scripts.sql` | Archive old partitions + pg_cron setup | Ô£à Ready |
 
 ---
 
-## 🚀 Deployment Instructions
+## ­ƒÜÇ Deployment Instructions
 
 ### Prerequisites
 
@@ -58,7 +58,7 @@ Key details:
 
 ### Step 2: Run Migrations (in order)
 
-**⚠️ CRITICAL: Run in a transaction if possible, or ensure you can rollback**
+**ÔÜá´©Å CRITICAL: Run in a transaction if possible, or ensure you can rollback**
 
 ```bash
 # 1. Partition sales_orders (monthly)
@@ -82,7 +82,7 @@ psql -U postgres -d afenda_meta_ui -f 005_partition_maintenance_scripts.sql
 2. Creates initial partitions (6-13 partitions depending on table)
 3. Creates default partition (catches data outside ranges)
 4. Migrates data from existing table
-5. Swaps tables atomically (`tablename_old` ← old, `tablename` ← partitioned)
+5. Swaps tables atomically (`tablename_old` ÔåÉ old, `tablename` ÔåÉ partitioned)
 6. Validates partition setup
 
 **Duration estimates:**
@@ -145,7 +145,7 @@ Add to system crontab:
 
 ### Step 5: Cleanup Old Tables (after validation period)
 
-**⚠️ Wait at least 7 days to ensure partitioned tables work correctly**
+**ÔÜá´©Å Wait at least 7 days to ensure partitioned tables work correctly**
 
 ```sql
 -- After confirming partitioned tables work:
@@ -161,7 +161,7 @@ DROP FUNCTION sales.create_domain_event_logs_partition(DATE);
 
 ---
 
-## 🔄 Rollback Procedure
+## ­ƒöä Rollback Procedure
 
 If issues are detected after migration:
 
@@ -184,7 +184,7 @@ DROP TABLE sales.domain_event_logs_partitioned_failed CASCADE;
 
 ---
 
-## 📊 Performance Testing
+## ­ƒôè Performance Testing
 
 ### Before/After Comparison
 
@@ -225,7 +225,7 @@ ORDER BY created_at;
 
 ---
 
-## 🛠️ Maintenance Operations
+## ­ƒøá´©Å Maintenance Operations
 
 ### Create Future Partitions (manual)
 
@@ -261,7 +261,7 @@ SELECT * FROM sales.archive_domain_event_logs_partitions(90, FALSE, FALSE);
 
 ---
 
-## 🧪 Testing Checklist
+## ­ƒº¬ Testing Checklist
 
 Before deploying to production:
 
@@ -279,7 +279,7 @@ Before deploying to production:
 
 ---
 
-## 📚 References
+## ­ƒôÜ References
 
 - [PARTITION_STRATEGY.md](../PARTITION_STRATEGY.md) - Comprehensive strategy documentation
 - [PostgreSQL Partitioning Docs](https://www.postgresql.org/docs/14/ddl-partitioning.html)
@@ -288,7 +288,7 @@ Before deploying to production:
 
 ---
 
-## ✅ Completion Status
+## Ô£à Completion Status
 
 - [x] Strategy documented
 - [x] Migration SQL created (3 tables)

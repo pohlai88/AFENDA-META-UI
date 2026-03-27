@@ -27,6 +27,11 @@ import { db } from "../db/index.js";
 import { getSchema } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
 import { evaluateInvariants } from "../policy/invariant-enforcer.js";
+import {
+  MutationPolicyViolationError,
+  assertBulkMutationAllowed,
+  executeMutationCommand,
+} from "../policy/mutation-command-gateway.js";
 import { parseFilters, parseSortParams, buildWhereClause } from "../utils/queryBuilder.js";
 import type { SessionContext, MetaField } from "@afenda/meta-types";
 
@@ -127,8 +132,35 @@ function sendInvariantViolation(
   });
 }
 
+function sendMutationPolicyViolation(res: Response, err: MutationPolicyViolationError) {
+  res.status(err.statusCode).json({
+    error: "Mutation policy violation",
+    code: err.code,
+    message: err.message,
+    details: {
+      model: err.model,
+      operation: err.operation,
+      mutationPolicy: err.mutationPolicy,
+      policyId: err.policy?.id,
+      source: err.source,
+    },
+  });
+}
+
 function session(req: Request): SessionContext {
   return (req as Request & { session: SessionContext }).session;
+}
+
+function resolveActorId(sess: SessionContext): string | undefined {
+  const maybeRecord = sess as unknown as Record<string, unknown>;
+
+  for (const candidate of [maybeRecord.uid, maybeRecord.userId, maybeRecord.id]) {
+    if (typeof candidate === "string" && candidate.length > 0) {
+      return candidate;
+    }
+  }
+
+  return undefined;
 }
 
 /** Dynamically resolve the Drizzle table object by model name. */
@@ -635,10 +667,35 @@ router.post("/:model", async (req: Request, res: Response) => {
       return;
     }
 
-    const [created] = await dbLike.insert(table).values(safe).returning();
-    res.status(201).json({ data: created });
+    const commandResult = await executeMutationCommand({
+      model,
+      operation: "create",
+      actorId: resolveActorId(sess),
+      nextRecord: safe,
+      mutate: async () => {
+        const [created] = await dbLike.insert(table).values(safe).returning();
+        return created ?? null;
+      },
+    });
+
+    res.status(201).json({
+      data: commandResult.record,
+      meta:
+        commandResult.policy || commandResult.event
+          ? {
+              mutationPolicy: commandResult.mutationPolicy,
+              policyId: commandResult.policy?.id,
+              eventType: commandResult.event?.eventType,
+              eventId: commandResult.event?.id,
+            }
+          : undefined,
+    });
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model }, `POST /${model} failed`);
+    if (err instanceof MutationPolicyViolationError) {
+      sendMutationPolicyViolation(res, err);
+      return;
+    }
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -704,20 +761,50 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const [updated] = await dbLike
-      .update(table)
-      .set(safe)
-      .where(eq(tableColumns.id, id))
-      .returning();
+    const nextRecord = { ...existing, ...safe };
+    const commandResult = await executeMutationCommand({
+      model,
+      operation: "update",
+      recordId: id,
+      actorId: resolveActorId(sess),
+      existingRecord: existing,
+      nextRecord,
+      mutate: async () => {
+        const [updated] = await dbLike
+          .update(table)
+          .set(safe)
+          .where(eq(tableColumns.id, id))
+          .returning();
+
+        return updated ?? null;
+      },
+    });
+
+    const updated = commandResult.record;
 
     if (!updated) {
       res.status(404).json({ error: "Not found" });
       return;
     }
 
-    res.json({ data: updated });
+    res.json({
+      data: updated,
+      meta:
+        commandResult.policy || commandResult.event
+          ? {
+              mutationPolicy: commandResult.mutationPolicy,
+              policyId: commandResult.policy?.id,
+              eventType: commandResult.event?.eventType,
+              eventId: commandResult.event?.id,
+            }
+          : undefined,
+    });
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model, id }, `PATCH /${model}/${id} failed`);
+    if (err instanceof MutationPolicyViolationError) {
+      sendMutationPolicyViolation(res, err);
+      return;
+    }
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -772,6 +859,8 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
       return;
     }
 
+    const actorId = resolveActorId(sess);
+
     if (softDeleteColumn) {
       const now = new Date();
       const updatePayload: RowRecord = { [softDeleteColumn]: now };
@@ -781,23 +870,51 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
         updatePayload.updatedAt = now;
       }
 
-      const [updated] = await dbLike
-        .update(table)
-        .set(updatePayload)
-        .where(eq(tableColumns.id, id))
-        .returning();
+      const commandResult = await executeMutationCommand({
+        model,
+        operation: "delete",
+        recordId: id,
+        actorId,
+        existingRecord: existing,
+        nextRecord: { ...existing, ...updatePayload },
+        mutate: async () => {
+          const [updated] = await dbLike
+            .update(table)
+            .set(updatePayload)
+            .where(eq(tableColumns.id, id))
+            .returning();
+
+          return updated ?? null;
+        },
+      });
+
+      const updated = commandResult.record;
 
       if (!updated) {
         res.status(404).json({ error: "Not found" });
         return;
       }
     } else {
-      await dbLike.delete(table).where(eq(tableColumns.id, id));
+      await executeMutationCommand({
+        model,
+        operation: "delete",
+        recordId: id,
+        actorId,
+        existingRecord: existing,
+        mutate: async () => {
+          const deleted = await dbLike.delete(table).where(eq(tableColumns.id, id)).returning();
+          return deleted[0] ?? existing;
+        },
+      });
     }
 
     res.status(204).send();
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model, id }, `DELETE /${model}/${id} failed`);
+    if (err instanceof MutationPolicyViolationError) {
+      sendMutationPolicyViolation(res, err);
+      return;
+    }
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -828,6 +945,8 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
     }
 
     const { ids, updates } = req.body as { ids: string[]; updates: Record<string, unknown> };
+
+    assertBulkMutationAllowed({ model, operation: "update" });
 
     if (!Array.isArray(ids) || ids.length === 0) {
       res.status(400).json({ error: "ids array is required and must not be empty" });
@@ -888,6 +1007,10 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
     });
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model }, `POST /${model}/bulk-update failed`);
+    if (err instanceof MutationPolicyViolationError) {
+      sendMutationPolicyViolation(res, err);
+      return;
+    }
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;
@@ -918,6 +1041,8 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
     }
 
     const { ids } = req.body as { ids: string[] };
+
+    assertBulkMutationAllowed({ model, operation: "delete" });
 
     if (!Array.isArray(ids) || ids.length === 0) {
       res.status(400).json({ error: "ids array is required and must not be empty" });
@@ -956,6 +1081,10 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
     });
   } catch (err) {
     (req as RequestWithLog).log?.error({ err, model }, `POST /${model}/bulk-delete failed`);
+    if (err instanceof MutationPolicyViolationError) {
+      sendMutationPolicyViolation(res, err);
+      return;
+    }
     if (isDbUnavailableError(err)) {
       sendDatabaseUnavailable(res);
       return;

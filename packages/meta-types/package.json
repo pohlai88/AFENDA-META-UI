@@ -58,6 +58,10 @@
       "import": "./dist/mesh.js",
       "types": "./dist/mesh.d.ts"
     },
+    "./mutation-policy": {
+      "import": "./dist/mutation-policy.js",
+      "types": "./dist/mutation-policy.d.ts"
+    },
     "./state-machine": {
       "import": "./dist/state-machine.js",
       "types": "./dist/state-machine.d.ts"

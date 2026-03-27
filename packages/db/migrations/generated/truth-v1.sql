@@ -5,8 +5,118 @@
 -- Regenerate with: pnpm --filter @afenda/db truth:generate
 -- Diff check:      pnpm --filter @afenda/db truth:check
 -- =============================================================================
--- Generated at: 2026-03-27T07:38:22.832Z
+-- Generated at: 2026-03-27T12:10:27.401Z
 
+-- Cross invariant: sales.cross.active_subscription_requires_sale_order | severity=warning | executionKind=trigger | model=sales_order
+CREATE OR REPLACE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_sales_order"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM (
+      SELECT
+        OLD."amount_total" AS "amount_total",
+        OLD."created_at" AS "created_at",
+        OLD."id" AS "id",
+        OLD."status" AS "status",
+        OLD."tenant_id" AS "tenant_id"
+    ) AS "m_sales_order"
+    JOIN "sales"."subscriptions" AS "m_subscription"
+      ON "m_sales_order"."id" = "m_subscription"."sales_order_id"
+    WHERE ("m_subscription"."status" <> 'active' OR "m_sales_order"."status" = 'sale')
+  ) THEN
+      RAISE WARNING 'Cross invariant sales.cross.active_subscription_requires_sale_order violated during direct mutation of sales_order.';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM (
+      SELECT
+        NEW."amount_total" AS "amount_total",
+        NEW."created_at" AS "created_at",
+        NEW."id" AS "id",
+        NEW."status" AS "status",
+        NEW."tenant_id" AS "tenant_id"
+    ) AS "m_sales_order"
+    JOIN "sales"."subscriptions" AS "m_subscription"
+      ON "m_sales_order"."id" = "m_subscription"."sales_order_id"
+    WHERE ("m_subscription"."status" <> 'active' OR "m_sales_order"."status" = 'sale')
+  ) THEN
+      RAISE WARNING 'Cross invariant sales.cross.active_subscription_requires_sale_order violated during direct mutation of sales_order.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+-- Cross invariant: sales.cross.active_subscription_requires_sale_order | severity=warning | executionKind=trigger | model=subscription
+CREATE OR REPLACE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_subscription"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM (
+      SELECT
+        OLD."close_reason_id" AS "close_reason_id",
+        OLD."created_at" AS "created_at",
+        OLD."id" AS "id",
+        OLD."recurring_total" AS "recurring_total",
+        OLD."sales_order_id" AS "sales_order_id",
+        OLD."status" AS "status",
+        OLD."tenant_id" AS "tenant_id"
+    ) AS "m_subscription"
+    JOIN "sales"."sales_orders" AS "m_sales_order"
+      ON "m_subscription"."sales_order_id" = "m_sales_order"."id"
+    WHERE ("m_subscription"."status" <> 'active' OR "m_sales_order"."status" = 'sale')
+  ) THEN
+      RAISE WARNING 'Cross invariant sales.cross.active_subscription_requires_sale_order violated during direct mutation of subscription.';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM (
+      SELECT
+        NEW."close_reason_id" AS "close_reason_id",
+        NEW."created_at" AS "created_at",
+        NEW."id" AS "id",
+        NEW."recurring_total" AS "recurring_total",
+        NEW."sales_order_id" AS "sales_order_id",
+        NEW."status" AS "status",
+        NEW."tenant_id" AS "tenant_id"
+    ) AS "m_subscription"
+    JOIN "sales"."sales_orders" AS "m_sales_order"
+      ON "m_subscription"."sales_order_id" = "m_sales_order"."id"
+    WHERE ("m_subscription"."status" <> 'active' OR "m_sales_order"."status" = 'sale')
+  ) THEN
+      RAISE WARNING 'Cross invariant sales.cross.active_subscription_requires_sale_order violated during direct mutation of subscription.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS "trg_xinv_sales_cross_active_subscription_requires_sale_order_sales_order" ON "sales"."sales_orders";
+CREATE TRIGGER "trg_xinv_sales_cross_active_subscription_requires_sale_order_sales_order"
+  BEFORE INSERT OR UPDATE OR DELETE ON "sales"."sales_orders"
+  FOR EACH ROW
+  EXECUTE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_sales_order"();
+DROP TRIGGER IF EXISTS "trg_xinv_sales_cross_active_subscription_requires_sale_order_subscription" ON "sales"."subscriptions";
+CREATE TRIGGER "trg_xinv_sales_cross_active_subscription_requires_sale_order_subscription"
+  BEFORE INSERT OR UPDATE OR DELETE ON "sales"."subscriptions"
+  FOR EACH ROW
+  EXECUTE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_subscription"();
+-- Mutation policy: sales.sales_order.dual_write_rollout
+--   mode=dual-write
+--   appliesTo=sales_order
+--   requiredEvents=sales_order.submitted, sales_order.confirmed, sales_order.cancelled
 -- Invariant: sales.consignment_agreement.active_has_partner | severity=error | scope=entity
 ALTER TABLE "sales"."consignment_agreements"
   DROP CONSTRAINT IF EXISTS "chk_inv_sales_consignment_agreement_active_has_partner";

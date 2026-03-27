@@ -31,6 +31,130 @@ All sections below follow this canonical vocabulary.
 
 ---
 
+## Implementation Status Update (2026-03-27)
+
+This section reflects the **actual repository implementation state** as of 2026-03-27.
+
+### Verified Signals
+
+- `pnpm --filter @afenda/meta-types test:run` -> passed (`5 files`, `21 tests`)
+- `pnpm --filter @afenda/meta-types lint:strict` -> passed
+- `pnpm --filter @afenda/db exec vitest run src/truth-compiler/dependency-graph.test.ts src/truth-compiler/event-compiler.test.ts` -> passed (`2 files`, `4 tests`)
+- `pnpm --filter @afenda/api exec vitest run src/policy/invariant-enforcer.test.ts` -> passed (`1 file`, `4 tests`)
+- `pnpm --filter @afenda/db truth:generate` -> completed (`packages/db/migrations/generated/truth-v1.sql`)
+- `pnpm --filter @afenda/db truth:check` -> passed
+- `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/sales-order-command-service.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`2 files`, `29 tests`)
+- `Set-Location apps/api; pnpm vitest run src/modules/sales/__test__/subscription-command-service.test.ts src/modules/sales/__test__/return-order-command-service.test.ts src/events/__test__/projectionRuntime.test.ts src/routes/__test__/sales.route.test.ts` -> passed (`4 files`, `37 tests`)
+- `pnpm --dir apps/api typecheck` -> passed
+- `pnpm run build` (workspace root) -> passed
+
+### Phase Progress Matrix
+
+| Phase | Status | Notes |
+| ----- | ------ | ----- |
+| `0` Reframe & Document | Done | README exists, package description updated, `@module` headers present across meta-types modules. |
+| `1` Quality Gates | Done | Local ESLint + Vitest setup in `@afenda/meta-types`; runtime and constants tests are implemented and green. |
+| `2` Structural Hardening | Done | Runtime moved under `src/runtime/`; backward-compatible re-export retained; subpath exports added; consumer mappings now resolve to `dist`. |
+| `3` Truth Engine Foundations | Done | `invariants.ts`, `state-machine.ts`, `truth-model.ts`, and event transition binding are implemented and exported. |
+| `3.6` Compiler V1 | Done (local gates) | Compiler modules + API invariant enforcer exist; scripts wired; generated artifact is now present and `truth:check` passes locally. |
+| `3.7` Compiler V2 Extensions | Partial (compiler/runtime slice substantially complete) | Cross-invariant compiler now emits `check`, `trigger`, and `deferred-trigger` SQL with dependency-ordered assembly, including join-backed multi-model trigger evaluation via explicit `joinPaths`. A real join-backed cross invariant is now wired into compiler input, and the generic API CRUD path routes writes through a mutation command gateway that blocks unsupported bulk writes and appends command-mapped domain events across sales orders, subscriptions, and return orders. Bounded-context command orchestration is now live for sales-order confirm/cancel, subscription activate/cancel, and return-order approve routes. Remaining: migrate more opted-in write paths off generic CRUD and reduce dual-write surface area. |
+| `3.8` Engine V5 Foundations | Partial (runtime hardening in progress) | Projection runtime utilities now exist for deterministic replay, projection checkpoints, and drift diagnostics (version/hash/staleness checks) with focused tests. Bounded-context command services cover sales orders plus initial subscription/return-order rollout under explicit mutation policy contracts. Remaining: schema compiler target, persisted projection checkpoint plumbing, replay tooling integration, and broader bounded-context rollout. |
+| `4` Governance & Stability | Partial | Export snapshot test added and `.changeset/config.json` added. Remaining: wire changeset flow into release/CI policy. |
+
+### Baseline Drift Note
+
+The next section (`Current State (Audit Summary)`) is the original baseline snapshot and is now historically useful but no longer current (tests/lint/docs/compiler work have progressed beyond it).
+
+---
+
+## Next Wave of Development (Wave 2)
+
+Goal: close Phase `3.6` into a fully reviewable compiler flow, then establish Phase `4` governance, then start executable Phase `3.7` behavior.
+
+### Wave 2 Scope (Priority Order)
+
+1. **Close 3.6 artifact and gate gaps**
+  - Run `truth:generate` and commit `packages/db/migrations/generated/truth-v1.sql`.
+  - Add/confirm CI gate executing `pnpm --filter @afenda/db truth:check`.
+  - Ensure generated SQL remains deterministic across consecutive runs.
+
+2. **Establish Phase 4 contract governance**
+  - [x] Add `packages/meta-types/src/__tests__/api-contract.test.ts` export snapshot test.
+  - [x] Add `.changeset/config.json` and make `@afenda/meta-types` versioning enforceable.
+  - Document deprecation workflow updates in the package README (if any deltas remain).
+
+3. **Start 3.7 executable compiler behavior**
+  - [x] Add cross-invariant compiler stage (respecting `executionKind` and strict-mode rejection).
+  - [x] Integrate dependency graph topological order into compiler assembly order.
+  - [x] Add deterministic tests for ordering and actionable cycle diagnostics.
+
+4. **Prepare event-sourcing rollout contracts (without full cutover)**
+  - [x] Introduce typed mutation policy contract (`direct | dual-write | event-only`) in the compiler/runtime boundary.
+  - [x] Implement guardrails to keep behavior opt-in per bounded context.
+
+### Definition of Done for Wave 2
+
+- `truth:check` passes locally and in CI. (local done)
+- Generated SQL artifact is present and stable in PR diffs.
+- Export snapshot test exists and passes.
+- Changeset config exists and supports package versioning.
+- Cross-invariant compiler stage is callable and covered by tests.
+- Compiler execution order uses dependency graph topological sorting.
+
+### Wave 2 Execution Log (Current)
+
+- Step 1 completed: generated truth SQL artifact and restored passing `truth:check` gate.
+- Step 2 completed: added API export snapshot coverage and initial changeset configuration.
+- Step 3 completed for current compiler slice: `trigger` / `deferred-trigger` cross-invariant SQL generation is implemented with green tests, multi-model trigger invariants compile through explicit join paths instead of per-model row-local evaluation, and `truth-v1.sql` now exercises that path through a real authored cross invariant.
+- Step 4 advanced beyond scaffolding: mutation policy contracts, runtime guard helpers, dependency nodes, `event-only` DB blockers, and an initial generic API mutation command gateway are implemented with green tests.
+- Step 4 runtime refinement: sales-order flows now use command-specific event mapping and the gateway supports projection-aware `event-only` execution (append + project + optional projection persistence).
+- Step 5 bounded-context runtime path: `/api/sales/orders/confirm` and `/api/sales/orders/cancel` now execute through a dedicated sales-order command service that loads projection state, appends command-specific events, and persists the refreshed sales-order projection.
+- Step 6 bounded-context expansion: `/api/sales/subscriptions/activate`, `/api/sales/subscriptions/cancel`, and `/api/sales/returns/approve` now execute through dedicated command services with explicit `dual-write` policy enforcement and command-specific event typing.
+- Step 7 projection runtime hardening: added deterministic replay/checkpoint/drift helpers (`projectionRuntime`) and focused tests for replay determinism, non-monotonic version rejection, and drift diagnostics.
+- Next active focus: persist projection checkpoints in opted-in command flows, then continue migration of remaining opted-in write paths off generic CRUD.
+
+## Next Wave of Development (Wave 3)
+
+Goal: turn the current sales-order bounded-context slice into a repeatable runtime pattern for additional aggregates and strengthen operational guarantees for `event-only` execution.
+
+### Wave 3 Scope (Priority Order)
+
+1. **Bounded-context expansion of command runtime**
+  - [x] Implement command services and routes for at least two additional aggregates currently using generic CRUD write paths (`subscription`, `return_order`).
+  - Reuse the same command flow shape proven in sales-order (`load -> validate -> append -> project -> persist projection`).
+  - Keep mutation policy enforcement explicit per aggregate.
+
+2. **Projection runtime hardening**
+  - [x] Add projection version metadata and replay-safe projector contracts for opted-in bounded contexts.
+  - [x] Add deterministic replay tests (`append event stream -> rebuild projection -> compare expected state`).
+  - [x] Add projection drift diagnostics (stale projection detection and actionable error payloads).
+
+3. **Generic CRUD de-scope for opted-in models**
+  - For models under `event-only`/`dual-write` rollout, route writes through command services by default.
+  - Keep read paths unchanged; only write orchestration moves.
+  - Add explicit guardrail tests proving unsupported bulk writes remain blocked.
+
+4. **Governance + CI closure for runtime rollout**
+  - Add focused CI test targets for bounded-context command services and projection replay checks.
+  - Wire release/change documentation for runtime policy transitions (`direct -> dual-write -> event-only`).
+
+### Definition of Done for Wave 3
+
+- At least two additional bounded contexts have command services using append-and-project runtime orchestration.
+- Projection replay tests exist and pass for all opted-in bounded contexts.
+- Generic CRUD no longer owns write orchestration for opted-in models.
+- CI includes bounded-context command + projection replay checks.
+- Runtime policy transition guidance is documented for operators.
+
+### Suggested Execution Sequence (Low-Risk)
+
+1. `3.6` artifact closure (`truth-v1.sql` generation + CI gate confirmation)
+2. Phase `4` governance primitives (snapshot + changesets)
+3. `3.7` compiler stage extension (cross-invariants + ordering)
+4. Event-sourcing contract flags and opt-in wiring
+
+---
+
 ## Current State (Audit Summary)
 
 | Metric                | Value                                             |
@@ -1013,8 +1137,8 @@ After each phase, the following must pass:
 - [ ] Compiler rejects ambiguous cross-entity invariants in strict mode
 - [ ] Dependency graph topological sort is deterministic across runs
 - [ ] Cycle detection returns actionable diagnostics (node IDs and dependency path)
-- [ ] Event-sourcing capability flags support `direct`, `dual-write`, and `event-only`
-- [ ] In `event-only` mode, direct mutation attempts are rejected for opted-in entities
+- [x] Event-sourcing capability flags support `direct`, `dual-write`, and `event-only`
+- [x] In `event-only` mode, direct mutation attempts are rejected for opted-in entities
 - [ ] Projection update path has test coverage for append -> project flow
 
 ### Phase 3.8

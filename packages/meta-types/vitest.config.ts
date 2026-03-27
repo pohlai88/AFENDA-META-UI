@@ -1,8 +1,10 @@
 import { defineConfig } from "vitest/config";
 
+const testInclude = ["src/**/__test__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"];
+
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts", "src/**/__tests__/**/*.ts"],
+    include: testInclude,
     environment: "node",
   },
 });

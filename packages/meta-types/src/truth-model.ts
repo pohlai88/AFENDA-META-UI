@@ -40,6 +40,40 @@ export interface TruthModel {
   relationships: string[];
   /** Policy IDs from declarative policy definitions. */
   policies: string[];
+  /** Optional event-sourcing rollout policy per entity/bounded context. */
+  mutationPolicies?: MutationPolicyDefinition[];
+}
+
+// ---------------------------------------------------------------------------
+// Event-Sourcing Mutation Policy Contracts (Phase 3.7.3)
+// ---------------------------------------------------------------------------
+
+/** Direct-write rollout mode for a truth model or entity. */
+export type MutationPolicy = "direct" | "dual-write" | "event-only";
+
+/** Operations subject to direct-mutation policy checks. */
+export type MutationOperation = "create" | "update" | "delete";
+
+/**
+ * Opt-in event-sourcing policy for a bounded context or specific entity models.
+ *
+ * `appliesTo` may target one or more entity IDs declared in the TruthModel.
+ * `requiredEvents` is used by compiler/runtime validation to ensure event-capable
+ * models are not marked dual-write/event-only without a declared event contract.
+ */
+export interface MutationPolicyDefinition {
+  /** Stable policy identifier for diagnostics and generated artifact comments. */
+  id: string;
+  /** Direct-write mode for the targeted models. */
+  mutationPolicy: MutationPolicy;
+  /** Target entity IDs within the bounded context. */
+  appliesTo: string[];
+  /** Optional event contract identifiers that must exist for this policy to be valid. */
+  requiredEvents?: string[];
+  /** Optional operations covered by the guard. Defaults to create/update/delete. */
+  directMutationOperations?: MutationOperation[];
+  /** Human-readable rollout reason used in diagnostics and generated SQL comments. */
+  description?: string;
 }
 
 // ---------------------------------------------------------------------------

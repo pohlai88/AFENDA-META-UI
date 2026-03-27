@@ -8,6 +8,7 @@ import type {
   CrossInvariantDefinition,
   EntityDef,
   InvariantDefinition,
+  MutationPolicyDefinition,
   StateMachineDefinition,
 } from "@afenda/meta-types";
 
@@ -16,6 +17,7 @@ export interface NormalizedTruthModel {
   entities: EntityDef[];
   invariants: InvariantDefinition[];
   crossInvariants: CrossInvariantDefinition[];
+  mutationPolicies: MutationPolicyDefinition[];
   stateMachines: StateMachineDefinition[];
   events: string[];
   /** Optional DB schema prefix for generated function/trigger/constraint names. */
@@ -31,6 +33,10 @@ export interface SqlSegment {
   model: string;
   /** Kind controls output order: comment → check → function → trigger. */
   kind: SqlSegmentKind;
+  /** Optional dependency-graph node identifier used for topological ordering. */
+  nodeId?: string;
+  /** Optional precomputed ordering index from dependency graph assembly. */
+  orderIndex?: number;
   /** Generated SQL text. Must be self-contained and idempotent. */
   sql: string;
 }

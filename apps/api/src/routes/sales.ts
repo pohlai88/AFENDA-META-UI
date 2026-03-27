@@ -15,12 +15,12 @@ import {
   validateConsignmentStockReport,
 } from "../modules/sales/consignment-service.js";
 import {
-  approveReturn,
   generateReturnCreditNote,
   inspectReturnOrder,
   receiveReturn,
   validateReturnOrder,
 } from "../modules/sales/returns-service.js";
+import { approveReturnOrderCommand } from "../modules/sales/return-order-command-service.js";
 import {
   activateSubscription,
   cancelSubscription,
@@ -29,6 +29,10 @@ import {
   resumeSubscription,
   validateSubscription,
 } from "../modules/sales/subscription-service.js";
+import {
+  activateSubscriptionCommand,
+  cancelSubscriptionCommand,
+} from "../modules/sales/subscription-command-service.js";
 import {
   approveDocument,
   createDocumentApprovalRequest,
@@ -39,6 +43,10 @@ import {
   resolveRoundingPolicy,
   reverseAccountingPosting,
 } from "../modules/sales/document-infrastructure-service.js";
+import {
+  cancelSalesOrder,
+  confirmSalesOrder,
+} from "../modules/sales/sales-order-command-service.js";
 
 const router = Router();
 
@@ -93,6 +101,17 @@ const reportOperationSchema = z.object({
   tenantId: z.int().positive().optional(),
   reportId: z.uuid().optional(),
   id: z.uuid().optional(),
+});
+
+const salesOrderOperationSchema = z.object({
+  tenantId: z.int().positive().optional(),
+  orderId: z.uuid().optional(),
+  id: z.uuid().optional(),
+  actorId: z.int().positive().optional(),
+});
+
+const cancelSalesOrderSchema = salesOrderOperationSchema.extend({
+  reason: z.string().max(2000).optional(),
 });
 
 const expireAgreementSchema = z.object({
@@ -245,6 +264,172 @@ const resolveRoundingPolicySchema = z.object({
   currencyCode: z.string().length(3).optional(),
   effectiveAt: z.coerce.date().optional(),
 });
+
+router.post(
+  "/orders/confirm/:id",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = salesOrderOperationSchema.safeParse({ ...req.body, id: req.params.id });
+
+    if (!parsed.success) {
+      throw new ValidationError("Invalid sales order payload.", parsed.error.flatten());
+    }
+
+    const orderId = parsed.data.orderId ?? parsed.data.id;
+    if (!orderId) {
+      throw new ValidationError("orderId is required.");
+    }
+
+    const tenantId =
+      parsed.data.tenantId ??
+      parseInteger((req.tenantContext?.tenantId as string | undefined) ?? null);
+    if (!tenantId) {
+      throw new ValidationError(
+        "A numeric tenantId is required. Provide it in the request body or x-tenant-id header."
+      );
+    }
+
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const result = await confirmSalesOrder({
+      tenantId,
+      orderId,
+      actorId,
+    });
+
+    res.status(200).json(result);
+  })
+);
+
+router.post(
+  "/orders/confirm",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = salesOrderOperationSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      throw new ValidationError("Invalid sales order payload.", parsed.error.flatten());
+    }
+
+    const orderId = parsed.data.orderId ?? parsed.data.id;
+    if (!orderId) {
+      throw new ValidationError("orderId is required.");
+    }
+
+    const tenantId =
+      parsed.data.tenantId ??
+      parseInteger((req.tenantContext?.tenantId as string | undefined) ?? null);
+    if (!tenantId) {
+      throw new ValidationError(
+        "A numeric tenantId is required. Provide it in the request body or x-tenant-id header."
+      );
+    }
+
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const result = await confirmSalesOrder({
+      tenantId,
+      orderId,
+      actorId,
+    });
+
+    res.status(200).json(result);
+  })
+);
+
+router.post(
+  "/orders/cancel/:id",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = cancelSalesOrderSchema.safeParse({ ...req.body, id: req.params.id });
+
+    if (!parsed.success) {
+      throw new ValidationError("Invalid sales order payload.", parsed.error.flatten());
+    }
+
+    const orderId = parsed.data.orderId ?? parsed.data.id;
+    if (!orderId) {
+      throw new ValidationError("orderId is required.");
+    }
+
+    const tenantId =
+      parsed.data.tenantId ??
+      parseInteger((req.tenantContext?.tenantId as string | undefined) ?? null);
+    if (!tenantId) {
+      throw new ValidationError(
+        "A numeric tenantId is required. Provide it in the request body or x-tenant-id header."
+      );
+    }
+
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const result = await cancelSalesOrder({
+      tenantId,
+      orderId,
+      actorId,
+      reason: parsed.data.reason,
+    });
+
+    res.status(200).json(result);
+  })
+);
+
+router.post(
+  "/orders/cancel",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = cancelSalesOrderSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      throw new ValidationError("Invalid sales order payload.", parsed.error.flatten());
+    }
+
+    const orderId = parsed.data.orderId ?? parsed.data.id;
+    if (!orderId) {
+      throw new ValidationError("orderId is required.");
+    }
+
+    const tenantId =
+      parsed.data.tenantId ??
+      parseInteger((req.tenantContext?.tenantId as string | undefined) ?? null);
+    if (!tenantId) {
+      throw new ValidationError(
+        "A numeric tenantId is required. Provide it in the request body or x-tenant-id header."
+      );
+    }
+
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const result = await cancelSalesOrder({
+      tenantId,
+      orderId,
+      actorId,
+      reason: parsed.data.reason,
+    });
+
+    res.status(200).json(result);
+  })
+);
 
 router.post(
   "/commissions/generate/:id",
@@ -862,7 +1047,7 @@ router.post(
       );
     }
 
-    const result = await approveReturn({
+    const result = await approveReturnOrderCommand({
       tenantId,
       returnOrderId,
       actorId,
@@ -904,7 +1089,7 @@ router.post(
       );
     }
 
-    const result = await approveReturn({
+    const result = await approveReturnOrderCommand({
       tenantId,
       returnOrderId,
       actorId,
@@ -1224,7 +1409,7 @@ router.post(
       );
     }
 
-    const result = await activateSubscription({
+    const result = await activateSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1266,7 +1451,7 @@ router.post(
       );
     }
 
-    const result = await activateSubscription({
+    const result = await activateSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1480,7 +1665,7 @@ router.post(
       );
     }
 
-    const result = await cancelSubscription({
+    const result = await cancelSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,
@@ -1524,7 +1709,7 @@ router.post(
       );
     }
 
-    const result = await cancelSubscription({
+    const result = await cancelSubscriptionCommand({
       tenantId,
       subscriptionId,
       actorId,

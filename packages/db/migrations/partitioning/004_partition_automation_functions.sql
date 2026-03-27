@@ -149,8 +149,8 @@ BEGIN
                     )
                 END
             ) FROM pg_tables WHERE schemaname = 'sales') >= CURRENT_DATE + INTERVAL '3 months'
-            THEN '✅ OK'::TEXT
-            ELSE '⚠️ WARNING'::TEXT
+            THEN 'Ô£à OK'::TEXT
+            ELSE 'ÔÜá´©Å WARNING'::TEXT
         END,
         CASE
             WHEN (SELECT MAX(
@@ -174,8 +174,8 @@ BEGIN
         (SELECT COUNT(*)::TEXT FROM sales.sales_orders_default),
         CASE
             WHEN (SELECT COUNT(*) FROM sales.sales_orders_default) = 0
-            THEN '✅ OK'::TEXT
-            ELSE '❌ ERROR'::TEXT
+            THEN 'Ô£à OK'::TEXT
+            ELSE 'ÔØî ERROR'::TEXT
         END,
         CASE
             WHEN (SELECT COUNT(*) FROM sales.sales_orders_default) = 0
@@ -190,8 +190,8 @@ BEGIN
         (SELECT COUNT(*)::TEXT FROM sales.accounting_postings_default),
         CASE
             WHEN (SELECT COUNT(*) FROM sales.accounting_postings_default) = 0
-            THEN '✅ OK'::TEXT
-            ELSE '❌ ERROR'::TEXT
+            THEN 'Ô£à OK'::TEXT
+            ELSE 'ÔØî ERROR'::TEXT
         END,
         CASE
             WHEN (SELECT COUNT(*) FROM sales.accounting_postings_default) = 0
@@ -206,8 +206,8 @@ BEGIN
         (SELECT COUNT(*)::TEXT FROM sales.domain_event_logs_default),
         CASE
             WHEN (SELECT COUNT(*) FROM sales.domain_event_logs_default) = 0
-            THEN '✅ OK'::TEXT
-            ELSE '❌ ERROR'::TEXT
+            THEN 'Ô£à OK'::TEXT
+            ELSE 'ÔØî ERROR'::TEXT
         END,
         CASE
             WHEN (SELECT COUNT(*) FROM sales.domain_event_logs_default) = 0
@@ -223,7 +223,7 @@ BEGIN
         (SELECT pg_size_pretty(MAX(pg_total_relation_size(schemaname||'.'||tablename)))
          FROM pg_tables
          WHERE schemaname = 'sales' AND tablename LIKE 'sales_orders_%'),
-        '📊 INFO'::TEXT,
+        '­ƒôè INFO'::TEXT,
         'Monitor partition sizes. Consider monthly archival if > 50GB per partition'::TEXT;
 END;
 $$ LANGUAGE plpgsql;

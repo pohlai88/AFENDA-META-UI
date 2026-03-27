@@ -11,9 +11,10 @@ import type {
   EntityDef,
   InvariantDefinition,
   InvariantRegistry,
+  MutationPolicyDefinition,
   StateMachineDefinition,
-  TruthModel,
 } from "@afenda/meta-types";
+import type { TruthModel } from "@afenda/meta-types/truth-model";
 
 import type { NormalizedTruthModel } from "./types.js";
 
@@ -32,6 +33,8 @@ export interface NormalizerInput {
   stateMachines: StateMachineDefinition[];
   /** Cross-entity invariants for advanced compiler stages. */
   crossInvariantDefinitions?: CrossInvariantDefinition[];
+  /** Event-sourcing rollout policies for compiler/runtime enforcement scaffolding. */
+  mutationPolicies?: MutationPolicyDefinition[];
   /** Optional DB schema prefix for generated artifact names (default: "public"). */
   namespace?: string;
 }
@@ -75,11 +78,15 @@ export function normalize(input: NormalizerInput): NormalizedTruthModel {
   const crossInvariants = (input.crossInvariantDefinitions ?? []).filter((crossInvariant) =>
     crossInvariant.involvedModels.every((modelId) => modelSet.has(modelId))
   );
+  const mutationPolicies = (input.mutationPolicies ?? input.model.mutationPolicies ?? []).filter(
+    (policy) => policy.appliesTo.every((modelId) => modelSet.has(modelId))
+  );
 
   return {
     entities: Array.from(entityIndex.values()),
     invariants: Array.from(invariantIndex.values()),
     crossInvariants,
+    mutationPolicies,
     stateMachines,
     events: [...new Set(input.model.events)],
     namespace: input.namespace,

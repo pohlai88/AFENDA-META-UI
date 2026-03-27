@@ -6,7 +6,7 @@ export const appUserRole = pgRole("app_user").existing();
 export const serviceRole = pgRole("service_role").existing();
 
 export const tenantIsolationCheck = () =>
-  sql`"tenantId" = NULLIF(current_setting('afenda.tenant_id', true), '')::int`;
+  sql`"tenant_id" = NULLIF(current_setting('afenda.tenant_id', true), '')::int`;
 
 export const tenantSelectPolicy = (tableName: string) =>
   pgPolicy(`${tableName}_tenant_select`, {

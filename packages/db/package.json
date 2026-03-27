@@ -53,7 +53,6 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate:manual": "tsx migrate-manual.ts",
     "db:studio": "drizzle-kit studio",
     "db:trigger:apply": "tsx src/_maintenance/apply-status-triggers.ts",
     "db:trigger:dry": "tsx src/_maintenance/apply-status-triggers.ts --dry-run",
@@ -62,8 +61,8 @@
     "ops:partition:plan": "tsx src/_maintenance/run-sales-partition-plan.ts --dry-run",
     "ops:partition:apply": "tsx src/_maintenance/run-sales-partition-plan.ts --apply",
     "test:db": "vitest run --passWithNoTests",
-    "test:graph-validation": "vitest run --passWithNoTests src/graph-validation/__tests__",
-    "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__tests__",
+    "test:graph-validation": "vitest run --passWithNoTests src/graph-validation/__test__",
+    "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__test__",
     "check:all": "pnpm run typecheck && pnpm run truth:check && pnpm run test:db",
     "gate:early": "pnpm run check:all",
     "seed": "tsx src/_seeds/index.ts",
@@ -74,13 +73,13 @@
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
+    "@neondatabase/serverless": "^1.0.2",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "catalog:",
     "pg": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@neondatabase/serverless": "^1.0.2",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "dotenv": "^17.3.1",

@@ -18,6 +18,7 @@ export type DependencyNodeKind =
   | "entity"
   | "invariant"
   | "cross-invariant"
+  | "mutation-policy"
   | "transition"
   | "event";
 
@@ -80,6 +81,21 @@ export function buildDependencyGraph(model: NormalizedTruthModel): DependencyGra
       id,
       kind: "cross-invariant",
       dependsOn: sortStrings(new Set([...entityDependencies, ...explicitDependencies])),
+    });
+  }
+
+  const allEvents = new Set(model.events);
+  for (const policy of model.mutationPolicies) {
+    const id = `mutation-policy:${policy.id}`;
+    const entityDependencies = policy.appliesTo.map((name) => `entity:${name}`);
+    const eventDependencies = (policy.requiredEvents ?? [])
+      .filter((eventType) => allEvents.has(eventType))
+      .map((eventType) => `event:${eventType}`);
+
+    nodes.set(id, {
+      id,
+      kind: "mutation-policy",
+      dependsOn: sortStrings(new Set([...entityDependencies, ...eventDependencies])),
     });
   }
 

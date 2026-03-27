@@ -17,6 +17,7 @@ export type * from "./invariants.js";
 export type * from "./sandbox.js";
 export * from "./graph.js";
 export type * from "./mesh.js";
+export * from "./mutation-policy.js";
 export type * from "./state-machine.js";
 export type * from "./truth-model.js";
 export type * from "./workflow.js";

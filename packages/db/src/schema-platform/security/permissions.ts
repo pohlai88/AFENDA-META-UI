@@ -12,7 +12,7 @@ export const permissions = securitySchema.table(
   "permissions",
   {
     permissionId: integer().primaryKey().generatedAlwaysAsIdentity(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     resource: text().notNull(),
     action: text().notNull(),
     key: text().notNull(),
@@ -76,7 +76,7 @@ export const rolePermissions = securitySchema.table(
   "role_permissions",
   {
     rolePermissionId: integer().primaryKey().generatedAlwaysAsIdentity(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     roleId: integer().notNull(),
     permissionId: integer().notNull(),
     ...timestampColumns,
@@ -128,7 +128,7 @@ export const userPermissions = securitySchema.table(
   "user_permissions",
   {
     userPermissionId: integer().primaryKey().generatedAlwaysAsIdentity(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     userId: integer().notNull(),
     permissionId: integer().notNull(),
     reason: text(),

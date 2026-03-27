@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 
+const testInclude = ["src/**/__test__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"];
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -16,7 +18,8 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: testInclude,
     environment: "node",
+    setupFiles: ["./src/__test__/setup-env.ts"],
   },
 });

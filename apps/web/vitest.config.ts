@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const testInclude = ["src/**/__test__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"];
+
 /**
  * Vitest Configuration - Enterprise Setup
  * ========================================
@@ -167,7 +169,7 @@ export default defineConfig({
     // ========================================
     // INCLUDE/EXCLUDE PATTERNS
     // ========================================
-    include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    include: testInclude,
     exclude: [
       "node_modules",
       "dist",

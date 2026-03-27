@@ -16,11 +16,13 @@
  */
 
 import type {
+  CrossInvariantDefinition,
   EntityDef,
   InvariantRegistry,
+  MutationPolicyDefinition,
   StateMachineDefinition,
-  TruthModel,
 } from "@afenda/meta-types";
+import type { TruthModel } from "@afenda/meta-types/truth-model";
 
 import type { NormalizerInput } from "./normalizer.js";
 
@@ -46,8 +48,19 @@ export const SALES_TRUTH_MODEL: TruthModel = {
     "sales.consignment_agreement.active_has_partner",
     "sales.sales_order.confirmed_amount_positive",
   ],
+  crossInvariants: ["sales.cross.active_subscription_requires_sale_order"],
   relationships: ["consignment_agreement_to_sales_order"],
   policies: [],
+  mutationPolicies: [
+    {
+      id: "sales.sales_order.dual_write_rollout",
+      mutationPolicy: "dual-write",
+      appliesTo: ["sales_order"],
+      requiredEvents: ["sales_order.submitted", "sales_order.confirmed", "sales_order.cancelled"],
+      description:
+        "Sales orders emit append-only domain events while legacy direct writes remain enabled.",
+    },
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -88,6 +101,11 @@ export const SALES_ENTITY_DEFS: EntityDef[] = [
       id: { type: "uuid", primary: true, defaultSql: "gen_random_uuid()" },
       status: { type: "text", nullable: false },
       recurring_total: { type: "numeric", nullable: false },
+      sales_order_id: {
+        type: "uuid",
+        nullable: true,
+        references: { table: "sales_orders", column: "id" },
+      },
       close_reason_id: { type: "uuid", nullable: true },
       tenant_id: { type: "integer", nullable: false },
       created_at: { type: "timestamp", defaultSql: "now()" },
@@ -203,6 +221,73 @@ export const SALES_STATE_MACHINES: StateMachineDefinition[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Mutation Policies (Phase 3.7.3)
+// ---------------------------------------------------------------------------
+
+export const SALES_MUTATION_POLICIES: MutationPolicyDefinition[] = [
+  {
+    id: "sales.sales_order.dual_write_rollout",
+    mutationPolicy: "dual-write",
+    appliesTo: ["sales_order"],
+    requiredEvents: ["sales_order.submitted", "sales_order.confirmed", "sales_order.cancelled"],
+    description:
+      "Sales orders emit append-only domain events while legacy direct writes remain enabled.",
+  },
+  {
+    id: "sales.subscription.dual_write_rollout",
+    mutationPolicy: "dual-write",
+    appliesTo: ["subscription"],
+    requiredEvents: ["subscription.activated", "subscription.cancelled", "subscription.paused"],
+    directMutationOperations: ["update"],
+    description:
+      "Subscription commands emit policy-aware lifecycle events while retaining direct updates during rollout.",
+  },
+  {
+    id: "sales.return_order.dual_write_rollout",
+    mutationPolicy: "dual-write",
+    appliesTo: ["return_order"],
+    requiredEvents: [
+      "return_order.approved",
+      "return_order.received",
+      "return_order.inspected",
+      "return_order.credited",
+    ],
+    directMutationOperations: ["update"],
+    description:
+      "Return-order commands append domain events while preserving direct writes for phased runtime migration.",
+  },
+];
+
+export const SALES_CROSS_INVARIANTS: CrossInvariantDefinition[] = [
+  {
+    id: "sales.cross.active_subscription_requires_sale_order",
+    description:
+      "Active subscriptions must resolve to a related sales order that is already in sale state.",
+    involvedModels: ["subscription", "sales_order"],
+    severity: "warning",
+    condition: {
+      logic: "or",
+      conditions: [
+        { field: "subscription.status", operator: "neq", value: "active" },
+        { field: "sales_order.status", operator: "eq", value: "sale" },
+      ],
+    },
+    joinPaths: [
+      {
+        fromModel: "subscription",
+        fromField: "sales_order_id",
+        toModel: "sales_order",
+        toField: "id",
+      },
+    ],
+    executionKind: "trigger",
+    dependsOn: ["sales.sales_order.confirmed_amount_positive"],
+    triggerOn: ["create", "update", "transition"],
+    tenantOverridable: false,
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Compiler Input — wire up registries for the full pipeline
 // ---------------------------------------------------------------------------
 
@@ -211,6 +296,8 @@ export const COMPILER_INPUT: NormalizerInput = {
   model: SALES_TRUTH_MODEL,
   entityDefs: SALES_ENTITY_DEFS,
   invariantRegistries: SALES_INVARIANT_REGISTRIES,
+  crossInvariantDefinitions: SALES_CROSS_INVARIANTS,
   stateMachines: SALES_STATE_MACHINES,
+  mutationPolicies: SALES_MUTATION_POLICIES,
   namespace: "sales",
 };

@@ -10,7 +10,7 @@ export const appModules = coreSchema.table(
   "app_modules",
   {
     appModuleId: integer().primaryKey().generatedAlwaysAsIdentity(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     code: text().notNull(),
     name: text().notNull(),
     description: text(),

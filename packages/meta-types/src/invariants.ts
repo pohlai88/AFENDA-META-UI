@@ -65,6 +65,18 @@ export interface InvariantRegistry {
 /** Explicit execution mode for cross-entity invariant enforcement. */
 export type InvariantExecutionKind = "check" | "trigger" | "deferred-trigger";
 
+/** Explicit join edge used to compile deterministic cross-entity trigger checks. */
+export interface CrossInvariantJoinDefinition {
+  /** Source model in the join edge. */
+  fromModel: string;
+  /** Source model field participating in the equality join. */
+  fromField: string;
+  /** Target model in the join edge. */
+  toModel: string;
+  /** Target model field participating in the equality join. */
+  toField: string;
+}
+
 /**
  * Cross-entity invariant definition for rules that span joins/aggregates.
  *
@@ -82,6 +94,8 @@ export interface CrossInvariantDefinition {
   severity: InvariantSeverity;
   /** Declarative condition for enforcement layers to compile. */
   condition: ConditionExpression;
+  /** Explicit join edges used for deterministic multi-model trigger compilation. */
+  joinPaths?: CrossInvariantJoinDefinition[];
   /** How this invariant must execute (never inferred by heuristics). */
   executionKind: InvariantExecutionKind;
   /**

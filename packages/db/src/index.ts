@@ -8,7 +8,9 @@
 export { db, pool, getPoolStats, checkDatabaseConnection, type Database } from "./db.js";
 export { relations } from "./relations.js";
 export {
+  SALES_CROSS_INVARIANTS,
   SALES_INVARIANT_REGISTRIES,
+  SALES_MUTATION_POLICIES,
   SALES_STATE_MACHINES,
   SALES_TRUTH_MODEL,
 } from "./truth-compiler/truth-config.js";

@@ -19,7 +19,7 @@ export const userRoles = securitySchema.table(
   {
     userId: integer().notNull(),
     roleId: integer().notNull(),
-    tenantId: integer().notNull(),
+    tenantId: integer("tenant_id").notNull(),
     assignedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     assignedBy: integer().notNull(),
     expiresAt: timestamp({ withTimezone: true }),

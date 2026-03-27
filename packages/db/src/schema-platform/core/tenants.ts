@@ -23,7 +23,7 @@ export interface TenantSettings {
 export const tenants = coreSchema.table(
   "tenants",
   {
-    tenantId: integer().primaryKey().generatedAlwaysAsIdentity(),
+    tenantId: integer("tenant_id").primaryKey().generatedAlwaysAsIdentity(),
     tenantCode: text().notNull(),
     ...nameColumn,
     status: tenantStatusEnum().notNull().default("ACTIVE"),
