@@ -22,6 +22,7 @@ import {
   getAuditFailures,
   getUserAuditTrail,
 } from "../audit/index.js";
+import { asyncHandler, ValidationError, NotFoundError } from "../middleware/errorHandler.js";
 import type { DecisionAuditQuery } from "@afenda/meta-types";
 
 const router = Router();
@@ -100,54 +101,48 @@ router.post("/audit-log", (req: Request, res: Response) => {
  * GET /api/audit/decisions?tenantId=acme-corp&eventType=metadata_resolved&limit=50
  * GET /api/audit/decisions?tenantId=acme-corp&scope=invoice.*&fromTimestamp=2026-03-25T00:00:00Z
  */
-router.get("/audit/decisions", (req: Request, res: Response) => {
-  try {
-    const { tenantId, eventType, scope, userId, fromTimestamp, toTimestamp, limit, offset } =
-      req.query;
+router.get("/audit/decisions", asyncHandler(async (req: Request, res: Response) => {
+  const { tenantId, eventType, scope, userId, fromTimestamp, toTimestamp, limit, offset } =
+    req.query;
 
-    if (!tenantId || typeof tenantId !== "string") {
-      res.status(400).json({ error: "tenantId query parameter is required" });
-      return;
-    }
-
-    // Validate eventType if provided
-    const validEventTypes = [
-      "metadata_resolved",
-      "rule_evaluated",
-      "policy_enforced",
-      "workflow_transitioned",
-      "event_propagated",
-      "layout_rendered",
-    ];
-
-    const normalizedEventType =
-      eventType && validEventTypes.includes(eventType as string)
-        ? (eventType as DecisionAuditQuery["eventType"])
-        : undefined;
-
-    const query: DecisionAuditQuery = {
-      tenantId,
-      eventType: normalizedEventType,
-      scope: scope ? (scope as string) : undefined,
-      userId: userId ? (userId as string) : undefined,
-      fromTimestamp: fromTimestamp ? (fromTimestamp as string) : undefined,
-      toTimestamp: toTimestamp ? (toTimestamp as string) : undefined,
-      limit: limit ? parseInt(limit as string) : 100,
-      offset: offset ? parseInt(offset as string) : 0,
-    };
-
-    const entries = queryDecisionAuditLog(query);
-    res.json({
-      count: entries.length,
-      limit: query.limit,
-      offset: query.offset,
-      entries,
-    });
-  } catch (error) {
-    auditLog.error(error, "Error querying decision audit log");
-    res.status(500).json({ error: "Failed to query audit log" });
+  if (!tenantId || typeof tenantId !== "string") {
+    throw new ValidationError("tenantId query parameter is required");
   }
-});
+
+  // Validate eventType if provided
+  const validEventTypes = [
+    "metadata_resolved",
+    "rule_evaluated",
+    "policy_enforced",
+    "workflow_transitioned",
+    "event_propagated",
+    "layout_rendered",
+  ];
+
+  const normalizedEventType =
+    eventType && validEventTypes.includes(eventType as string)
+      ? (eventType as DecisionAuditQuery["eventType"])
+      : undefined;
+
+  const query: DecisionAuditQuery = {
+    tenantId,
+    eventType: normalizedEventType,
+    scope: scope ? (scope as string) : undefined,
+    userId: userId ? (userId as string) : undefined,
+    fromTimestamp: fromTimestamp ? (fromTimestamp as string) : undefined,
+    toTimestamp: toTimestamp ? (toTimestamp as string) : undefined,
+    limit: limit ? parseInt(limit as string) : 100,
+    offset: offset ? parseInt(offset as string) : 0,
+  };
+
+  const entries = queryDecisionAuditLog(query);
+  res.json({
+    count: entries.length,
+    limit: query.limit,
+    offset: query.offset,
+    entries,
+  });
+}));
 
 /**
  * GET /api/audit/chain/:chainId
@@ -159,22 +154,16 @@ router.get("/audit/decisions", (req: Request, res: Response) => {
  * GET /api/audit/chain/req-12345
  * Returns: [metadata_resolved, rule_evaluated, policy_enforced, workflow_transitioned]
  */
-router.get("/audit/chain/:chainId", (req: Request, res: Response) => {
-  try {
-    const { chainId } = req.params;
-    const chain = getDecisionChain(chainId);
+router.get("/audit/chain/:chainId", asyncHandler(async (req: Request, res: Response) => {
+  const { chainId } = req.params;
+  const chain = getDecisionChain(chainId);
 
-    if (!chain) {
-      res.status(404).json({ error: "Chain not found" });
-      return;
-    }
-
-    res.json(chain);
-  } catch (error) {
-    auditLog.error(error, "Error retrieving decision chain");
-    res.status(500).json({ error: "Failed to retrieve decision chain" });
+  if (!chain) {
+    throw new NotFoundError("Chain not found");
   }
-});
+
+  res.json(chain);
+}));
 
 /**
  * GET /api/audit/stats/:eventType
@@ -199,28 +188,22 @@ router.get("/audit/chain/:chainId", (req: Request, res: Response) => {
  * GET /api/audit/stats/metadata_resolved?tenantId=acme-corp
  * GET /api/audit/stats/rule_evaluated?tenantId=acme-corp&timeWindowMs=86400000
  */
-router.get("/audit/stats/:eventType", (req: Request, res: Response) => {
-  try {
-    const { eventType } = req.params;
-    const { tenantId, timeWindowMs } = req.query;
+router.get("/audit/stats/:eventType", asyncHandler(async (req: Request, res: Response) => {
+  const { eventType } = req.params;
+  const { tenantId, timeWindowMs } = req.query;
 
-    if (!tenantId || typeof tenantId !== "string") {
-      res.status(400).json({ error: "tenantId query parameter is required" });
-      return;
-    }
-
-    const stats = getDecisionStats(
-      tenantId,
-      eventType,
-      timeWindowMs ? parseInt(timeWindowMs as string) : 3600000
-    );
-
-    res.json(stats);
-  } catch (error) {
-    auditLog.error(error, "Error retrieving decision stats");
-    res.status(500).json({ error: "Failed to retrieve stats" });
+  if (!tenantId || typeof tenantId !== "string") {
+    throw new ValidationError("tenantId query parameter is required");
   }
-});
+
+  const stats = getDecisionStats(
+    tenantId,
+    eventType,
+    timeWindowMs ? parseInt(timeWindowMs as string) : 3600000
+  );
+
+  res.json(stats);
+}));
 
 /**
  * GET /api/audit/slow-decisions
@@ -236,31 +219,25 @@ router.get("/audit/stats/:eventType", (req: Request, res: Response) => {
  * @example
  * GET /api/audit/slow-decisions?tenantId=acme-corp&thresholdMs=50&limit=20
  */
-router.get("/audit/slow-decisions", (req: Request, res: Response) => {
-  try {
-    const { tenantId, thresholdMs, limit } = req.query;
+router.get("/audit/slow-decisions", asyncHandler(async (req: Request, res: Response) => {
+  const { tenantId, thresholdMs, limit } = req.query;
 
-    if (!tenantId || typeof tenantId !== "string") {
-      res.status(400).json({ error: "tenantId query parameter is required" });
-      return;
-    }
-
-    const decisions = getSlowDecisions(
-      tenantId,
-      thresholdMs ? parseInt(thresholdMs as string) : 100,
-      limit ? parseInt(limit as string) : 10
-    );
-
-    res.json({
-      count: decisions.length,
-      threshold: thresholdMs || 100,
-      decisions,
-    });
-  } catch (error) {
-    auditLog.error(error, "Error retrieving slow decisions");
-    res.status(500).json({ error: "Failed to retrieve slow decisions" });
+  if (!tenantId || typeof tenantId !== "string") {
+    throw new ValidationError("tenantId query parameter is required");
   }
-});
+
+  const decisions = getSlowDecisions(
+    tenantId,
+    thresholdMs ? parseInt(thresholdMs as string) : 100,
+    limit ? parseInt(limit as string) : 10
+  );
+
+  res.json({
+    count: decisions.length,
+    threshold: thresholdMs || 100,
+    decisions,
+  });
+}));
 
 /**
  * GET /api/audit/failures
@@ -275,26 +252,20 @@ router.get("/audit/slow-decisions", (req: Request, res: Response) => {
  * @example
  * GET /api/audit/failures?tenantId=acme-corp&limit=100
  */
-router.get("/audit/failures", (req: Request, res: Response) => {
-  try {
-    const { tenantId, limit } = req.query;
+router.get("/audit/failures", asyncHandler(async (req: Request, res: Response) => {
+  const { tenantId, limit } = req.query;
 
-    if (!tenantId || typeof tenantId !== "string") {
-      res.status(400).json({ error: "tenantId query parameter is required" });
-      return;
-    }
-
-    const failures = getAuditFailures(tenantId, limit ? parseInt(limit as string) : 50);
-
-    res.json({
-      count: failures.length,
-      failures,
-    });
-  } catch (error) {
-    auditLog.error(error, "Error retrieving audit failures");
-    res.status(500).json({ error: "Failed to retrieve audit failures" });
+  if (!tenantId || typeof tenantId !== "string") {
+    throw new ValidationError("tenantId query parameter is required");
   }
-});
+
+  const failures = getAuditFailures(tenantId, limit ? parseInt(limit as string) : 50);
+
+  res.json({
+    count: failures.length,
+    failures,
+  });
+}));
 
 /**
  * GET /api/audit/user/:userId
@@ -309,27 +280,21 @@ router.get("/audit/failures", (req: Request, res: Response) => {
  * @example
  * GET /api/audit/user/alice?tenantId=acme-corp
  */
-router.get("/audit/user/:userId", (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const { tenantId, limit } = req.query;
+router.get("/audit/user/:userId", asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const { tenantId, limit } = req.query;
 
-    if (!tenantId || typeof tenantId !== "string") {
-      res.status(400).json({ error: "tenantId query parameter is required" });
-      return;
-    }
-
-    const trail = getUserAuditTrail(tenantId, userId, limit ? parseInt(limit as string) : 100);
-
-    res.json({
-      userId,
-      count: trail.length,
-      trail,
-    });
-  } catch (error) {
-    auditLog.error(error, "Error retrieving user audit trail");
-    res.status(500).json({ error: "Failed to retrieve user audit trail" });
+  if (!tenantId || typeof tenantId !== "string") {
+    throw new ValidationError("tenantId query parameter is required");
   }
-});
+
+  const trail = getUserAuditTrail(tenantId, userId, limit ? parseInt(limit as string) : 100);
+
+  res.json({
+    userId,
+    count: trail.length,
+    trail,
+  });
+}));
 
 export default router;

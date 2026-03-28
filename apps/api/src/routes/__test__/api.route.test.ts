@@ -173,26 +173,7 @@ describe("/api generic CRUD invariant enforcement", () => {
     expect(updateSetMock).not.toHaveBeenCalled();
   });
 
-  it("appends a direct mutation event for dual-write create operations", async () => {
-    insertValuesMock.mockReturnValueOnce({
-      returning: vi.fn().mockResolvedValueOnce([
-        {
-          id: "so-2",
-          status: "draft",
-          amount_total: 120,
-        },
-      ]),
-    });
-    dbAppendEventMock.mockResolvedValueOnce({
-      id: "evt-1",
-      aggregateType: "sales_order",
-      aggregateId: "so-2",
-      eventType: "sales_order.submitted",
-      payload: {},
-      version: 1,
-      timestamp: new Date().toISOString(),
-    });
-
+  it("rejects direct sales_order create when shared event-only policy is active", async () => {
     const response = await request(createApp({ uid: "21", roles: ["admin"] }))
       .post("/api/sales_order")
       .send({
@@ -200,16 +181,12 @@ describe("/api generic CRUD invariant enforcement", () => {
         amount_total: 120,
       });
 
-    expect(response.status).toBe(201);
-    expect(response.body.meta.mutationPolicy).toBe("dual-write");
-    expect(response.body.meta.eventType).toBe("sales_order.submitted");
-    expect(dbAppendEventMock).toHaveBeenCalledWith(
-      "sales_order",
-      "so-2",
-      "sales_order.submitted",
-      expect.objectContaining({ operation: "create", model: "sales_order" }),
-      expect.objectContaining({ actor: "21", source: "api.generic-crud" })
-    );
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("MUTATION_POLICY_VIOLATION");
+    expect(response.body.details.model).toBe("sales_order");
+    expect(response.body.details.mutationPolicy).toBe("event-only");
+    expect(insertValuesMock).not.toHaveBeenCalled();
+    expect(dbAppendEventMock).not.toHaveBeenCalled();
   });
 
   it("rejects bulk update for non-direct mutation policies", async () => {
@@ -223,7 +200,54 @@ describe("/api generic CRUD invariant enforcement", () => {
     expect(response.status).toBe(409);
     expect(response.body.code).toBe("MUTATION_POLICY_VIOLATION");
     expect(response.body.details.model).toBe("sales_order");
-    expect(response.body.details.mutationPolicy).toBe("dual-write");
+    expect(response.body.details.mutationPolicy).toBe("event-only");
     expect(updateSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects commission_entry bulk update after shared event-only promotion", async () => {
+    const response = await request(createApp({ uid: "21", roles: ["admin"] }))
+      .post("/api/commission_entry/bulk-update")
+      .send({
+        ids: ["entry-1", "entry-2"],
+        updates: { status: "approved" },
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("MUTATION_POLICY_VIOLATION");
+    expect(response.body.details.model).toBe("commission_entry");
+    expect(response.body.details.mutationPolicy).toBe("event-only");
+    expect(updateSetMock).not.toHaveBeenCalled();
+  });
+
+  it("prevents generic commission_entry create bypass after shared promotion", async () => {
+    const response = await request(createApp({ uid: "21", roles: ["admin"] }))
+      .post("/api/commission_entry")
+      .send({
+        id: "entry-1",
+        status: "draft",
+      });
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.status).toBeLessThan(500);
+    expect(typeof response.body.error).toBe("string");
+    expect(insertValuesMock).not.toHaveBeenCalled();
+  });
+
+  it("prevents generic commission_entry delete bypass after shared promotion", async () => {
+    selectLimitMock.mockResolvedValueOnce([
+      {
+        id: "entry-1",
+        status: "draft",
+      },
+    ]);
+
+    const response = await request(createApp({ uid: "21", roles: ["admin"] })).delete(
+      "/api/commission_entry/entry-1"
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.status).toBeLessThan(500);
+    expect(typeof response.body.error).toBe("string");
+    expect(deleteWhereMock).not.toHaveBeenCalled();
   });
 });

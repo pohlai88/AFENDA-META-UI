@@ -15,6 +15,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { logger } from "../logging/index.js";
+import { MutationPolicyViolationError } from "../policy/mutation-command-gateway.js";
 
 type RequestLog = {
   error: (obj: unknown, msg?: string) => void;
@@ -101,6 +102,23 @@ export function errorHandler(
     },
     "Error caught by global handler"
   );
+
+  // ── Mutation policy violations → 409 ──────────────────────────────────
+  if (err instanceof MutationPolicyViolationError) {
+    res.status(err.statusCode).json({
+      error: "Mutation policy violation",
+      code: err.code,
+      message: err.message,
+      details: {
+        model: err.model,
+        operation: err.operation,
+        mutationPolicy: err.mutationPolicy,
+        policyId: err.policy?.id,
+        source: err.source,
+      },
+    });
+    return;
+  }
 
   // Determine status code
   const statusCode = err instanceof AppError ? err.statusCode : 500;

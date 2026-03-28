@@ -1,0 +1,216 @@
+name: Changesets Release
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - '.changeset/**'
+      - 'packages/**'
+      - 'apps/**'
+      - 'pnpm-lock.yaml'
+
+concurrency:
+  group: changesets-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PNPM_VERSION: 10.33.0
+  NODE_VERSION: 22.x
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  setup:
+    name: Setup & Check Changesets
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+      changesets_count: ${{ steps.check.outputs.count }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Check for changesets
+        id: check
+        run: |
+          CHANGESETS_DIR=".changeset"
+          count=$(find "$CHANGESETS_DIR" -type f -name "*.md" ! -name "README.md" | wc -l)
+          if [ "$count" -gt 0 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "count=$count" >> $GITHUB_OUTPUT
+            echo "Found $count changeset(s)"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "count=0" >> $GITHUB_OUTPUT
+            echo "No changesets found"
+          fi
+
+  version:
+    name: Version & Changelog
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.has_changes == 'true'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Version packages
+        run: pnpm changeset version
+
+      - name: Generate changelog
+        run: pnpm changeset list
+        id: changelog
+
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Commit version bump
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: version packages"
+            git push origin HEAD:${{ github.ref }}
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Create summary
+        run: |
+          echo "## ✅ Version Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changesets processed**: ${{ needs.setup.outputs.changesets_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Changes" >> $GITHUB_STEP_SUMMARY
+          pnpm changeset list >> $GITHUB_STEP_SUMMARY || echo "See changesets for details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Review version changes in package.json files" >> $GITHUB_STEP_SUMMARY
+          echo "- Review CHANGELOG.md updates" >> $GITHUB_STEP_SUMMARY
+          echo "- Publish with: \`pnpm changeset publish\`" >> $GITHUB_STEP_SUMMARY
+
+  publish:
+    name: Publish to Package Registry
+    runs-on: ubuntu-latest
+    needs: [setup, version]
+    if: needs.setup.outputs.has_changes == 'true'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Configure npm registry
+        run: |
+          cat > ~/.npmrc << EOF
+          //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          registry=https://registry.npmjs.org
+          EOF
+        if: secrets.NPM_TOKEN != ''
+
+      - name: Publish packages
+        run: pnpm changeset publish
+        if: secrets.NPM_TOKEN != ''
+
+      - name: Skip publish notice
+        if: secrets.NPM_TOKEN == ''
+        run: |
+          echo "⚠️  NPM_TOKEN not configured. Skipping publish step."
+          echo "Configure NPM_TOKEN in GitHub Secrets to enable automated publishing."
+
+      - name: Create release notes
+        run: |
+          echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: Changesets processed and versioning complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "**npm publish**: ✅ Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**npm publish**: ⏭️  Skipped (NPM_TOKEN not configured)" >> $GITHUB_STEP_SUMMARY
+          fi

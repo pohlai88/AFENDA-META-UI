@@ -22,5 +22,6 @@ export type * from "./state-machine.js";
 export type * from "./truth-model.js";
 export type * from "./workflow.js";
 export type * from "./tenant.js";
+export type * from "./organization.js";
 export * from "./resolutionCache.js";
 export * from "./utils.js";

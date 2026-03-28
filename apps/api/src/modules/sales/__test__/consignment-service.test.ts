@@ -48,6 +48,7 @@ void ensureTestEnv;
 vi.mock("../../../db/index.js", () => ({
   db: {
     select: selectMock,
+    selectDistinct: selectMock,
     update: updateMock,
   },
 }));

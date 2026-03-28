@@ -10,6 +10,7 @@ const {
   approveCommissionEntriesMock,
   loadCommissionEntriesForMutationMock,
   payCommissionEntriesMock,
+  removeCommissionEntryMock,
   persistPreparedCommissionGenerationMock,
   prepareCommissionGenerationMock,
   queueSelect,
@@ -48,6 +49,7 @@ const {
     approveCommissionEntriesMock: vi.fn(),
     loadCommissionEntriesForMutationMock: vi.fn(),
     payCommissionEntriesMock: vi.fn(),
+    removeCommissionEntryMock: vi.fn(),
     persistPreparedCommissionGenerationMock: vi.fn(),
     prepareCommissionGenerationMock: vi.fn(),
     queueSelect: (...rows: unknown[][]) => {
@@ -78,6 +80,7 @@ vi.mock("../commission-service.js", () => ({
   approveCommissionEntries: approveCommissionEntriesMock,
   loadCommissionEntriesForMutation: loadCommissionEntriesForMutationMock,
   payCommissionEntries: payCommissionEntriesMock,
+  removeCommissionEntry: removeCommissionEntryMock,
   persistPreparedCommissionGeneration: persistPreparedCommissionGenerationMock,
   prepareCommissionGeneration: prepareCommissionGenerationMock,
 }));
@@ -98,6 +101,7 @@ import {
   generateCommissionForOrderCommand,
   payCommissionEntriesCommand,
   payCommissionEntryCommand,
+  removeCommissionEntryCommand,
 } from "../commission-command-service.js";
 
 const baseEntry = {
@@ -170,6 +174,33 @@ describe("commission command service", () => {
     expect(result.updatedCount).toBe(1);
     expect(result.mutationPolicy).toBe("event-only");
     expect(result.event?.eventType).toBe("commission_entry.paid");
+  });
+
+  it("runs single-entry delete under event-only policy and appends a deleted event", async () => {
+    queueCommissionEntryReads(baseEntry);
+    removeCommissionEntryMock.mockResolvedValueOnce({
+      deletedCount: 1,
+      entry: {
+        ...baseEntry,
+        updatedBy: 77,
+        deletedAt: new Date("2026-03-28T14:00:00.000Z"),
+      },
+    });
+
+    const result = await removeCommissionEntryCommand({
+      tenantId: 7,
+      actorId: 77,
+      entryId: "entry-1",
+    });
+
+    expect(result.deletedCount).toBe(1);
+    expect(result.mutationPolicy).toBe("event-only");
+    expect(result.event?.eventType).toBe("commission_entry.deleted");
+    expect(removeCommissionEntryMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      actorId: 77,
+      entryId: "entry-1",
+    });
   });
 
   it("rejects payment for draft entries before appending an event", async () => {

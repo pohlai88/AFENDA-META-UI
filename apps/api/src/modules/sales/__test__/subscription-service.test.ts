@@ -13,6 +13,9 @@ const { ensureTestEnv, selectMock, updateMock, insertMock, queueSelect, setUpdat
         where: vi.fn(() => chain),
         orderBy: vi.fn(() => chain),
         limit: vi.fn(async () => rows),
+        prepare: vi.fn(() => ({
+          execute: vi.fn(async () => rows),
+        })),
         then: (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve),
       };
 
@@ -92,9 +95,19 @@ vi.mock("../../../utils/audit-logs.js", () => ({
 vi.mock("../../../db/index.js", () => ({
   db: {
     select: selectMock,
+    selectDistinct: selectMock,
     update: updateMock,
     insert: insertMock,
   },
+}));
+
+vi.mock("@afenda/db", () => ({
+  relations: {},
+  schema: {},
+  eq: vi.fn(),
+  and: vi.fn(),
+  or: vi.fn(),
+  sql: vi.fn(),
 }));
 
 vi.mock("@afenda/db/schema-domain", () => ({

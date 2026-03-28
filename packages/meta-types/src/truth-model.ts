@@ -74,6 +74,8 @@ export interface MutationPolicyDefinition {
   directMutationOperations?: MutationOperation[];
   /** Human-readable rollout reason used in diagnostics and generated SQL comments. */
   description?: string;
+  /** Target mutation policy mode for promotion planning. Set on dual-write policies to declare the intended production mode. */
+  targetMode?: MutationPolicy;
 }
 
 // ---------------------------------------------------------------------------

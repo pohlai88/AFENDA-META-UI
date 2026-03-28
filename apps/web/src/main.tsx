@@ -16,13 +16,13 @@ import { registerAppQueryErrorOverrides } from "./bootstrap/query-error-override
 import { bootstrapAnalytics } from "./bootstrap/analytics-bootstrap";
 import { getAppConfig } from "./lib/app-config";
 import App from "./App.js";
+import "@fontsource-variable/geist";
 import "./index.css";
 import { logger } from "./lib/logger";
 
 const log = logger.child({ module: "main" });
 
 document.title = import.meta.env.VITE_APP_TITLE ?? "AFENDA";
-
 
 // ───────────────────────────────────────────────────────────────────────
 // Dynamic Import Error Handler

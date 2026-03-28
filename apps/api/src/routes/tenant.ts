@@ -18,11 +18,8 @@
 
 import { Router, type Request, type Response } from "express";
 import {
-  registerTenant,
-  updateTenant,
   getTenant,
   listTenants,
-  removeTenant,
   registerOverride,
   removeOverride,
   getOverridesForModel,
@@ -31,6 +28,14 @@ import {
   registerIndustryTemplate,
   getTenantStats,
 } from "../tenant/index.js";
+import {
+  registerTenantCommand,
+  removeTenantCommand,
+  updateTenantCommand,
+} from "../tenant/tenant-command-service.js";
+import { MutationPolicyViolationError } from "../policy/mutation-command-gateway.js";
+import { asyncHandler } from "../middleware/errorHandler.js";
+import { resolveActorId } from "./_shared/actor-resolution.js";
 import type { TenantDefinition, MetadataOverride, ResolutionContext } from "@afenda/meta-types";
 
 const router = Router();
@@ -49,19 +54,37 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
-  try {
-    const tenant = req.body as TenantDefinition;
-    if (!tenant.id) {
-      return res.status(400).json({ error: "Tenant must have an id" });
+router.post(
+  "/",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const tenant = req.body as TenantDefinition;
+      if (!tenant.id) {
+        res.status(400).json({ error: "Tenant must have an id" });
+        return;
+      }
+
+      const result = await registerTenantCommand({
+        tenant,
+        actorId: resolveActorId(req),
+      });
+
+      res.status(201).json({
+        data: tenant,
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      const msg = err instanceof Error ? err.message : "Failed to register tenant";
+      res.status(400).json({ error: msg });
     }
-    registerTenant(tenant);
-    res.status(201).json({ id: tenant.id, message: "Tenant registered" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to register tenant";
-    res.status(400).json({ error: msg });
-  }
-});
+  })
+);
 
 router.get("/:tenantId", async (req: Request, res: Response) => {
   try {
@@ -76,32 +99,78 @@ router.get("/:tenantId", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:tenantId", async (req: Request, res: Response) => {
-  try {
-    const tenant = req.body as TenantDefinition;
-    if (tenant.id !== req.params.tenantId) {
-      return res.status(400).json({ error: "Tenant ID must match URL parameter" });
-    }
-    updateTenant(tenant);
-    res.json({ message: "Tenant updated" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to update tenant";
-    res.status(400).json({ error: msg });
-  }
-});
+router.put(
+  "/:tenantId",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const tenant = req.body as TenantDefinition;
+      if (tenant.id !== req.params.tenantId) {
+        res.status(400).json({ error: "Tenant ID must match URL parameter" });
+        return;
+      }
 
-router.delete("/:tenantId", async (req: Request, res: Response) => {
-  try {
-    const { tenantId } = req.params;
-    const removed = removeTenant(tenantId);
-    if (!removed) {
-      return res.status(404).json({ error: `Tenant "${tenantId}" not found` });
+      if (!getTenant(tenant.id)) {
+        res.status(404).json({ error: `Tenant "${tenant.id}" not found` });
+        return;
+      }
+
+      const result = await updateTenantCommand({
+        tenant,
+        actorId: resolveActorId(req),
+      });
+
+      res.json({
+        data: tenant,
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      const msg = err instanceof Error ? err.message : "Failed to update tenant";
+      res.status(400).json({ error: msg });
     }
-    res.json({ message: "Tenant deleted" });
-  } catch (_err) {
-    res.status(500).json({ error: "Failed to delete tenant" });
-  }
-});
+  })
+);
+
+router.delete(
+  "/:tenantId",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { tenantId } = req.params;
+      if (!getTenant(tenantId)) {
+        res.status(404).json({ error: `Tenant "${tenantId}" not found` });
+        return;
+      }
+
+      const result = await removeTenantCommand({
+        tenantId,
+        actorId: resolveActorId(req),
+      });
+
+      if (!result.record) {
+        res.status(404).json({ error: `Tenant "${tenantId}" not found` });
+        return;
+      }
+
+      res.json({
+        message: "Tenant deleted",
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      res.status(500).json({ error: "Failed to delete tenant" });
+    }
+  })
+);
 
 // ────────────────────────────────────────────────────────────────────────
 // Overrides (Customization Stack)

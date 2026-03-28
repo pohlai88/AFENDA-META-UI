@@ -78,6 +78,10 @@
       "import": "./dist/tenant.js",
       "types": "./dist/tenant.d.ts"
     },
+    "./organization": {
+      "import": "./dist/organization.js",
+      "types": "./dist/organization.d.ts"
+    },
     "./resolutionCache": {
       "import": "./dist/resolutionCache.js",
       "types": "./dist/resolutionCache.d.ts"
@@ -94,7 +98,8 @@
     "lint:strict": "eslint src/ --max-warnings 0",
     "lint:fix": "eslint src/ --fix",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "gate:export-snapshot": "vitest run src/__test__/api-contract.test.ts"
   },
   "devDependencies": {
     "typescript": "catalog:",

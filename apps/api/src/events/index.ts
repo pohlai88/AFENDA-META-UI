@@ -27,7 +27,9 @@ export {
   detectProjectionDrift,
   assertNoProjectionDrift,
   ProjectionDriftError,
+  getLatestEventVersionStrict,
   ProjectionReplayError,
+  type ProjectionReplayConflictDetails,
 } from "./projectionRuntime.js";
 
 export {

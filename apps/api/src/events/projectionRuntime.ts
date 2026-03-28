@@ -40,12 +40,23 @@ export interface ProjectionDriftReport {
   checkpointVersion: number;
 }
 
+export interface ProjectionReplayConflictDetails {
+  projectionName: string;
+  previousVersion: number;
+  receivedVersion: number;
+  eventId: string;
+  aggregateType: string;
+  aggregateId: string;
+}
+
 export class ProjectionReplayError extends Error {
   readonly code = "PROJECTION_REPLAY_ERROR";
+  readonly details?: ProjectionReplayConflictDetails;
 
-  constructor(message: string) {
+  constructor(message: string, details?: ProjectionReplayConflictDetails) {
     super(message);
     this.name = "ProjectionReplayError";
+    this.details = details;
   }
 }
 
@@ -150,13 +161,26 @@ export function assertNoProjectionDrift(report: ProjectionDriftReport): void {
   }
 }
 
+export function getLatestEventVersionStrict(events: DomainEvent[], projectionName: string): number {
+  assertMonotonicVersions(events, projectionName);
+  return events.at(-1)?.version ?? 0;
+}
+
 function assertMonotonicVersions(events: DomainEvent[], projectionName: string): void {
   let previousVersion = 0;
 
   for (const event of events) {
     if (event.version <= previousVersion) {
       throw new ProjectionReplayError(
-        `Projection ${projectionName} requires strictly increasing event versions; received ${event.version} after ${previousVersion}.`
+        `Projection ${projectionName} requires strictly increasing event versions; received ${event.version} after ${previousVersion}.`,
+        {
+          projectionName,
+          previousVersion,
+          receivedVersion: event.version,
+          eventId: event.id,
+          aggregateType: event.aggregateType,
+          aggregateId: event.aggregateId,
+        }
       );
     }
 

@@ -33,6 +33,7 @@ import {
   executeMutationCommand,
 } from "../policy/mutation-command-gateway.js";
 import { parseFilters, parseSortParams, buildWhereClause } from "../utils/queryBuilder.js";
+import { resolveActorId } from "./_shared/actor-resolution.js";
 import type { SessionContext, MetaField } from "@afenda/meta-types";
 
 const router = Router();
@@ -149,18 +150,6 @@ function sendMutationPolicyViolation(res: Response, err: MutationPolicyViolation
 
 function session(req: Request): SessionContext {
   return (req as Request & { session: SessionContext }).session;
-}
-
-function resolveActorId(sess: SessionContext): string | undefined {
-  const maybeRecord = sess as unknown as Record<string, unknown>;
-
-  for (const candidate of [maybeRecord.uid, maybeRecord.userId, maybeRecord.id]) {
-    if (typeof candidate === "string" && candidate.length > 0) {
-      return candidate;
-    }
-  }
-
-  return undefined;
 }
 
 /** Dynamically resolve the Drizzle table object by model name. */
@@ -670,7 +659,7 @@ router.post("/:model", async (req: Request, res: Response) => {
     const commandResult = await executeMutationCommand({
       model,
       operation: "create",
-      actorId: resolveActorId(sess),
+      actorId: resolveActorId(req),
       nextRecord: safe,
       mutate: async () => {
         const [created] = await dbLike.insert(table).values(safe).returning();
@@ -766,7 +755,7 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
       model,
       operation: "update",
       recordId: id,
-      actorId: resolveActorId(sess),
+      actorId: resolveActorId(req),
       existingRecord: existing,
       nextRecord,
       mutate: async () => {
@@ -859,7 +848,7 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const actorId = resolveActorId(sess);
+    const actorId = resolveActorId(req);
 
     if (softDeleteColumn) {
       const now = new Date();

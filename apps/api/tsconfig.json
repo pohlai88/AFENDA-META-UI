@@ -9,12 +9,12 @@
     "paths": {
       "@afenda/meta-types": ["../../packages/meta-types/dist/index.d.ts"],
       "@afenda/meta-types/*": ["../../packages/meta-types/dist/*"],
-      "@afenda/db": ["../../packages/db/src/index.ts"],
-      "@afenda/db/truth-compiler": ["../../packages/db/src/truth-compiler/index.ts"],
-      "@afenda/db/*": ["../../packages/db/src/*"],
-      "@afenda/db/schema-meta": ["../../packages/db/src/schema-meta/index.ts"],
-      "@afenda/db/schema-domain": ["../../packages/db/src/schema-domain/index.ts"],
-      "@afenda/db/schema-platform": ["../../packages/db/src/schema-platform/index.ts"]
+      "@afenda/db": ["../../packages/db/dist/index.d.ts"],
+      "@afenda/db/truth-compiler": ["../../packages/db/dist/truth-compiler/index.d.ts"],
+      "@afenda/db/*": ["../../packages/db/dist/*"],
+      "@afenda/db/schema-meta": ["../../packages/db/dist/schema-meta/index.d.ts"],
+      "@afenda/db/schema-domain": ["../../packages/db/dist/schema-domain/index.d.ts"],
+      "@afenda/db/schema-platform": ["../../packages/db/dist/schema-platform/index.d.ts"]
     }
   },
   "include": ["src"]

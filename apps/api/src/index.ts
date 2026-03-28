@@ -52,6 +52,7 @@ import graphRouter from "./routes/graph.js";
 import meshRouter from "./routes/mesh.js";
 import workflowRouter from "./routes/workflow.js";
 import tenantRouter from "./routes/tenant.js";
+import organizationRouter from "./routes/organization.js";
 import expEngineRouter from "./routes/expEngine.js";
 import uploadsRouter from "./routes/uploads.js";
 import searchRouter from "./routes/search.js";
@@ -230,6 +231,7 @@ if (config.rateLimitEnabled) {
   app.use("/api/mesh", apiLimiter);
   app.use("/api/workflows", apiLimiter);
   app.use("/api/tenants", metaLimiter); // Slightly lighter — mostly metadata ops
+  app.use("/api/organizations", metaLimiter);
   app.use("/api/rules", apiLimiter); // Rule evaluation
   app.use("/api/expressions", apiLimiter); // Expression testing
   app.use("/api/uploads", apiLimiter);
@@ -241,6 +243,7 @@ app.use("/api/graph", graphRouter);
 app.use("/api/mesh", meshRouter);
 app.use("/api/workflows", workflowRouter);
 app.use("/api/tenants", tenantRouter);
+app.use("/api/organizations", organizationRouter);
 app.use("/api/rules", expEngineRouter);
 app.use("/api/expressions", expEngineRouter);
 app.use("/api", uploadsRouter);

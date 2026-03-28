@@ -17,18 +17,23 @@
 
 import { Router, type Request, type Response } from "express";
 import {
-  registerWorkflow,
-  updateWorkflow,
-  removeWorkflow,
   getWorkflow,
   listWorkflows,
   triggerWorkflows,
-  advanceInstance,
-  submitApproval,
   getInstance,
   listInstances,
   getWorkflowStats,
 } from "../workflow/index.js";
+import {
+  advanceWorkflowInstanceCommand,
+  createWorkflowCommand,
+  removeWorkflowCommand,
+  submitWorkflowApprovalCommand,
+  updateWorkflowCommand,
+} from "../workflow/workflow-command-service.js";
+import { MutationPolicyViolationError } from "../policy/mutation-command-gateway.js";
+import { asyncHandler } from "../middleware/errorHandler.js";
+import { resolveActorId, resolveNumericActorId } from "./_shared/actor-resolution.js";
 import type { WorkflowDefinition, WorkflowStatus } from "@afenda/meta-types";
 
 const router = Router();
@@ -73,46 +78,107 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
-  try {
-    const def = req.body as WorkflowDefinition;
-    if (!def.id) {
-      return res.status(400).json({ error: "Workflow must have an id" });
-    }
-    registerWorkflow(def);
-    res.status(201).json({ id: def.id, message: "Workflow registered" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to register workflow";
-    res.status(400).json({ error: msg });
-  }
-});
+router.post(
+  "/",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const def = req.body as WorkflowDefinition;
+      if (!def.id) {
+        res.status(400).json({ error: "Workflow must have an id" });
+        return;
+      }
 
-router.put("/:id", async (req: Request, res: Response) => {
-  try {
-    const def = req.body as WorkflowDefinition;
-    if (def.id !== req.params.id) {
-      return res.status(400).json({ error: "Workflow ID must match URL parameter" });
-    }
-    updateWorkflow(def);
-    res.json({ message: "Workflow updated" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to update workflow";
-    res.status(400).json({ error: msg });
-  }
-});
+      const result = await createWorkflowCommand({
+        workflow: def,
+        actorId: resolveActorId(req),
+      });
 
-router.delete("/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const removed = removeWorkflow(id);
-    if (!removed) {
-      return res.status(404).json({ error: `Workflow "${id}" not found` });
+      res.status(201).json({
+        data: def,
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      const msg = err instanceof Error ? err.message : "Failed to register workflow";
+      res.status(400).json({ error: msg });
     }
-    res.json({ message: "Workflow deleted" });
-  } catch (_err) {
-    res.status(500).json({ error: "Failed to delete workflow" });
-  }
-});
+  })
+);
+
+router.put(
+  "/:id",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const def = req.body as WorkflowDefinition;
+      if (def.id !== req.params.id) {
+        res.status(400).json({ error: "Workflow ID must match URL parameter" });
+        return;
+      }
+
+      if (!getWorkflow(def.id)) {
+        res.status(404).json({ error: `Workflow "${def.id}" not found` });
+        return;
+      }
+
+      const result = await updateWorkflowCommand({
+        workflow: def,
+        actorId: resolveActorId(req),
+      });
+
+      res.json({
+        data: def,
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      const msg = err instanceof Error ? err.message : "Failed to update workflow";
+      res.status(400).json({ error: msg });
+    }
+  })
+);
+
+router.delete(
+  "/:id",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      if (!getWorkflow(id)) {
+        res.status(404).json({ error: `Workflow "${id}" not found` });
+        return;
+      }
+
+      const result = await removeWorkflowCommand({ workflowId: id, actorId: resolveActorId(req) });
+      if (!result.record) {
+        res.status(404).json({ error: `Workflow "${id}" not found` });
+        return;
+      }
+
+      res.json({
+        message: "Workflow deleted",
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      res.status(500).json({ error: "Failed to delete workflow" });
+    }
+  })
+);
 
 // ────────────────────────────────────────────────────────────────────────
 // Workflow Triggering
@@ -175,44 +241,91 @@ router.get("/instances/:instanceId", async (req: Request, res: Response) => {
  * Advance an instance (not usually called directly — workflows auto-advance).
  * Useful for resuming after external actions.
  */
-router.post("/instances/:instanceId/advance", async (req: Request, res: Response) => {
-  try {
-    const { instanceId } = req.params;
-    const { actor, stepInput } = req.body as {
-      actor?: string;
-      stepInput?: Record<string, unknown>;
-    };
-    const instance = await advanceInstance(instanceId, {
-      actor: actor ?? "system",
-      stepInput,
-    });
-    res.json(instance);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to advance instance";
-    res.status(400).json({ error: msg });
-  }
-});
+router.post(
+  "/instances/:instanceId/advance",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { instanceId } = req.params;
+      const { actor, stepInput } = req.body as {
+        actor?: string | number;
+        stepInput?: Record<string, unknown>;
+      };
+      const actorId = resolveNumericActorId(req, actor);
+      if (!actorId) {
+        res.status(400).json({
+          error:
+            "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user.",
+        });
+        return;
+      }
+
+      const result = await advanceWorkflowInstanceCommand({
+        instanceId,
+        actorId: String(actorId),
+        stepInput,
+      });
+
+      res.json({
+        data: result.record,
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      const msg = err instanceof Error ? err.message : "Failed to advance instance";
+      res.status(400).json({ error: msg });
+    }
+  })
+);
 
 /**
  * Submit an approval decision for a waiting instance.
  */
-router.post("/instances/:instanceId/approve", async (req: Request, res: Response) => {
-  try {
-    const { instanceId } = req.params;
-    const { decision, actor, reason } = req.body as {
-      decision: "approved" | "rejected";
-      actor: string;
-      reason?: string;
-    };
-    if (!decision || !actor) {
-      return res.status(400).json({ error: "Decision and actor are required" });
+router.post(
+  "/instances/:instanceId/approve",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { instanceId } = req.params;
+      const { decision, actor, reason } = req.body as {
+        decision: "approved" | "rejected";
+        actor?: string | number;
+        reason?: string;
+      };
+      const actorId = resolveNumericActorId(req, actor);
+      if (!decision || !actorId) {
+        res.status(400).json({
+          error:
+            "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user.",
+        });
+        return;
+      }
+
+      const result = await submitWorkflowApprovalCommand({
+        instanceId,
+        decision,
+        actorId: String(actorId),
+        reason,
+      });
+
+      res.json({
+        data: result.record,
+        meta: {
+          mutationPolicy: result.mutationPolicy,
+          policyId: result.policy?.id,
+          eventType: result.event?.eventType,
+          eventId: result.event?.id,
+        },
+      });
+    } catch (err) {
+      if (err instanceof MutationPolicyViolationError) throw err;
+      const msg = err instanceof Error ? err.message : "Failed to submit approval";
+      res.status(400).json({ error: msg });
     }
-    const instance = await submitApproval(instanceId, decision, actor, reason);
-    res.json(instance);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to submit approval";
-    res.status(400).json({ error: msg });
-  }
-});
+  })
+);
 
 export default router;

@@ -1,6 +1,7 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import multer, { MulterError } from "multer";
 import { persistUploadFile } from "../uploads/storage.js";
+import { asyncHandler, ValidationError } from "../middleware/errorHandler.js";
 
 const router = Router();
 
@@ -46,47 +47,39 @@ function isAllowedMimeType(kind: "file" | "image", mimeType: string): boolean {
   return allowedFileMimeTypes.has(mimeType) || mimeType.startsWith("image/");
 }
 
-router.post("/uploads", upload.single("file"), async (req: Request, res: Response) => {
+router.post("/uploads", upload.single("file"), asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) {
-    res.status(400).json({ error: "No file uploaded. Use multipart field name 'file'." });
-    return;
+    throw new ValidationError("No file uploaded. Use multipart field name 'file'.");
   }
 
   const kind = getUploadKind(req);
   const mimeType = req.file.mimetype || "application/octet-stream";
 
   if (!isAllowedMimeType(kind, mimeType)) {
-    res.status(400).json({
-      error: `Unsupported ${kind} MIME type: ${mimeType}`,
+    throw new ValidationError(`Unsupported ${kind} MIME type: ${mimeType}`, {
       code: "UNSUPPORTED_MIME_TYPE",
+      mimeType,
     });
-    return;
   }
 
   if (kind === "image" && !mimeType.startsWith("image/")) {
-    res.status(400).json({
-      error: `Expected image upload, received ${mimeType}`,
+    throw new ValidationError(`Expected image upload, received ${mimeType}`, {
       code: "INVALID_IMAGE_UPLOAD",
-    });
-    return;
-  }
-
-  try {
-    const stored = await persistUploadFile({
-      buffer: req.file.buffer,
-      originalName: req.file.originalname,
       mimeType,
     });
-
-    res.status(201).json({
-      ...stored,
-      kind,
-    });
-  } catch (error) {
-    req.log?.error({ error }, "Upload persistence failed");
-    res.status(500).json({ error: "Failed to persist uploaded file" });
   }
-});
+
+  const stored = await persistUploadFile({
+    buffer: req.file.buffer,
+    originalName: req.file.originalname,
+    mimeType,
+  });
+
+  res.status(201).json({
+    ...stored,
+    kind,
+  });
+}));
 
 router.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof MulterError) {

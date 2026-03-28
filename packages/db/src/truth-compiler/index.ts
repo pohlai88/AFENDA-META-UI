@@ -13,4 +13,5 @@ export * from "./transition-compiler.js";
 export * from "./event-compiler.js";
 export * from "./dependency-graph.js";
 export * from "./emitter.js";
+export * from "./schema-compiler.js";
 export * from "./types.js";

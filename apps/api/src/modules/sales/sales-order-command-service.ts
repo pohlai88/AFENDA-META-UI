@@ -1,24 +1,17 @@
-import type { MutationPolicyDefinition } from "@afenda/meta-types";
+import { requireMutationPolicyById } from "@afenda/db";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
 import { partners, salesOrderLines, salesOrders } from "../../db/schema/index.js";
-import { dbGetAggregateEvents } from "../../events/dbEventStore.js";
-import {
-  getProjectionCheckpoint,
-  upsertProjectionCheckpoint,
-} from "../../events/projectionCheckpointStore.js";
-import {
-  assertNoProjectionDrift,
-  buildProjectionCheckpoint,
-  detectProjectionDrift,
-} from "../../events/projectionRuntime.js";
+import { upsertProjectionCheckpoint } from "../../events/projectionCheckpointStore.js";
+import { buildProjectionCheckpoint } from "../../events/projectionRuntime.js";
 import { ConflictError, NotFoundError } from "../../middleware/errorHandler.js";
 import {
-  executeMutationCommand,
+  createProjectionDriftValidator,
+  executeCommandRuntime,
   type ExecuteMutationCommandResult,
-  type MutationEventPayload,
-} from "../../policy/mutation-command-gateway.js";
+} from "../../policy/command-runtime-spine.js";
+import type { MutationEventPayload } from "../../policy/mutation-command-gateway.js";
 import {
   cancelOrder,
   confirmOrder,
@@ -34,14 +27,9 @@ type SalesOrderLineRecord = typeof salesOrderLines.$inferSelect;
 type PartnerRecord = typeof partners.$inferSelect;
 type SalesOrderPatch = Partial<SalesOrderRecord>;
 
-const SALES_ORDER_EVENT_ONLY_POLICY: MutationPolicyDefinition = {
-  id: "sales.sales_order.command_projection",
-  mutationPolicy: "event-only",
-  appliesTo: ["sales_order"],
-  requiredEvents: ["sales_order.submitted", "sales_order.confirmed", "sales_order.cancelled"],
-  description:
-    "Sales-order command routes append events first and refresh the read model through projection persistence.",
-};
+const SALES_ORDER_EVENT_ONLY_POLICY = requireMutationPolicyById(
+  "sales.sales_order.command_projection"
+);
 
 const SALES_ORDER_PROJECTION_DEFINITION = {
   name: "sales_order.read_model",
@@ -50,6 +38,10 @@ const SALES_ORDER_PROJECTION_DEFINITION = {
     schemaHash: "sales_order_read_model_v1",
   },
 };
+const assertSalesOrderProjectionDrift = createProjectionDriftValidator({
+  aggregateType: "sales_order",
+  definition: SALES_ORDER_PROJECTION_DEFINITION,
+});
 
 export interface ConfirmSalesOrderInput {
   tenantId: number;
@@ -154,7 +146,7 @@ async function executeSalesOrderCommand(input: {
   nextOrder: SalesOrderRecord;
   persistPatch: SalesOrderPatch;
 }): Promise<ExecuteMutationCommandResult<SalesOrderRecord>> {
-  return executeMutationCommand({
+  return executeCommandRuntime({
     model: "sales_order",
     operation: "update",
     recordId: input.orderId,
@@ -201,25 +193,7 @@ async function loadSalesOrderProjectionState(input: {
   orderId: string;
 }): Promise<SalesOrderRecord> {
   const order = await loadSalesOrder(input.tenantId, input.orderId);
-  const checkpoint = getProjectionCheckpoint({
-    projectionName: SALES_ORDER_PROJECTION_DEFINITION.name,
-    aggregateType: "sales_order",
-    aggregateId: input.orderId,
-  });
-
-  if (!checkpoint) {
-    return order;
-  }
-
-  const events = await dbGetAggregateEvents("sales_order", input.orderId);
-  const latestEventVersion = events.at(-1)?.version ?? 0;
-  const driftReport = detectProjectionDrift({
-    definition: SALES_ORDER_PROJECTION_DEFINITION,
-    checkpoint,
-    latestEventVersion,
-  });
-
-  assertNoProjectionDrift(driftReport);
+  await assertSalesOrderProjectionDrift(input.orderId);
   return order;
 }
 

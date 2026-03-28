@@ -69,7 +69,8 @@
     "archival": "tsx src/archival/runner.ts",
     "graph-validation": "tsx src/graph-validation/runner.ts",
     "truth:generate": "tsx src/truth-compiler/generate-truth-sql.ts",
-    "truth:check": "tsx src/truth-compiler/generate-truth-sql.ts --check"
+    "truth:check": "tsx src/truth-compiler/generate-truth-sql.ts --check",
+    "truth:schema:compare": "tsx src/truth-compiler/compare-truth-schema.ts"
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",

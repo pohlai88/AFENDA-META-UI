@@ -5,7 +5,7 @@
 -- Regenerate with: pnpm --filter @afenda/db truth:generate
 -- Diff check:      pnpm --filter @afenda/db truth:check
 -- =============================================================================
--- Generated at: 2026-03-27T12:10:27.401Z
+-- Generated at: 2026-03-27T21:14:00.892Z
 
 -- Cross invariant: sales.cross.active_subscription_requires_sale_order | severity=warning | executionKind=trigger | model=sales_order
 CREATE OR REPLACE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_sales_order"()
@@ -113,10 +113,48 @@ CREATE TRIGGER "trg_xinv_sales_cross_active_subscription_requires_sale_order_sub
   BEFORE INSERT OR UPDATE OR DELETE ON "sales"."subscriptions"
   FOR EACH ROW
   EXECUTE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_subscription"();
--- Mutation policy: sales.sales_order.dual_write_rollout
---   mode=dual-write
+-- Mutation policy: sales.sales_order.command_projection
+--   mode=event-only
 --   appliesTo=sales_order
 --   requiredEvents=sales_order.submitted, sales_order.confirmed, sales_order.cancelled
+-- Mutation policy: sales.sales_order.command_projection | mode=event-only | model=sales_order
+CREATE OR REPLACE FUNCTION "sales"."enforce_event_only_sales_order_writes"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION USING
+    MESSAGE = 'Sales-order command routes append events first and refresh the read model through projection persistence.',
+    ERRCODE = 'P0001',
+    HINT = 'Route writes through the append-only command/event gateway for this bounded context.';
+END;
+$$;
+DROP TRIGGER IF EXISTS "trg_enforce_event_only_sales_order_writes" ON "sales"."sales_orders";
+CREATE TRIGGER "trg_enforce_event_only_sales_order_writes"
+  BEFORE CREATE OR DELETE OR UPDATE ON "sales"."sales_orders"
+  FOR EACH ROW
+  EXECUTE FUNCTION "sales"."enforce_event_only_sales_order_writes"();
+-- Mutation policy: sales.subscription.command_projection
+--   mode=event-only
+--   appliesTo=subscription
+--   requiredEvents=subscription.activated, subscription.cancelled, subscription.paused, subscription.direct_update
+-- Mutation policy: sales.subscription.command_projection | mode=event-only | model=subscription
+CREATE OR REPLACE FUNCTION "sales"."enforce_event_only_subscription_writes"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION USING
+    MESSAGE = 'Subscription command routes append events first and refresh the read model through projection persistence.',
+    ERRCODE = 'P0001',
+    HINT = 'Route writes through the append-only command/event gateway for this bounded context.';
+END;
+$$;
+DROP TRIGGER IF EXISTS "trg_enforce_event_only_subscription_writes" ON "sales"."subscriptions";
+CREATE TRIGGER "trg_enforce_event_only_subscription_writes"
+  BEFORE UPDATE ON "sales"."subscriptions"
+  FOR EACH ROW
+  EXECUTE FUNCTION "sales"."enforce_event_only_subscription_writes"();
 -- Invariant: sales.consignment_agreement.active_has_partner | severity=error | scope=entity
 ALTER TABLE "sales"."consignment_agreements"
   DROP CONSTRAINT IF EXISTS "chk_inv_sales_consignment_agreement_active_has_partner";
@@ -270,9 +308,10 @@ BEGIN
   RETURN NEW;
 END;
 $$;
--- Event contract: subscription (4 registered types)
+-- Event contract: subscription (5 registered types)
 --   • subscription.activated
 --   • subscription.cancelled
+--   • subscription.direct_update
 --   • subscription.paused
 --   • subscription.renewed
 CREATE OR REPLACE FUNCTION "sales"."emit_subscription_event"()
@@ -286,7 +325,7 @@ BEGIN
   actor_id := "sales"."current_actor_id"();
 
   IF TG_OP = 'DELETE' THEN
-    event_payload := jsonb_build_object('operation', TG_OP, 'truth_event_contract', jsonb_build_array('subscription.activated', 'subscription.cancelled', 'subscription.paused', 'subscription.renewed'), 'state_field', 'status', 'state_value', OLD."status");
+    event_payload := jsonb_build_object('operation', TG_OP, 'truth_event_contract', jsonb_build_array('subscription.activated', 'subscription.cancelled', 'subscription.direct_update', 'subscription.paused', 'subscription.renewed'), 'state_field', 'status', 'state_value', OLD."status");
     PERFORM "sales"."emit_domain_event"(
       'SUBSCRIPTION_DELETED',
       'subscription',
@@ -298,7 +337,7 @@ BEGIN
     RETURN OLD;
   END IF;
 
-  event_payload := jsonb_build_object('operation', TG_OP, 'truth_event_contract', jsonb_build_array('subscription.activated', 'subscription.cancelled', 'subscription.paused', 'subscription.renewed'), 'state_field', 'status', 'state_value', NEW."status");
+  event_payload := jsonb_build_object('operation', TG_OP, 'truth_event_contract', jsonb_build_array('subscription.activated', 'subscription.cancelled', 'subscription.direct_update', 'subscription.paused', 'subscription.renewed'), 'state_field', 'status', 'state_value', NEW."status");
   PERFORM "sales"."emit_domain_event"(
     'SUBSCRIPTION_MUTATED',
     'subscription',

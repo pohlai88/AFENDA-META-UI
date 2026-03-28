@@ -20,6 +20,7 @@ const {
   generateCommissionForOrderCommandMock,
   payCommissionEntryCommandMock,
   payCommissionEntriesCommandMock,
+  removeCommissionEntryCommandMock,
   getCommissionReportMock,
   validateConsignmentStockReportMock,
   generateConsignmentInvoiceDraftMock,
@@ -53,6 +54,7 @@ const {
     generateCommissionForOrderCommandMock: vi.fn(),
     payCommissionEntryCommandMock: vi.fn(),
     payCommissionEntriesCommandMock: vi.fn(),
+    removeCommissionEntryCommandMock: vi.fn(),
     getCommissionReportMock: vi.fn(),
     validateConsignmentStockReportMock: vi.fn(),
     generateConsignmentInvoiceDraftMock: vi.fn(),
@@ -96,6 +98,7 @@ vi.mock("../../modules/sales/commission-command-service.js", () => ({
   generateCommissionForOrderCommand: generateCommissionForOrderCommandMock,
   payCommissionEntryCommand: payCommissionEntryCommandMock,
   payCommissionEntriesCommand: payCommissionEntriesCommandMock,
+  removeCommissionEntryCommand: removeCommissionEntryCommandMock,
 }));
 
 vi.mock("../../modules/sales/commission-service.js", () => ({
@@ -846,6 +849,47 @@ describe("/api/sales/commissions/pay route", () => {
 
     expect(response.status).toBe(400);
     expect(payCommissionEntriesCommandMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/sales/commissions/:id delete route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("routes single-entry delete through the command service", async () => {
+    removeCommissionEntryCommandMock.mockResolvedValueOnce({
+      deletedCount: 1,
+      entry: {
+        id: "entry-1",
+        status: "paid",
+        deletedAt: new Date("2026-03-28T14:00:00.000Z"),
+      },
+      mutationPolicy: "event-only",
+      event: { id: "evt-delete", eventType: "commission_entry.deleted" },
+    });
+
+    const response = await request(createApp({ uid: "42", roles: ["admin"] })).delete(
+      "/api/sales/commissions/00000000-0000-4000-8000-000000000123"
+    );
+
+    expect(response.status).toBe(200);
+    expect(removeCommissionEntryCommandMock).toHaveBeenCalledWith({
+      tenantId: 7,
+      actorId: 42,
+      entryId: "00000000-0000-4000-8000-000000000123",
+    });
+    expect(response.body.mutationPolicy).toBe("event-only");
+    expect(response.body.event.eventType).toBe("commission_entry.deleted");
+  });
+
+  it("returns 400 for invalid delete payload", async () => {
+    const response = await request(createApp({ uid: "42", roles: ["admin"] })).delete(
+      "/api/sales/commissions/not-a-uuid"
+    );
+
+    expect(response.status).toBe(400);
+    expect(removeCommissionEntryCommandMock).not.toHaveBeenCalled();
   });
 });
 

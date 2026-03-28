@@ -1,0 +1,39 @@
+name: Release Governance
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master, develop]
+
+concurrency:
+  group: release-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22.x
+
+jobs:
+  release-governance:
+    name: Release Governance Required Status
+    runs-on: ubuntu-latest
+    env:
+      AFENDA_PROMOTION_CONTEXT: production-candidate
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Release governance checks
+        run: node tools/scripts/ci-release-governance-check.mjs
+
+      - name: Policy contract consistency gate
+        run: pnpm ci:policy:contract-consistency
+
+      - name: Non-sales promotion gate checks
+        run: node tools/scripts/ci-non-sales-promotion-gates-check.mjs

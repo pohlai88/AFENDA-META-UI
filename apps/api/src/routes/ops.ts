@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 
 import { db } from "../db/index.js";
 import { requireAuth } from "../middleware/auth.js";
+import { asyncHandler } from "../middleware/errorHandler.js";
 import { domainEventLogs, domainInvariantLogs } from "../db/schema/index.js";
 
 export const opsRouter = Router();
@@ -25,7 +26,7 @@ function withOptional<T extends SQL | undefined>(base: T, next: SQL | undefined)
   return and(base, next);
 }
 
-opsRouter.get("/invariant-violations", requireAuth, async (req: Request, res: Response) => {
+opsRouter.get("/invariant-violations", requireAuth, asyncHandler(async (req: Request, res: Response) => {
   const page = Math.max(1, parseInteger(req.query.page, 1));
   const limit = Math.min(200, Math.max(1, parseInteger(req.query.limit, 50)));
   const offset = (page - 1) * limit;
@@ -110,9 +111,9 @@ opsRouter.get("/invariant-violations", requireAuth, async (req: Request, res: Re
       },
     },
   });
-});
+}));
 
-opsRouter.get("/invariant-violations/stats", requireAuth, async (_req: Request, res: Response) => {
+opsRouter.get("/invariant-violations/stats", requireAuth, asyncHandler(async (_req: Request, res: Response) => {
   const [summary] = await db
     .select({
       total: sql<number>`count(*)::int`,
@@ -140,9 +141,9 @@ opsRouter.get("/invariant-violations/stats", requireAuth, async (_req: Request, 
     },
     recentFailures24h: summary?.recentFailures24h ?? 0,
   });
-});
+}));
 
-opsRouter.get("/domain-events", requireAuth, async (req: Request, res: Response) => {
+opsRouter.get("/domain-events", requireAuth, asyncHandler(async (req: Request, res: Response) => {
   const page = Math.max(1, parseInteger(req.query.page, 1));
   const limit = Math.min(200, Math.max(1, parseInteger(req.query.limit, 50)));
   const offset = (page - 1) * limit;
@@ -209,6 +210,6 @@ opsRouter.get("/domain-events", requireAuth, async (req: Request, res: Response)
       },
     },
   });
-});
+}));
 
 export default opsRouter;

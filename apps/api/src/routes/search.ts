@@ -15,6 +15,7 @@ import { sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { getSchema, listModels } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
+import { asyncHandler, ValidationError } from "../middleware/errorHandler.js";
 import type { SessionContext } from "@afenda/meta-types";
 import type { MetaField } from "@afenda/meta-types";
 
@@ -66,7 +67,7 @@ function pickSubtitle(row: Record<string, unknown>, fields: MetaField[], titleFi
 // ---------------------------------------------------------------------------
 // GET /search?q=term&models=partner,product&limit=20
 // ---------------------------------------------------------------------------
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", asyncHandler(async (req: Request, res: Response) => {
   const sess = session(req);
   const rawQ = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const limitParam = Math.min(MAX_TOTAL, Math.max(1, Number(req.query.limit) || 20));
@@ -94,8 +95,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   if (rawQ.length < 2) {
-    res.status(400).json({ error: "Query must be at least 2 characters" });
-    return;
+    throw new ValidationError("Query must be at least 2 characters");
   }
 
   // Sanitize query: prevent SQL injection by using parameterized queries only
@@ -160,6 +160,6 @@ router.get("/", async (req: Request, res: Response) => {
       models: Object.keys(grouped),
     },
   });
-});
+}));
 
 export default router;

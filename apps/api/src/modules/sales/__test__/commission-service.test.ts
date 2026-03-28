@@ -22,6 +22,9 @@ const {
       orderBy: vi.fn(() => chain),
       limit: vi.fn(() => chain),
       offset: vi.fn(async () => rows),
+      prepare: vi.fn(() => ({
+        execute: vi.fn(async () => rows),
+      })),
       then: (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve),
     };
 
@@ -60,6 +63,7 @@ void ensureTestEnv;
 vi.mock("../../../db/index.js", () => ({
   db: {
     select: selectMock,
+    selectDistinct: selectMock,
     insert: insertMock,
     update: updateMock,
   },

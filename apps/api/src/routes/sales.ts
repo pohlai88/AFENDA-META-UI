@@ -7,6 +7,7 @@ import {
   approveCommissionEntryCommand,
   approveCommissionEntriesCommand,
   generateCommissionForOrderCommand,
+  removeCommissionEntryCommand,
   payCommissionEntryCommand,
   payCommissionEntriesCommand,
 } from "../modules/sales/commission-command-service.js";
@@ -689,6 +690,48 @@ router.post(
       periodStart: parsed.data.periodStart,
       periodEnd: parsed.data.periodEnd,
       paidDate: parsed.data.paidDate,
+    });
+
+    res.status(200).json(result);
+  })
+);
+
+router.delete(
+  "/commissions/:id",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = commissionEntryOperationSchema.safeParse({ ...req.body, id: req.params.id });
+
+    if (!parsed.success) {
+      throw new ValidationError("Invalid commission delete payload.", parsed.error.flatten());
+    }
+
+    const tenantId =
+      parsed.data.tenantId ??
+      parseInteger((req.tenantContext?.tenantId as string | undefined) ?? null);
+    if (!tenantId) {
+      throw new ValidationError(
+        "A numeric tenantId is required. Provide it in the request body or x-tenant-id header."
+      );
+    }
+
+    const actorId = parsed.data.actorId ?? resolveActorId(req);
+    if (!actorId) {
+      throw new ValidationError(
+        "A numeric actorId is required. Provide it in the request body or authenticate as a numeric user."
+      );
+    }
+
+    const entryId = parsed.data.entryId ?? parsed.data.id;
+
+    if (!entryId) {
+      throw new ValidationError("entryId is required.");
+    }
+
+    const result = await removeCommissionEntryCommand({
+      tenantId,
+      actorId,
+      entryId,
     });
 
     res.status(200).json(result);

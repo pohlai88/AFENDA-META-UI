@@ -79,13 +79,27 @@ describe("projectionRuntime", () => {
   });
 
   it("rejects non-monotonic event versions", () => {
-    expect(() =>
+    let error: unknown;
+
+    try {
       replayProjectionEvents({
         definition: salesOrderProjection,
         events: [makeEvent(2, "sales_order.submitted"), makeEvent(2, "sales_order.confirmed")],
         initialState,
-      })
-    ).toThrow(ProjectionReplayError);
+      });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(ProjectionReplayError);
+    expect((error as ProjectionReplayError).details).toEqual({
+      projectionName: "sales_order.read_model",
+      previousVersion: 2,
+      receivedVersion: 2,
+      eventId: "evt-2",
+      aggregateType: "sales_order",
+      aggregateId: "so-1",
+    });
   });
 
   it("detects stale projections and hash/version drift", () => {

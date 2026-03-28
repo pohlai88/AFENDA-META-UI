@@ -1,4 +1,4 @@
-import type { MutationPolicyDefinition } from "@afenda/meta-types";
+import { requireMutationPolicyById } from "@afenda/db";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
@@ -9,20 +9,14 @@ import {
   subscriptions,
 } from "../../db/schema/index.js";
 import { dbGetAggregateEvents } from "../../events/dbEventStore.js";
-import {
-  getProjectionCheckpoint,
-  upsertProjectionCheckpoint,
-} from "../../events/projectionCheckpointStore.js";
-import {
-  assertNoProjectionDrift,
-  buildProjectionCheckpoint,
-  detectProjectionDrift,
-} from "../../events/projectionRuntime.js";
+import { upsertProjectionCheckpoint } from "../../events/projectionCheckpointStore.js";
+import { buildProjectionCheckpoint } from "../../events/projectionRuntime.js";
 import { NotFoundError, ValidationError } from "../../middleware/errorHandler.js";
 import {
-  executeMutationCommand,
+  createProjectionDriftValidator,
+  executeCommandRuntime,
   type ExecuteMutationCommandResult,
-} from "../../policy/mutation-command-gateway.js";
+} from "../../policy/command-runtime-spine.js";
 import {
   computeMRR,
   computeNextInvoiceDate,
@@ -52,20 +46,9 @@ type SubscriptionRecord = typeof subscriptions.$inferSelect;
 type SubscriptionTemplateRecord = typeof subscriptionTemplates.$inferSelect;
 type SubscriptionLineRecord = typeof subscriptionLines.$inferSelect;
 
-const SUBSCRIPTION_EVENT_ONLY_POLICY: MutationPolicyDefinition = {
-  id: "sales.subscription.command_projection",
-  mutationPolicy: "event-only",
-  appliesTo: ["subscription"],
-  requiredEvents: [
-    "subscription.activated",
-    "subscription.cancelled",
-    "subscription.paused",
-    "subscription.direct_update",
-  ],
-  directMutationOperations: ["update"],
-  description:
-    "Subscription command routes append events first and refresh the read model through projection persistence.",
-};
+const SUBSCRIPTION_EVENT_ONLY_POLICY = requireMutationPolicyById(
+  "sales.subscription.command_projection"
+);
 
 const SUBSCRIPTION_PROJECTION_DEFINITION = {
   name: "subscription.read_model",
@@ -74,6 +57,10 @@ const SUBSCRIPTION_PROJECTION_DEFINITION = {
     schemaHash: "subscription_read_model_v1",
   },
 };
+const assertSubscriptionProjectionDrift = createProjectionDriftValidator({
+  aggregateType: "subscription",
+  definition: SUBSCRIPTION_PROJECTION_DEFINITION,
+});
 
 export interface ActivateSubscriptionCommandInput extends ActivateSubscriptionInput {
   source?: string;
@@ -394,7 +381,7 @@ async function executeSubscriptionCommand(input: {
   nextSubscription: SubscriptionRecord;
   persistProjection: () => Promise<void>;
 }): Promise<ExecuteMutationCommandResult<SubscriptionRecord>> {
-  return executeMutationCommand({
+  return executeCommandRuntime({
     model: "subscription",
     operation: "update",
     recordId: input.subscriptionId,
@@ -429,25 +416,7 @@ async function loadSubscriptionProjectionState(input: {
   subscriptionId: string;
 }): Promise<SubscriptionRecord> {
   const subscription = await loadSubscription(input.tenantId, input.subscriptionId);
-  const checkpoint = getProjectionCheckpoint({
-    projectionName: SUBSCRIPTION_PROJECTION_DEFINITION.name,
-    aggregateType: "subscription",
-    aggregateId: input.subscriptionId,
-  });
-
-  if (!checkpoint) {
-    return subscription;
-  }
-
-  const events = await dbGetAggregateEvents("subscription", input.subscriptionId);
-  const latestEventVersion = events.at(-1)?.version ?? 0;
-  const driftReport = detectProjectionDrift({
-    definition: SUBSCRIPTION_PROJECTION_DEFINITION,
-    checkpoint,
-    latestEventVersion,
-  });
-
-  assertNoProjectionDrift(driftReport);
+  await assertSubscriptionProjectionDrift(input.subscriptionId);
   return subscription;
 }
 

@@ -43,6 +43,7 @@ export const SALES_TRUTH_MODEL: TruthModel = {
     "subscription.paused",
     "subscription.renewed",
     "subscription.cancelled",
+    "subscription.direct_update",
   ],
   invariants: [
     "sales.consignment_agreement.active_has_partner",
@@ -224,7 +225,7 @@ export const SALES_STATE_MACHINES: StateMachineDefinition[] = [
 // Mutation Policies (Phase 3.7.3)
 // ---------------------------------------------------------------------------
 
-export const SALES_MUTATION_POLICIES: MutationPolicyDefinition[] = [
+export const MUTATION_POLICIES: MutationPolicyDefinition[] = [
   {
     id: "sales.sales_order.command_projection",
     mutationPolicy: "event-only",
@@ -261,7 +262,108 @@ export const SALES_MUTATION_POLICIES: MutationPolicyDefinition[] = [
     description:
       "Return-order command routes append events first and refresh the read model through projection persistence.",
   },
+  {
+    id: "sales.commission_entry.command_projection",
+    mutationPolicy: "event-only",
+    appliesTo: ["commission_entry"],
+    requiredEvents: [
+      "commission_entry.approved",
+      "commission_entry.paid",
+      "commission_entry.generated",
+      "commission_entry.recalculated",
+    ],
+    directMutationOperations: ["create", "update", "delete"],
+    description:
+      "Commission-entry command routes now own mutation orchestration; direct generic updates are blocked in favor of append-and-project command flows.",
+  },
+  {
+    id: "platform.tenant.command_event_only",
+    mutationPolicy: "event-only",
+    appliesTo: ["tenant"],
+    requiredEvents: ["tenant.direct_create", "tenant.direct_update", "tenant.direct_delete"],
+    directMutationOperations: ["create", "update", "delete"],
+    description:
+      "Tenant command routes are now append-and-project only; direct CRUD writes are blocked by default policy enforcement.",
+  },
+  {
+    id: "platform.organization.command_event_only",
+    mutationPolicy: "event-only",
+    appliesTo: ["organization"],
+    requiredEvents: [
+      "organization.direct_create",
+      "organization.direct_update",
+      "organization.direct_delete",
+    ],
+    directMutationOperations: ["create", "update", "delete"],
+    description:
+      "Organization command routes are now append-and-project only; direct CRUD writes are blocked by default policy enforcement.",
+  },
+  {
+    id: "platform.workflow.command_event_only",
+    mutationPolicy: "event-only",
+    appliesTo: ["workflow"],
+    requiredEvents: ["workflow.direct_create", "workflow.direct_update", "workflow.direct_delete"],
+    directMutationOperations: ["create", "update", "delete"],
+    description:
+      "Workflow definition command routes are now append-and-project only; direct registry writes are blocked by default policy enforcement.",
+  },
+  {
+    id: "platform.workflow_instance.command_event_only",
+    mutationPolicy: "event-only",
+    appliesTo: ["workflow_instance"],
+    requiredEvents: ["workflow_instance.direct_update"],
+    directMutationOperations: ["update"],
+    description:
+      "Workflow instance command routes are now append-and-project only; direct engine state transitions are blocked by default policy enforcement.",
+  },
 ];
+
+export const SCOPED_MUTATION_POLICIES: MutationPolicyDefinition[] = [
+  {
+    id: "sales.commission_entry.command_generation",
+    mutationPolicy: "dual-write",
+    appliesTo: ["commission_entry"],
+    requiredEvents: ["commission_entry.generated", "commission_entry.recalculated"],
+    directMutationOperations: ["create", "update"],
+    description:
+      "Commission generation remains command-owned under dual-write until create/update parity is proven across the aggregate.",
+  },
+];
+
+export const MUTATION_POLICY_REGISTRY: MutationPolicyDefinition[] = [
+  ...MUTATION_POLICIES,
+  ...SCOPED_MUTATION_POLICIES,
+];
+
+export function getMutationPolicyById(policyId: string): MutationPolicyDefinition | undefined {
+  return MUTATION_POLICY_REGISTRY.find((policy) => policy.id === policyId);
+}
+
+export function requireMutationPolicyById(policyId: string): MutationPolicyDefinition {
+  const policy = getMutationPolicyById(policyId);
+  if (policy) {
+    return policy;
+  }
+
+  throw new Error(
+    `truth-config: missing mutation policy "${policyId}" in MUTATION_POLICY_REGISTRY`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Deprecated aliases — remove after one release cycle
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use MUTATION_POLICIES */
+export const SALES_MUTATION_POLICIES = MUTATION_POLICIES;
+/** @deprecated Use SCOPED_MUTATION_POLICIES */
+export const SALES_SCOPED_MUTATION_POLICIES = SCOPED_MUTATION_POLICIES;
+/** @deprecated Use MUTATION_POLICY_REGISTRY */
+export const SALES_MUTATION_POLICY_REGISTRY = MUTATION_POLICY_REGISTRY;
+/** @deprecated Use getMutationPolicyById */
+export const getSalesMutationPolicyById = getMutationPolicyById;
+/** @deprecated Use requireMutationPolicyById */
+export const requireSalesMutationPolicyById = requireMutationPolicyById;
 
 export const SALES_CROSS_INVARIANTS: CrossInvariantDefinition[] = [
   {
@@ -303,6 +405,6 @@ export const COMPILER_INPUT: NormalizerInput = {
   invariantRegistries: SALES_INVARIANT_REGISTRIES,
   crossInvariantDefinitions: SALES_CROSS_INVARIANTS,
   stateMachines: SALES_STATE_MACHINES,
-  mutationPolicies: SALES_MUTATION_POLICIES,
+  mutationPolicies: MUTATION_POLICIES,
   namespace: "sales",
 };

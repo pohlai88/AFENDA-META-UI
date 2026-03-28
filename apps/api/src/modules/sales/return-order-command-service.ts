@@ -1,23 +1,16 @@
-import type { MutationPolicyDefinition } from "@afenda/meta-types";
+import { requireMutationPolicyById } from "@afenda/db";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
-import { dbGetAggregateEvents } from "../../events/dbEventStore.js";
-import {
-  getProjectionCheckpoint,
-  upsertProjectionCheckpoint,
-} from "../../events/projectionCheckpointStore.js";
-import {
-  assertNoProjectionDrift,
-  buildProjectionCheckpoint,
-  detectProjectionDrift,
-} from "../../events/projectionRuntime.js";
+import { upsertProjectionCheckpoint } from "../../events/projectionCheckpointStore.js";
+import { buildProjectionCheckpoint } from "../../events/projectionRuntime.js";
 import { returnOrders } from "../../db/schema/index.js";
 import { NotFoundError } from "../../middleware/errorHandler.js";
 import {
-  executeMutationCommand,
+  createProjectionDriftValidator,
+  executeCommandRuntime,
   type ExecuteMutationCommandResult,
-} from "../../policy/mutation-command-gateway.js";
+} from "../../policy/command-runtime-spine.js";
 import {
   approveReturn,
   generateReturnCreditNote,
@@ -35,20 +28,9 @@ import {
 
 type ReturnOrderRecord = typeof returnOrders.$inferSelect;
 
-const RETURN_ORDER_EVENT_ONLY_POLICY: MutationPolicyDefinition = {
-  id: "sales.return_order.command_projection",
-  mutationPolicy: "event-only",
-  appliesTo: ["return_order"],
-  requiredEvents: [
-    "return_order.approved",
-    "return_order.received",
-    "return_order.inspected",
-    "return_order.credited",
-  ],
-  directMutationOperations: ["update"],
-  description:
-    "Return-order command routes append events first and refresh the read model through projection persistence.",
-};
+const RETURN_ORDER_EVENT_ONLY_POLICY = requireMutationPolicyById(
+  "sales.return_order.command_projection"
+);
 
 const RETURN_ORDER_PROJECTION_DEFINITION = {
   name: "return_order.read_model",
@@ -57,6 +39,10 @@ const RETURN_ORDER_PROJECTION_DEFINITION = {
     schemaHash: "return_order_read_model_v1",
   },
 };
+const assertReturnOrderProjectionDrift = createProjectionDriftValidator({
+  aggregateType: "return_order",
+  definition: RETURN_ORDER_PROJECTION_DEFINITION,
+});
 
 export interface ApproveReturnOrderCommandInput extends ApproveReturnInput {
   source?: string;
@@ -251,7 +237,7 @@ async function executeReturnOrderCommand(input: {
   nextReturnOrder: ReturnOrderRecord;
   persistProjection: () => Promise<void>;
 }): Promise<ExecuteMutationCommandResult<ReturnOrderRecord>> {
-  return executeMutationCommand({
+  return executeCommandRuntime({
     model: "return_order",
     operation: "update",
     recordId: input.returnOrderId,
@@ -286,24 +272,6 @@ async function loadReturnOrderProjectionState(input: {
   returnOrderId: string;
 }): Promise<ReturnOrderRecord> {
   const returnOrder = await loadReturnOrder(input.tenantId, input.returnOrderId);
-  const checkpoint = getProjectionCheckpoint({
-    projectionName: RETURN_ORDER_PROJECTION_DEFINITION.name,
-    aggregateType: "return_order",
-    aggregateId: input.returnOrderId,
-  });
-
-  if (!checkpoint) {
-    return returnOrder;
-  }
-
-  const events = await dbGetAggregateEvents("return_order", input.returnOrderId);
-  const latestEventVersion = events.at(-1)?.version ?? 0;
-  const driftReport = detectProjectionDrift({
-    definition: RETURN_ORDER_PROJECTION_DEFINITION,
-    checkpoint,
-    latestEventVersion,
-  });
-
-  assertNoProjectionDrift(driftReport);
+  await assertReturnOrderProjectionDrift(input.returnOrderId);
   return returnOrder;
 }

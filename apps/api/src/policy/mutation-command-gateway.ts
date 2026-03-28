@@ -1,4 +1,4 @@
-import { SALES_MUTATION_POLICIES } from "@afenda/db";
+import { MUTATION_POLICIES } from "@afenda/db";
 import {
   isDirectMutationAllowed,
   resolveMutationPolicy,
@@ -9,6 +9,7 @@ import {
 } from "@afenda/meta-types";
 
 import { dbAppendEvent } from "../events/dbEventStore.js";
+import { resolveEventType } from "./event-type-registry.js";
 
 type MutationRecord = Record<string, unknown>;
 
@@ -48,6 +49,12 @@ export interface ExecuteMutationCommandInput<TRecord extends MutationRecord> {
     projectedState: TRecord | null;
     event: DomainEvent<MutationEventPayload>;
     policy: MutationPolicyDefinition;
+  }) => Promise<void>;
+  validateProjectionDrift?: (input: {
+    model: string;
+    operation: MutationOperation;
+    aggregateId?: string;
+    policy?: MutationPolicyDefinition;
   }) => Promise<void>;
 }
 
@@ -101,7 +108,7 @@ export class MutationPolicyViolationError extends Error {
 }
 
 function policiesFor(policies?: MutationPolicyDefinition[]): MutationPolicyDefinition[] {
-  return policies ?? SALES_MUTATION_POLICIES;
+  return policies ?? MUTATION_POLICIES;
 }
 
 function operationsFor(policy: MutationPolicyDefinition): MutationOperation[] {
@@ -147,163 +154,13 @@ function buildEventPayload(input: {
   };
 }
 
-function normalizeStatus(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value.toLowerCase() : undefined;
-}
-
-function resolveSalesOrderEventType(input: {
-  operation: MutationOperation;
-  before?: MutationRecord | null;
-  after?: MutationRecord | null;
-}): string {
-  const beforeStatus = normalizeStatus(input.before?.status);
-  const afterStatus = normalizeStatus(input.after?.status);
-
-  if (input.operation === "delete") {
-    return "sales_order.cancelled";
-  }
-
-  if (afterStatus === "cancel" || afterStatus === "cancelled") {
-    return "sales_order.cancelled";
-  }
-
-  if (
-    afterStatus &&
-    ["sale", "confirmed", "done"].includes(afterStatus) &&
-    beforeStatus !== afterStatus
-  ) {
-    return "sales_order.confirmed";
-  }
-
-  return "sales_order.submitted";
-}
-
-function resolveSubscriptionEventType(input: {
-  operation: MutationOperation;
-  before?: MutationRecord | null;
-  after?: MutationRecord | null;
-}): string {
-  if (input.operation === "delete") {
-    return "subscription.cancelled";
-  }
-
-  const beforeStatus = normalizeStatus(input.before?.status);
-  const afterStatus = normalizeStatus(input.after?.status);
-
-  if (afterStatus === "cancelled") {
-    return "subscription.cancelled";
-  }
-
-  if (afterStatus === "active" && beforeStatus !== "active") {
-    return "subscription.activated";
-  }
-
-  if (afterStatus === "paused" && beforeStatus !== "paused") {
-    return "subscription.paused";
-  }
-
-  return "subscription.direct_update";
-}
-
-function resolveReturnOrderEventType(input: {
-  operation: MutationOperation;
-  before?: MutationRecord | null;
-  after?: MutationRecord | null;
-}): string {
-  if (input.operation === "delete") {
-    return "return_order.cancelled";
-  }
-
-  const beforeStatus = normalizeStatus(input.before?.status);
-  const afterStatus = normalizeStatus(input.after?.status);
-
-  if (afterStatus === "approved" && beforeStatus !== "approved") {
-    return "return_order.approved";
-  }
-
-  if (afterStatus === "received" && beforeStatus !== "received") {
-    return "return_order.received";
-  }
-
-  if (afterStatus === "inspected" && beforeStatus !== "inspected") {
-    return "return_order.inspected";
-  }
-
-  if (afterStatus === "credited" && beforeStatus !== "credited") {
-    return "return_order.credited";
-  }
-
-  return "return_order.direct_update";
-}
-
-function resolveCommissionEntryEventType(input: {
-  operation: MutationOperation;
-  before?: MutationRecord | null;
-  after?: MutationRecord | null;
-}): string {
-  if (input.operation === "delete") {
-    return "commission_entry.deleted";
-  }
-
-  if (input.operation === "create") {
-    return "commission_entry.generated";
-  }
-
-  const beforeStatus = normalizeStatus(input.before?.status);
-  const afterStatus = normalizeStatus(input.after?.status);
-
-  if (beforeStatus !== undefined && afterStatus === "approved" && beforeStatus !== "approved") {
-    return "commission_entry.approved";
-  }
-
-  if (beforeStatus !== undefined && afterStatus === "paid" && beforeStatus !== "paid") {
-    return "commission_entry.paid";
-  }
-
-  return input.operation === "update"
-    ? "commission_entry.recalculated"
-    : "commission_entry.direct_update";
-}
-
 function resolveCommandEventType(input: {
   model: string;
   operation: MutationOperation;
   before?: MutationRecord | null;
   after?: MutationRecord | null;
 }): string {
-  if (input.model === "sales_order") {
-    return resolveSalesOrderEventType({
-      operation: input.operation,
-      before: input.before,
-      after: input.after,
-    });
-  }
-
-  if (input.model === "subscription") {
-    return resolveSubscriptionEventType({
-      operation: input.operation,
-      before: input.before,
-      after: input.after,
-    });
-  }
-
-  if (input.model === "return_order") {
-    return resolveReturnOrderEventType({
-      operation: input.operation,
-      before: input.before,
-      after: input.after,
-    });
-  }
-
-  if (input.model === "commission_entry") {
-    return resolveCommissionEntryEventType({
-      operation: input.operation,
-      before: input.before,
-      after: input.after,
-    });
-  }
-
-  return `${input.model}.direct_${input.operation}`;
+  return resolveEventType(input);
 }
 
 function buildViolationMessage(input: {
@@ -475,6 +332,22 @@ export async function executeMutationCommand<TRecord extends MutationRecord>(
     });
   }
 
+  const resolvedAggregateId = resolveAggregateId({
+    recordId: input.recordId,
+    record: input.existingRecord,
+    nextRecord: input.nextRecord,
+    existingRecord: input.existingRecord,
+  });
+
+  if (input.validateProjectionDrift) {
+    await input.validateProjectionDrift({
+      model: input.model,
+      operation: input.operation,
+      aggregateId: resolvedAggregateId,
+      policy: resolvedPolicy,
+    });
+  }
+
   const result = await input.mutate();
 
   if (
@@ -489,12 +362,14 @@ export async function executeMutationCommand<TRecord extends MutationRecord>(
     };
   }
 
-  const aggregateId = resolveAggregateId({
-    recordId: input.recordId,
-    record: result,
-    nextRecord: input.nextRecord,
-    existingRecord: input.existingRecord,
-  });
+  const aggregateId =
+    resolvedAggregateId ??
+    resolveAggregateId({
+      recordId: input.recordId,
+      record: result,
+      nextRecord: input.nextRecord,
+      existingRecord: input.existingRecord,
+    });
 
   if (!aggregateId) {
     throw new Error(

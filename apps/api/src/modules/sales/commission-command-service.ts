@@ -1,34 +1,29 @@
-import type { MutationPolicyDefinition } from "@afenda/meta-types";
+import { requireMutationPolicyById } from "@afenda/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 import { db } from "../../db/index.js";
 import { commissionEntries } from "../../db/schema/index.js";
-import { dbGetAggregateEvents } from "../../events/dbEventStore.js";
-import {
-  getProjectionCheckpoint,
-  upsertProjectionCheckpoint,
-} from "../../events/projectionCheckpointStore.js";
-import {
-  assertNoProjectionDrift,
-  buildProjectionCheckpoint,
-  detectProjectionDrift,
-} from "../../events/projectionRuntime.js";
+import { upsertProjectionCheckpoint } from "../../events/projectionCheckpointStore.js";
+import { buildProjectionCheckpoint } from "../../events/projectionRuntime.js";
 import { NotFoundError, ValidationError } from "../../middleware/errorHandler.js";
 import {
-  executeMutationCommand,
+  createProjectionDriftValidator,
+  executeCommandRuntime,
   type ExecuteMutationCommandResult,
-} from "../../policy/mutation-command-gateway.js";
+} from "../../policy/command-runtime-spine.js";
 import {
   approveCommissionEntries,
   loadCommissionEntriesForMutation,
   payCommissionEntries,
   persistPreparedCommissionGeneration,
   prepareCommissionGeneration,
+  removeCommissionEntry,
   type ApproveCommissionEntriesResult,
   type GenerateCommissionForOrderInput,
   type GenerateCommissionForOrderResult,
   type PayCommissionEntriesResult,
+  type RemoveCommissionEntryResult,
 } from "./commission-service.js";
 
 type CommissionEntryRecord = typeof commissionEntries.$inferSelect;
@@ -36,25 +31,12 @@ type CommissionEntryEvent = NonNullable<
   ExecuteMutationCommandResult<CommissionEntryRecord>["event"]
 >;
 
-const COMMISSION_ENTRY_EVENT_ONLY_POLICY: MutationPolicyDefinition = {
-  id: "sales.commission_entry.command_projection",
-  mutationPolicy: "event-only",
-  appliesTo: ["commission_entry"],
-  requiredEvents: ["commission_entry.approved", "commission_entry.paid"],
-  directMutationOperations: ["update"],
-  description:
-    "Commission approval and payment command routes append entry-scoped events first and refresh the read model through projection persistence.",
-};
-
-const COMMISSION_ENTRY_GENERATION_POLICY: MutationPolicyDefinition = {
-  id: "sales.commission_entry.command_generation",
-  mutationPolicy: "dual-write",
-  appliesTo: ["commission_entry"],
-  requiredEvents: ["commission_entry.generated", "commission_entry.recalculated"],
-  directMutationOperations: ["create", "update"],
-  description:
-    "Commission generation remains command-owned under dual-write until create/update parity is proven across the aggregate.",
-};
+const COMMISSION_ENTRY_EVENT_ONLY_POLICY = requireMutationPolicyById(
+  "sales.commission_entry.command_projection"
+);
+const COMMISSION_ENTRY_GENERATION_POLICY = requireMutationPolicyById(
+  "sales.commission_entry.command_generation"
+);
 
 const COMMISSION_ENTRY_PROJECTION_DEFINITION = {
   name: "commission_entry.read_model",
@@ -63,6 +45,10 @@ const COMMISSION_ENTRY_PROJECTION_DEFINITION = {
     schemaHash: "commission_entry_read_model_v1",
   },
 };
+const assertCommissionEntryProjectionDrift = createProjectionDriftValidator({
+  aggregateType: "commission_entry",
+  definition: COMMISSION_ENTRY_PROJECTION_DEFINITION,
+});
 
 export interface ApproveCommissionEntryCommandInput {
   tenantId: number;
@@ -76,6 +62,13 @@ export interface PayCommissionEntryCommandInput {
   actorId: number;
   entryId: string;
   paidDate?: Date;
+  source?: string;
+}
+
+export interface RemoveCommissionEntryCommandInput {
+  tenantId: number;
+  actorId: number;
+  entryId: string;
   source?: string;
 }
 
@@ -121,6 +114,9 @@ export interface ApproveCommissionEntryCommandResult
 export interface PayCommissionEntryCommandResult
   extends PayCommissionEntriesResult, CommissionCommandMetadata {}
 
+export interface RemoveCommissionEntryCommandResult
+  extends RemoveCommissionEntryResult, CommissionCommandMetadata {}
+
 export interface GenerateCommissionForOrderCommandResult
   extends GenerateCommissionForOrderResult, CommissionCommandMetadata {}
 
@@ -140,7 +136,7 @@ export async function generateCommissionForOrderCommand(
   const operation = prepared.persistence === "created" ? "create" : "update";
   let serviceResult: GenerateCommissionForOrderResult | undefined;
 
-  const commandResult = await executeMutationCommand({
+  const commandResult = await executeCommandRuntime({
     model: "commission_entry",
     operation,
     recordId: prepared.persistence === "updated" ? prepared.existingEntry?.id : undefined,
@@ -255,6 +251,55 @@ export async function payCommissionEntryCommand(
 
   if (!serviceResult) {
     throw new Error("commission-command-service: pay mutation returned no result");
+  }
+
+  return {
+    ...serviceResult,
+    mutationPolicy: commandResult.mutationPolicy,
+    event: commandResult.event,
+  };
+}
+
+export async function removeCommissionEntryCommand(
+  input: RemoveCommissionEntryCommandInput
+): Promise<RemoveCommissionEntryCommandResult> {
+  await loadCommissionEntry(input.tenantId, input.entryId);
+
+  let serviceResult: RemoveCommissionEntryResult | undefined;
+  const commandResult = await executeCommandRuntime({
+    model: "commission_entry",
+    operation: "delete",
+    recordId: input.entryId,
+    actorId: String(input.actorId),
+    source: input.source ?? "api.sales.commissions.delete.single",
+    policies: [COMMISSION_ENTRY_EVENT_ONLY_POLICY],
+    mutate: async () => null,
+    loadProjectionState: async () =>
+      loadCommissionEntryProjectionState({
+        tenantId: input.tenantId,
+        entryId: input.entryId,
+      }),
+    projectEvent: () => null,
+    persistProjectionState: async ({ event }) => {
+      serviceResult = await removeCommissionEntry({
+        tenantId: input.tenantId,
+        actorId: input.actorId,
+        entryId: input.entryId,
+      });
+      upsertProjectionCheckpoint(
+        buildProjectionCheckpoint({
+          definition: COMMISSION_ENTRY_PROJECTION_DEFINITION,
+          aggregateType: "commission_entry",
+          aggregateId: input.entryId,
+          lastAppliedVersion: event.version,
+          updatedAt: event.timestamp,
+        })
+      );
+    },
+  });
+
+  if (!serviceResult) {
+    throw new Error("commission-command-service: delete mutation returned no result");
   }
 
   return {
@@ -406,7 +451,7 @@ async function executeCommissionEntryCommand(input: {
   nextEntry: CommissionEntryRecord;
   persistProjection: () => Promise<void>;
 }): Promise<ExecuteMutationCommandResult<CommissionEntryRecord>> {
-  return executeMutationCommand({
+  return executeCommandRuntime({
     model: "commission_entry",
     operation: "update",
     recordId: input.entryId,
@@ -441,24 +486,7 @@ async function loadCommissionEntryProjectionState(input: {
   entryId: string;
 }): Promise<CommissionEntryRecord> {
   const record = await loadCommissionEntry(input.tenantId, input.entryId);
-  const checkpoint = getProjectionCheckpoint({
-    projectionName: COMMISSION_ENTRY_PROJECTION_DEFINITION.name,
-    aggregateType: "commission_entry",
-    aggregateId: input.entryId,
-  });
-
-  if (checkpoint) {
-    const events = await dbGetAggregateEvents("commission_entry", input.entryId);
-    const latestEventVersion = events.at(-1)?.version ?? 0;
-    assertNoProjectionDrift(
-      detectProjectionDrift({
-        definition: COMMISSION_ENTRY_PROJECTION_DEFINITION,
-        checkpoint,
-        latestEventVersion,
-      })
-    );
-  }
-
+  await assertCommissionEntryProjectionDrift(input.entryId);
   return record;
 }
 

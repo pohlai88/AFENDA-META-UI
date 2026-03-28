@@ -113,6 +113,17 @@ export interface PayCommissionEntriesResult {
   entries: Array<typeof commissionEntries.$inferSelect>;
 }
 
+export interface RemoveCommissionEntryInput {
+  tenantId: number;
+  actorId: number;
+  entryId: string;
+}
+
+export interface RemoveCommissionEntryResult {
+  deletedCount: number;
+  entry: typeof commissionEntries.$inferSelect;
+}
+
 export interface CommissionReportInput {
   tenantId: number;
   salespersonId?: number;
@@ -354,6 +365,36 @@ export async function payCommissionEntries(
     updatedCount: updatedEntries.length,
     unchangedCount,
     entries: updatedEntries,
+  };
+}
+
+export async function removeCommissionEntry(
+  input: RemoveCommissionEntryInput
+): Promise<RemoveCommissionEntryResult> {
+  const [entry] = await db
+    .update(commissionEntries)
+    .set({
+      deletedAt: new Date(),
+      updatedBy: input.actorId,
+    })
+    .where(
+      and(
+        eq(commissionEntries.tenantId, input.tenantId),
+        eq(commissionEntries.id, input.entryId),
+        isNull(commissionEntries.deletedAt)
+      )
+    )
+    .returning();
+
+  if (!entry) {
+    throw new NotFoundError(
+      `Commission entry ${input.entryId} was not found for tenant ${input.tenantId}.`
+    );
+  }
+
+  return {
+    deletedCount: 1,
+    entry,
   };
 }
 

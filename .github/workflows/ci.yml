@@ -61,6 +61,8 @@ jobs:
     name: System Integrity Gates
     needs: setup
     runs-on: ubuntu-latest
+    env:
+      AFENDA_PROMOTION_CONTEXT: production-candidate
     steps:
       - uses: actions/checkout@v5
         with:
@@ -104,12 +106,40 @@ jobs:
         run: pnpm ci:gate
         continue-on-error: false
 
+      - name: Meta-types export snapshot gate
+        run: pnpm ci:gate:exports
+        continue-on-error: false
+
+      - name: Truth schema drift gate
+        run: pnpm ci:gate:truth-schema-drift
+        continue-on-error: false
+
+      - name: Policy contract consistency gate
+        run: pnpm ci:policy:contract-consistency
+        continue-on-error: false
+
       - name: Bounded-context command tests
         run: pnpm ci:api:command-bounded-context
         continue-on-error: false
 
       - name: Projection replay checks
         run: pnpm ci:api:projection-replay
+        continue-on-error: false
+
+      - name: Release governance checks
+        run: pnpm ci:release:governance
+        continue-on-error: false
+
+      - name: Non-sales promotion gate checks
+        run: pnpm ci:promotion:non-sales
+        continue-on-error: false
+
+      - name: Non-sales parity execution checks
+        run: pnpm ci:parity:non-sales
+        continue-on-error: false
+
+      - name: Organization promotion checklist automation
+        run: pnpm ci:promotion:organization:checklist
         continue-on-error: false
 
   lint:
