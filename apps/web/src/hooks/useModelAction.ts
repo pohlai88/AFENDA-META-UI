@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@afenda/ui";
-import type { MetaAction } from "@afenda/meta-types";
+import type { MetaAction } from "@afenda/meta-types/schema";
 import { queryKeys } from "~/lib/query-keys";
 
 interface UseModelActionOptions {

@@ -17,8 +17,7 @@
  * @layer db/truth-compiler
  */
 
-import type { StateMachineDefinition, Transition } from "@afenda/meta-types";
-
+import type { StateMachineDefinition, Transition } from "@afenda/meta-types/compiler";
 import type { NormalizedTruthModel, SqlSegment } from "./types.js";
 import { quoteIdentifier, toSnakeIdentifier } from "./sql-utils.js";
 

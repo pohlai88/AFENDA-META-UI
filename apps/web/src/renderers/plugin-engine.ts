@@ -5,7 +5,7 @@
  * Modules plug in like VS Code extensions.
  */
 
-import type { JsonValue, JsonObject } from "@afenda/meta-types";
+import type { JsonValue, JsonObject } from "@afenda/meta-types/core";
 import type { RendererModule } from "./types/contracts";
 import { logger } from '../lib/logger';
 const log = logger.child({ module: 'plugin-engine' });

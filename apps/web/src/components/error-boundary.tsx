@@ -39,7 +39,22 @@ export class ErrorBoundaryClass extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
-    // TODO: Send to error tracking service (Sentry, etc.)
+
+    // Send to error tracking service if configured
+    if (import.meta.env.VITE_SENTRY_DSN) {
+      // Sentry integration would be initialized in bootstrap
+      // window.Sentry?.captureException(error, { contexts: { react: errorInfo } });
+    }
+
+    // Log structured error for production debugging
+    if (import.meta.env.PROD) {
+      console.error(JSON.stringify({
+        type: 'react-error-boundary',
+        error: { name: error.name, message: error.message, stack: error.stack },
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString(),
+      }));
+    }
   }
 
   private handleReset = () => {

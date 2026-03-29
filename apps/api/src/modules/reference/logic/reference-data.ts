@@ -10,12 +10,7 @@
  * Phase 0: Platform Reference Data (Sales Domain Expansion)
  */
 
-import type {
-  Sequence,
-  Currency,
-  CurrencyRate,
-  UnitOfMeasure,
-} from "@afenda/db/schema-platform";
+import type { Sequence, Currency, CurrencyRate, UnitOfMeasure } from "@afenda/db/schema/reference";
 import { Decimal } from "decimal.js";
 
 // ============================================================================

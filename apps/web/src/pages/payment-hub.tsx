@@ -28,8 +28,7 @@ import { useModelList, useModel, type ListOptions } from "~/hooks/useModel";
 import { useMeta } from "~/hooks/useMeta";
 import { SearchInput } from "~/components/SearchInput";
 import { ActionButtons } from "~/components/ActionButtons";
-import type { MetaAction } from "@afenda/meta-types";
-
+import type { MetaAction } from "@afenda/meta-types/schema";
 interface SalesOrder {
   id: string;
   supplier: string;

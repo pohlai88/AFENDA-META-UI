@@ -4,8 +4,8 @@
  */
 
 import { applyRbac } from "./rbac.js";
-import type { ModelMeta, SessionContext } from "@afenda/meta-types";
-
+import type { SessionContext } from "@afenda/meta-types/rbac";
+import type { ModelMeta } from "@afenda/meta-types/schema";
 // Sample model with expression-based action visibility
 const testModel: ModelMeta = {
   model: "test_model",

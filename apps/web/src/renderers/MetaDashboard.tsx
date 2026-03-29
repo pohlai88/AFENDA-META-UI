@@ -13,12 +13,7 @@
 
 import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  MetaDashboardChartConfig,
-  MetaDashboardChartSeries,
-  MetaDashboardView,
-  MetaDashboardWidget,
-} from "@afenda/meta-types";
+import type { MetaDashboardChartConfig, MetaDashboardChartSeries, MetaDashboardView, MetaDashboardWidget } from "@afenda/meta-types/schema";
 import {
   Bar,
   BarChart,

@@ -39,8 +39,7 @@ import { FormFieldRenderer } from "./FormFieldRenderer";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { MetaField } from "@afenda/meta-types";
-
+import type { MetaField } from "@afenda/meta-types/schema";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------

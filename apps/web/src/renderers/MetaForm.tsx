@@ -14,7 +14,7 @@
  */
 
 import React, { useState } from "react";
-import type { FieldType, MetaField, ModelMeta, MetaGroup, MetaFormView } from "@afenda/meta-types";
+import type { FieldType, MetaField, ModelMeta, MetaGroup, MetaFormView } from "@afenda/meta-types/schema";
 import { useMeta } from "../hooks/useMeta.js";
 import { useModel } from "../hooks/useModel.js";
 import { FieldRenderer } from "./fields/index.js";

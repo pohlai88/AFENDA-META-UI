@@ -9,8 +9,7 @@ import { MutationPolicyViolationError } from "../policy/mutation-command-gateway
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { resolveActorId } from "./_shared/actor-resolution.js";
 
-import type { OrganizationDefinition } from "@afenda/meta-types";
-
+import type { OrganizationDefinition } from "@afenda/meta-types/platform";
 const router = Router();
 
 router.get("/", (_req: Request, res: Response) => {

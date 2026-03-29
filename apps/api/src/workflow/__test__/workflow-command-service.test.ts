@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { WorkflowDefinition, WorkflowInstance } from "@afenda/meta-types";
-
+import type { WorkflowDefinition, WorkflowInstance } from "@afenda/meta-types/workflow";
 const {
   advanceInstanceMock,
   assertNoProjectionDriftMock,

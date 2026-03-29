@@ -10,13 +10,7 @@
  * from reaching production.
  */
 
-import type {
-  TenantDefinition,
-  MetadataOverride,
-  OverrideScope,
-  ResolutionContext,
-  GovernanceViolation,
-} from "@afenda/meta-types";
+import type { TenantDefinition, MetadataOverride, OverrideScope, ResolutionContext, GovernanceViolation } from "@afenda/meta-types/platform";
 import { logDecisionAudit } from "../audit/decisionAuditLogger.js";
 import { randomUUID } from "crypto";
 import * as tenantRepo from "./tenantRepository.js";

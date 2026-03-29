@@ -1,11 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import type {
-  BlastRadiusResult,
-  PolicyDefinition,
-  SimulationReport,
-  SimulationScenario,
-} from "@afenda/meta-types";
-
+import type { BlastRadiusResult, PolicyDefinition, SimulationReport, SimulationScenario } from "@afenda/meta-types/policy";
 interface SimulatePayload {
   scenario: SimulationScenario;
   policies?: PolicyDefinition[];

@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`API Snapshot Tests (Auto-Generated) > /health > GET /health returns expected response shape 1`] = `
+{
+  "body": {
+    "createdAt": "[MASKED]",
+    "id": "[MASKED]",
+    "nested": {
+      "updatedAt": "[MASKED]",
+    },
+  },
+  "contentType": "application/json; charset=utf-8",
+  "status": 200,
+}
+`;
+
+exports[`API Snapshot Tests (Auto-Generated) > /orders > POST /orders returns expected response shape 1`] = `
+{
+  "body": {
+    "data": {
+      "createdAt": "[MASKED]",
+    },
+    "id": "[MASKED]",
+    "timestamp": "[MASKED]",
+  },
+  "contentType": "application/json",
+  "status": 201,
+}
+`;

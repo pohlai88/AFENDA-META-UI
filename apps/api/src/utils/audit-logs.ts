@@ -7,11 +7,7 @@
 
 import { db } from "../db/index.js";
 import { domainEventLogs, domainInvariantLogs } from "../db/schema/index.js";
-import type {
-  DomainEventType,
-  InvariantSeverity,
-  InvariantStatus,
-} from "@afenda/db/schema-domain";
+import type { DomainEventType, InvariantSeverity, InvariantStatus } from "@afenda/db/schema/sales";
 
 export interface RecordInvariantCheckParams {
   tenantId: number;
@@ -58,9 +54,7 @@ export interface RecordDomainEventParams {
  * });
  * ```
  */
-export async function recordInvariantCheck(
-  params: RecordInvariantCheckParams
-): Promise<void> {
+export async function recordInvariantCheck(params: RecordInvariantCheckParams): Promise<void> {
   await db.insert(domainInvariantLogs).values({
     tenantId: params.tenantId,
     invariantCode: params.invariantCode,
@@ -82,9 +76,7 @@ export async function recordInvariantCheck(
  *
  * More efficient than individual calls when validating multiple rules.
  */
-export async function recordInvariantChecks(
-  checks: RecordInvariantCheckParams[]
-): Promise<void> {
+export async function recordInvariantChecks(checks: RecordInvariantCheckParams[]): Promise<void> {
   if (checks.length === 0) return;
 
   await db.insert(domainInvariantLogs).values(

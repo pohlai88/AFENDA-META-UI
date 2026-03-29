@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MutationPolicyDefinition } from "@afenda/meta-types";
-
+import type { MutationPolicyDefinition } from "@afenda/meta-types/policy";
 const { dbAppendEventMock } = vi.hoisted(() => ({
   dbAppendEventMock: vi.fn(),
 }));

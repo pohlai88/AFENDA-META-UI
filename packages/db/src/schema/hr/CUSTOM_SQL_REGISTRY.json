@@ -1,0 +1,27 @@
+{
+  "$schema": "Custom SQL entries that live outside Drizzle-generated migrations",
+  "version": 1,
+  "instructions": "When generating next migration, append the SQL from 'pending' entries to the migration file, then update status to 'applied' and set migration field.",
+  "entries": [
+    {
+      "csqlId": "CSQL-001",
+      "type": "circular_fk",
+      "circularFkRef": "CIRC-001",
+      "description": "Deferred FK: departments.managerId → employees.id (composite with tenantId)",
+      "tables": ["hr.departments", "hr.employees"],
+      "migration": null,
+      "status": "pending",
+      "sql": "ALTER TABLE hr.departments ADD CONSTRAINT fk_departments_manager FOREIGN KEY (tenant_id, manager_id) REFERENCES hr.employees(tenant_id, id);"
+    },
+    {
+      "csqlId": "CSQL-002",
+      "type": "circular_fk",
+      "circularFkRef": "CIRC-002",
+      "description": "Deferred FK: departments.costCenterId → costCenters.id (composite with tenantId)",
+      "tables": ["hr.departments", "hr.cost_centers"],
+      "migration": null,
+      "status": "pending",
+      "sql": "ALTER TABLE hr.departments ADD CONSTRAINT fk_departments_cost_center FOREIGN KEY (tenant_id, cost_center_id) REFERENCES hr.cost_centers(tenant_id, id);"
+    }
+  ]
+}

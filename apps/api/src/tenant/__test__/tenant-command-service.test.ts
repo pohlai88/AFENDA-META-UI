@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TenantDefinition } from "@afenda/meta-types";
-
+import type { TenantDefinition } from "@afenda/meta-types/platform";
 const {
   executeCommandRuntimeMock,
   getTenantMock,

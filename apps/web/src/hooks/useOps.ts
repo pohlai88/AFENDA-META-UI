@@ -42,7 +42,7 @@ export interface InvariantStats {
   recentFailures24h: number;
 }
 
-export interface OpsFilters {
+export interface OpsFilters extends Record<string, unknown> {
   page?: number;
   limit?: number;
   status?: string;
@@ -72,7 +72,7 @@ export function useInvariantViolations(
   filters?: OpsFilters
 ): UseQueryResult<PaginatedResponse<InvariantViolation>> {
   return useQuery({
-    queryKey: queryKeys.ops.violations(filters as unknown as Record<string, unknown> | undefined),
+    queryKey: queryKeys.ops.violations(filters),
     queryFn: async (): Promise<PaginatedResponse<InvariantViolation>> => {
       const res = await fetch(`/api/ops/invariant-violations${toQueryString(filters)}`);
       if (!res.ok) {
@@ -108,7 +108,7 @@ export function useDomainEvents(
   filters?: OpsFilters
 ): UseQueryResult<PaginatedResponse<DomainEventLog>> {
   return useQuery({
-    queryKey: queryKeys.ops.events(filters as unknown as Record<string, unknown> | undefined),
+    queryKey: queryKeys.ops.events(filters),
     queryFn: async (): Promise<PaginatedResponse<DomainEventLog>> => {
       const res = await fetch(`/api/ops/domain-events${toQueryString(filters)}`);
       if (!res.ok) {

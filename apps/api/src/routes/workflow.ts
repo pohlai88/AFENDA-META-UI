@@ -34,8 +34,7 @@ import {
 import { MutationPolicyViolationError } from "../policy/mutation-command-gateway.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { resolveActorId, resolveNumericActorId } from "./_shared/actor-resolution.js";
-import type { WorkflowDefinition, WorkflowStatus } from "@afenda/meta-types";
-
+import type { WorkflowDefinition, WorkflowStatus } from "@afenda/meta-types/workflow";
 const router = Router();
 
 // ────────────────────────────────────────────────────────────────────────

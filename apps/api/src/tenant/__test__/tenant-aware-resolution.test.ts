@@ -19,7 +19,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import type { ResolutionContext, ModelMeta } from "@afenda/meta-types";
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { ModelMeta } from "@afenda/meta-types/schema";
 import { resolveMetadata, reverseResolution } from "../index.js";
 import { registerRule } from "../../rules/index.js";
 import type { RuleExecutionContext } from "../../rules/index.js";
@@ -192,28 +193,38 @@ describe("Tenant-Aware Metadata Resolution", () => {
     });
   });
 
-  describe("Layout Resolution with Tenant Context", () => {
+  /**
+   * Layout Resolution with Tenant Context
+   * Note: These tests require full layout registry setup with LayoutDefinition registration.
+   * Deferred to future implementation when layout system is fully materialized.
+   * Relevant types: LayoutDefinition, LayoutNode from @afenda/meta-types/layout
+   */
+  describe.skip("Layout Resolution with Tenant Context", () => {
     it("should resolve layout for tenant context", () => {
-      // This test would require layout registry setup
-      // and LayoutDefinition registration
-      // Placeholder for now
+      // Requires: layout registry, LayoutDefinition registration, tenant-specific layouts
       expect(true).toBe(true);
     });
 
     it("should prioritize user-specific layouts", () => {
-      // User layout > dept layout > tenant layout > global
+      // Priority order: user layout > dept layout > tenant layout > global default
       expect(true).toBe(true);
     });
   });
 
-  describe("Policy Evaluation with Tenant Context", () => {
+  /**
+   * Policy Evaluation with Tenant Context
+   * Note: These tests require policy registry and scenario-based test fixtures.
+   * Deferred to future implementation when policy evaluation engine is integrated.
+   * Relevant types: PolicyDefinition, PolicyContext from @afenda/meta-types/policy
+   */
+  describe.skip("Policy Evaluation with Tenant Context", () => {
     it("should evaluate policies with tenant-resolved metadata", () => {
-      // Placeholder — requires policy registry and scenario setup
+      // Requires: policy registry, tenant-specific policy definitions, evaluation engine
       expect(true).toBe(true);
     });
 
     it("should apply tenant-specific policy overrides", () => {
-      // A policy might be stricter or more lenient per tenant
+      // Use case: tenant-specific strictness levels (e.g., retail vs enterprise)
       expect(true).toBe(true);
     });
   });

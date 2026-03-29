@@ -5,7 +5,7 @@
 -- Regenerate with: pnpm --filter @afenda/db truth:generate
 -- Diff check:      pnpm --filter @afenda/db truth:check
 -- =============================================================================
--- Generated at: 2026-03-27T21:14:00.892Z
+-- Generated at: 2026-03-29T00:11:44.052Z
 
 -- Cross invariant: sales.cross.active_subscription_requires_sale_order | severity=warning | executionKind=trigger | model=sales_order
 CREATE OR REPLACE FUNCTION "sales"."enforce_xinv_sales_cross_active_subscription_requires_sale_order_on_sales_order"()

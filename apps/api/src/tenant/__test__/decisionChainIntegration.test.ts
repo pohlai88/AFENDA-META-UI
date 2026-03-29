@@ -1,12 +1,9 @@
 import { randomUUID } from "crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-  DecisionAuditEntry,
-  ModelMeta,
-  PolicyContext,
-  PolicyDefinition,
-  ResolutionContext,
-} from "@afenda/meta-types";
+import type { DecisionAuditEntry } from "@afenda/meta-types/audit";
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { PolicyContext, PolicyDefinition } from "@afenda/meta-types/policy";
+import type { ModelMeta } from "@afenda/meta-types/schema";
 import {
   clearDecisionAuditLog,
   getDecisionChain,

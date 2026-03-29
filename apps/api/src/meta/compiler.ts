@@ -13,17 +13,16 @@
  * the schema registry UI or migration scripts.
  */
 
-import {
-  type FieldType,
-  type MetaAction,
-  type MetaField,
-  type MetaListView,
-  type MetaFormView,
-  type ModelMeta,
-  type IntrospectedModel,
-  type IntrospectedField,
-} from "@afenda/meta-types";
-
+import type {
+  FieldType,
+  MetaAction,
+  MetaField,
+  MetaListView,
+  MetaFormView,
+  ModelMeta,
+  IntrospectedModel,
+  IntrospectedField,
+} from "@afenda/meta-types/schema";
 // ---------------------------------------------------------------------------
 // GraphQL scalar → FieldType mapping
 // ---------------------------------------------------------------------------
@@ -217,7 +216,8 @@ function buildDefaultActions(model: string): MetaAction[] {
         style: "secondary",
         icon: "CalendarClock",
         allowed_roles: ["admin", "sales_manager", "sales_ops"],
-        confirm_message: "Evaluate expiry and update agreement status if the agreement is past end date?",
+        confirm_message:
+          "Evaluate expiry and update agreement status if the agreement is past end date?",
       },
     ];
   }

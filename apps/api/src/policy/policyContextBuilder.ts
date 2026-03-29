@@ -14,8 +14,7 @@
  *   previousRecord.status     → "prev_status"
  */
 
-import type { PolicyContext } from "@afenda/meta-types";
-
+import type { PolicyContext } from "@afenda/meta-types/policy";
 /**
  * Flatten an object into dot-delimited keys with `_` separator.
  * Arrays are flattened per-element as `key_N_subkey`.

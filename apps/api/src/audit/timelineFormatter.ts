@@ -5,14 +5,7 @@
  * applying sensitivity masking where needed.
  */
 
-import type {
-  AuditEntry,
-  AuditTimelineEntry,
-  FieldChange,
-  MaskingRule,
-  SensitivityLevel,
-} from "@afenda/meta-types";
-
+import type { AuditEntry, AuditTimelineEntry, FieldChange, MaskingRule, SensitivityLevel } from "@afenda/meta-types/audit";
 type MaskingRules = Record<SensitivityLevel, MaskingRule>;
 
 // Re-import the constant at runtime for default masking behavior

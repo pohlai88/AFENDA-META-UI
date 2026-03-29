@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { OrganizationDefinition } from "@afenda/meta-types";
-
+import type { OrganizationDefinition } from "@afenda/meta-types/platform";
 import {
   clearOrganizations,
   disableOrganizationPersistence,

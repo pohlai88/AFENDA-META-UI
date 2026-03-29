@@ -12,8 +12,17 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { schemaRegistry } from "../db/schema/index.js";
-import type { ModelMeta, SchemaRegistryEntry } from "@afenda/meta-types";
+import type { ModelMeta } from "@afenda/meta-types/schema";
 
+/**
+ * Schema registry row type inferred from Drizzle table definition.
+ *
+ * **Truth Engine Type Boundary:**
+ * We use Drizzle's inferred type instead of hand-written interfaces
+ * to maintain type safety through the ORM boundary. The casing conversion
+ * (snake_case DB → camelCase TS) is handled by Drizzle's casing config.
+ */
+export type SchemaRegistryRow = typeof schemaRegistry.$inferSelect;
 // ---------------------------------------------------------------------------
 // Simple in-process cache
 // ---------------------------------------------------------------------------
@@ -117,7 +126,7 @@ export async function deleteSchema(model: string): Promise<void> {
 }
 
 /** Retrieve the full registry entry (includes version, timestamps). */
-export async function getRegistryEntry(model: string): Promise<SchemaRegistryEntry | null> {
+export async function getRegistryEntry(model: string): Promise<SchemaRegistryRow | null> {
   await ensureRegistryTable();
 
   const rows = await db
@@ -126,5 +135,5 @@ export async function getRegistryEntry(model: string): Promise<SchemaRegistryEnt
     .where(eq(schemaRegistry.model, model))
     .limit(1);
 
-  return rows.length ? (rows[0] as unknown as SchemaRegistryEntry) : null;
+  return rows[0] ?? null;
 }

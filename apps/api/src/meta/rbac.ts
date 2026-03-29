@@ -14,16 +14,8 @@
  * should be wired in before production use.
  */
 
-import type {
-  ModelMeta,
-  MetaField,
-  MetaAction,
-  MetaFormView,
-  MetaListView,
-  MetaResponse,
-  SessionContext,
-  RbacResult,
-} from "@afenda/meta-types";
+import type { SessionContext, RbacResult } from "@afenda/meta-types/rbac";
+import type { ModelMeta, MetaField, MetaAction, MetaFormView, MetaListView, MetaResponse } from "@afenda/meta-types/schema";
 import { compileExpression } from "filtrex";
 
 import { logger } from '../logging/logger.js';

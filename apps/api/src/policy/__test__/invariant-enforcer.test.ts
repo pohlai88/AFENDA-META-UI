@@ -1,4 +1,4 @@
-import type { InvariantRegistry } from "@afenda/meta-types";
+import type { InvariantRegistry } from "@afenda/meta-types/policy";
 import { describe, expect, it } from "vitest";
 
 import { evaluateInvariants } from "../invariant-enforcer.js";

@@ -10,14 +10,7 @@
  * are shared by both implementations.
  */
 
-import type {
-  DomainEvent,
-  EventQuery,
-  EventReducer,
-  EventStoreStats,
-  AggregateSnapshot,
-} from "@afenda/meta-types";
-
+import type { DomainEvent, EventQuery, EventReducer, EventStoreStats, AggregateSnapshot } from "@afenda/meta-types/events";
 // ---------------------------------------------------------------------------
 // In-Memory Store
 // ---------------------------------------------------------------------------

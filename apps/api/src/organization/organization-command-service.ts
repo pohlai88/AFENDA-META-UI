@@ -10,9 +10,10 @@ import {
   updateOrganization,
 } from "./index.js";
 
-import type { OrganizationDefinition } from "@afenda/meta-types";
+import type { RecordOf } from "@afenda/meta-types/compiler";
+import type { OrganizationDefinition } from "@afenda/meta-types/platform";
 
-type OrganizationRecord = Record<string, unknown>;
+type OrganizationRecord = RecordOf<OrganizationDefinition>;
 
 const ORGANIZATION_CREATE_SOURCE = "api.organizations.create";
 const ORGANIZATION_UPDATE_SOURCE = "api.organizations.update";
@@ -30,7 +31,7 @@ const assertOrganizationProjectionDrift = createProjectionDriftValidator({
 });
 
 function toOrganizationRecord(organization: OrganizationDefinition): OrganizationRecord {
-  return organization as unknown as OrganizationRecord;
+  return organization;
 }
 
 export { toOrganizationRecord };

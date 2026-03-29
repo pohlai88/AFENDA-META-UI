@@ -226,15 +226,43 @@ export interface SchemaDiff {
 }
 
 /**
- * Compare two schema versions
+ * Compare two schema versions and detect breaking/non-breaking changes
+ *
+ * @param from - Source schema version
+ * @param to - Target schema version
+ * @returns SchemaDiff with breaking flag and list of changes
+ *
+ * @example
+ * ```ts
+ * const diff = diffSchemas("1.0", "2.0");
+ * if (diff.breaking) {
+ *   console.warn("Breaking changes detected:", diff.changes);
+ * }
+ * ```
  */
 export function diffSchemas(from: SchemaVersion, to: SchemaVersion): SchemaDiff {
-  // This would be implemented with actual schema definitions
-  // For now, return a stub
+  const fromSchema = SchemaRegistry[from];
+  const toSchema = SchemaRegistry[to];
+
+  if (!fromSchema || !toSchema) {
+    return {
+      from,
+      to,
+      breaking: false,
+      changes: [{
+        type: "changed",
+        field: "schema",
+        description: `Unknown schema version: ${!fromSchema ? from : to}`,
+      }],
+    };
+  }
+
+  // For now, return schema-level breaking flag and empty changes array
+  // Future: implement field-level diff logic (added/removed/renamed/changed)
   return {
     from,
     to,
-    breaking: SchemaRegistry[to].breaking,
+    breaking: toSchema.breaking,
     changes: [],
   };
 }

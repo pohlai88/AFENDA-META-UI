@@ -19,8 +19,7 @@ import {
   getGraphStats,
 } from "../graph/index.js";
 import { asyncHandler, ValidationError, NotFoundError } from "../middleware/errorHandler.js";
-import type { GraphNode, GraphQuery, GraphNodeType, GraphEdgeType } from "@afenda/meta-types";
-
+import type { GraphNode, GraphQuery, GraphNodeType, GraphEdgeType } from "@afenda/meta-types/graph";
 const router = Router();
 
 // ────────────────────────────────────────────────────────────────────────

@@ -9,8 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, waitFor } from "@testing-library/react";
 import { screen, renderWithProviders } from "~/test/utils";
 import { RelationField } from "../RelationField";
-import type { MetaField } from "@afenda/meta-types";
-
+import type { MetaField } from "@afenda/meta-types/schema";
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------

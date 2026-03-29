@@ -1,10 +1,7 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as schema from "./schema/index.js";
-import { relations } from "@afenda/db";
+import { createDatabase } from "@afenda/db/client";
 import { createChildLogger } from "../logging/index.js";
 import { PinoDrizzleLogger } from "./drizzleLogger.js";
 
@@ -18,20 +15,22 @@ dotenv.config({ path: ROOT_ENV_PATH, override: true });
 const log = createChildLogger("database");
 
 // ---------------------------------------------------------------------------
-// Pool configuration — tuned for production safety
+// Create database via @afenda/db factory — single source of pool config
 // ---------------------------------------------------------------------------
 
-const pool = new pg.Pool({
+const drizzleLogger = new PinoDrizzleLogger(500); // 500ms slow query threshold
+
+const instance = createDatabase({
   connectionString: process.env.DATABASE_URL,
-  max: Number(process.env.DB_POOL_MAX ?? 10),
-  idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS ?? 10_000),
-  connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS ?? 5_000),
-  statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT_MS ?? 30_000),
-  idle_in_transaction_session_timeout: 60_000,
+  logger: drizzleLogger,
 });
 
+export const db = instance.db;
+export const pool = instance.pool;
+export type Db = typeof db;
+
 // ---------------------------------------------------------------------------
-// Pool event monitoring
+// Pool event monitoring (api-specific Pino logging)
 // ---------------------------------------------------------------------------
 
 pool.on("error", (err) => {
@@ -46,24 +45,9 @@ pool.on("connect", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Drizzle ORM with custom logger and relations
+// Slow query detection via pool query wrapper
 // ---------------------------------------------------------------------------
 
-const drizzleLogger = new PinoDrizzleLogger(500); // 500ms slow query threshold
-
-export const db = drizzle({
-  client: pool,
-  schema,
-  relations,
-  casing: "camelCase",
-  logger: drizzleLogger,
-});
-export type Db = typeof db;
-
-/**
- * Wrapped pool query with slow query detection.
- * Tracks execution time and logs queries exceeding threshold via PinoDrizzleLogger.
- */
 const originalPoolQuery = pool.query.bind(pool);
 pool.query = async function queryWithTiming(
   ...args: Parameters<typeof originalPoolQuery>
@@ -81,19 +65,5 @@ pool.query = async function queryWithTiming(
   return result;
 } as typeof originalPoolQuery;
 
-export async function checkDatabaseConnection(): Promise<void> {
-  await pool.query("SELECT 1");
-}
-
-/**
- * Pool health stats — consumed by `/health` endpoint.
- */
-export function getPoolStats() {
-  return {
-    totalCount: pool.totalCount,
-    idleCount: pool.idleCount,
-    waitingCount: pool.waitingCount,
-  };
-}
-
-export { pool };
+export const checkDatabaseConnection = instance.checkDatabaseConnection;
+export const getPoolStats = instance.getPoolStats;

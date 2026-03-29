@@ -36,8 +36,7 @@ import {
 import { MutationPolicyViolationError } from "../policy/mutation-command-gateway.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { resolveActorId } from "./_shared/actor-resolution.js";
-import type { TenantDefinition, MetadataOverride, ResolutionContext } from "@afenda/meta-types";
-
+import type { TenantDefinition, MetadataOverride, ResolutionContext } from "@afenda/meta-types/platform";
 const router = Router();
 
 // ────────────────────────────────────────────────────────────────────────

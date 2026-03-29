@@ -134,8 +134,19 @@ describe("/api/ops positive-path responses", () => {
     expect(response.body.meta.filters.status).toBe("fail");
   });
 
+  /**
+   * Invariant Violation Stats Query
+   * Status: Skipped - requires Drizzle query builder mock refactor
+   * Issue: Stats query uses aggregate functions (count, sum) that don't work with current mock chain
+   *
+   * Current mock limitation: The stats endpoint uses destructuring assignment on query results:
+   *   const [stats] = await db.select({ total: count(), ... }).from(table)
+   * This pattern requires more sophisticated mocking than the current createStatsQuery helper provides.
+   *
+   * Future: Implement proper Drizzle mock utilities or use integration tests with test database.
+   * Related: apps/api/src/routes/ops.ts - GET /invariant-violations/stats endpoint
+   */
   it.skip("returns invariant violation stats", async () => {
-    // TODO: Fix mock chain for stats query - currently breaks on destructuring
     const statsRows = [
       {
         total: 10,
@@ -161,8 +172,21 @@ describe("/api/ops positive-path responses", () => {
     expect(response.body.recentFailures24h).toBe(1);
   });
 
+  /**
+   * Domain Events List Query
+   * Status: Skipped - requires Drizzle query builder mock refactor
+   * Issue: Events query uses separate count() subquery that doesn't work with current mock chain
+   *
+   * Current mock limitation: The events endpoint executes two queries:
+   *   1. SELECT * FROM events WHERE ... (works with current mocks)
+   *   2. SELECT count(*) FROM events WHERE ... (breaks - count query not properly mocked)
+   *
+   * The mock chain doesn't support parallel count queries alongside the main data query.
+   *
+   * Future: Implement proper Drizzle mock utilities or use integration tests with test database.
+   * Related: apps/api/src/routes/ops.ts - GET /domain-events endpoint
+   */
   it.skip("returns domain events list with filters metadata", async () => {
-    // TODO: Fix mock chain for event query - currently breaks on count query
     const eventRows = [
       {
         id: "evt-1",

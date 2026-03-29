@@ -13,9 +13,12 @@ import {
   updateWorkflow,
 } from "./index.js";
 
-import type { WorkflowDefinition, WorkflowInstance } from "@afenda/meta-types";
+import type { RecordOf } from "@afenda/meta-types/compiler";
+import type { WorkflowDefinition, WorkflowInstance } from "@afenda/meta-types/workflow";
 
-type WorkflowRecord = Record<string, unknown>;
+type WorkflowDefinitionRecord = RecordOf<WorkflowDefinition>;
+type WorkflowInstanceRecord = RecordOf<WorkflowInstance>;
+type WorkflowRecord = WorkflowDefinitionRecord | WorkflowInstanceRecord;
 
 const WORKFLOW_CREATE_SOURCE = "api.workflows.create";
 const WORKFLOW_UPDATE_SOURCE = "api.workflows.update";
@@ -45,20 +48,20 @@ const assertWorkflowInstanceProjectionDrift = createProjectionDriftValidator({
   definition: WORKFLOW_INSTANCE_PROJECTION_DEFINITION,
 });
 
-function toWorkflowRecord(workflow: WorkflowDefinition): WorkflowRecord {
-  return workflow as unknown as WorkflowRecord;
+function toWorkflowRecord(workflow: WorkflowDefinition): WorkflowDefinitionRecord {
+  return workflow;
 }
 
-function toWorkflowInstanceRecord(instance: WorkflowInstance): WorkflowRecord {
-  return instance as unknown as WorkflowRecord;
+function toWorkflowInstanceRecord(instance: WorkflowInstance): WorkflowInstanceRecord {
+  return instance;
 }
 
 export async function createWorkflowCommand(input: {
   workflow: WorkflowDefinition;
   actorId?: string;
   source?: string;
-}): Promise<ExecuteMutationCommandResult<WorkflowRecord>> {
-  return executeCommandRuntime<WorkflowRecord>({
+}): Promise<ExecuteMutationCommandResult<WorkflowDefinitionRecord>> {
+  return executeCommandRuntime<WorkflowDefinitionRecord>({
     model: "workflow",
     operation: "create",
     actorId: input.actorId,
@@ -76,10 +79,10 @@ export async function updateWorkflowCommand(input: {
   workflow: WorkflowDefinition;
   actorId?: string;
   source?: string;
-}): Promise<ExecuteMutationCommandResult<WorkflowRecord>> {
+}): Promise<ExecuteMutationCommandResult<WorkflowDefinitionRecord>> {
   const existing = getWorkflow(input.workflow.id);
 
-  return executeCommandRuntime<WorkflowRecord>({
+  return executeCommandRuntime<WorkflowDefinitionRecord>({
     model: "workflow",
     operation: "update",
     recordId: input.workflow.id,
@@ -99,10 +102,10 @@ export async function removeWorkflowCommand(input: {
   workflowId: string;
   actorId?: string;
   source?: string;
-}): Promise<ExecuteMutationCommandResult<WorkflowRecord>> {
+}): Promise<ExecuteMutationCommandResult<WorkflowDefinitionRecord>> {
   const existing = getWorkflow(input.workflowId);
 
-  return executeCommandRuntime<WorkflowRecord>({
+  return executeCommandRuntime<WorkflowDefinitionRecord>({
     model: "workflow",
     operation: "delete",
     recordId: input.workflowId,
@@ -122,11 +125,11 @@ export async function advanceWorkflowInstanceCommand(input: {
   actorId?: string;
   stepInput?: Record<string, unknown>;
   source?: string;
-}): Promise<ExecuteMutationCommandResult<WorkflowRecord>> {
+}): Promise<ExecuteMutationCommandResult<WorkflowInstanceRecord>> {
   const existing = getInstance(input.instanceId);
   const resolvedActorId = input.actorId ?? "system";
 
-  return executeCommandRuntime<WorkflowRecord>({
+  return executeCommandRuntime<WorkflowInstanceRecord>({
     model: "workflow_instance",
     operation: "update",
     recordId: input.instanceId,
@@ -152,10 +155,10 @@ export async function submitWorkflowApprovalCommand(input: {
   actorId: string;
   reason?: string;
   source?: string;
-}): Promise<ExecuteMutationCommandResult<WorkflowRecord>> {
+}): Promise<ExecuteMutationCommandResult<WorkflowInstanceRecord>> {
   const existing = getInstance(input.instanceId);
 
-  return executeCommandRuntime<WorkflowRecord>({
+  return executeCommandRuntime<WorkflowInstanceRecord>({
     model: "workflow_instance",
     operation: "update",
     recordId: input.instanceId,

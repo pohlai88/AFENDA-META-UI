@@ -10,7 +10,7 @@
  * Phase 1: Partner Enhancement (Sales Domain Expansion)
  */
 
-import type { Partner, PartnerAddress } from "@afenda/db/schema-domain";
+import type { Partner, PartnerAddress } from "@afenda/db/schema/sales";
 import { Decimal } from "decimal.js";
 
 // ============================================================================

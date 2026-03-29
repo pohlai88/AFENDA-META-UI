@@ -14,7 +14,7 @@ import React, { useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { ModelMeta, MetaField, MetaGroup, MetaFormView } from "@afenda/meta-types";
+import type { ModelMeta, MetaField, MetaGroup, MetaFormView } from "@afenda/meta-types/schema";
 import { useMeta } from "~/hooks/useMeta";
 import { useModel } from "~/hooks/useModel";
 import { Form } from "@afenda/ui";

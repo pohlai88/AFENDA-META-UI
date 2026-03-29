@@ -4,8 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { pgTable, text, integer, jsonb, timestamp, primaryKey } from "drizzle-orm/pg-core";
-import type { ModelMeta, MetaPermissions, MetaFieldPermission } from "@afenda/meta-types";
-
+import type { ModelMeta, MetaPermissions, MetaFieldPermission } from "@afenda/meta-types/schema";
 export const schemaRegistry = pgTable(
   "schema_registry",
   {

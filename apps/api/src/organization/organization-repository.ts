@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import type { OrganizationDefinition } from "@afenda/meta-types";
-
+import type { OrganizationDefinition } from "@afenda/meta-types/platform";
 const DEFAULT_SNAPSHOT_PATH = resolve(process.cwd(), ".data", "organizations.snapshot.json");
 
 let snapshotFilePath = DEFAULT_SNAPSHOT_PATH;

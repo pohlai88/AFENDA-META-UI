@@ -16,9 +16,8 @@ import { db } from "../db/index.js";
 import { getSchema, listModels } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
 import { asyncHandler, ValidationError } from "../middleware/errorHandler.js";
-import type { SessionContext } from "@afenda/meta-types";
-import type { MetaField } from "@afenda/meta-types";
-
+import type { SessionContext } from "@afenda/meta-types/rbac";
+import type { MetaField } from "@afenda/meta-types/schema";
 const router = Router();
 
 const MAX_PER_MODEL = 5;

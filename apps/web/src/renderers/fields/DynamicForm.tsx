@@ -1,5 +1,5 @@
 import React from "react";
-import type { FieldType, MetaField } from "@afenda/meta-types";
+import type { FieldType, MetaField } from "@afenda/meta-types/schema";
 import type {
   DiscriminatedFieldProps,
   FieldConfig,

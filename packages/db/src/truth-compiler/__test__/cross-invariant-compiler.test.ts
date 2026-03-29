@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CrossInvariantDefinition } from "@afenda/meta-types";
-
+import type { CrossInvariantDefinition } from "@afenda/meta-types/policy";
 import { compileCrossInvariants } from "../cross-invariant-compiler.js";
 import { normalize } from "../normalizer.js";
 import { COMPILER_INPUT } from "../truth-config.js";

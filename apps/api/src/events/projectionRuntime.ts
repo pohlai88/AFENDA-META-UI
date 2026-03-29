@@ -1,5 +1,5 @@
-import type { DomainEvent, ProjectionDefinition } from "@afenda/meta-types";
-
+import type { ProjectionDefinition } from "@afenda/meta-types/compiler";
+import type { DomainEvent } from "@afenda/meta-types/events";
 interface ProjectionContractIdentity {
   name: string;
   version: {

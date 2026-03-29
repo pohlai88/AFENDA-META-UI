@@ -5,7 +5,7 @@ import type {
   CommissionPlan,
   CommissionPlanTier,
   NewCommissionEntry,
-} from "@afenda/db/schema-domain";
+} from "@afenda/db/schema/sales";
 
 type DecimalLike = number | string;
 

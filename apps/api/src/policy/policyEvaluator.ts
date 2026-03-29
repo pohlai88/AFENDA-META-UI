@@ -15,14 +15,8 @@
  * This enables different validation rules per tenant, industry, etc.
  */
 
-import type {
-  PolicyContext,
-  PolicyDefinition,
-  PolicyEvaluationResult,
-  PolicyViolation,
-  ResolutionContext,
-} from "@afenda/meta-types";
-
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { PolicyContext, PolicyDefinition, PolicyEvaluationResult, PolicyViolation } from "@afenda/meta-types/policy";
 import { getPoliciesForScope } from "./policyRegistry.js";
 import { evaluateCondition } from "./policyDSL.js";
 import { buildPolicyContext } from "./policyContextBuilder.js";

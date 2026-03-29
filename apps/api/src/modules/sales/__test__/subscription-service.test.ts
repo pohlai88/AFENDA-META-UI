@@ -110,7 +110,7 @@ vi.mock("@afenda/db", () => ({
   sql: vi.fn(),
 }));
 
-vi.mock("@afenda/db/schema-domain", () => ({
+vi.mock("@afenda/db/schema/sales", () => ({
   subscriptionCloseReasons: {},
   subscriptionLines: {},
   subscriptionLogs: {},

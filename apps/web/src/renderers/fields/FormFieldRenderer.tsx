@@ -7,7 +7,7 @@
 import React, { memo } from "react";
 import { useFormContext, type ControllerRenderProps } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import type { MetaField } from "@afenda/meta-types";
+import type { MetaField } from "@afenda/meta-types/schema";
 import { useComputedFieldState } from "../conditions";
 import { useDebounce } from "~/hooks/useDebounce";
 import {

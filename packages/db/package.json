@@ -14,17 +14,25 @@
       "import": "./dist/truth-compiler/index.js",
       "types": "./dist/truth-compiler/index.d.ts"
     },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    },
     "./shared": {
-      "import": "./dist/_shared/index.js",
-      "types": "./dist/_shared/index.d.ts"
+      "import": "./dist/columns/index.js",
+      "types": "./dist/columns/index.d.ts"
+    },
+    "./columns": {
+      "import": "./dist/columns/index.js",
+      "types": "./dist/columns/index.d.ts"
     },
     "./session": {
-      "import": "./dist/_session/index.js",
-      "types": "./dist/_session/index.d.ts"
+      "import": "./dist/session/index.js",
+      "types": "./dist/session/index.d.ts"
     },
     "./rls": {
-      "import": "./dist/_rls/index.js",
-      "types": "./dist/_rls/index.d.ts"
+      "import": "./dist/rls/index.js",
+      "types": "./dist/rls/index.d.ts"
     },
     "./relations": {
       "import": "./dist/relations.js",
@@ -34,17 +42,53 @@
       "import": "./dist/schema/index.js",
       "types": "./dist/schema/index.d.ts"
     },
+    "./schema/core": {
+      "import": "./dist/schema/core/index.js",
+      "types": "./dist/schema/core/index.d.ts"
+    },
+    "./schema/security": {
+      "import": "./dist/schema/security/index.js",
+      "types": "./dist/schema/security/index.d.ts"
+    },
+    "./schema/reference": {
+      "import": "./dist/schema/reference/index.js",
+      "types": "./dist/schema/reference/index.d.ts"
+    },
+    "./schema/meta": {
+      "import": "./dist/schema/meta/index.js",
+      "types": "./dist/schema/meta/index.d.ts"
+    },
+    "./schema/sales": {
+      "import": "./dist/schema/sales/index.js",
+      "types": "./dist/schema/sales/index.d.ts"
+    },
+    "./schema/accounting": {
+      "import": "./dist/schema/accounting/index.js",
+      "types": "./dist/schema/accounting/index.d.ts"
+    },
+    "./schema/hr": {
+      "import": "./dist/schema/hr/index.js",
+      "types": "./dist/schema/hr/index.d.ts"
+    },
+    "./schema/inventory": {
+      "import": "./dist/schema/inventory/index.js",
+      "types": "./dist/schema/inventory/index.d.ts"
+    },
+    "./schema/purchasing": {
+      "import": "./dist/schema/purchasing/index.js",
+      "types": "./dist/schema/purchasing/index.d.ts"
+    },
     "./schema-meta": {
-      "import": "./dist/schema-meta/index.js",
-      "types": "./dist/schema-meta/index.d.ts"
+      "import": "./dist/schema/meta/index.js",
+      "types": "./dist/schema/meta/index.d.ts"
     },
     "./schema-domain": {
-      "import": "./dist/schema-domain/index.js",
-      "types": "./dist/schema-domain/index.d.ts"
+      "import": "./dist/schema/sales/index.js",
+      "types": "./dist/schema/sales/index.d.ts"
     },
     "./schema-platform": {
-      "import": "./dist/schema-platform/index.js",
-      "types": "./dist/schema-platform/index.d.ts"
+      "import": "./dist/schema/index.js",
+      "types": "./dist/schema/index.d.ts"
     }
   },
   "scripts": {
@@ -54,18 +98,18 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:trigger:apply": "tsx src/_maintenance/apply-status-triggers.ts",
-    "db:trigger:dry": "tsx src/_maintenance/apply-status-triggers.ts --dry-run",
-    "ops:retention:plan": "tsx src/_maintenance/run-sales-retention.ts --dry-run",
-    "ops:retention:apply": "tsx src/_maintenance/run-sales-retention.ts --apply",
-    "ops:partition:plan": "tsx src/_maintenance/run-sales-partition-plan.ts --dry-run",
-    "ops:partition:apply": "tsx src/_maintenance/run-sales-partition-plan.ts --apply",
+    "db:trigger:apply": "tsx src/maintenance/apply-status-triggers.ts",
+    "db:trigger:dry": "tsx src/maintenance/apply-status-triggers.ts --dry-run",
+    "ops:retention:plan": "tsx src/maintenance/run-sales-retention.ts --dry-run",
+    "ops:retention:apply": "tsx src/maintenance/run-sales-retention.ts --apply",
+    "ops:partition:plan": "tsx src/maintenance/run-sales-partition-plan.ts --dry-run",
+    "ops:partition:apply": "tsx src/maintenance/run-sales-partition-plan.ts --apply",
     "test:db": "vitest run --passWithNoTests",
     "test:graph-validation": "vitest run --passWithNoTests src/graph-validation/__test__",
     "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__test__",
     "check:all": "pnpm run typecheck && pnpm run truth:check && pnpm run test:db",
     "gate:early": "pnpm run check:all",
-    "seed": "tsx src/_seeds/index.ts",
+    "seed": "tsx src/seeds/index.ts",
     "archival": "tsx src/archival/runner.ts",
     "graph-validation": "tsx src/graph-validation/runner.ts",
     "truth:generate": "tsx src/truth-compiler/generate-truth-sql.ts",

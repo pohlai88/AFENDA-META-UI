@@ -18,15 +18,8 @@
  * resolveLayoutWithContext() picks the best match using hierarchy.
  */
 
-import type {
-  LayoutDefinition,
-  LayoutNode,
-  LayoutField,
-  LayoutViewType,
-  ResolvedLayout,
-  ResolutionContext,
-} from "@afenda/meta-types";
-
+import type { LayoutDefinition, LayoutNode, LayoutField, LayoutViewType, ResolvedLayout } from "@afenda/meta-types/layout";
+import type { ResolutionContext } from "@afenda/meta-types/platform";
 // ---------------------------------------------------------------------------
 // Layout Registry (in-memory, swap for DB in production)
 // ---------------------------------------------------------------------------

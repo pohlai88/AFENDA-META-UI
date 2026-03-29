@@ -23,8 +23,7 @@ import {
   getUserAuditTrail,
 } from "../audit/index.js";
 import { asyncHandler, ValidationError, NotFoundError } from "../middleware/errorHandler.js";
-import type { DecisionAuditQuery } from "@afenda/meta-types";
-
+import type { DecisionAuditQuery } from "@afenda/meta-types/audit";
 const router = Router();
 const auditLog = createChildLogger("audit");
 

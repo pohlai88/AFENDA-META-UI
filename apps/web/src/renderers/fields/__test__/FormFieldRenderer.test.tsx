@@ -9,8 +9,7 @@ import { screen, renderWithProviders, fireEvent } from "~/test/utils";
 import { FormFieldRenderer } from "~/renderers/fields/FormFieldRenderer";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { waitFor } from "@testing-library/react";
-import type { MetaField } from "@afenda/meta-types";
-
+import type { MetaField } from "@afenda/meta-types/schema";
 afterEach(() => {
   vi.restoreAllMocks();
 });

@@ -4,14 +4,8 @@
  * @layer db/truth-compiler
  */
 
-import type {
-  CrossInvariantDefinition,
-  EntityDef,
-  InvariantDefinition,
-  MutationPolicyDefinition,
-  StateMachineDefinition,
-} from "@afenda/meta-types";
-
+import type { EntityDef, StateMachineDefinition } from "@afenda/meta-types/compiler";
+import type { CrossInvariantDefinition, InvariantDefinition, MutationPolicyDefinition } from "@afenda/meta-types/policy";
 /** Fully resolved pipeline input produced by the normalizer. */
 export interface NormalizedTruthModel {
   entities: EntityDef[];

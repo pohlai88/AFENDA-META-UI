@@ -9,8 +9,7 @@ import {
   validateLayout,
   flattenRenderPlan,
 } from "../index.js";
-import type { LayoutDefinition, LayoutNode } from "@afenda/meta-types";
-
+import type { LayoutDefinition, LayoutNode } from "@afenda/meta-types/layout";
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------

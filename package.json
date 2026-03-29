@@ -37,6 +37,8 @@
     "ci:gate:casing": "node tools/ci-gate/index.mjs --gate=casing",
     "ci:gate:postgres": "node tools/ci-gate/index.mjs --gate=postgres-schema",
     "ci:gate:truth": "node tools/ci-gate/index.mjs --gate=truth-score",
+    "ci:gate:truth-coverage": "pnpm --filter @afenda/truth-coverage enforce",
+    "truth-coverage": "pnpm --filter @afenda/truth-coverage check",
     "ci:gate:dependencies": "node tools/ci-gate/index.mjs --gate=dependencies",
     "ci:gate:typescript": "node tools/ci-gate/index.mjs --gate=typescript",
     "ci:gate:policy": "node tools/ci-gate/index.mjs --gate=policy",

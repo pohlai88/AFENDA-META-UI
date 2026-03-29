@@ -17,8 +17,7 @@ import { useModelAction } from "~/hooks/useModelAction";
 import { useModelWithMeta } from "~/hooks/useModelWithMeta";
 import { ActionButtons } from "~/components/ActionButtons";
 import { emitAuditLog, type AuditAction } from "~/api/audit-log";
-import type { MetaAction } from "@afenda/meta-types";
-
+import type { MetaAction } from "@afenda/meta-types/schema";
 interface ApprovalActionsProps {
   /** Model name (e.g. "sales_order", "purchase_order") */
   model: string;

@@ -19,7 +19,7 @@ import {
 } from "@afenda/ui";
 import { MoreVerticalIcon } from "lucide-react";
 import { useActions } from "~/hooks/useActions";
-import type { MetaAction } from "@afenda/meta-types";
+import type { MetaAction } from "@afenda/meta-types/schema";
 import { logger } from "../lib/logger";
 const log = logger.child({ module: "RowActionsMenu" });
 

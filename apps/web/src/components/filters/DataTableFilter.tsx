@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import type { MetaField } from "@afenda/meta-types";
+import type { MetaField } from "@afenda/meta-types/schema";
 import type { FilterCondition, FilterGroup } from "~/hooks/useModel";
 import {
   buildConditionSummary,

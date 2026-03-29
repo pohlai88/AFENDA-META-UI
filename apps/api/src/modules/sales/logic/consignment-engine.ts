@@ -5,7 +5,7 @@ import type {
   ConsignmentStatus,
   ConsignmentStockReport,
   ConsignmentStockReportLine,
-} from "@afenda/db/schema-domain";
+} from "@afenda/db/schema/sales";
 import { StateMachine, type TransitionRule } from "../../../utils/state-machine.js";
 
 type DecimalLike = string | number;

@@ -26,8 +26,7 @@ import {
 } from "../rules/index.js";
 import type { RuleExecutionContext } from "../rules/index.js";
 import { evaluateExpression } from "../policy/policyDSL.js";
-import type { ResolutionContext } from "@afenda/meta-types";
-
+import type { ResolutionContext } from "@afenda/meta-types/platform";
 // ---------------------------------------------------------------------------
 // POST /api/rules/evaluate
 // ---------------------------------------------------------------------------

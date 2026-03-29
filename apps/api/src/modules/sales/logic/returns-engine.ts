@@ -6,7 +6,7 @@ import type {
   ReturnStatus,
   SalesOrder,
   SalesOrderLine,
-} from "@afenda/db/schema-domain";
+} from "@afenda/db/schema/sales";
 import { StateMachine, type TransitionRule } from "../../../utils/state-machine.js";
 
 export type ReturnInvariantCode =
@@ -231,9 +231,7 @@ export function validateReturnQuantities(
     const creditAmount = new Decimal(returnLine.creditAmount);
 
     // Find corresponding source order line
-    const sourceLine = input.sourceOrderLines.find(
-      (sl) => sl.productId === returnLine.productId
-    );
+    const sourceLine = input.sourceOrderLines.find((sl) => sl.productId === returnLine.productId);
 
     let deliveredQty = new Decimal(0);
     let quantityValid = false;

@@ -2,7 +2,7 @@
 
 import { getTableColumns } from "drizzle-orm";
 
-import type { MetaAction, MetaField, ModelMeta } from "@afenda/meta-types";
+import type { MetaAction, MetaField, ModelMeta } from "@afenda/meta-types/schema";
 import {
   commissionEntries,
   commissionPlans,

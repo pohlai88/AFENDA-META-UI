@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { simulateScenario, analyzeBlastRadius, simulateBatch } from "../index.js";
 import { registerPolicies, clearPolicies } from "../../policy/policyRegistry.js";
-import type { PolicyDefinition, SimulationScenario } from "@afenda/meta-types";
-
+import type { PolicyDefinition, SimulationScenario } from "@afenda/meta-types/policy";
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------

@@ -16,7 +16,7 @@ export {
   auditOperationEnum,
   auditSourceEnum,
   layoutViewTypeEnum,
-} from "@afenda/db/schema-meta";
+} from "@afenda/db/schema/meta";
 
 // Sales domain tables (from shared @afenda/db package)
 export {
@@ -55,7 +55,7 @@ export {
   subscriptions,
   territories,
   territoryRules,
-} from "@afenda/db/schema-domain";
+} from "@afenda/db/schema/sales";
 
 // Phase 4: Tenant persistence tables
 export {
@@ -64,7 +64,7 @@ export {
   tenantDefinitions,
   metadataOverrides,
   industryTemplates,
-} from "@afenda/db/schema-meta";
+} from "@afenda/db/schema/meta";
 
 // Phase 4: Decision audit persistence tables
 export {
@@ -72,4 +72,7 @@ export {
   decisionStatusEnum,
   decisionAuditEntries,
   decisionAuditChains,
-} from "@afenda/db/schema-meta";
+} from "@afenda/db/schema/meta";
+
+// Wave 5A: Mutation policy violation observability
+export { mutationPolicyViolations } from "@afenda/db/schema/meta";

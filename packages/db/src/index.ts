@@ -1,11 +1,11 @@
 /**
  * @afenda/db public API
  *
- * Exports: Database (db, pool, Database type), shared types, session, RLS
- * Internal (_private/): Migration scripts, Drizzle adapters
+ * Exports: Database (db, pool, Database type), client factory, shared types, session, RLS
  */
 
-export { db, pool, getPoolStats, checkDatabaseConnection, type Database } from "./db.js";
+export { db, pool, getPoolStats, checkDatabaseConnection, dbServerless, type Database, type DatabaseOptions, type DrizzleLogger, type PoolStats } from "./db.js";
+export { createDatabase, createServerlessDatabase } from "./client/index.js";
 export { relations } from "./relations.js";
 export {
   getMutationPolicyById,
@@ -25,6 +25,6 @@ export {
   SALES_TRUTH_MODEL,
 } from "./truth-compiler/truth-config.js";
 
-export * from "./_shared/index.js";
-export * from "./_session/index.js";
-export * from "./_rls/index.js";
+export * from "./columns/index.js";
+export * from "./session/index.js";
+export * from "./rls/index.js";

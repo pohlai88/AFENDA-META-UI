@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { FieldType } from "@afenda/meta-types";
+import type { FieldType } from "@afenda/meta-types/schema";
 import type {
   FieldArrayConfig,
   FieldConfig,

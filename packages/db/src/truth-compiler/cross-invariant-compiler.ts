@@ -12,15 +12,9 @@
  * @layer db/truth-compiler
  */
 
-import type {
-  ConditionExpression,
-  ConditionGroup,
-  CrossInvariantDefinition,
-  CrossInvariantJoinDefinition,
-  EntityDef,
-  FieldCondition,
-} from "@afenda/meta-types";
-
+import type { EntityDef } from "@afenda/meta-types/compiler";
+import type { CrossInvariantDefinition, CrossInvariantJoinDefinition } from "@afenda/meta-types/policy";
+import type { ConditionExpression, ConditionGroup, FieldCondition } from "@afenda/meta-types/schema";
 import type { NormalizedTruthModel, SqlSegment } from "./types.js";
 import { quoteIdentifier, renderLiteral, toSnakeIdentifier } from "./sql-utils.js";
 

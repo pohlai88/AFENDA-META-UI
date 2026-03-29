@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MetaField } from "@afenda/meta-types";
+import type { MetaField } from "@afenda/meta-types/schema";
 import type { FilterCondition } from "~/hooks/useModel";
 import {
   buildConditionSummary,

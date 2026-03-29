@@ -1,4 +1,4 @@
-import type { OrganizationDefinition } from "@afenda/meta-types";
+import type { OrganizationDefinition } from "@afenda/meta-types/platform";
 import * as organizationRepository from "./organization-repository.js";
 
 const organizationStore = new Map<string, OrganizationDefinition>();

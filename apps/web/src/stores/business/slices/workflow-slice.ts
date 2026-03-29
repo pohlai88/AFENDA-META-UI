@@ -12,8 +12,7 @@
 
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../store";
-import type { WorkflowInstance, WorkflowStatus } from "@afenda/meta-types";
-
+import type { WorkflowInstance, WorkflowStatus } from "@afenda/meta-types/workflow";
 interface ApprovalTask {
   instanceId: string;
   workflowId: string;

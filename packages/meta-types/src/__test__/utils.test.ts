@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertNever, isJsonArray, isJsonObject, isJsonPrimitive } from "../utils.js";
+import { assertNever, isJsonArray, isJsonObject, isJsonPrimitive } from "../core/index.js";
 
 describe("utils", () => {
   it("validates json objects", () => {

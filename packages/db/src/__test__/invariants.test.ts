@@ -12,7 +12,7 @@
  * - Tax calculations reconcile
  * - Historical records exist where required
  *
- * @see packages/db/src/_seeds/README.md for seed infrastructure overview
+ * @see packages/db/src/seeds/README.md for seed infrastructure overview
  * @see .ideas/SEED_INFRASTRUCTURE_AUDIT.md for comprehensive seed audit
  */
 
@@ -20,26 +20,14 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { eq, isNotNull } from "drizzle-orm";
 import { db } from "../db.js";
 import * as schema from "../schema/index.js";
-import { seed } from "../_seeds/index.js";
-import {
-  validateSalesPhase6Invariants,
-} from "../_seeds/domains/sales/index.js";
-import {
-  validateProductConfigurationInvariants,
-} from "../_seeds/domains/product/index.js";
-import {
-  validateConsignmentPhase7Invariants,
-} from "../_seeds/domains/consignment/index.js";
-import {
-  validateReturnsPhase8Invariants,
-} from "../_seeds/domains/returns/index.js";
-import {
-  validateSubscriptionsPhase9Invariants,
-} from "../_seeds/domains/subscriptions/index.js";
-import {
-  validateCommissionsPhase10Invariants,
-} from "../_seeds/domains/commissions/index.js";
-import { SEED_IDS } from "../_seeds/seed-ids.js";
+import { seed } from "../seeds/index.js";
+import { validateSalesPhase6Invariants } from "../seeds/domains/sales/index.js";
+import { validateProductConfigurationInvariants } from "../seeds/domains/product/index.js";
+import { validateConsignmentPhase7Invariants } from "../seeds/domains/consignment/index.js";
+import { validateReturnsPhase8Invariants } from "../seeds/domains/returns/index.js";
+import { validateSubscriptionsPhase9Invariants } from "../seeds/domains/subscriptions/index.js";
+import { validateCommissionsPhase10Invariants } from "../seeds/domains/commissions/index.js";
+import { SEED_IDS } from "../seeds/seed-ids.js";
 
 // Skip all tests if DATABASE_URL is not set
 const skipTests = !process.env.DATABASE_URL;
@@ -83,9 +71,7 @@ describe.skipIf(skipTests)("Domain Invariant Validation", () => {
         .limit(10);
 
       for (const order of orders) {
-        const expectedTotal = (
-          Number(order.amountUntaxed) + Number(order.amountTax)
-        ).toFixed(2);
+        const expectedTotal = (Number(order.amountUntaxed) + Number(order.amountTax)).toFixed(2);
         expect(order.amountTotal).toBe(expectedTotal);
       }
     });
@@ -190,10 +176,7 @@ describe.skipIf(skipTests)("Domain Invariant Validation", () => {
         .limit(10);
 
       // Expect at least some of the 6 RMA states to be present
-      const validStatuses = [
-        "draft", "submitted", "approved", "received",
-        "refunded", "rejected"
-      ];
+      const validStatuses = ["draft", "submitted", "approved", "received", "refunded", "rejected"];
 
       for (const returnOrder of returns) {
         expect(validStatuses).toContain(returnOrder.status);
@@ -398,7 +381,7 @@ describe.skipIf(skipTests)("Domain Invariant Validation", () => {
       }
     });
 
-it("should have tax rates as numeric(9,4) percentages", async () => {
+    it("should have tax rates as numeric(9,4) percentages", async () => {
       const taxRates = await db
         .select({
           amount: schema.taxRates.amount,

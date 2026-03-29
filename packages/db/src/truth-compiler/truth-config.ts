@@ -15,14 +15,13 @@
  * @layer db/truth-compiler
  */
 
+import type { EntityDef, StateMachineDefinition } from "@afenda/meta-types/compiler";
 import type {
   CrossInvariantDefinition,
-  EntityDef,
   InvariantRegistry,
   MutationPolicyDefinition,
-  StateMachineDefinition,
-} from "@afenda/meta-types";
-import type { TruthModel } from "@afenda/meta-types/truth-model";
+} from "@afenda/meta-types/policy";
+import type { TruthModel } from "@afenda/meta-types/compiler";
 
 import type { NormalizerInput } from "./normalizer.js";
 

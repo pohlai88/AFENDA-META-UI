@@ -1,5 +1,5 @@
 import React from "react";
-import type { MetaField } from "@afenda/meta-types";
+import type { MetaField } from "@afenda/meta-types/schema";
 import { cn } from "~/lib/utils";
 
 export function getFieldHelpTextId(fieldName: string) {

@@ -11,8 +11,7 @@ import {
   getEventStoreStats,
   clearEventStore,
 } from "../eventStore.js";
-import type { DomainEvent, EventReducer } from "@afenda/meta-types";
-
+import type { DomainEvent, EventReducer } from "@afenda/meta-types/events";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

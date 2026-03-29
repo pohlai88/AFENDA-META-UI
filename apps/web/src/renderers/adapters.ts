@@ -5,7 +5,7 @@
  * Ensures backward compatibility across metadata schema versions.
  */
 
-import type { MetaField, MetaAction, ConditionExpression } from "@afenda/meta-types";
+import type { MetaField, MetaAction, ConditionExpression } from "@afenda/meta-types/schema";
 import type { MetadataAdapter } from "./types/contracts";
 
 /**

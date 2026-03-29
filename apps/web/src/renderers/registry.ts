@@ -123,20 +123,44 @@ export const RendererRegistry: RendererRegistryMap = {
     },
   },
 
+  /**
+   * Detail View Renderer
+   * Future: Single-record detail view with custom layouts
+   * Status: Not yet implemented
+   * Use case: Entity detail pages with custom field arrangements
+   */
   detail: {
-    // Placeholder for future detail view renderer
+    // Reserved for future implementation
   },
 
+  /**
+   * Grid Renderer (Cards/Tiles)
+   * Future: Card-based grid layout for visual browsing
+   * Status: Not yet implemented
+   * Use case: Product catalogs, image galleries, dashboard widgets
+   */
   grid: {
-    // Placeholder for future grid renderer (cards, tiles)
+    // Reserved for future implementation
   },
 
+  /**
+   * Calendar Renderer
+   * Future: Time-based event visualization
+   * Status: Not yet implemented
+   * Use case: Scheduling, event management, deadline tracking
+   */
   calendar: {
-    // Placeholder for future calendar renderer
+    // Reserved for future implementation
   },
 
+  /**
+   * Kanban Board Renderer
+   * Future: Status-based card board for workflow visualization
+   * Status: Not yet implemented
+   * Use case: Task management, sales pipeline, project boards
+   */
   kanban: {
-    // Placeholder for future kanban board renderer
+    // Reserved for future implementation
   },
 };
 

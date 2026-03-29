@@ -6,15 +6,9 @@
  * @layer db/truth-compiler
  */
 
-import type {
-  CrossInvariantDefinition,
-  EntityDef,
-  InvariantDefinition,
-  InvariantRegistry,
-  MutationPolicyDefinition,
-  StateMachineDefinition,
-} from "@afenda/meta-types";
-import type { TruthModel } from "@afenda/meta-types/truth-model";
+import type { EntityDef, StateMachineDefinition } from "@afenda/meta-types/compiler";
+import type { CrossInvariantDefinition, InvariantDefinition, InvariantRegistry, MutationPolicyDefinition } from "@afenda/meta-types/policy";
+import type { TruthModel } from "@afenda/meta-types/compiler";
 
 import type { NormalizedTruthModel } from "./types.js";
 

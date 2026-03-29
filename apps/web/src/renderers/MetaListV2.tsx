@@ -1,5 +1,5 @@
 import React from "react";
-import type { MetaListView } from "@afenda/meta-types";
+import type { MetaListView } from "@afenda/meta-types/schema";
 import { useMeta } from "~/hooks/useMeta";
 import { type FilterGroup, useModelList } from "~/hooks/useModel";
 import { DataTableFilter } from "~/components/filters/DataTableFilter";

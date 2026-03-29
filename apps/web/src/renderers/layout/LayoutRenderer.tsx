@@ -16,15 +16,8 @@
 
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type {
-  LayoutNode,
-  LayoutSection,
-  LayoutGrid,
-  LayoutTabs,
-  LayoutField,
-  LayoutCustom,
-  ConditionExpression,
-} from "@afenda/meta-types";
+import type { LayoutNode, LayoutSection, LayoutGrid, LayoutTabs, LayoutField, LayoutCustom } from "@afenda/meta-types/layout";
+import type { ConditionExpression } from "@afenda/meta-types/schema";
 import { evaluateCondition } from "../conditions.js";
 
 // ---------------------------------------------------------------------------

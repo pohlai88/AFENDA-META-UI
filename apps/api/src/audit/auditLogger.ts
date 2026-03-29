@@ -8,8 +8,7 @@
  * Production: replace with DB-backed implementation.
  */
 
-import type { AuditEntry, AuditQuery } from "@afenda/meta-types";
-
+import type { AuditEntry, AuditQuery } from "@afenda/meta-types/audit";
 // ---------------------------------------------------------------------------
 // In-Memory Store (swap for DB in production)
 // ---------------------------------------------------------------------------

@@ -8,10 +8,9 @@ import type {
   DecisionAuditEntry,
   DecisionAuditQuery,
   DecisionAuditChain,
-  PolicyContext,
-  PolicyDefinition,
-  ResolutionContext,
-} from "@afenda/meta-types";
+} from "@afenda/meta-types/audit";
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { PolicyContext, PolicyDefinition } from "@afenda/meta-types/policy";
 const auditState = vi.hoisted(() => ({
   store: [] as Array<DecisionAuditEntry>,
   chains: new Map<string, DecisionAuditChain>(),
@@ -116,7 +115,7 @@ vi.mock("../../tenant/tenantRepository.js", () => ({
   dbLoadAllIndustryTemplates: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("@afenda/db/schema-meta", () => ({
+vi.mock("@afenda/db/schema/meta", () => ({
   schemaRegistry: {},
   entities: {},
   fields: {},
@@ -139,7 +138,7 @@ vi.mock("@afenda/db/schema-meta", () => ({
   decisionAuditChains: {},
 }));
 
-vi.mock("@afenda/db/schema-domain", () => ({
+vi.mock("@afenda/db/schema/sales", () => ({
   orderStatusEnum: {},
   partnerTypeEnum: {},
   partners: {},

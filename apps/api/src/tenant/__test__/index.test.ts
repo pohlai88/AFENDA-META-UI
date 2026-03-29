@@ -16,8 +16,7 @@ import {
   deepMerge,
   clearTenants,
 } from "../index.js";
-import type { TenantDefinition, MetadataOverride } from "@afenda/meta-types";
-
+import type { TenantDefinition, MetadataOverride } from "@afenda/meta-types/platform";
 beforeEach(() => clearTenants());
 
 // ---------------------------------------------------------------------------

@@ -112,16 +112,22 @@ class BrowserLogger implements Logger {
       return;
     }
 
-    // In production: structured JSON (could send to remote endpoint)
+    // In production: structured JSON
     if (level === "error" || level === "fatal") {
       console.error(JSON.stringify(logData));
 
-      // TODO: Send to remote logging endpoint
-      // fetch('/api/logs', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(logData)
-      // }).catch(() => {}); // Silent fail
+      // Send to remote logging endpoint if configured
+      if (import.meta.env.VITE_LOG_ENDPOINT) {
+        fetch(import.meta.env.VITE_LOG_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(logData),
+          // Use keepalive for reliability and non-blocking
+          keepalive: true,
+        }).catch(() => {
+          // Silent fail - don't block or throw on logging infrastructure issues
+        });
+      }
     } else {
       console.warn(JSON.stringify(logData));
     }

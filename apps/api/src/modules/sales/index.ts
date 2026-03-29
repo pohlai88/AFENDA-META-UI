@@ -12,7 +12,7 @@
  * commission_entry, territory, sales_team, return_order, consignment_agreement, subscription
  */
 
-import type { MetaModule } from "@afenda/meta-types";
+import type { MetaModule } from "@afenda/meta-types/module";
 import { logger } from "../../logging/logger.js";
 
 export default {

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../db.js";
-import { seed } from "../_seeds/index.js";
+import { seed } from "../seeds/index.js";
 import { salesOrders } from "../schema/index.js";
 import { compileInvariants } from "../truth-compiler/invariant-compiler.js";
 import { normalize } from "../truth-compiler/normalizer.js";

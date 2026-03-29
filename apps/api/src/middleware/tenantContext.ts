@@ -13,8 +13,8 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
-import type { SessionContext, ResolutionContext } from "@afenda/meta-types";
-
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { SessionContext } from "@afenda/meta-types/rbac";
 declare global {
   namespace Express {
     interface Request {

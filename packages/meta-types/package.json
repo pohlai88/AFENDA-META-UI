@@ -10,85 +10,61 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    },
     "./schema": {
-      "import": "./dist/schema.js",
-      "types": "./dist/schema.d.ts"
+      "import": "./dist/schema/index.js",
+      "types": "./dist/schema/index.d.ts"
     },
     "./rbac": {
-      "import": "./dist/rbac.js",
-      "types": "./dist/rbac.d.ts"
+      "import": "./dist/rbac/index.js",
+      "types": "./dist/rbac/index.d.ts"
+    },
+    "./compiler": {
+      "import": "./dist/compiler/index.js",
+      "types": "./dist/compiler/index.d.ts"
     },
     "./module": {
-      "import": "./dist/module.js",
-      "types": "./dist/module.d.ts"
+      "import": "./dist/module/index.js",
+      "types": "./dist/module/index.d.ts"
     },
     "./layout": {
-      "import": "./dist/layout.js",
-      "types": "./dist/layout.d.ts"
+      "import": "./dist/layout/index.js",
+      "types": "./dist/layout/index.d.ts"
     },
     "./policy": {
-      "import": "./dist/policy.js",
-      "types": "./dist/policy.d.ts"
+      "import": "./dist/policy/index.js",
+      "types": "./dist/policy/index.d.ts"
     },
     "./audit": {
-      "import": "./dist/audit.js",
-      "types": "./dist/audit.d.ts"
+      "import": "./dist/audit/index.js",
+      "types": "./dist/audit/index.d.ts"
     },
     "./events": {
-      "import": "./dist/events.js",
-      "types": "./dist/events.d.ts"
-    },
-    "./entity-def": {
-      "import": "./dist/entity-def.js",
-      "types": "./dist/entity-def.d.ts"
-    },
-    "./invariants": {
-      "import": "./dist/invariants.js",
-      "types": "./dist/invariants.d.ts"
-    },
-    "./sandbox": {
-      "import": "./dist/sandbox.js",
-      "types": "./dist/sandbox.d.ts"
+      "import": "./dist/events/index.js",
+      "types": "./dist/events/index.d.ts"
     },
     "./graph": {
-      "import": "./dist/graph.js",
-      "types": "./dist/graph.d.ts"
+      "import": "./dist/graph/index.js",
+      "types": "./dist/graph/index.d.ts"
     },
     "./mesh": {
-      "import": "./dist/mesh.js",
-      "types": "./dist/mesh.d.ts"
-    },
-    "./mutation-policy": {
-      "import": "./dist/mutation-policy.js",
-      "types": "./dist/mutation-policy.d.ts"
-    },
-    "./state-machine": {
-      "import": "./dist/state-machine.js",
-      "types": "./dist/state-machine.d.ts"
-    },
-    "./truth-model": {
-      "import": "./dist/truth-model.js",
-      "types": "./dist/truth-model.d.ts"
+      "import": "./dist/mesh/index.js",
+      "types": "./dist/mesh/index.d.ts"
     },
     "./workflow": {
-      "import": "./dist/workflow.js",
-      "types": "./dist/workflow.d.ts"
+      "import": "./dist/workflow/index.js",
+      "types": "./dist/workflow/index.d.ts"
     },
-    "./tenant": {
-      "import": "./dist/tenant.js",
-      "types": "./dist/tenant.d.ts"
+    "./platform": {
+      "import": "./dist/platform/index.js",
+      "types": "./dist/platform/index.d.ts"
     },
-    "./organization": {
-      "import": "./dist/organization.js",
-      "types": "./dist/organization.d.ts"
-    },
-    "./resolutionCache": {
-      "import": "./dist/resolutionCache.js",
-      "types": "./dist/resolutionCache.d.ts"
-    },
-    "./utils": {
-      "import": "./dist/utils.js",
-      "types": "./dist/utils.d.ts"
+    "./inventory": {
+      "import": "./dist/inventory/index.js",
+      "types": "./dist/inventory/index.d.ts"
     }
   },
   "scripts": {
@@ -99,10 +75,23 @@
     "lint:fix": "eslint src/ --fix",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:ci": "vitest run",
+    "test:contracts": "vitest run src/__test__/api-contract.test.ts src/__test__/integration/type-contracts.test.ts src/__test__/integration/dependency-chains.test.ts",
+    "test:schema": "vitest run src/schema/__test__/schema.test.ts src/rbac/__test__/schema.test.ts src/workflow/__test__/schema.test.ts src/platform/__test__/tenant.schema.test.ts src/inventory/__test__/schema.test.ts",
+    "test:types": "tsc --noEmit",
     "gate:export-snapshot": "vitest run src/__test__/api-contract.test.ts"
   },
+  "peerDependencies": {
+    "zod": "catalog:"
+  },
   "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

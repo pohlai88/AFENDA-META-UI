@@ -6,8 +6,7 @@
  */
 
 import type React from "react";
-import type { JsonObject } from "@afenda/meta-types";
-
+import type { JsonObject } from "@afenda/meta-types/core";
 /**
  * Renderer version identifier
  * Follow semantic versioning: v1, v2, v3

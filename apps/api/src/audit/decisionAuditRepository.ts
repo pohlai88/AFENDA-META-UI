@@ -13,11 +13,7 @@
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { decisionAuditEntries, decisionAuditChains } from "../db/schema/index.js";
-import type {
-  DecisionAuditEntry,
-  DecisionAuditQuery,
-  DecisionAuditChain,
-} from "@afenda/meta-types";
+import type { DecisionAuditEntry, DecisionAuditQuery, DecisionAuditChain } from "@afenda/meta-types/audit";
 import { logger } from "../logging/logger.js";
 
 const dbGetDecisionChainSummaryPrepared = db

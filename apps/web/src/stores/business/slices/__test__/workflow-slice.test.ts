@@ -28,8 +28,7 @@ import workflowReducer, {
   selectWorkflowIsLoading,
   type WorkflowState,
 } from "../workflow-slice";
-import type { WorkflowInstance } from "@afenda/meta-types";
-
+import type { WorkflowInstance } from "@afenda/meta-types/workflow";
 const mockInstance: WorkflowInstance = {
   id: "wf_1",
   workflowId: "approval_workflow",

@@ -10,13 +10,7 @@
  * In production, replace with Kafka, NATS, or Redis Streams.
  */
 
-import type {
-  MeshEvent,
-  MeshEventHandler,
-  MeshSubscription,
-  StreamProcessor,
-  DeadLetterEntry,
-} from "@afenda/meta-types";
+import type { MeshEvent, MeshEventHandler, MeshSubscription, StreamProcessor, DeadLetterEntry } from "@afenda/meta-types/mesh";
 import { logDecisionAudit } from "../audit/decisionAuditLogger.js";
 
 // ---------------------------------------------------------------------------

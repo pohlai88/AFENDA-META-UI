@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import type { PolicyDefinition, SimulationScenario } from "@afenda/meta-types";
-
+import type { PolicyDefinition, SimulationScenario } from "@afenda/meta-types/policy";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler, ValidationError } from "../middleware/errorHandler.js";
 import { analyzeBlastRadius, simulateBatch, simulateScenario } from "../sandbox/index.js";

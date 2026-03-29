@@ -14,8 +14,7 @@
 import { eq, and, gte, lte, asc, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { events } from "../db/schema/index.js";
-import type { DomainEvent, EventQuery } from "@afenda/meta-types";
-
+import type { DomainEvent, EventQuery } from "@afenda/meta-types/events";
 const dbGetAggregateEventsPrepared = db
   .select()
   .from(events)

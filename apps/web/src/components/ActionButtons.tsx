@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@afenda/ui";
-import type { MetaAction } from "@afenda/meta-types";
+import type { MetaAction } from "@afenda/meta-types/schema";
 import { useModelAction } from "~/hooks/useModelAction";
 
 type ButtonVariant = "default" | "secondary" | "destructive" | "outline" | "ghost";

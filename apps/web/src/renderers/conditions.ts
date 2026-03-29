@@ -8,13 +8,7 @@
 
 import React from "react";
 import { useWatch, type Control, type FieldValues } from "react-hook-form";
-import type {
-  MetaField,
-  ConditionExpression,
-  FieldCondition,
-  ConditionGroup,
-} from "@afenda/meta-types";
-
+import type { MetaField, ConditionExpression, FieldCondition, ConditionGroup } from "@afenda/meta-types/schema";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------

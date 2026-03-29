@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { DecisionAuditEntry } from "@afenda/meta-types";
+import type { DecisionAuditEntry } from "@afenda/meta-types/audit";
 import {
   logDecisionAudit,
   logDecisionAuditBatch,

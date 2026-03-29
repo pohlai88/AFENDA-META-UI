@@ -2,7 +2,7 @@ import {
   MUTATION_POLICIES,
   SCOPED_MUTATION_POLICIES,
 } from "../../packages/db/src/truth-compiler/truth-config.ts";
-import type { MutationOperation, MutationPolicyDefinition } from "@afenda/meta-types";
+import type { MutationOperation, MutationPolicyDefinition } from "@afenda/meta-types/policy";
 
 const ALLOWED_OPERATIONS: ReadonlySet<MutationOperation> = new Set(["create", "update", "delete"]);
 

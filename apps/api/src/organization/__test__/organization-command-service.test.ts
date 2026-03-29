@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OrganizationDefinition } from "@afenda/meta-types";
-
+import type { OrganizationDefinition } from "@afenda/meta-types/platform";
 const {
   assertNoProjectionDriftMock,
   dbGetAggregateEventsMock,

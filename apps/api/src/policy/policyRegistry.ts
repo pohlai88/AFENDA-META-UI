@@ -7,8 +7,7 @@
  * Future: back by schema_registry table or dedicated policy table.
  */
 
-import type { PolicyDefinition } from "@afenda/meta-types";
-
+import type { PolicyDefinition } from "@afenda/meta-types/policy";
 const policies = new Map<string, PolicyDefinition>();
 
 // ---------------------------------------------------------------------------

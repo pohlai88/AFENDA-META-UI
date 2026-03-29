@@ -15,3 +15,5 @@ export * from "./dependency-graph.js";
 export * from "./emitter.js";
 export * from "./schema-compiler.js";
 export * from "./types.js";
+export * from "./mutation-policy-runtime.js";
+export * from "./graph-constants.js";

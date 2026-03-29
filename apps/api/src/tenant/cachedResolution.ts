@@ -1,5 +1,5 @@
-import type { ResolutionContext } from "@afenda/meta-types";
-import { ResolutionCacheService } from "@afenda/meta-types";
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import { ResolutionCacheService } from "./resolution-cache.js";
 import { randomUUID } from "crypto";
 import { logDecisionAudit } from "../audit/decisionAuditLogger.js";
 

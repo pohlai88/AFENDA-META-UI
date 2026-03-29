@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { maskValue, formatTimeline } from "../timelineFormatter.js";
-import type { AuditEntry } from "@afenda/meta-types";
-
+import type { AuditEntry } from "@afenda/meta-types/audit";
 describe("timelineFormatter", () => {
   describe("maskValue", () => {
     it("shows low-sensitivity values to any viewer", () => {

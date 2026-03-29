@@ -14,7 +14,7 @@
 import { getTableColumns } from "drizzle-orm";
 import { compileModel } from "./compiler.js";
 import { upsertSchema, getRegistryEntry } from "./registry.js";
-import type { IntrospectedModel, IntrospectedField } from "@afenda/meta-types";
+import type { IntrospectedModel, IntrospectedField } from "@afenda/meta-types/schema";
 import * as schemaExports from "../db/schema/index.js";
 
 // ---------------------------------------------------------------------------

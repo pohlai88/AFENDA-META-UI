@@ -11,7 +11,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useMeta } from "./useMeta";
-import type { MetaAction } from "@afenda/meta-types";
+import type { MetaAction } from "@afenda/meta-types/schema";
 import { toast } from "sonner";
 
 export interface ActionContext {

@@ -15,8 +15,7 @@ import { getSchema, listModels } from "../meta/registry.js";
 import { applyRbac } from "../meta/rbac.js";
 import { moduleRegistry } from "../meta/moduleRegistry.js";
 import { asyncHandler, NotFoundError, ForbiddenError } from "../middleware/errorHandler.js";
-import type { SessionContext } from "@afenda/meta-types";
-
+import type { SessionContext } from "@afenda/meta-types/rbac";
 const router = Router();
 
 type RequestLog = {

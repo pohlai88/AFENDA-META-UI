@@ -11,13 +11,7 @@
  *           timer waits, notifications, and integrations.
  */
 
-import type {
-  WorkflowDefinition,
-  WorkflowInstance,
-  WorkflowStep,
-  WorkflowStepExecution,
-  WorkflowStatus,
-} from "@afenda/meta-types";
+import type { WorkflowDefinition, WorkflowInstance, WorkflowStep, WorkflowStepExecution, WorkflowStatus } from "@afenda/meta-types/workflow";
 import { logDecisionAudit } from "../audit/decisionAuditLogger.js";
 
 // ---------------------------------------------------------------------------

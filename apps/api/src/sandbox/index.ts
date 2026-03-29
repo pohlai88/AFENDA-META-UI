@@ -10,16 +10,7 @@
  * 4. Blast Radius — estimate how many records a policy affects
  */
 
-import type {
-  PolicyDefinition,
-  PolicyContext,
-  PolicyViolation,
-  SimulationScenario,
-  PolicySimulationResult,
-  SimulationReport,
-  BlastRadiusResult,
-} from "@afenda/meta-types";
-
+import type { PolicyDefinition, PolicyContext, PolicyViolation, SimulationScenario, PolicySimulationResult, SimulationReport, BlastRadiusResult } from "@afenda/meta-types/policy";
 import { evaluateExplicitPolicies } from "../policy/policyEvaluator.js";
 import { getPoliciesForScope } from "../policy/policyRegistry.js";
 import { buildPolicyContext } from "../policy/policyContextBuilder.js";

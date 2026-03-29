@@ -27,6 +27,10 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_HOST?: string;
   /** Log level for frontend logger (trace|debug|info|warn|error|fatal) */
   readonly VITE_LOG_LEVEL?: string;
+  /** Remote logging endpoint for production error tracking */
+  readonly VITE_LOG_ENDPOINT?: string;
+  /** Sentry DSN for error tracking integration */
+  readonly VITE_SENTRY_DSN?: string;
 }
 
 interface ImportMeta {

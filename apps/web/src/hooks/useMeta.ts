@@ -9,7 +9,7 @@
  */
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type { MetaResponse } from "@afenda/meta-types";
+import type { MetaResponse } from "@afenda/meta-types/schema";
 import { queryKeys } from "~/lib/query-keys";
 
 export function useMeta(model: string, options?: { skip?: boolean }): UseQueryResult<MetaResponse> {

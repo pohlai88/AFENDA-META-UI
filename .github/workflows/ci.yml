@@ -236,7 +236,16 @@ jobs:
             turbo-${{ runner.os }}-${{ github.ref }}-
             turbo-${{ runner.os }}-
 
+      - name: Setup Neon test database
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node tools/scripts/setup-test-db.mjs --ci
+        continue-on-error: false
+
       - name: Run Vitest
+        env:
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
         run: pnpm test ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         continue-on-error: true
 
@@ -247,6 +256,19 @@ jobs:
           files: ./coverage/coverage-final.json
           flags: unittests
           fail_ci_if_error: false
+
+      - name: Cleanup test database
+        if: always()
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          TEST_NEON_BRANCH_ID: ${{ env.TEST_NEON_BRANCH_ID }}
+        run: |
+          if [ -n "$TEST_NEON_BRANCH_ID" ]; then
+            echo "🗑️  Deleting test database branch: $TEST_NEON_BRANCH_ID"
+            curl -X DELETE "https://console.neon.tech/api/v2/projects/${{ secrets.NEON_PROJECT_ID }}/branches/$TEST_NEON_BRANCH_ID" \
+              -H "Authorization: Bearer $NEON_API_KEY" \
+              -H "Accept: application/json" || echo "⚠️  Failed to delete test branch (may have been manually deleted)"
+          fi
 
   build:
     name: Build

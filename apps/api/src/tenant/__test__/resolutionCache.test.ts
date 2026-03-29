@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { ResolutionCache } from "@afenda/meta-types";
+import { ResolutionCache } from "../resolution-cache.js";
 import { CachedResolution } from "../cachedResolution.js";
-import type { ResolutionContext, ModelMeta } from "@afenda/meta-types";
-
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { ModelMeta } from "@afenda/meta-types/schema";
 // ============================================================================
 // Test Data
 // ============================================================================

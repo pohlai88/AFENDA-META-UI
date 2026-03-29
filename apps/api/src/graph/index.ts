@@ -9,16 +9,7 @@
  * In production, swap the in-memory stores for a graph DB (e.g. Neo4j, ArangoDB).
  */
 
-import type {
-  GraphNode,
-  GraphEdge,
-  GraphNodeType,
-  GraphEdgeType,
-  GraphQuery,
-  GraphQueryResult,
-  TruthConflict,
-} from "@afenda/meta-types";
-
+import type { GraphNode, GraphEdge, GraphNodeType, GraphEdgeType, GraphQuery, GraphQueryResult, TruthConflict } from "@afenda/meta-types/graph";
 // ---------------------------------------------------------------------------
 // In-Memory Stores
 // ---------------------------------------------------------------------------

@@ -27,8 +27,7 @@ import {
   selectWorkflowError,
 } from "~/stores/business";
 import { toast } from "sonner";
-import type { WorkflowInstance } from "@afenda/meta-types";
-
+import type { WorkflowInstance } from "@afenda/meta-types/workflow";
 function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && typeof err.message === "string" && err.message.length > 0) {
     return err.message;

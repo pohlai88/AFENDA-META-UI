@@ -22,7 +22,7 @@
  *   5. Return transformed/computed result
  */
 
-import type { ResolutionContext } from "@afenda/meta-types";
+import type { ResolutionContext } from "@afenda/meta-types/platform";
 import { evaluateExpression } from "../policy/policyDSL.js";
 import { buildPolicyContext } from "../policy/policyContextBuilder.js";
 import { CachedResolution, resolveMetadata } from "../tenant/index.js";

@@ -17,8 +17,7 @@
  * uom_categories, units_of_measure, document_attachments, approval_logs
  */
 
-import type { MetaModule } from "@afenda/meta-types";
-
+import type { MetaModule } from "@afenda/meta-types/module";
 export default {
   name: "reference",
   label: "Reference Data",

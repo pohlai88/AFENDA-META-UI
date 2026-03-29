@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useMemo, useCallback, memo } from "react";
-import type { MetaKanbanView, MetaField } from "@afenda/meta-types";
+import type { MetaKanbanView, MetaField } from "@afenda/meta-types/schema";
 import { useMeta } from "../hooks/useMeta.js";
 import { useModelList, useModel } from "../hooks/useModel.js";
 import { logger } from '../lib/logger';

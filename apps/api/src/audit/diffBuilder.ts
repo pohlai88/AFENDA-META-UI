@@ -5,8 +5,8 @@
  * Uses MetaField metadata to determine sensitivity level.
  */
 
-import type { MetaField, SensitivityLevel, FieldChange } from "@afenda/meta-types";
-
+import type { SensitivityLevel, FieldChange } from "@afenda/meta-types/audit";
+import type { MetaField } from "@afenda/meta-types/schema";
 /**
  * Deep-equal comparison for primitive and JSON-serializable values.
  * Returns true if the values are semantically identical.

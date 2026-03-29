@@ -5,7 +5,7 @@
  * The brain of enterprise systems.
  */
 
-import type { JsonValue, JsonObject } from "@afenda/meta-types";
+import type { JsonValue, JsonObject } from "@afenda/meta-types/core";
 import { logger } from "../lib/logger";
 const log = logger.child({ module: "rule-engine" });
 

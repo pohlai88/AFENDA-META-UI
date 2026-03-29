@@ -4,8 +4,7 @@
  * @layer db/truth-compiler
  */
 
-import type { MutationOperation, MutationPolicyDefinition } from "@afenda/meta-types";
-
+import type { MutationOperation, MutationPolicyDefinition } from "@afenda/meta-types/policy";
 import type { NormalizedTruthModel, SqlSegment } from "./types.js";
 import { quoteIdentifier, renderLiteral, toSnakeIdentifier } from "./sql-utils.js";
 

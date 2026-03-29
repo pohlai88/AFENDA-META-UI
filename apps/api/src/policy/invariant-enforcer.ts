@@ -1,13 +1,6 @@
 import { SALES_INVARIANT_REGISTRIES } from "@afenda/db";
-import type {
-  ConditionExpression,
-  ConditionGroup,
-  FieldCondition,
-  InvariantRegistry,
-  InvariantTriggerOperation,
-  InvariantViolation,
-} from "@afenda/meta-types";
-
+import type { InvariantRegistry, InvariantTriggerOperation, InvariantViolation } from "@afenda/meta-types/policy";
+import type { ConditionExpression, ConditionGroup, FieldCondition } from "@afenda/meta-types/schema";
 type Comparable = boolean | number | string | null | undefined;
 
 export interface InvariantEnforcementInput {

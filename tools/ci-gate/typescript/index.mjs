@@ -447,24 +447,24 @@ function checkAsUnknownAs(warnings) {
 }
 
 /**
- * Confirms that `assertNever` is exported from packages/meta-types/src/utils.ts.
+ * Confirms that `assertNever` is exported from packages/meta-types/src/core/guards.ts.
  * This function is the cornerstone of discriminated union exhaustiveness checking
  * (SKILL.md Pattern 6). If it disappears, switch statements over union variants
  * silently lose their compile-time coverage guarantee.
  */
 function checkAssertNeverExport(warnings) {
-  const utilsPath = join(repoRoot, "packages", "meta-types", "src", "utils.ts");
-  if (!existsSync(utilsPath)) {
+  const guardsPath = join(repoRoot, "packages", "meta-types", "src", "core", "guards.ts");
+  if (!existsSync(guardsPath)) {
     warnings.push(
       createIssue({
         level: "warning",
         category: "TS_EXHAUSTIVENESS_MISSING",
-        message: "packages/meta-types/src/utils.ts does not exist — assertNever infrastructure is gone.",
+        message: "packages/meta-types/src/core/guards.ts does not exist — assertNever infrastructure is gone.",
         explanation:
           "assertNever enables compile-time exhaustiveness checking for discriminated unions. Without it, switch statements over union variants cannot be verified by the type system (SKILL.md Pattern 6).",
-        relatedFiles: ["packages/meta-types/src/utils.ts"],
+        relatedFiles: ["packages/meta-types/src/core/guards.ts"],
         fixes: [
-          "Restore packages/meta-types/src/utils.ts and export assertNever.",
+          "Restore packages/meta-types/src/core/guards.ts and export assertNever.",
           "Signature: export function assertNever(value: never): never { throw new Error(`Unhandled variant: ${String(value)}`); }",
         ],
       })
@@ -472,19 +472,19 @@ function checkAssertNeverExport(warnings) {
     return;
   }
 
-  const source = readFileSync(utilsPath, "utf-8");
+  const source = readFileSync(guardsPath, "utf-8");
   if (!/export\s+function\s+assertNever/.test(source)) {
     warnings.push(
       createIssue({
         level: "warning",
         category: "TS_EXHAUSTIVENESS_MISSING",
-        message: "assertNever is not exported from packages/meta-types/src/utils.ts.",
+        message: "assertNever is not exported from packages/meta-types/src/core/guards.ts.",
         explanation:
           "assertNever enables compile-time exhaustiveness checking for discriminated unions. Every switch over a `type` or `status` discriminant should have a `default: assertNever(x)` branch so TypeScript catches unhandled variants at compile time (SKILL.md Pattern 6).",
-        relatedFiles: ["packages/meta-types/src/utils.ts"],
+        relatedFiles: ["packages/meta-types/src/core/guards.ts"],
         fixes: [
           "Add: export function assertNever(value: never): never { throw new Error(`Unhandled variant: ${String(value)}`); }",
-          "Import at call sites: import { assertNever } from '@afenda/meta-types';",
+          "Import at call sites: import { assertNever } from '@afenda/meta-types/core';",
         ],
       })
     );
@@ -623,6 +623,44 @@ function checkTypeGuardPredicates(warnings) {
   }
 }
 
+/**
+ * Structural lint: enforce that @afenda/meta-types main barrel only uses
+ * `export type *` for domain re-exports (except core/ which has runtime guards).
+ * Prevents accidental runtime leakage into the types package.
+ */
+function checkMetaTypesBarrelStructure(warnings) {
+  const barrelPath = join(repoRoot, "packages", "meta-types", "src", "index.ts");
+  if (!existsSync(barrelPath)) return;
+
+  const source = readFileSync(barrelPath, "utf-8");
+  const lines = source.split(/\r?\n/u);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Skip empty, comments, core (allowed runtime), and non-export lines
+    if (!trimmed.startsWith("export ")) continue;
+    if (trimmed.startsWith("export type ")) continue;
+    if (trimmed.includes("/core/")) continue;
+
+    // Any bare `export *` (not `export type *`) to a non-core domain is a violation
+    if (/^export\s+\*\s+from\b/.test(trimmed)) {
+      warnings.push(
+        createIssue({
+          level: "warning",
+          category: "TS_BARREL_RUNTIME_LEAK",
+          message: `meta-types barrel has runtime re-export: ${trimmed}`,
+          explanation:
+            "The main @afenda/meta-types barrel should only use 'export type *' for domain re-exports (except core/ which exports runtime guards). Runtime Zod schemas are accessed via domain subpath imports.",
+          relatedFiles: ["packages/meta-types/src/index.ts"],
+          fixes: [
+            `Change to: export type * from "${trimmed.match(/from\s+["']([^"']+)/)?.[1] ?? "..."}";`,
+          ],
+        })
+      );
+    }
+  }
+}
+
 function runTypecheck(errors) {
   try {
     const output = execSync("pnpm typecheck", {
@@ -679,6 +717,7 @@ function main() {
   checkAssertNeverExport(warnings);
   checkObjectWideningCasts(warnings);
   checkTypeGuardPredicates(warnings);
+  checkMetaTypesBarrelStructure(warnings);
 
   const hasWarnings = warnings.length > 0;
 

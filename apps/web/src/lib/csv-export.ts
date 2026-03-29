@@ -4,8 +4,7 @@
  * Utilities for exporting data to CSV format with proper escaping.
  */
 
-import type { MetaField } from "@afenda/meta-types";
-
+import type { MetaField } from "@afenda/meta-types/schema";
 /**
  * Escape CSV cell value (handle quotes, commas, newlines)
  */

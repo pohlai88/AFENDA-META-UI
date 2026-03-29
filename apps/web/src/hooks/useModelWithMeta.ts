@@ -16,7 +16,7 @@
  */
 
 import { useCallback } from "react";
-import type { CrudPermissions } from "@afenda/meta-types";
+import type { CrudPermissions } from "@afenda/meta-types/schema";
 import { useMeta } from "~/hooks/useMeta";
 import { useModel, useModelList } from "~/hooks/useModel";
 import type { FilterGroup } from "~/hooks/useModel";

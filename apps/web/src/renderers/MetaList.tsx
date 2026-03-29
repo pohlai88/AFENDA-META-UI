@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from "react";
-import type { MetaListView, MetaField } from "@afenda/meta-types";
+import type { MetaListView, MetaField } from "@afenda/meta-types/schema";
 import { useMeta } from "../hooks/useMeta.js";
 import { useModelList } from "../hooks/useModel.js";
 

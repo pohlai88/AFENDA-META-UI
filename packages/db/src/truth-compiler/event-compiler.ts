@@ -12,7 +12,7 @@
  * @layer db/truth-compiler
  */
 
-import { domainEventTypes } from "../schema-domain/sales/_enums.js";
+import { domainEventTypes } from "../schema/sales/_enums.js";
 
 import type { NormalizedTruthModel, SqlSegment } from "./types.js";
 import { quoteIdentifier, renderLiteral, toSnakeIdentifier } from "./sql-utils.js";
@@ -45,11 +45,17 @@ function groupEventsByModel(eventTypes: string[]): Map<string, string[]> {
 }
 
 function toDomainEventEnum(entityModel: string, suffix: "MUTATED" | "DELETED"): string {
-  const logicalModel = entityModel.startsWith("sales_") ? entityModel.slice("sales_".length) : entityModel;
+  const logicalModel = entityModel.startsWith("sales_")
+    ? entityModel.slice("sales_".length)
+    : entityModel;
   return `${toSnakeIdentifier(logicalModel).toUpperCase()}_${suffix}`;
 }
 
-function renderPayloadExpression(events: string[], stateField: string | undefined, rowRef: "OLD" | "NEW"): string {
+function renderPayloadExpression(
+  events: string[],
+  stateField: string | undefined,
+  rowRef: "OLD" | "NEW"
+): string {
   const parts = [
     `'operation'`,
     `TG_OP`,
@@ -59,7 +65,12 @@ function renderPayloadExpression(events: string[], stateField: string | undefine
 
   if (stateField) {
     const quotedStateField = quoteIdentifier(stateField);
-    parts.push(`'state_field'`, renderLiteral(stateField), `'state_value'`, `${rowRef}.${quotedStateField}`);
+    parts.push(
+      `'state_field'`,
+      renderLiteral(stateField),
+      `'state_value'`,
+      `${rowRef}.${quotedStateField}`
+    );
   }
 
   return `jsonb_build_object(${parts.join(", ")})`;
@@ -173,7 +184,9 @@ export function compileEvents(model: NormalizedTruthModel): SqlSegment[] {
 
   const ns = model.namespace ?? "public";
   const entityByName = new Map(model.entities.map((entity) => [entity.name, entity]));
-  const stateFieldByModel = new Map(model.stateMachines.map((stateMachine) => [stateMachine.model, stateMachine.stateField]));
+  const stateFieldByModel = new Map(
+    model.stateMachines.map((stateMachine) => [stateMachine.model, stateMachine.stateField])
+  );
   const eventsByModel = groupEventsByModel(model.events);
 
   for (const [entityModel, events] of eventsByModel) {

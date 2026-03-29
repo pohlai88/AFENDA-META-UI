@@ -13,8 +13,7 @@ import {
   clearWorkflows,
 } from "../index.js";
 import { clearDecisionAuditLog, queryDecisionAuditLog } from "../../audit/decisionAuditLogger.js";
-import type { WorkflowDefinition } from "@afenda/meta-types";
-
+import type { WorkflowDefinition } from "@afenda/meta-types/workflow";
 beforeEach(() => {
   clearWorkflows();
   clearDecisionAuditLog();

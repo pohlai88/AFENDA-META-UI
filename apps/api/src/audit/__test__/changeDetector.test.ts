@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectChanges, trackCreate, trackDelete } from "../changeDetector.js";
-import type { MetaField } from "@afenda/meta-types";
-
+import type { MetaField } from "@afenda/meta-types/schema";
 const fields: MetaField[] = [
   { name: "status", type: "string", label: "Status" },
   { name: "total", type: "integer", label: "Total" },

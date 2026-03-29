@@ -5,7 +5,7 @@ import type {
   SubscriptionLine,
   SubscriptionStatus,
   SubscriptionTemplate,
-} from "@afenda/db/schema-domain";
+} from "@afenda/db/schema/sales";
 import { StateMachine, type TransitionRule } from "../../../utils/state-machine.js";
 
 export type SubscriptionInvariantCode =

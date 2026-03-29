@@ -4,16 +4,17 @@ import {
 } from "../policy/command-runtime-spine.js";
 import { getTenant, registerTenant, removeTenant, updateTenant } from "./index.js";
 
-import type { TenantDefinition } from "@afenda/meta-types";
+import type { RecordOf } from "@afenda/meta-types/compiler";
+import type { TenantDefinition } from "@afenda/meta-types/platform";
 
-type TenantRecord = Record<string, unknown>;
+type TenantRecord = RecordOf<TenantDefinition>;
 
 const TENANT_REGISTER_SOURCE = "api.tenants.register";
 const TENANT_UPDATE_SOURCE = "api.tenants.update";
 const TENANT_DELETE_SOURCE = "api.tenants.delete";
 
 function toTenantRecord(tenant: TenantDefinition): TenantRecord {
-  return tenant as unknown as TenantRecord;
+  return tenant;
 }
 
 export async function registerTenantCommand(input: {

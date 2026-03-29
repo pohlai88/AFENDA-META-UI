@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MutationPolicyDefinition } from "@afenda/meta-types";
-
+import type { MutationPolicyDefinition } from "@afenda/meta-types/policy";
 import { compileMutationPolicies } from "../mutation-policy-compiler.js";
 import { normalize } from "../normalizer.js";
 import { COMPILER_INPUT } from "../truth-config.js";

@@ -30,8 +30,7 @@ import { readdir } from "fs/promises";
 import { logger } from "../logging/index.js";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import type { MetaModule, ModuleRegistryResult } from "@afenda/meta-types";
-
+import type { MetaModule, ModuleRegistryResult } from "@afenda/meta-types/module";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

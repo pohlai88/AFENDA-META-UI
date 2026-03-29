@@ -1,5 +1,4 @@
-import type { MutationOperation } from "@afenda/meta-types";
-
+import type { MutationOperation } from "@afenda/meta-types/policy";
 type MutationRecord = Record<string, unknown>;
 
 export interface EventTypeResolverInput {

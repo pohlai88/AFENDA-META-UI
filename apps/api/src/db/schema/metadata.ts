@@ -20,12 +20,9 @@ import {
   uuid,
   index,
 } from "drizzle-orm/pg-core";
-import type {
-  LayoutNode,
-  FieldChange,
-  BusinessType,
-} from "@afenda/meta-types";
-
+import type { FieldChange } from "@afenda/meta-types/audit";
+import type { LayoutNode } from "@afenda/meta-types/layout";
+import type { BusinessType } from "@afenda/meta-types/schema";
 // ── Enums ────────────────────────────────────────────────────────────────────
 
 export const policySeverityEnum = pgEnum("policy_severity", ["error", "warning", "info"]);

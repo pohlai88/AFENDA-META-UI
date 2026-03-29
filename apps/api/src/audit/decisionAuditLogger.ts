@@ -15,11 +15,7 @@
  * Production: replace with DB-backed implementation.
  */
 
-import type {
-  DecisionAuditEntry,
-  DecisionAuditQuery,
-  DecisionAuditChain,
-} from "@afenda/meta-types";
+import type { DecisionAuditEntry, DecisionAuditQuery, DecisionAuditChain } from "@afenda/meta-types/audit";
 import * as auditRepo from "./decisionAuditRepository.js";
 
 // ---------------------------------------------------------------------------

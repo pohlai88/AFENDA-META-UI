@@ -23,6 +23,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { sql, eq, asc, desc, inArray, and, isNull, type SQL, type Column } from "drizzle-orm";
+import type { PgTable } from "drizzle-orm/pg-core";
 import { db } from "../db/index.js";
 import { getSchema } from "../meta/registry.js";
 import { resolveRbac } from "../meta/rbac.js";
@@ -34,8 +35,8 @@ import {
 } from "../policy/mutation-command-gateway.js";
 import { parseFilters, parseSortParams, buildWhereClause } from "../utils/queryBuilder.js";
 import { resolveActorId } from "./_shared/actor-resolution.js";
-import type { SessionContext, MetaField } from "@afenda/meta-types";
-
+import type { SessionContext } from "@afenda/meta-types/rbac";
+import type { MetaField } from "@afenda/meta-types/schema";
 const router = Router();
 
 type RequestLog = {
@@ -49,31 +50,68 @@ type RequestWithLog = Request & {
 type RowRecord = Record<string, unknown>;
 type DynamicTableColumns = Record<string, Column>;
 
-type QueryLike = {
-  where: (clause: SQL) => QueryLike;
-  orderBy: (...clauses: unknown[]) => QueryLike;
-  limit: (value: number) => QueryLike;
-  offset: (value: number) => QueryLike;
-} & PromiseLike<RowRecord[]>;
+/**
+ * Typed query builder interface for dynamic table access.
+ *
+ * **Truth Engine Type Boundary:**
+ * Drizzle's query builder is strongly typed per-table at compile time.
+ * This dynamic routing system requires runtime table selection, which
+ * necessitates a widened interface. This is a controlled type boundary
+ * where we trade compile-time column safety for runtime schema flexibility.
+ *
+ * **Safety Guarantees:**
+ * - Table existence validated via schema registry lookup
+ * - Column access validated against MetaField definitions
+ * - SQL injection prevented via parameterized queries
+ * - Soft delete respected via column metadata
+ *
+ * **Type Cast Rationale:**
+ * The `table as unknown as PgTable` pattern is necessary because:
+ * 1. Tables are resolved dynamically from the schema registry at runtime
+ * 2. TypeScript cannot verify table schemas at compile time for dynamic routes
+ * 3. All table accesses are validated through getTableByName() before reaching this layer
+ * 4. This is a fundamental tradeoff in schema-driven generic CRUD systems
+ *
+ * @see packages/db/src/schema for actual table definitions
+ * @see meta/registry.ts for schema validation
+ * @see getTableByName() for runtime table resolution
+ */
+interface DynamicQueryBuilder extends PromiseLike<RowRecord[]> {
+  where: (clause: SQL) => DynamicQueryBuilder;
+  orderBy: (...clauses: unknown[]) => DynamicQueryBuilder;
+  limit: (value: number) => DynamicQueryBuilder;
+  offset: (value: number) => DynamicQueryBuilder;
+}
 
-type DbLike = {
-  select: (...args: unknown[]) => {
-    from: (table: unknown) => QueryLike | PromiseLike<RowRecord[]>;
+interface DynamicDb {
+  select: (projection?: Record<string, unknown>) => {
+    from: (table: PgTable) => DynamicQueryBuilder;
   };
-  insert: (table: unknown) => {
+  insert: (table: PgTable) => {
     values: (values: RowRecord) => { returning: () => Promise<RowRecord[]> };
   };
-  update: (table: unknown) => {
+  update: (table: PgTable) => {
     set: (values: RowRecord) => {
-      where: (clause: unknown) => { returning: () => Promise<RowRecord[]> };
+      where: (clause: SQL) => { returning: () => Promise<RowRecord[]> };
     };
   };
-  delete: (table: unknown) => {
-    where: (clause: unknown) => { returning: () => Promise<RowRecord[]> };
+  delete: (table: PgTable) => {
+    where: (clause: SQL) => { returning: () => Promise<RowRecord[]> };
   };
-};
+}
 
-const dbLike = db as unknown as DbLike;
+/**
+ * Type-widened database client for dynamic routing.
+ *
+ * **Invariant:** All table accesses are validated against schema registry
+ * before reaching this layer. See `getTableByName()` for validation logic.
+ */
+const dynamicDb = db as unknown as DynamicDb;
+
+/** Helper to cast dynamic table to PgTable type. All table accesses go through getTableByName() validation first. */
+function toPgTable(table: Record<string, unknown>): PgTable {
+  return table as unknown as PgTable;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -167,14 +205,14 @@ async function resolveTable(model: string): Promise<Record<string, unknown> | nu
 
 async function loadRowById(table: Record<string, unknown>, id: string): Promise<RowRecord | null> {
   const tableColumns = table as DynamicTableColumns;
-  const query = dbLike.select().from(table) as QueryLike;
+  const query = dynamicDb.select().from(toPgTable(table));
   const rows = await query.where(eq(tableColumns.id, id)).limit(1);
   return rows[0] ?? null;
 }
 
 async function loadRowsByIds(table: Record<string, unknown>, ids: string[]): Promise<RowRecord[]> {
   const tableColumns = table as DynamicTableColumns;
-  const query = dbLike.select().from(table) as QueryLike;
+  const query = dynamicDb.select().from(toPgTable(table));
   return query.where(inArray(tableColumns.id, ids));
 }
 
@@ -313,11 +351,11 @@ async function expandManyToOneRows(
     if (!relatedFieldNames.length) continue;
 
     const projection = buildSelectProjection(relatedColumns, relatedFieldNames);
-    let relatedQuery = dbLike.select(projection).from(relatedTable) as
-      | QueryLike
-      | PromiseLike<RowRecord[]>;
-    relatedQuery = (relatedQuery as QueryLike).where(inArray(valueColumn, relationIds));
-    const relatedRows = await (relatedQuery as unknown as PromiseLike<RowRecord[]>);
+    const relatedQuery = dynamicDb
+      .select(projection)
+      .from(toPgTable(relatedTable))
+      .where(inArray(valueColumn, relationIds));
+    const relatedRows = await relatedQuery;
 
     const byId = new Map<string, RowRecord>();
     for (const relatedRow of relatedRows) {
@@ -442,24 +480,26 @@ router.get("/:model", async (req: Request, res: Response) => {
     }
 
     // Build query with Drizzle
-    let query = dbLike.select(projection).from(table) as QueryLike | PromiseLike<RowRecord[]>;
+    let query = dynamicDb.select(projection).from(toPgTable(table));
 
     if (effectiveWhereClause) {
-      query = (query as QueryLike).where(effectiveWhereClause);
+      query = query.where(effectiveWhereClause);
     }
 
-    query = (query as QueryLike)
+    query = query
       .orderBy(...orderByClauses)
       .limit(limit)
       .offset(offset);
 
     // Execute query
-    const rows = await (query as unknown as PromiseLike<RowRecord[]>);
+    const rows = await query;
 
     // Get total count (with filters applied)
-    let countQuery = dbLike.select({ count: sql`count(*)` }).from(table) as
+    type CountQuery =
       | { where: (clause: SQL) => PromiseLike<Array<{ count: number | string }>> }
       | PromiseLike<Array<{ count: number | string }>>;
+
+    let countQuery: CountQuery = dynamicDb.select({ count: sql`count(*)` }).from(toPgTable(table)) as unknown as CountQuery;
 
     if (effectiveWhereClause) {
       countQuery = (
@@ -574,9 +614,12 @@ router.get("/:model/:id", async (req: Request, res: Response) => {
         : idClause;
     const finalWhereClause = effectiveWhereClause ?? idClause;
 
-    let query = dbLike.select(projection).from(table) as QueryLike | PromiseLike<RowRecord[]>;
-    query = (query as QueryLike).where(finalWhereClause).limit(1);
-    const rows = await (query as unknown as PromiseLike<RowRecord[]>);
+    const query = dynamicDb
+      .select(projection)
+      .from(toPgTable(table))
+      .where(finalWhereClause)
+      .limit(1);
+    const rows = await query;
 
     if (!rows.length) {
       res.status(404).json({ error: "Not found" });
@@ -662,7 +705,7 @@ router.post("/:model", async (req: Request, res: Response) => {
       actorId: resolveActorId(req),
       nextRecord: safe,
       mutate: async () => {
-        const [created] = await dbLike.insert(table).values(safe).returning();
+        const [created] = await dynamicDb.insert(toPgTable(table)).values(safe).returning();
         return created ?? null;
       },
     });
@@ -759,8 +802,8 @@ router.patch("/:model/:id", async (req: Request, res: Response) => {
       existingRecord: existing,
       nextRecord,
       mutate: async () => {
-        const [updated] = await dbLike
-          .update(table)
+        const [updated] = await dynamicDb
+          .update(toPgTable(table))
           .set(safe)
           .where(eq(tableColumns.id, id))
           .returning();
@@ -867,8 +910,8 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
         existingRecord: existing,
         nextRecord: { ...existing, ...updatePayload },
         mutate: async () => {
-          const [updated] = await dbLike
-            .update(table)
+          const [updated] = await dynamicDb
+            .update(toPgTable(table))
             .set(updatePayload)
             .where(eq(tableColumns.id, id))
             .returning();
@@ -891,7 +934,7 @@ router.delete("/:model/:id", async (req: Request, res: Response) => {
         actorId,
         existingRecord: existing,
         mutate: async () => {
-          const deleted = await dbLike.delete(table).where(eq(tableColumns.id, id)).returning();
+          const deleted = await dynamicDb.delete(toPgTable(table)).where(eq(tableColumns.id, id)).returning();
           return deleted[0] ?? existing;
         },
       });
@@ -981,8 +1024,8 @@ router.post("/:model/bulk-update", async (req: Request, res: Response) => {
     // Update all matching IDs
     const tableColumns = table as DynamicTableColumns;
 
-    const result = await dbLike
-      .update(table)
+    const result = await dynamicDb
+      .update(toPgTable(table))
       .set(safe)
       .where(inArray(tableColumns.id, ids))
       .returning();
@@ -1060,7 +1103,7 @@ router.post("/:model/bulk-delete", async (req: Request, res: Response) => {
     // Delete all matching IDs
     const tableColumns = table as DynamicTableColumns;
 
-    const result = await dbLike.delete(table).where(inArray(tableColumns.id, ids)).returning();
+    const result = await dynamicDb.delete(toPgTable(table)).where(inArray(tableColumns.id, ids)).returning();
 
     res.json({
       meta: {

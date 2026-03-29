@@ -7,7 +7,7 @@
  */
 
 import React from "react";
-import type { FieldType, MetaField } from "@afenda/meta-types";
+import type { FieldType, MetaField } from "@afenda/meta-types/schema";
 import { StringField } from "./StringField.js";
 import { BooleanField } from "./BooleanField.js";
 import { EnumField } from "./EnumField.js";

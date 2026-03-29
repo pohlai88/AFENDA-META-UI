@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { evaluatePolicies, evaluateExplicitPolicies } from "../policyEvaluator.js";
 import { registerPolicies, clearPolicies } from "../policyRegistry.js";
-import type { PolicyContext, PolicyDefinition } from "@afenda/meta-types";
-
+import type { PolicyContext, PolicyDefinition } from "@afenda/meta-types/policy";
 function makeContext(overrides: Partial<PolicyContext> = {}): PolicyContext {
   return {
     model: "sales.invoice",

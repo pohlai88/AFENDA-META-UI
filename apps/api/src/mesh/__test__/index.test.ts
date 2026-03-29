@@ -12,8 +12,7 @@ import {
   clearMesh,
 } from "../index.js";
 import { clearDecisionAuditLog, queryDecisionAuditLog } from "../../audit/decisionAuditLogger.js";
-import type { MeshEvent } from "@afenda/meta-types";
-
+import type { MeshEvent } from "@afenda/meta-types/mesh";
 beforeEach(() => {
   clearMesh();
   clearDecisionAuditLog();

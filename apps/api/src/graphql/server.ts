@@ -1,8 +1,8 @@
 import { createYoga } from "graphql-yoga";
 import { graphqlSchema } from "./schema.js";
 import type { Request, Response } from "express";
-import type { SessionContext, ResolutionContext } from "@afenda/meta-types";
-
+import type { ResolutionContext } from "@afenda/meta-types/platform";
+import type { SessionContext } from "@afenda/meta-types/rbac";
 type RequestWithContext = Request & {
   session?: SessionContext;
   tenantContext?: ResolutionContext;

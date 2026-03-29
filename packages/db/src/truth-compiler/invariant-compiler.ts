@@ -3,9 +3,10 @@
  * @description Compiles declarative InvariantDefinition contracts into idempotent SQL
  * CHECK constraints for entity-scoped, row-local invariants.
  *
- * V1 scope:
- *   - Entity-scoped invariants with row-local conditions → ALTER TABLE … ADD CONSTRAINT CHECK.
- *   - Aggregate / cross-aggregate / global scopes → placeholder comments for Phase 3.7.
+ * Scope:
+ *   - Entity-scoped invariants → ALTER TABLE … ADD CONSTRAINT CHECK (row-local, strongly enforced).
+ *   - Aggregate / cross-aggregate / global scopes → DEFERRABLE INITIALLY DEFERRED CONSTRAINT TRIGGER
+ *     (statement-boundary enforcement; replace function body with aggregate query for multi-row checks).
  *
  * Security (AD-11):
  *   - All identifiers pass through quoteIdentifier() — rejects non-ASCII / injection chars.
@@ -14,8 +15,11 @@
  * @layer db/truth-compiler
  */
 
-import type { ConditionExpression, ConditionGroup, FieldCondition } from "@afenda/meta-types";
-
+import type {
+  ConditionExpression,
+  ConditionGroup,
+  FieldCondition,
+} from "@afenda/meta-types/schema";
 import type { NormalizedTruthModel, SqlSegment } from "./types.js";
 import { quoteIdentifier, renderLiteral, toSnakeIdentifier } from "./sql-utils.js";
 
@@ -103,46 +107,99 @@ export function compileInvariants(model: NormalizedTruthModel): SqlSegment[] {
     const entityInvariants = model.invariants.filter((inv) => inv.targetModel === entity.name);
 
     for (const inv of entityInvariants) {
-      // Non-entity scopes require trigger/saga enforcement — deferred to Phase 3.7.
-      if (inv.scope !== "entity") {
-        segments.push({
-          model: entity.name,
-          kind: "comment",
-          sql:
-            `-- TODO Phase 3.7: invariant "${inv.id}" (scope=${inv.scope}) ` +
-            `requires trigger/saga enforcement — skipped in V1 compiler`,
-        });
-        continue;
-      }
-
       let conditionSql: string;
       try {
         conditionSql = compileConditionExpression(inv.condition);
       } catch (err) {
-        segments.push({
-          model: entity.name,
-          kind: "comment",
-          sql: `-- ERROR compiling invariant "${inv.id}": ${String(err)}`,
-        });
-        continue;
+        // Fail loudly — a silently-skipped constraint is a half-truth.
+        throw new Error(
+          `truth-compiler: failed to compile invariant "${inv.id}" (scope=${inv.scope}): ${String(err)}`
+        );
       }
 
-      const constraintName = `chk_inv_${toSnakeIdentifier(inv.id)}`;
       const tableRef = `${quoteIdentifier(ns)}.${quoteIdentifier(entity.table)}`;
-      const quotedConstraint = quoteIdentifier(constraintName);
 
-      segments.push({
-        model: entity.name,
-        kind: "check",
-        sql: [
+      if (inv.scope === "entity") {
+        // Row-local CHECK constraint — strongly enforced by PostgreSQL per-row.
+        const constraintName = `chk_inv_${toSnakeIdentifier(inv.id)}`;
+        const quotedConstraint = quoteIdentifier(constraintName);
+
+        segments.push({
+          model: entity.name,
+          kind: "check",
+          sql: [
+            `-- Invariant: ${inv.id} | severity=${inv.severity} | scope=${inv.scope}`,
+            `ALTER TABLE ${tableRef}`,
+            `  DROP CONSTRAINT IF EXISTS ${quotedConstraint};`,
+            `ALTER TABLE ${tableRef}`,
+            `  ADD CONSTRAINT ${quotedConstraint}`,
+            `  CHECK (${conditionSql});`,
+          ].join("\n"),
+        });
+      } else {
+        // Aggregate / cross-aggregate / global scope.
+        // Compiled as a DEFERRABLE INITIALLY DEFERRED CONSTRAINT TRIGGER so enforcement
+        // runs at statement boundary rather than per-row. For multi-row aggregate checks,
+        // replace the function body with an appropriate aggregate query.
+        const functionName = `enforce_inv_${toSnakeIdentifier(inv.id)}`;
+        const triggerName = `trg_inv_${toSnakeIdentifier(inv.id)}`;
+        const quotedFunction = `${quoteIdentifier(ns)}.${quoteIdentifier(functionName)}`;
+        const quotedTrigger = quoteIdentifier(triggerName);
+
+        const message =
+          `Invariant "${inv.id}" (scope=${inv.scope}) violated. ` + `Condition: ${conditionSql}`;
+        const scopeNote =
+          inv.scope === "global"
+            ? `-- NOTE: global scope applies across all tenant boundaries.`
+            : `-- NOTE: aggregate scope — for multi-row aggregate checks, replace the function body with your aggregate query.`;
+
+        const functionSql = [
           `-- Invariant: ${inv.id} | severity=${inv.severity} | scope=${inv.scope}`,
-          `ALTER TABLE ${tableRef}`,
-          `  DROP CONSTRAINT IF EXISTS ${quotedConstraint};`,
-          `ALTER TABLE ${tableRef}`,
-          `  ADD CONSTRAINT ${quotedConstraint}`,
-          `  CHECK (${conditionSql});`,
-        ].join("\n"),
-      });
+          scopeNote,
+          `CREATE OR REPLACE FUNCTION ${quotedFunction}()`,
+          `RETURNS trigger`,
+          `LANGUAGE plpgsql`,
+          `AS $$`,
+          `DECLARE`,
+          `  _holds BOOLEAN;`,
+          `BEGIN`,
+          `  SELECT (${conditionSql}) INTO _holds`,
+          `  FROM ${tableRef}`,
+          `  WHERE id = NEW.id;`,
+          `  IF NOT _holds THEN`,
+          `    RAISE EXCEPTION USING`,
+          `      MESSAGE = ${renderLiteral(message)},`,
+          `      ERRCODE = 'P0001',`,
+          `      HINT = ${renderLiteral(`Aggregate invariant ${inv.id} requires enforcement. Review and update the trigger function body with an appropriate aggregate query.`)};`,
+          `  END IF;`,
+          `  RETURN NEW;`,
+          `END;`,
+          `$$;`,
+        ].join("\n");
+
+        const triggerSql = [
+          `DROP TRIGGER IF EXISTS ${quotedTrigger} ON ${tableRef};`,
+          `CREATE CONSTRAINT TRIGGER ${quotedTrigger}`,
+          `  AFTER INSERT OR UPDATE ON ${tableRef}`,
+          `  DEFERRABLE INITIALLY DEFERRED`,
+          `  FOR EACH ROW`,
+          `  EXECUTE FUNCTION ${quotedFunction}();`,
+        ].join("\n");
+
+        segments.push({
+          model: entity.name,
+          kind: "function",
+          nodeId: `invariant:${inv.id}`,
+          sql: functionSql,
+        });
+
+        segments.push({
+          model: entity.name,
+          kind: "trigger",
+          nodeId: `invariant:${inv.id}`,
+          sql: triggerSql,
+        });
+      }
     }
   }
 

@@ -11,8 +11,7 @@
 import { eq, and, asc, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { tenantDefinitions, metadataOverrides, industryTemplates } from "../db/schema/index.js";
-import type { TenantDefinition, MetadataOverride } from "@afenda/meta-types";
-
+import type { TenantDefinition, MetadataOverride } from "@afenda/meta-types/platform";
 // ---------------------------------------------------------------------------
 // Prepared Statements (Hot Paths)
 // ---------------------------------------------------------------------------

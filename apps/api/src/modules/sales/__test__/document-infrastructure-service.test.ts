@@ -78,7 +78,7 @@ vi.mock("../../../utils/audit-logs.js", () => ({
   recordDomainEvent: recordDomainEventMock,
 }));
 
-vi.mock("@afenda/db/schema-domain", () => ({
+vi.mock("@afenda/db/schema/sales", () => ({
   accountingPostings: {},
   documentApprovals: {},
   documentStatusHistory: {},
