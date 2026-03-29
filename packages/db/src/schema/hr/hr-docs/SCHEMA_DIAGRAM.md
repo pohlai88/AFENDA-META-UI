@@ -4,11 +4,25 @@
 **Version:** 2.0
 **Domains:** 6 (People, Benefits, Learning, Payroll, Recruitment, Attendance)
 
+**Note:** This diagram set mirrors the domain-oriented organization described in `../README.md`. Each ERD groups tables by business domain even if the underlying SQL creation order differs. Naming conventions (`hr.` prefix, lower_snake_case tables/columns, tenant-scoped UUID PKs) are consistently applied, so new diagrams or modules should follow the same pattern. **Machine-checked edges:** the in-code relation catalog (`_relations.ts`) is diffed against Drizzle `foreignKey()` by `pnpm ci:gate:schema-quality` — see **Relations catalog & drift gate** (section below).
+
 ---
 
 ## Overview
 
 This document contains Entity Relationship Diagrams (ERDs) for all HR domains using Mermaid syntax. Each diagram shows the relationships between tables, primary keys (PK), foreign keys (FK), and important constraints.
+
+---
+
+## Relations catalog & drift gate
+
+ERDs here are **authoring / navigation** artifacts. The **canonical physical FK graph** for CI is whatever `foreignKey({ ... })` declarations appear in `packages/db/src/schema/hr/*.ts`. The parallel **`hrRelations`** map in `_relations.ts` documents the same edges in a stable, grep-friendly form (and supports docs / reverse engineering).
+
+- **Gate:** From the repo root, run `pnpm ci:gate:schema-quality`. Rule **`RELATIONS_DRIFT`** (severity **error**) fails when a catalog entry disagrees with an extracted FK edge, or when the schema declares an FK in scope that has no matching catalog row.
+- **Scope:** Single-column FKs plus composite second legs where the parent key is `[tenantId, id]` (including **self-table** patterns such as `course_modules.prerequisite_module_id` → `course_modules.id`). Other composite shapes are listed in `tools/ci-gate/drizzle-schema-quality/LIMITATIONS.md`.
+- **Remediation:** `RELATIONS_DRIFT_REMEDIATION.md`. **Upgrade cadence:** `HR_SCHEMA_UPGRADE_GUIDE.md`.
+
+When you add or rename a relationship in a diagram, update **`_relations.ts`** (and the Drizzle FK) so the gate stays green; diagrams do not substitute for the catalog.
 
 ---
 
@@ -855,8 +869,247 @@ stateDiagram-v2
 
 ---
 
+## Grievance Management ERD
+
+```mermaid
+erDiagram
+    TENANTS ||--o{ GRIEVANCE_CATEGORIES : has
+    GRIEVANCE_CATEGORIES ||--o{ GRIEVANCE_CATEGORIES : "parent→child"
+    TENANTS ||--o{ EMPLOYEE_GRIEVANCES : has
+    EMPLOYEES ||--o{ EMPLOYEE_GRIEVANCES : "files"
+    EMPLOYEES ||--o{ EMPLOYEE_GRIEVANCES : "assigned_to"
+    EMPLOYEES ||--o{ EMPLOYEE_GRIEVANCES : "against"
+    EMPLOYEES ||--o{ EMPLOYEE_GRIEVANCES : "escalated_to"
+    GRIEVANCE_CATEGORIES ||--o{ EMPLOYEE_GRIEVANCES : "categorized_by"
+    DEPARTMENTS ||--o{ EMPLOYEE_GRIEVANCES : "in_department"
+
+    GRIEVANCE_CATEGORIES {
+        uuid id PK
+        int tenant_id FK
+        text category_code UK
+        text name
+        enum category_type "harassment|discrimination|workplace_safety|..."
+        uuid parent_category_id FK "self-ref"
+        bool requires_investigation
+        enum default_priority "low|medium|high|critical"
+        int escalation_days "CHECK > 0"
+        bool is_active
+    }
+
+    EMPLOYEE_GRIEVANCES {
+        uuid id PK
+        int tenant_id FK
+        text grievance_number UK
+        uuid employee_id FK
+        uuid category_id FK
+        uuid department_id FK
+        text subject
+        text description
+        enum status "submitted→acknowledged→under_investigation→resolved→closed"
+        enum priority "low|medium|high|critical"
+        date filed_date
+        date acknowledged_date "CHECK >= filed_date"
+        date investigation_start_date "CHECK >= acknowledged_date"
+        date target_resolution_date
+        date actual_resolution_date "CHECK >= filed_date"
+        uuid assigned_to_id FK
+        uuid against_employee_id FK
+        bool is_anonymous
+        bool is_escalated
+        date escalated_date "CHECK >= filed_date"
+        uuid escalated_to_id FK
+        text investigation_findings
+        text resolution
+        int resolution_satisfaction "CHECK 1-5"
+        text appeal_notes
+        date appeal_date "CHECK >= actual_resolution_date"
+        text confidential_notes
+    }
+```
+
+## Loan Management ERD
+
+```mermaid
+erDiagram
+    TENANTS ||--o{ LOAN_TYPES : has
+    TENANTS ||--o{ EMPLOYEE_LOANS : has
+    EMPLOYEES ||--o{ EMPLOYEE_LOANS : "borrows"
+    EMPLOYEES ||--o{ EMPLOYEE_LOANS : "approves"
+    LOAN_TYPES ||--o{ EMPLOYEE_LOANS : "defines"
+    CURRENCIES ||--o{ EMPLOYEE_LOANS : "denominated_in"
+
+    LOAN_TYPES {
+        uuid id PK
+        int tenant_id FK
+        text loan_code UK
+        text name
+        enum category "salary_advance|personal_loan|housing_loan|..."
+        numeric max_amount "CHECK > 0"
+        int max_tenure_months "CHECK > 0"
+        numeric interest_rate "CHECK 0-100"
+        numeric max_percent_of_salary "CHECK 0-100"
+        bool requires_approval
+        int min_service_months "CHECK >= 0"
+        bool allow_multiple
+        bool is_active
+    }
+
+    EMPLOYEE_LOANS {
+        uuid id PK
+        int tenant_id FK
+        text loan_number UK
+        uuid employee_id FK
+        uuid loan_type_id FK
+        enum status "applied→approved→disbursed→repaying→completed"
+        numeric principal_amount "CHECK > 0"
+        numeric interest_rate "CHECK 0-100"
+        numeric total_repayable "CHECK >= principal"
+        numeric emi_amount "CHECK > 0"
+        enum repayment_frequency "monthly|bi_weekly|weekly"
+        int tenure_months "CHECK > 0"
+        int currency_id FK
+        date application_date
+        date approval_date "CHECK >= application_date"
+        date disbursement_date "CHECK >= approval_date"
+        date first_deduction_date "CHECK >= disbursement_date"
+        date last_deduction_date "CHECK >= first_deduction_date"
+        numeric total_paid "CHECK >= 0"
+        numeric total_outstanding "CHECK >= 0"
+        int installments_paid "CHECK >= 0"
+        int installments_remaining "CHECK >= 0"
+        uuid approved_by FK
+        text reason
+    }
+```
+
+## HR policy documents & acknowledgments ERD
+
+```mermaid
+erDiagram
+    TENANTS ||--o{ HR_POLICY_DOCUMENTS : publishes
+    TENANTS ||--o{ EMPLOYEE_POLICY_ACKNOWLEDGMENTS : tracks
+    EMPLOYEES ||--o{ EMPLOYEE_POLICY_ACKNOWLEDGMENTS : attests
+    HR_POLICY_DOCUMENTS ||--o{ EMPLOYEE_POLICY_ACKNOWLEDGMENTS : version
+    ONBOARDING_TASKS }o--|| HR_POLICY_DOCUMENTS : optional_linked_policy
+
+    HR_POLICY_DOCUMENTS {
+        uuid id PK
+        int tenant_id FK
+        text policy_code
+        text name
+        enum category "handbook|code_of_conduct|safety|..."
+        text document_url
+        text version_label
+        date effective_from
+        date effective_to
+        bool requires_acknowledgment
+        bool is_active
+    }
+
+    EMPLOYEE_POLICY_ACKNOWLEDGMENTS {
+        uuid id PK
+        int tenant_id FK
+        uuid employee_id FK
+        uuid policy_document_id FK
+        text policy_version_at_ack
+        enum acknowledgment_method "electronic|written|witnessed"
+        timestamptz acknowledged_at
+        text signature_document_url
+        text ip_address
+    }
+```
+
+## Shift swap requests ERD
+
+```mermaid
+erDiagram
+    TENANTS ||--o{ SHIFT_SWAP_REQUESTS : has
+    EMPLOYEES ||--o{ SHIFT_SWAP_REQUESTS : requester
+    EMPLOYEES ||--o{ SHIFT_SWAP_REQUESTS : counterpart
+    EMPLOYEES ||--o{ SHIFT_SWAP_REQUESTS : manager_approver
+    SHIFT_ASSIGNMENTS ||--o{ SHIFT_SWAP_REQUESTS : requester_shift
+    SHIFT_ASSIGNMENTS ||--o{ SHIFT_SWAP_REQUESTS : counterpart_shift
+
+    SHIFT_SWAP_REQUESTS {
+        uuid id PK
+        int tenant_id FK
+        text request_number UK
+        uuid requester_employee_id FK
+        uuid counterpart_employee_id FK
+        uuid requester_shift_assignment_id FK
+        uuid counterpart_shift_assignment_id FK
+        enum status "draft→submitted→counterparty→manager→approved→completed"
+        text reason
+        uuid manager_approved_by FK
+        timestamptz manager_approved_at
+        timestamptz executed_at "required when status=completed"
+    }
+```
+
+## Shift swap workflow state diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft
+    Draft --> Submitted : Requester submits
+    Draft --> Cancelled
+    Submitted --> CounterpartyPending : Route to peer
+    CounterpartyPending --> CounterpartyAccepted : Peer accepts
+    CounterpartyPending --> CounterpartyDeclined : Peer declines
+    CounterpartyPending --> Cancelled
+    CounterpartyAccepted --> ManagerPending : Escalate for approval
+    CounterpartyDeclined --> Cancelled
+    ManagerPending --> Approved : Manager approves
+    ManagerPending --> Rejected
+    ManagerPending --> Cancelled
+    Approved --> Completed : Shifts swapped in roster
+    Approved --> Cancelled
+    Completed --> [*]
+    Rejected --> [*]
+    Cancelled --> [*]
+```
+
+## Grievance Workflow State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Submitted : File grievance
+    Submitted --> Acknowledged : HR acknowledges
+    Submitted --> Withdrawn : Employee withdraws
+    Acknowledged --> UnderInvestigation : Begin investigation
+    Acknowledged --> Resolved : Direct resolution
+    Acknowledged --> Withdrawn : Employee withdraws
+    UnderInvestigation --> Resolved : Investigation complete
+    UnderInvestigation --> Withdrawn : Employee withdraws
+    Resolved --> Closed : Final closure
+    Resolved --> Appealed : Employee appeals
+    Appealed --> UnderInvestigation : Re-investigate
+    Appealed --> Resolved : Appeal resolved
+    Closed --> [*]
+    Withdrawn --> [*]
+```
+
+## Loan Lifecycle State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Applied : Submit application
+    Applied --> Approved : Manager/HR approves
+    Applied --> Cancelled : Reject/Withdraw
+    Approved --> Disbursed : Funds released
+    Approved --> Cancelled : Cancel before disbursement
+    Disbursed --> Repaying : First EMI deduction
+    Repaying --> Completed : All installments paid
+    Repaying --> Defaulted : Non-payment
+    Completed --> [*]
+    Defaulted --> [*]
+    Cancelled --> [*]
+```
+
+---
+
 ## Generated On
 
 **Date:** 2026-03-29
 **Tool:** Manual generation based on schema definitions
-**Version:** HR Schema v2.0
+**Version:** HR Schema v2.2 (P0 guide closure: policies, shift swap, onboarding enum wiring, GIN indexes)

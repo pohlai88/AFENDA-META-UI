@@ -1,3 +1,8 @@
+// ============================================================================
+// HR DOMAIN: EMPLOYMENT CONTRACTS (Phase 1)
+// Stores employment contract terms, benefit plan references, and employee enrollment links.
+// Tables: employment_contracts, benefit_plans, employee_benefits
+// ============================================================================
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -28,6 +33,15 @@ import {
   benefitStatusEnum,
 } from "./_enums.js";
 import { employees } from "./people.js";
+import { z } from "zod/v4";
+import {
+  EmploymentContractIdSchema,
+  BenefitPlanIdSchema,
+  EmployeeBenefitIdSchema,
+  EmployeeIdSchema,
+  refineDateRange,
+  hrTenantIdSchema,
+} from "./_zodShared.js";
 
 // ============================================================================
 // EMPLOYMENT CONTRACTS
@@ -42,14 +56,14 @@ export const employmentContracts = hrSchema.table(
     employeeId: uuid("employee_id").notNull(),
     contractType: contractTypeEnum("contract_type").notNull(),
     contractStatus: contractStatusEnum("contract_status").notNull(),
-    startDate: date("start_date").notNull(),
-    endDate: date("end_date"),
+    startDate: date("start_date", { mode: "string" }).notNull(),
+    endDate: date("end_date", { mode: "string" }),
     probationPeriodMonths: integer("probation_period_months"),
     noticePeriodDays: integer("notice_period_days"),
     workingHoursPerWeek: numeric("working_hours_per_week", { precision: 5, scale: 2 }),
     annualLeaveEntitlement: integer("annual_leave_entitlement"),
     contractDocumentUrl: text("contract_document_url"),
-    signedDate: date("signed_date"),
+    signedDate: date("signed_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -118,8 +132,8 @@ export const employeeBenefits = hrSchema.table(
     employeeId: uuid("employee_id").notNull(),
     benefitPlanId: uuid("benefit_plan_id").notNull(),
     benefitStatus: benefitStatusEnum("benefit_status").notNull().default("active"),
-    enrollmentDate: date("enrollment_date").notNull(),
-    effectiveDate: date("effective_date").notNull(),
+    enrollmentDate: date("enrollment_date", { mode: "string" }).notNull(),
+    effectiveDate: date("effective_date", { mode: "string" }).notNull(),
     endDate: date("end_date"),
     notes: text("notes"),
     ...timestampColumns,
@@ -142,3 +156,74 @@ export const employeeBenefits = hrSchema.table(
     serviceBypassPolicy("employee_benefits"),
   ]
 );
+
+// ============================================================================
+// ZOD INSERT SCHEMAS
+// ============================================================================
+
+export const insertEmploymentContractSchema = z
+  .object({
+    id: EmploymentContractIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    contractNumber: z.string().min(5).max(50),
+    employeeId: EmployeeIdSchema,
+    contractType: z.enum(["permanent", "fixed_term", "casual", "probation"]),
+    contractStatus: z.enum(["draft", "active", "expired", "terminated"]),
+    startDate: z.string().date(),
+    endDate: z.string().date().optional(),
+    probationPeriodMonths: z.number().int().nonnegative().optional(),
+    noticePeriodDays: z.number().int().nonnegative().optional(),
+    workingHoursPerWeek: z.number().positive().max(168).optional(),
+    annualLeaveEntitlement: z.number().int().nonnegative().optional(),
+    contractDocumentUrl: z.string().url().optional(),
+    signedDate: z.string().date().optional(),
+    notes: z.string().max(1000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startDate && data.endDate && data.startDate > data.endDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Contract start date cannot be after end date",
+        path: ["startDate"],
+      });
+    }
+  });
+
+export const insertBenefitPlanSchema = z.object({
+  id: BenefitPlanIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  planCode: z.string().min(2).max(50),
+  name: z.string().min(2).max(100),
+  description: z.string().max(1000).optional(),
+  benefitType: z.enum(["health", "dental", "vision", "life", "disability", "retirement", "other"]),
+  isActive: z.boolean().default(true),
+});
+
+export const insertEmployeeBenefitSchema = z
+  .object({
+    id: EmployeeBenefitIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
+    benefitPlanId: BenefitPlanIdSchema,
+    benefitStatus: z.enum(["active", "pending", "suspended", "cancelled"]).default("active"),
+    enrollmentDate: z.string().date(),
+    effectiveDate: z.string().date(),
+    endDate: z.string().date().optional(),
+    notes: z.string().max(1000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.enrollmentDate && data.effectiveDate && data.enrollmentDate > data.effectiveDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enrollment date cannot be after effective date",
+        path: ["enrollmentDate"],
+      });
+    }
+    if (data.effectiveDate && data.endDate && data.effectiveDate > data.endDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Effective date cannot be after end date",
+        path: ["effectiveDate"],
+      });
+    }
+  });

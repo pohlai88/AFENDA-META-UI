@@ -865,6 +865,47 @@ const filesToScan = glob.sync("apps/**/*.ts", {
 
 ---
 
+## Drizzle schema quality gate (`drizzle-schema-quality/`)
+
+Glob-driven convention checks on `packages/db/src/schema/**/*.ts` (Drizzle table modules). Complements **postgres-schema** (sales/meta business matrices): **RLS** (helpers missing vs count mismatch; allowlisted `core/`, `security/`, `meta/`, `reference/` may omit RLS entirely, or add paired `tenantIsolationPolicies` + `serviceBypassPolicy` only on tenant-scoped tables without requiring one pair per file), **composite employee FKs** (`foreignColumns: [employees.tenantId, employees.id]` ⇒ `table.tenantId` first), **named indexes** (no anonymous or single-identifier names), optional **extractor** parse health. See [drizzle-schema-quality/LIMITATIONS.md](drizzle-schema-quality/LIMITATIONS.md) for regex/RLS literal-call limits.
+
+**Glob (default):** `packages/db/src/schema/**/*.ts` (cwd = repo root).
+
+**Excluded paths / files:**
+
+- Any `**/_*.ts` (e.g. `_schema.ts`, `_enums.ts`)
+- `**/index.ts` barrels
+- Stub-only modules listed in `drizzle-schema-quality/config.mjs` (e.g. `hr/onboarding.ts`)
+
+**Flags:**
+
+| Flag | Purpose |
+|------|---------|
+| `--format=json` | Findings JSON on stdout |
+| `--baseline=<path>` | `baseline.{ "file::table::ruleId": { ruleId, severity, reason } }` (+ legacy `suppress`) — invalid baseline fails the gate |
+| `--verbose` | With drizzle gate: log suppressed keys and reasons (`pnpm ci:gate --verbose` forwards this) |
+| `--severity-threshold=error` or `=warn` | Default `error`: fail only on errors; `warn` fails on warnings too |
+| `--mode=full` or `=fast` | `full` (default): run `extractSchema` per file for `TABLE_PARSE_ERROR`; `fast`: skip extractor |
+| `--glob=<pattern>` | Override glob, e.g. HR-only scan |
+
+**Severity matrix:** [drizzle-schema-quality/rules-matrix.json](drizzle-schema-quality/rules-matrix.json). **Baseline:** object `baseline.{ "file::table::ruleId": { ruleId, severity, reason } }` — short paths resolve under `packages/db/src/schema/`. See [baseline.example.json](drizzle-schema-quality/baseline.example.json). Committed: `baseline.json` (used by master runner + `pnpm ci:gate:schema-quality`). Console prints `key:` per finding for copy/paste.
+
+**HR relations drift:** `RELATIONS_DRIFT` (severity **error**) compares `packages/db/src/schema/hr/_relations.ts` to extracted `foreignKey()` edges in HR modules. Remediation: [packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md](../packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md). **Phase 3 (remaining):** deeper Zod/doc/table-count drift — TBD.
+
+**Commands:**
+
+```bash
+pnpm ci:gate:schema-quality          # full mode + repo baseline (matches CI surface for this gate)
+pnpm ci:gate:schema-quality:hr       # HR glob + same baseline
+node tools/ci-gate/index.mjs --gate=drizzle-schema-quality
+```
+
+**Note:** `pnpm ci:gate:fast` passes `--mode=fast` into this gate, which **skips** `extractSchema` / **`TABLE_PARSE_ERROR`**. Use default `pnpm ci:gate` (full) for complete schema-quality coverage.
+
+**Documentation:** [drizzle-schema-quality/README.md](drizzle-schema-quality/README.md)
+
+---
+
 ## Package Scripts Reference
 
 From workspace root:
@@ -874,6 +915,8 @@ From workspace root:
 | `pnpm ci:gate`         | Run all gates                     | `node tools/ci-gate/index.mjs`               |
 | `pnpm ci:gate:fix`     | Run all gates with auto-fix       | `node tools/ci-gate/index.mjs --fix`         |
 | `pnpm ci:gate:logger`  | Run logger gate only              | `node tools/ci-gate/index.mjs --gate=logger` |
+| `pnpm ci:gate:schema-quality` | Drizzle schema convention gate (full + baseline) | `node tools/ci-gate/drizzle-schema-quality/index.mjs --baseline=…` |
+| `pnpm ci:gate:schema-quality:hr` | HR schema only (same baseline) | same + `--glob=packages/db/src/schema/hr/**/*.ts` |
 | `pnpm ci:gate:verbose` | Run all gates with verbose output | `node tools/ci-gate/index.mjs --verbose`     |
 
 ---

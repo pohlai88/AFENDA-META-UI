@@ -1,10 +1,8 @@
 // ============================================================================
-// HR DOMAIN: PEOPLE ANALYTICS & INTELLIGENCE MODULE (Phase 8)
-// Implements: analytics_facts (partitioned), hr_metrics, analytics_dashboards,
-// data_exports, report_subscriptions, analytics_dimensions
-// NOTE: analytics_facts requires manual partition creation in migration SQL
+// HR DOMAIN: PEOPLE ANALYTICS & INTELLIGENCE (Phase 8)
+// Defines metrics facts, dashboards, exports, subscriptions, and dimensional analytics.
+// Tables: analytics_facts, hr_metrics, analytics_dashboards, data_exports, report_subscriptions, analytics_dimensions
 // ============================================================================
-
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -45,7 +43,10 @@ import {
   DataExportIdSchema,
   ReportSubscriptionIdSchema,
   AnalyticsDimensionIdSchema,
+  EmployeeIdSchema,
   refineDateRange,
+  hrTenantIdSchema,
+  hrAuditUserIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -153,6 +154,16 @@ export const analyticsDashboards = hrSchema.table(
     index("analytics_dashboards_tenant_idx").on(table.tenantId),
     index("analytics_dashboards_type_idx").on(table.tenantId, table.dashboardType),
     index("analytics_dashboards_owner_idx").on(table.tenantId, table.ownerId),
+    index("analytics_dashboards_layout_gin")
+      .using("gin", sql`(${table.layout}::jsonb)`)
+      .where(sql`${table.layout} IS NOT NULL AND ${table.layout} <> ''`),
+    index("analytics_dashboards_widgets_gin").using("gin", sql`(${table.widgets}::jsonb)`),
+    index("analytics_dashboards_filters_gin")
+      .using("gin", sql`(${table.filters}::jsonb)`)
+      .where(sql`${table.filters} IS NOT NULL AND ${table.filters} <> ''`),
+    index("analytics_dashboards_shared_with_gin")
+      .using("gin", sql`(${table.sharedWith}::jsonb)`)
+      .where(sql`${table.sharedWith} IS NOT NULL AND ${table.sharedWith} <> ''`),
     ...tenantIsolationPolicies("analytics_dashboards"),
     serviceBypassPolicy("analytics_dashboards"),
   ]
@@ -199,6 +210,9 @@ export const dataExports = hrSchema.table(
     index("data_exports_status_idx").on(table.tenantId, table.status),
     index("data_exports_requested_by_idx").on(table.tenantId, table.requestedBy),
     index("data_exports_requested_at_idx").on(table.tenantId, table.requestedAt),
+    index("data_exports_parameters_gin")
+      .using("gin", sql`(${table.parameters}::jsonb)`)
+      .where(sql`${table.parameters} IS NOT NULL AND ${table.parameters} <> ''`),
     ...tenantIsolationPolicies("data_exports"),
     serviceBypassPolicy("data_exports"),
   ]
@@ -279,6 +293,10 @@ export const analyticsDimensions = hrSchema.table(
     ),
     index("analytics_dimensions_current_idx").on(table.tenantId, table.isCurrent),
     index("analytics_dimensions_valid_from_idx").on(table.validFrom),
+    index("analytics_dimensions_dimension_value_gin").using(
+      "gin",
+      sql`(${table.dimensionValue}::jsonb)`
+    ),
     ...tenantIsolationPolicies("analytics_dimensions"),
     serviceBypassPolicy("analytics_dimensions"),
   ]
@@ -290,7 +308,7 @@ export const analyticsDimensions = hrSchema.table(
 
 export const insertAnalyticsFactSchema = z.object({
   id: AnalyticsFactIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   factDate: z.string().date(),
   metricType: z.enum(["headcount", "turnover", "engagement", "productivity", "cost", "custom"]),
   dimensionKey: z.string().max(200).optional(),
@@ -301,7 +319,7 @@ export const insertAnalyticsFactSchema = z.object({
 
 export const insertHrMetricSchema = z.object({
   id: HrMetricIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   metricCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
@@ -326,7 +344,7 @@ export const insertHrMetricSchema = z.object({
 
 export const insertAnalyticsDashboardSchema = z.object({
   id: AnalyticsDashboardIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   dashboardCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
@@ -335,20 +353,20 @@ export const insertAnalyticsDashboardSchema = z.object({
   widgets: z.string().min(1), // JSON string
   filters: z.string().optional(), // JSON string
   isPublic: z.boolean().default(false),
-  ownerId: z.string().uuid().optional(),
+  ownerId: EmployeeIdSchema.optional(),
   sharedWith: z.string().optional(), // JSON string
 });
 
 export const insertDataExportSchema = z.object({
   id: DataExportIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   exportCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
   exportType: z.enum(["report", "data_dump", "scheduled"]),
   format: z.enum(["csv", "xlsx", "json", "pdf"]),
   status: z.enum(["pending", "processing", "completed", "failed"]).default("pending"),
-  requestedBy: z.string().uuid(),
+  requestedBy: EmployeeIdSchema,
   requestedAt: z.string().datetime().optional(),
   startedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
@@ -361,7 +379,7 @@ export const insertDataExportSchema = z.object({
 
 export const insertReportSubscriptionSchema = z.object({
   id: ReportSubscriptionIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   subscriptionCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
@@ -373,13 +391,13 @@ export const insertReportSubscriptionSchema = z.object({
   isActive: z.boolean().default(true),
   lastRunAt: z.string().datetime().optional(),
   nextRunAt: z.string().datetime().optional(),
-  createdBy: z.string().uuid(),
+  createdBy: hrAuditUserIdSchema,
 });
 
 export const insertAnalyticsDimensionSchema = z
   .object({
     id: AnalyticsDimensionIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     dimensionType: z.enum(["employee", "department", "position", "location", "custom"]),
     dimensionKey: z.string().min(3).max(200),
     dimensionValue: z.string().min(1), // JSON string

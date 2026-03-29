@@ -1,9 +1,8 @@
 // ============================================================================
-// HR DOMAIN: EMPLOYEE EXPERIENCE & SELF-SERVICE MODULE (Phase 6)
-// Implements: employee_self_service_profiles, employee_requests,
-// employee_notifications, employee_preferences, employee_surveys, survey_responses
+// HR DOMAIN: EMPLOYEE SELF-SERVICE (Phase 6)
+// Implements request portals, notifications, preferences, and employee survey workflows.
+// Tables: employee_self_service_profiles, employee_requests, employee_notifications, employee_preferences, employee_surveys, survey_responses
 // ============================================================================
-
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -44,10 +43,12 @@ import {
   EmployeePreferenceIdSchema,
   EmployeeSurveyIdSchema,
   SurveyResponseIdSchema,
+  EmployeeIdSchema,
   boundedPercentageSchema,
   businessEmailSchema,
   refineDateRange,
   refineConditionalRequired,
+  hrTenantIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -172,6 +173,9 @@ export const employeeNotifications = hrSchema.table(
     index("employee_notifications_status_idx").on(table.tenantId, table.status),
     index("employee_notifications_priority_idx").on(table.tenantId, table.priority),
     index("employee_notifications_employee_status_idx").on(table.employeeId, table.status),
+    index("employee_notifications_metadata_gin")
+      .using("gin", sql`(${table.metadata}::jsonb)`)
+      .where(sql`${table.metadata} IS NOT NULL AND ${table.metadata} <> ''`),
     ...tenantIsolationPolicies("employee_notifications"),
     serviceBypassPolicy("employee_notifications"),
   ]
@@ -309,8 +313,8 @@ export const surveyResponses = hrSchema.table(
 
 export const insertEmployeeSelfServiceProfileSchema = z.object({
   id: EmployeeSelfServiceProfileIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  employeeId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  employeeId: EmployeeIdSchema,
   isEnabled: z.boolean().default(true),
   lastLoginAt: z.string().datetime().optional(),
   loginCount: z.number().int().nonnegative().default(0),
@@ -321,8 +325,8 @@ export const insertEmployeeSelfServiceProfileSchema = z.object({
 export const insertEmployeeRequestSchema = z
   .object({
     id: EmployeeRequestIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    employeeId: z.string().uuid(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
     requestNumber: z.string().min(5).max(50),
     requestType: z.enum(["time_off", "document", "pay_change", "profile_update", "other"]),
     requestDate: z.string().date(),
@@ -330,7 +334,7 @@ export const insertEmployeeRequestSchema = z
       .enum(["draft", "submitted", "approved", "rejected", "cancelled"])
       .default("draft"),
     requestData: z.string().optional(), // JSON string
-    approvedBy: z.string().uuid().optional(),
+    approvedBy: EmployeeIdSchema.optional(),
     approvedAt: z.string().datetime().optional(),
     rejectedReason: z.string().max(500).optional(),
     notes: z.string().max(1000).optional(),
@@ -350,8 +354,8 @@ export const insertEmployeeRequestSchema = z
 export const insertEmployeeNotificationSchema = z
   .object({
     id: EmployeeNotificationIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    employeeId: z.string().uuid(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
     title: z.string().min(1).max(200),
     message: z.string().min(1).max(2000),
     notificationType: z.enum(["info", "warning", "error", "success"]),
@@ -376,8 +380,8 @@ export const insertEmployeeNotificationSchema = z
 
 export const insertEmployeePreferenceSchema = z.object({
   id: EmployeePreferenceIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  employeeId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  employeeId: EmployeeIdSchema,
   preferenceKey: z.string().min(1).max(100),
   preferenceValue: z.string().min(1).max(500),
   preferenceType: z.enum(["ui", "communication", "privacy", "notification"]),
@@ -387,7 +391,7 @@ export const insertEmployeePreferenceSchema = z.object({
 export const insertEmployeeSurveySchema = z
   .object({
     id: EmployeeSurveyIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     surveyCode: z.string().min(3).max(50),
     name: z.string().min(2).max(100),
     description: z.string().max(2000).optional(),
@@ -404,9 +408,9 @@ export const insertEmployeeSurveySchema = z
 export const insertSurveyResponseSchema = z
   .object({
     id: SurveyResponseIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    surveyId: z.string().uuid(),
-    employeeId: z.string().uuid().optional(), // Nullable for anonymous
+    tenantId: hrTenantIdSchema,
+    surveyId: EmployeeSurveyIdSchema,
+    employeeId: EmployeeIdSchema.optional(), // Nullable for anonymous
     responseDate: z.string().datetime().optional(),
     responses: z.string().min(1), // JSON string
     completionPercentage: boundedPercentageSchema,

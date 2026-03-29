@@ -1,9 +1,8 @@
 // ============================================================================
-// HR DOMAIN: GLOBAL MOBILITY & COMPLIANCE MODULE (Phase 9)
-// Implements: international_assignments, assignment_allowances, work_permits,
-// compliance_tracking, relocation_services, dei_metrics
+// HR DOMAIN: GLOBAL MOBILITY (Phase 9)
+// Handles international assignments, permits, compliance tracking, relocation, and DEI metrics.
+// Tables: international_assignments, assignment_allowances, work_permits, compliance_tracking, relocation_services, dei_metrics
 // ============================================================================
-
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -46,8 +45,10 @@ import {
   ComplianceTrackingIdSchema,
   RelocationServiceIdSchema,
   DeiMetricIdSchema,
+  EmployeeIdSchema,
   currencyAmountSchema,
   refineDateRange,
+  hrTenantIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -389,9 +390,9 @@ export const deiMetrics = hrSchema.table(
 export const insertInternationalAssignmentSchema = z
   .object({
     id: InternationalAssignmentIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     assignmentCode: z.string().min(3).max(50),
-    employeeId: z.string().uuid(),
+    employeeId: EmployeeIdSchema,
     assignmentType: z.enum(["short_term", "long_term", "permanent", "rotational", "commuter"]),
     status: z.enum(["planned", "active", "completed", "cancelled", "extended"]).default("planned"),
     homeCountry: z.string().length(2),
@@ -411,8 +412,8 @@ export const insertInternationalAssignmentSchema = z
 export const insertAssignmentAllowanceSchema = z
   .object({
     id: AssignmentAllowanceIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    assignmentId: z.string().uuid(),
+    tenantId: hrTenantIdSchema,
+    assignmentId: InternationalAssignmentIdSchema,
     allowanceType: z.enum([
       "housing",
       "education",
@@ -434,9 +435,9 @@ export const insertAssignmentAllowanceSchema = z
 
 export const insertWorkPermitSchema = z.object({
   id: WorkPermitIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   permitNumber: z.string().min(3).max(100),
-  employeeId: z.string().uuid(),
+  employeeId: EmployeeIdSchema,
   permitType: z.enum(["work_visa", "residence_permit", "citizenship", "dependent_visa", "other"]),
   status: z.enum(["applied", "approved", "rejected", "expired", "renewed"]).default("applied"),
   country: z.string().length(2),
@@ -453,7 +454,7 @@ export const insertWorkPermitSchema = z.object({
 
 export const insertComplianceTrackingSchema = z.object({
   id: ComplianceTrackingIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   complianceCode: z.string().min(3).max(50),
   complianceType: z.enum(["eeo", "ofccp", "gdpr", "local_labor_law", "tax_compliance", "other"]),
   name: z.string().min(2).max(100),
@@ -468,13 +469,13 @@ export const insertComplianceTrackingSchema = z.object({
   actionItems: z.string().optional(), // JSON string
   remediationPlan: z.string().max(2000).optional(),
   remediationDeadline: z.string().date().optional(),
-  reviewedBy: z.string().uuid().optional(),
+  reviewedBy: EmployeeIdSchema.optional(),
 });
 
 export const insertRelocationServiceSchema = z.object({
   id: RelocationServiceIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  assignmentId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  assignmentId: InternationalAssignmentIdSchema,
   serviceType: z.enum([
     "moving",
     "temporary_housing",
@@ -500,7 +501,7 @@ export const insertRelocationServiceSchema = z.object({
 
 export const insertDeiMetricSchema = z.object({
   id: DeiMetricIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   metricCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),

@@ -1,3 +1,8 @@
+// ============================================================================
+// HR DOMAIN: ATTENDANCE & LEAVE (Phase 3)
+// Defines leave policies, time sheets, attendance records, shift scheduling.
+// Tables: leave_type_configs, leave_allocations, leave_requests, holiday_calendars
+// ============================================================================
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -23,12 +28,7 @@ import {
 import { tenants } from "../core/tenants.js";
 import { countries, states } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
-import {
-  leaveTypeEnum,
-  leaveStatusEnum,
-  attendanceStatusEnum,
-  shiftTypeEnum,
-} from "./_enums.js";
+import { leaveTypeEnum, leaveStatusEnum, attendanceStatusEnum, shiftTypeEnum } from "./_enums.js";
 import { employees } from "./people.js";
 
 // ============================================================================
@@ -50,7 +50,12 @@ export const leaveTypeConfigs = hrSchema.table(
     minAdvanceNoticeDays: integer("min_advance_notice_days"),
     maxConsecutiveDays: integer("max_consecutive_days"),
     allowHalfDay: boolean("allow_half_day").notNull().default(true),
+    isEncashable: boolean("is_encashable").notNull().default(false),
+    encashmentRate: numeric("encashment_rate", { precision: 5, scale: 2 }),
+    isCompensatory: boolean("is_compensatory").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
+    effectiveFrom: date("effective_from", { mode: "string" }),
+    effectiveTo: date("effective_to", { mode: "string" }),
     ...timestampColumns,
     ...auditColumns,
     ...softDeleteColumns,
@@ -123,14 +128,14 @@ export const leaveRequests = hrSchema.table(
     requestNumber: text("request_number").notNull(),
     employeeId: uuid("employee_id").notNull(),
     leaveTypeConfigId: uuid("leave_type_config_id").notNull(),
-    startDate: date("start_date").notNull(),
-    endDate: date("end_date").notNull(),
+    startDate: date("start_date", { mode: "string" }).notNull(),
+    endDate: date("end_date", { mode: "string" }).notNull(),
     daysRequested: numeric("days_requested", { precision: 5, scale: 2 }).notNull(),
     reason: text("reason"),
     leaveStatus: leaveStatusEnum("leave_status").notNull().default("draft"),
-    requestedDate: date("requested_date").notNull(),
+    requestedDate: date("requested_date", { mode: "string" }).notNull(),
     approvedBy: uuid("approved_by"),
-    approvedDate: date("approved_date"),
+    approvedDate: date("approved_date", { mode: "string" }),
     rejectionReason: text("rejection_reason"),
     notes: text("notes"),
     ...timestampColumns,
@@ -159,6 +164,9 @@ export const leaveRequests = hrSchema.table(
     index("leave_requests_tenant_idx").on(table.tenantId),
     index("leave_requests_employee_idx").on(table.tenantId, table.employeeId),
     index("leave_requests_status_idx").on(table.tenantId, table.leaveStatus),
+    index("leave_requests_employee_status_idx")
+      .on(table.tenantId, table.employeeId, table.leaveStatus)
+      .where(sql`${table.deletedAt} IS NULL`),
     ...tenantIsolationPolicies("leave_requests"),
     serviceBypassPolicy("leave_requests"),
   ]
@@ -208,7 +216,7 @@ export const holidays = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     holidayCalendarId: uuid("holiday_calendar_id").notNull(),
     ...nameColumn,
-    holidayDate: date("holiday_date").notNull(),
+    holidayDate: date("holiday_date", { mode: "string" }).notNull(),
     description: text("description"),
     isRecurring: boolean("is_recurring").notNull().default(false),
     ...timestampColumns,
@@ -240,14 +248,14 @@ export const timeSheets = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     timesheetNumber: text("timesheet_number").notNull(),
     employeeId: uuid("employee_id").notNull(),
-    periodStartDate: date("period_start_date").notNull(),
-    periodEndDate: date("period_end_date").notNull(),
+    periodStartDate: date("period_start_date", { mode: "string" }).notNull(),
+    periodEndDate: date("period_end_date", { mode: "string" }).notNull(),
     totalHours: numeric("total_hours", { precision: 8, scale: 2 }).notNull().default("0"),
     totalOvertime: numeric("total_overtime", { precision: 8, scale: 2 }).notNull().default("0"),
     leaveStatus: leaveStatusEnum("leave_status").notNull().default("draft"),
-    submittedDate: date("submitted_date"),
+    submittedDate: date("submitted_date", { mode: "string" }),
     approvedBy: uuid("approved_by"),
-    approvedDate: date("approved_date"),
+    approvedDate: date("approved_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -285,7 +293,7 @@ export const timeSheetLines = hrSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: integer("tenant_id").notNull(),
     timeSheetId: uuid("time_sheet_id").notNull(),
-    workDate: date("work_date").notNull(),
+    workDate: date("work_date", { mode: "string" }).notNull(),
     hoursWorked: numeric("hours_worked", { precision: 5, scale: 2 }).notNull(),
     overtimeHours: numeric("overtime_hours", { precision: 5, scale: 2 }).notNull().default("0"),
     description: text("description"),
@@ -299,7 +307,10 @@ export const timeSheetLines = hrSchema.table(
       columns: [table.tenantId, table.timeSheetId],
       foreignColumns: [timeSheets.tenantId, timeSheets.id],
     }),
-    check("time_sheet_lines_hours_valid", sql`${table.hoursWorked} >= 0 AND ${table.hoursWorked} <= 24`),
+    check(
+      "time_sheet_lines_hours_valid",
+      sql`${table.hoursWorked} >= 0 AND ${table.hoursWorked} <= 24`
+    ),
     index("time_sheet_lines_tenant_idx").on(table.tenantId),
     index("time_sheet_lines_timesheet_idx").on(table.tenantId, table.timeSheetId),
     ...tenantIsolationPolicies("time_sheet_lines"),
@@ -317,7 +328,7 @@ export const attendanceRecords = hrSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: integer("tenant_id").notNull(),
     employeeId: uuid("employee_id").notNull(),
-    attendanceDate: date("attendance_date").notNull(),
+    attendanceDate: date("attendance_date", { mode: "string" }).notNull(),
     checkInTime: timestamp("check_in_time", { withTimezone: true }),
     checkOutTime: timestamp("check_out_time", { withTimezone: true }),
     hoursWorked: numeric("hours_worked", { precision: 5, scale: 2 }),
@@ -391,7 +402,7 @@ export const shiftAssignments = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     employeeId: uuid("employee_id").notNull(),
     shiftScheduleId: uuid("shift_schedule_id").notNull(),
-    assignmentDate: date("assignment_date").notNull(),
+    assignmentDate: date("assignment_date", { mode: "string" }).notNull(),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,

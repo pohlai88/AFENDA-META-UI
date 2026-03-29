@@ -19,9 +19,11 @@ import { resolve } from "node:path";
  * Extract a TruthModel from a Drizzle schema source file.
  *
  * @param {string} filePath - Path to the .ts schema file (relative to repo root or absolute)
+ * @param {{ silent?: boolean }} [options]
  * @returns {TruthModel}
  */
-export function extractSchema(filePath) {
+export function extractSchema(filePath, options = {}) {
+  const silent = Boolean(options.silent);
   const absolutePath = resolve(filePath);
   const source = readFileSync(absolutePath, "utf-8");
 
@@ -40,11 +42,13 @@ export function extractSchema(filePath) {
     }
   }
 
-  console.log(`  Extracted ${Object.keys(tables).length} table(s) from ${filePath}`);
+  if (!silent) {
+    console.log(`  Extracted ${Object.keys(tables).length} table(s) from ${filePath}`);
 
-  const parseErrors = Object.entries(tables).filter(([, t]) => t._parseError);
-  if (parseErrors.length > 0) {
-    console.log(`  ⚠ Parse errors in: ${parseErrors.map(([n]) => n).join(", ")}`);
+    const parseErrors = Object.entries(tables).filter(([, t]) => t._parseError);
+    if (parseErrors.length > 0) {
+      console.log(`  ⚠ Parse errors in: ${parseErrors.map(([n]) => n).join(", ")}`);
+    }
   }
 
   return { tables };

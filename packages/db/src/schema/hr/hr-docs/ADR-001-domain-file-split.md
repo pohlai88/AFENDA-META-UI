@@ -82,9 +82,14 @@ Changes to payroll logic don't require reviewing attendance or recruitment code.
 ### 3. Split by subdirectory (e.g., `hr/people/`, `hr/payroll/`)
 **Deferred:** Possible future enhancement if domains grow beyond 500 lines per file. Current 8-file structure is sufficient.
 
+## Current state (supersedes table above)
+
+The schema has grown to **27 domain modules** and **146 tables**, all still under `pgSchema("hr")`. Expenses moved to `expenses.ts`, exit interviews to `lifecycle.ts`, skills to `skills.ts`, learning to `learning.ts`, and many upgrade modules were added. The historical table in **Decision** is frozen for context; the **authoritative** file → bounded-context map is **[HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md) → P0 domain placement audit**.
+
 ## References
 
 - Implementation: [packages/db/src/schema/hr/](.)
 - Governance: [SCHEMA_LOCKDOWN.md](SCHEMA_LOCKDOWN.md)
 - Domain catalog: [README.md](README.md)
+- P0 registry: [HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md)
 - Circular FK handling: [ADR-002](ADR-002-circular-fk-handling.md)

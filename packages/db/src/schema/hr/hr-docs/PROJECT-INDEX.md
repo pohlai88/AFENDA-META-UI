@@ -1,6 +1,6 @@
 # HR Domain Upgrade — Project Index
 
-**Status:** ✅ Implementation Complete
+**Status:** ✅ Phase 10 Commission Release + SWOT Proposals
 **Created:** 2024
 **Last Updated:** 2026-03-29
 
@@ -67,28 +67,23 @@ This project successfully upgraded the HR schema to **exceed legacy afenda-hybri
 
 #### Project References
 
-- [UPGRADE-EXECUTIVE-SUMMARY.md](./UPGRADE-EXECUTIVE-SUMMARY.md) - Executive summary
-- [UPGRADE-PLAN.md](./UPGRADE-PLAN.md) - Technical implementation plan
-- [UPGRADE-QUICKREF.md](./UPGRADE-QUICKREF.md) - Developer quick reference
 - [CIRCULAR_FKS.md](./CIRCULAR_FKS.md) - Circular FK documentation
 
 ---
 
-### 📦 Archived Documentation
+### 🔥 Release Highlights
 
-The following documents have been moved to `archive/` folder:
-
-- Legacy analysis documents (LEGACY-\*.md)
-- Phase implementation summaries (PHASE\*.md)
-- Implementation proposals
-
-_See [README.md](./README.md) for complete archive list_
+- **P0 / v2.2:** Policy documents + acknowledgments, shift swap requests, onboarding enum/CHECK/Zod wiring, GIN indexes on JSON text columns, full `_relations` vs `foreignKey()` alignment (`RELATIONS_DRIFT` = CI error), `hr-fk-graph` self-composite second legs, `staffing_plans.approved_by` → employees, prior catalog fixes (grievances, loans, policies, shift swap), grievance category tenant-scoped self-FK, `CUSTOM_SQL_REGISTRY` SQL aligned to migrations. See `HR_SCHEMA_UPGRADE_GUIDE.md`.
+- **SWOT Proposals:** Grievance Management (2 tables) and Loan Management (2 tables) added based on senior HR director SWOT analysis. Closes critical legal/compliance gap and APAC/MEA market gap. Includes workflow state machines, branded IDs, 8 new pgEnums, ERDs, and Zod insert schemas. Full report: `.reports/hr-schema-swot-analysis.md`.
+- **Phase 10:** Commission plans, tiers, entries, territories, territory rules, and sales team coverage now live for regulated incentive modeling.
+- **Phase 9-6 Recap:** Employee Experience, Workforce Strategy, People Analytics, and Global Workforce domains continue stabilization with partitioned analytics fact tables and DEI compliance support.
+- **Meta-types Integration:** Ongoing validation and governance reinforcement documented in ADR-003 and SCHEMA_LOCKDOWN.
 
 ---
 
-## 🎯 Implementation Results
+## Implementation Results
 
-### ✅ Completed Phases
+### Completed Phases
 
 1. **Phase 0:** meta-types integration foundation
 2. **Phase 1:** Enhanced branded IDs and business types
@@ -100,15 +95,17 @@ _See [README.md](./README.md) for complete archive list_
 8. **Phase 7:** Workforce Strategy & Succession Planning (8 tables)
 9. **Phase 8:** People Analytics & Reporting (6 tables)
 10. **Phase 9:** Global Workforce & Compliance (6 tables)
+11. **SWOT Proposals:** Grievance Management (2 tables) + Loan Management (2 tables)
+12. **P0 Guide Closure (v2.2):** Policy + acknowledgments (2 tables), shift swap (1 table), onboarding enhancements, indexes, relation catalog
 
 ### 📊 Final Statistics
 
-- **Total Tables:** 97 across 13 domain files (from 45)
-- **Total Enums:** 80+ (from 38)
+- **Total Tables:** 146 in `hr.*` (P0 audit registry in `HR_SCHEMA_UPGRADE_GUIDE.md`)
+- **Total Enums:** 94+ (from 38)
 - **Zod Validation:** 50KB+ of schemas
 - **Documentation:** World-class with ERDs and workflows
 - **Type Safety:** 100% branded IDs with meta-types (100+ branded types)
-- **Domains:** 13 (People, Employment, Benefits, Payroll, Attendance, Talent, Recruitment, Learning, Operations, Employee Experience, Workforce Strategy, People Analytics, Global Workforce)
+- **Domains:** 16+ (adds HR policy & acknowledgments; shift swap extends attendance enhancements)
 
 ### 🏆 Key Achievements
 
@@ -129,6 +126,13 @@ _See [README.md](./README.md) for complete archive list_
 - People analytics with partitioned fact tables
 - Global mobility and international assignment tracking
 - DEI metrics and compliance tracking (EEO, OFCCP, GDPR)
+
+**SWOT Proposal Additions:**
+
+- Grievance management with full lifecycle (filed → acknowledged → investigated → resolved → closed/appealed)
+- Loan management with EMI tracking, repayment schedules, and payroll integration readiness
+- Configurable grievance categories (harassment, discrimination, workplace safety, etc.)
+- Configurable loan types (salary advance, housing, vehicle, education, medical, emergency)
 
 ---
 

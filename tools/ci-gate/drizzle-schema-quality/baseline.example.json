@@ -1,0 +1,20 @@
+{
+  "_comment": "baseline.{key}: { ruleId, severity, reason }. Short file segment → packages/db/src/schema/<segment>. Commit messages should note baseline changes. Prune as fixes land.",
+  "baseline": {
+    "hr/benefits.ts::benefit_enrollments::INDEX_ANONYMOUS": {
+      "ruleId": "INDEX_ANONYMOUS",
+      "severity": "warn",
+      "reason": "Legacy anonymous index; migration planned Q3 2026"
+    },
+    "hr/operations.ts::some_tenant_table::RLS_COUNT_MISMATCH": {
+      "ruleId": "RLS_COUNT_MISMATCH",
+      "severity": "error",
+      "reason": "Temporary pairing mismatch during refactor; tracked in ISSUE-1234"
+    },
+    "hr/payroll.ts::payment_distributions::ZOD_PARITY": {
+      "ruleId": "ZOD_PARITY",
+      "severity": "warn",
+      "reason": "Zod schema drift acknowledged; fix deferred to Phase 2"
+    }
+  }
+}

@@ -1,3 +1,8 @@
+// ============================================================================
+// HR DOMAIN: PEOPLE & ORG STRUCTURE (Phase 0)
+// Defines departments, job titles, positions, employees, and cost centers (5 tables).
+// Tables: departments, job_titles, job_positions, employees, cost_centers
+// ============================================================================
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -20,7 +25,7 @@ import {
 } from "../../columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { countries, currencies, states } from "../reference/index.js";
-import { users } from "../security/index.js";
+import { users, UserIdSchema } from "../security/index.js";
 import { hrSchema } from "./_schema.js";
 import {
   employmentStatusEnum,
@@ -32,6 +37,20 @@ import {
   departmentTypeEnum,
   costCenterTypeEnum,
 } from "./_enums.js";
+import { z } from "zod/v4";
+import {
+  DepartmentIdSchema,
+  JobTitleIdSchema,
+  JobPositionIdSchema,
+  EmployeeIdSchema,
+  CostCenterIdSchema,
+  businessEmailSchema,
+  internationalPhoneSchema,
+  currencyAmountSchema,
+  refineDateRange,
+  hrTenantIdSchema,
+  HrWorkLocationUuidSchema,
+} from "./_zodShared.js";
 
 // ============================================================================
 // DEPARTMENTS
@@ -160,14 +179,14 @@ export const employees = hrSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: integer("tenant_id").notNull(),
     employeeNumber: text("employee_number").notNull(),
-    userId: uuid("user_id"),
+    userId: integer("user_id"),
     firstName: text("first_name").notNull(),
     middleName: text("middle_name"),
     lastName: text("last_name").notNull(),
     email: text("email").notNull(),
     phoneNumber: text("phone_number"),
     mobileNumber: text("mobile_number"),
-    dateOfBirth: date("date_of_birth"),
+    dateOfBirth: date("date_of_birth", { mode: "string" }),
     gender: genderEnum("gender"),
     maritalStatus: maritalStatusEnum("marital_status"),
     nationality: text("nationality"),
@@ -179,9 +198,13 @@ export const employees = hrSchema.table(
     employmentType: employmentTypeEnum("employment_type").notNull(),
     employmentStatus: employmentStatusEnum("employment_status").notNull(),
     employeeCategory: employeeCategoryEnum("employee_category").notNull(),
-    hireDate: date("hire_date").notNull(),
-    confirmationDate: date("confirmation_date"),
-    terminationDate: date("termination_date"),
+    hireDate: date("hire_date", { mode: "string" }).notNull(),
+    confirmationDate: date("confirmation_date", { mode: "string" }),
+    terminationDate: date("termination_date", { mode: "string" }),
+    departureReasonId: uuid("departure_reason_id"),
+    departureDate: date("departure_date", { mode: "string" }),
+    rehireEligible: boolean("rehire_eligible"),
+    lastPromotionDate: date("last_promotion_date", { mode: "string" }),
     workLocationId: uuid("work_location_id"),
     workLocationType: workLocationTypeEnum("work_location_type").notNull().default("office"),
     addressLine1: text("address_line_1"),
@@ -228,7 +251,12 @@ export const employees = hrSchema.table(
     index("employees_tenant_idx").on(table.tenantId),
     index("employees_department_idx").on(table.tenantId, table.departmentId),
     index("employees_manager_idx").on(table.tenantId, table.managerId),
-    index("employees_status_idx").on(table.tenantId, table.employmentStatus),
+    index("employees_dept_status_idx")
+      .on(table.tenantId, table.departmentId, table.employmentStatus)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("employees_status_idx")
+      .on(table.tenantId, table.employmentStatus)
+      .where(sql`${table.deletedAt} IS NULL`),
     ...tenantIsolationPolicies("employees"),
     serviceBypassPolicy("employees"),
   ]
@@ -269,3 +297,139 @@ export const costCenters = hrSchema.table(
     serviceBypassPolicy("cost_centers"),
   ]
 );
+
+// ============================================================================
+// ZOD INSERT SCHEMAS
+// ============================================================================
+
+export const insertDepartmentSchema = z.object({
+  id: DepartmentIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  departmentCode: z.string().min(2).max(50),
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+  departmentType: z.enum([
+    "operations",
+    "sales",
+    "marketing",
+    "finance",
+    "hr",
+    "it",
+    "legal",
+    "other",
+  ]),
+  parentDepartmentId: DepartmentIdSchema.optional(),
+  managerId: EmployeeIdSchema.optional(),
+  costCenterId: CostCenterIdSchema.optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const insertJobTitleSchema = z
+  .object({
+    id: JobTitleIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    titleCode: z.string().min(2).max(50),
+    name: z.string().min(2).max(100),
+    description: z.string().max(500).optional(),
+    departmentId: DepartmentIdSchema.optional(),
+    levelCode: z.string().max(20).optional(),
+    minSalary: currencyAmountSchema(2).optional(),
+    maxSalary: currencyAmountSchema(2).optional(),
+    currencyId: z.number().int().positive().optional(),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.minSalary !== undefined &&
+      data.maxSalary !== undefined &&
+      data.minSalary > data.maxSalary
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Minimum salary cannot exceed maximum salary",
+        path: ["minSalary"],
+      });
+    }
+  });
+
+export const insertJobPositionSchema = z.object({
+  id: JobPositionIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  positionCode: z.string().min(2).max(50),
+  name: z.string().min(2).max(100),
+  description: z.string().max(1000).optional(),
+  jobTitleId: JobTitleIdSchema,
+  departmentId: DepartmentIdSchema,
+  reportsToPositionId: JobPositionIdSchema.optional(),
+  headcount: z.number().int().positive().default(1),
+  isActive: z.boolean().default(true),
+});
+
+export const insertEmployeeSchema = z
+  .object({
+    id: EmployeeIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    employeeNumber: z.string().min(3).max(50),
+    userId: UserIdSchema.optional(),
+    firstName: z.string().min(1).max(100),
+    middleName: z.string().max(100).optional(),
+    lastName: z.string().min(1).max(100),
+    email: businessEmailSchema,
+    phoneNumber: internationalPhoneSchema.optional(),
+    mobileNumber: internationalPhoneSchema.optional(),
+    dateOfBirth: z.string().date().optional(),
+    gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+    maritalStatus: z.enum(["single", "married", "divorced", "widowed", "separated"]).optional(),
+    nationality: z.string().max(100).optional(),
+    nationalId: z.string().max(100).optional(),
+    passportNumber: z.string().max(50).optional(),
+    jobPositionId: JobPositionIdSchema,
+    departmentId: DepartmentIdSchema,
+    managerId: EmployeeIdSchema.optional(),
+    employmentType: z.enum(["full_time", "part_time", "contract", "temporary", "intern"]),
+    employmentStatus: z.enum(["active", "on_leave", "suspended", "terminated", "resigned"]),
+    employeeCategory: z.enum(["permanent", "probation", "contract", "consultant"]),
+    hireDate: z.string().date(),
+    confirmationDate: z.string().date().optional(),
+    terminationDate: z.string().date().optional(),
+    workLocationId: HrWorkLocationUuidSchema.optional(),
+    workLocationType: z.enum(["office", "remote", "hybrid"]).default("office"),
+    addressLine1: z.string().max(200).optional(),
+    addressLine2: z.string().max(200).optional(),
+    city: z.string().max(100).optional(),
+    stateId: z.number().int().positive().optional(),
+    countryId: z.number().int().positive().optional(),
+    postalCode: z.string().max(20).optional(),
+    emergencyContactName: z.string().max(100).optional(),
+    emergencyContactPhone: internationalPhoneSchema.optional(),
+    emergencyContactRelationship: z.string().max(50).optional(),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.hireDate && data.terminationDate && data.hireDate > data.terminationDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Hire date cannot be after termination date",
+        path: ["hireDate"],
+      });
+    }
+    if (data.hireDate && data.confirmationDate && data.hireDate > data.confirmationDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Hire date cannot be after confirmation date",
+        path: ["hireDate"],
+      });
+    }
+  });
+
+export const insertCostCenterSchema = z.object({
+  id: CostCenterIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  costCenterCode: z.string().min(2).max(50),
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+  costCenterType: z.enum(["department", "project", "product", "location", "other"]),
+  parentCostCenterId: CostCenterIdSchema.optional(),
+  managerId: EmployeeIdSchema.optional(),
+  isActive: z.boolean().default(true),
+});

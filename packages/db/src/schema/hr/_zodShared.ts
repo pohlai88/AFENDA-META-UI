@@ -1,3 +1,7 @@
+// ============================================================================
+// HR ZOD SHARED SCHEMAS
+// Shared branded IDs, business types, workflow state factories, and refinements used across HR domains.
+// ============================================================================
 /**
  * HR Domain Zod Schema Library - Phase 0 Foundation
  * ============================================================================
@@ -44,6 +48,10 @@
  * See UPGRADE-EXECUTIVE-SUMMARY.md Phase 0 for detailed implementation plan.
  */
 
+// ============================================================================
+// HR ZOD SHARED SCHEMAS
+// Shared branded IDs, business types, workflow state factories, and refinements used across HR domains.
+// ============================================================================
 import { z } from "zod/v4";
 
 // ============================================================================
@@ -125,6 +133,7 @@ export const BenefitProviderIdSchema = z.uuid().brand<"BenefitProviderId">();
 export const BenefitEnrollmentIdSchema = z.uuid().brand<"BenefitEnrollmentId">();
 export const BenefitDependentCoverageIdSchema = z.uuid().brand<"BenefitDependentCoverageId">();
 export const BenefitClaimIdSchema = z.uuid().brand<"BenefitClaimId">();
+export const BenefitPlanBenefitIdSchema = z.uuid().brand<"BenefitPlanBenefitId">();
 
 // New: Learning Domain Enhancement (Phase 2)
 export const CourseIdSchema = z.uuid().brand<"CourseId">();
@@ -154,6 +163,12 @@ export const PaymentDistributionIdSchema = z.uuid().brand<"PaymentDistributionId
 export const ApplicantDocumentIdSchema = z.uuid().brand<"ApplicantDocumentId">();
 export const InterviewFeedbackFormIdSchema = z.uuid().brand<"InterviewFeedbackFormId">();
 export const OfferLetterIdSchema = z.uuid().brand<"OfferLetterId">();
+
+/** Matches `integer("tenant_id")` / FK to `core.tenants` for all `hr.*` insert payloads. */
+export const hrTenantIdSchema = z.number().int().positive();
+
+/** Matches `integer("created_by")` / `integer("updated_by")` from shared `auditColumns` (e.g. `security.users.user_id`). */
+export const hrAuditUserIdSchema = z.number().int().positive();
 
 // ============================================================================
 // PHASE 6-9 ENHANCEMENTS: BRANDED ID SCHEMAS
@@ -192,6 +207,96 @@ export const WorkPermitIdSchema = z.uuid().brand<"WorkPermitId">();
 export const ComplianceTrackingIdSchema = z.uuid().brand<"ComplianceTrackingId">();
 export const RelocationServiceIdSchema = z.uuid().brand<"RelocationServiceId">();
 export const DeiMetricIdSchema = z.uuid().brand<"DeiMetricId">();
+
+// Schema Upgrade: Skills Taxonomy
+export const SkillTypeIdSchema = z.uuid().brand<"SkillTypeId">();
+export const SkillLevelIdSchema = z.uuid().brand<"SkillLevelId">();
+export const JobPositionSkillIdSchema = z.uuid().brand<"JobPositionSkillId">();
+export const ResumeLineTypeIdSchema = z.uuid().brand<"ResumeLineTypeId">();
+export const EmployeeResumeLineIdSchema = z.uuid().brand<"EmployeeResumeLineId">();
+
+// Schema Upgrade: Expense Management
+export const ExpenseCategoryIdSchema = z.uuid().brand<"ExpenseCategoryId">();
+export const ExpensePolicyIdSchema = z.uuid().brand<"ExpensePolicyId">();
+export const ExpenseReportIdSchema = z.uuid().brand<"ExpenseReportId">();
+export const ExpenseApprovalIdSchema = z.uuid().brand<"ExpenseApprovalId">();
+/** Optional `expense_lines.project_id` when no cross-schema FK is defined. */
+export const ExpenseLineProjectRefIdSchema = z.uuid().brand<"ExpenseLineProjectRefId">();
+
+// Schema Upgrade: Employee Experience
+export const BonusPointRuleIdSchema = z.uuid().brand<"BonusPointRuleId">();
+export const EmployeeBonusPointIdSchema = z.uuid().brand<"EmployeeBonusPointId">();
+export const BonusPointTransactionIdSchema = z.uuid().brand<"BonusPointTransactionId">();
+/** Polymorphic `bonus_point_transactions.reference_id` (pairs with `reference_type`). */
+export const BonusPointTransactionReferenceIdSchema = z.uuid().brand<"BonusPointTransactionReferenceId">();
+export const DisciplinaryActionTypeIdSchema = z.uuid().brand<"DisciplinaryActionTypeId">();
+export const DisciplinaryActionRecordIdSchema = z.uuid().brand<"DisciplinaryActionRecordId">();
+
+// Schema Upgrade: Leave Enhancements
+export const CompensatoryLeaveRequestIdSchema = z.uuid().brand<"CompensatoryLeaveRequestId">();
+export const LeaveRestrictionIdSchema = z.uuid().brand<"LeaveRestrictionId">();
+export const LeaveEncashmentIdSchema = z.uuid().brand<"LeaveEncashmentId">();
+
+// Schema Upgrade: Tax Compliance
+export const TaxExemptionCategoryIdSchema = z.uuid().brand<"TaxExemptionCategoryId">();
+export const TaxExemptionSubCategoryIdSchema = z.uuid().brand<"TaxExemptionSubCategoryId">();
+export const EmployeeTaxDeclarationIdSchema = z.uuid().brand<"EmployeeTaxDeclarationId">();
+export const TaxDeclarationItemIdSchema = z.uuid().brand<"TaxDeclarationItemId">();
+export const TaxExemptionProofIdSchema = z.uuid().brand<"TaxExemptionProofId">();
+
+// Schema Upgrade: Attendance Enhancement
+export const AttendanceRequestIdSchema = z.uuid().brand<"AttendanceRequestId">();
+export const OvertimeRuleIdSchema = z.uuid().brand<"OvertimeRuleId">();
+export const BiometricDeviceIdSchema = z.uuid().brand<"BiometricDeviceId">();
+export const BiometricLogIdSchema = z.uuid().brand<"BiometricLogId">();
+/** Work-site / location UUID used where HR tables store `location_id` without a Drizzle FK. */
+export const HrWorkLocationUuidSchema = z.uuid().brand<"HrWorkLocationUuid">();
+
+// Schema Upgrade: Employee Lifecycle
+export const EmployeePromotionIdSchema = z.uuid().brand<"EmployeePromotionId">();
+export const EmployeeTransferIdSchema = z.uuid().brand<"EmployeeTransferId">();
+export const ExitInterviewRecordIdSchema = z.uuid().brand<"ExitInterviewRecordId">();
+export const FullFinalSettlementIdSchema = z.uuid().brand<"FullFinalSettlementId">();
+
+// Schema Upgrade: Travel & Vehicle
+export const TravelRequestIdSchema = z.uuid().brand<"TravelRequestId">();
+export const TravelItineraryIdSchema = z.uuid().brand<"TravelItineraryId">();
+export const CompanyVehicleIdSchema = z.uuid().brand<"CompanyVehicleId">();
+export const VehicleLogIdSchema = z.uuid().brand<"VehicleLogId">();
+
+// Schema Upgrade: Workforce Planning
+export const StaffingPlanIdSchema = z.uuid().brand<"StaffingPlanId">();
+export const StaffingPlanDetailIdSchema = z.uuid().brand<"StaffingPlanDetailId">();
+
+// Schema Upgrade: Appraisal Templates
+export const AppraisalTemplateIdSchema = z.uuid().brand<"AppraisalTemplateId">();
+export const AppraisalTemplateKraIdSchema = z.uuid().brand<"AppraisalTemplateKraId">();
+export const EmployeeKraIdSchema = z.uuid().brand<"EmployeeKraId">();
+
+// Schema Upgrade: Recruitment Enhancement (Phase 6B)
+export const RecruitmentPipelineStageIdSchema = z.uuid().brand<"RecruitmentPipelineStageId">();
+export const RecruitmentAnalyticsIdSchema = z.uuid().brand<"RecruitmentAnalyticsId">();
+export const ResumeParsedDataIdSchema = z.uuid().brand<"ResumeParsedDataId">();
+
+// Schema Upgrade: Enterprise Features (Phase 7)
+export const EquityGrantIdSchema = z.uuid().brand<"EquityGrantId">();
+export const VestingScheduleIdSchema = z.uuid().brand<"VestingScheduleId">();
+export const MarketBenchmarkIdSchema = z.uuid().brand<"MarketBenchmarkId">();
+
+// SWOT Proposal: Grievance Management
+export const GrievanceCategoryIdSchema = z.uuid().brand<"GrievanceCategoryId">();
+export const GrievanceIdSchema = z.uuid().brand<"GrievanceId">();
+
+// SWOT Proposal: Loan Management
+export const LoanTypeIdSchema = z.uuid().brand<"LoanTypeId">();
+export const EmployeeLoanIdSchema = z.uuid().brand<"EmployeeLoanId">();
+
+// HR upgrade guide: policy acknowledgments & shift swap
+export const HrPolicyDocumentIdSchema = z.uuid().brand<"HrPolicyDocumentId">();
+export const EmployeePolicyAcknowledgmentIdSchema = z
+  .uuid()
+  .brand<"EmployeePolicyAcknowledgmentId">();
+export const ShiftSwapRequestIdSchema = z.uuid().brand<"ShiftSwapRequestId">();
 
 // ============================================================================
 // BUSINESS TYPE VALIDATORS (meta-types integration)
@@ -741,6 +846,90 @@ export const onboardingWorkflow = {
 
 export const onboardingStateSchema = createWorkflowStateSchema(onboardingWorkflow);
 
+/**
+ * Grievance workflow states
+ */
+export const grievanceWorkflow = {
+  states: [
+    "submitted",
+    "acknowledged",
+    "under_investigation",
+    "resolved",
+    "closed",
+    "appealed",
+    "withdrawn",
+  ] as const,
+  transitions: {
+    submitted: ["acknowledged", "withdrawn"],
+    acknowledged: ["under_investigation", "resolved", "withdrawn"],
+    under_investigation: ["resolved", "withdrawn"],
+    resolved: ["closed", "appealed"],
+    closed: [],
+    appealed: ["under_investigation", "resolved"],
+    withdrawn: [],
+  },
+} as const;
+
+export const grievanceStateSchema = createWorkflowStateSchema(grievanceWorkflow);
+
+/**
+ * Loan lifecycle workflow states
+ */
+export const loanWorkflow = {
+  states: [
+    "applied",
+    "approved",
+    "disbursed",
+    "repaying",
+    "completed",
+    "defaulted",
+    "cancelled",
+  ] as const,
+  transitions: {
+    applied: ["approved", "cancelled"],
+    approved: ["disbursed", "cancelled"],
+    disbursed: ["repaying"],
+    repaying: ["completed", "defaulted"],
+    completed: [],
+    defaulted: [],
+    cancelled: [],
+  },
+} as const;
+
+export const loanStateSchema = createWorkflowStateSchema(loanWorkflow);
+
+/**
+ * Shift swap request workflow (counterparty + manager gates)
+ */
+export const shiftSwapWorkflow = {
+  states: [
+    "draft",
+    "submitted",
+    "counterparty_pending",
+    "counterparty_accepted",
+    "counterparty_declined",
+    "manager_pending",
+    "approved",
+    "rejected",
+    "cancelled",
+    "completed",
+  ] as const,
+  transitions: {
+    draft: ["submitted", "cancelled"],
+    submitted: ["counterparty_pending", "cancelled"],
+    counterparty_pending: ["counterparty_accepted", "counterparty_declined", "cancelled"],
+    counterparty_accepted: ["manager_pending", "cancelled"],
+    counterparty_declined: ["cancelled"],
+    manager_pending: ["approved", "rejected", "cancelled"],
+    approved: ["completed", "cancelled"],
+    rejected: [],
+    cancelled: [],
+    completed: [],
+  },
+} as const;
+
+export const shiftSwapStateSchema = createWorkflowStateSchema(shiftSwapWorkflow);
+
 // ============================================================================
 // CROSS-FIELD REFINEMENTS
 // Reusable superRefine callbacks mirroring CHECK constraints.
@@ -1140,6 +1329,7 @@ export type BenefitProviderId = z.infer<typeof BenefitProviderIdSchema>;
 export type BenefitEnrollmentId = z.infer<typeof BenefitEnrollmentIdSchema>;
 export type BenefitDependentCoverageId = z.infer<typeof BenefitDependentCoverageIdSchema>;
 export type BenefitClaimId = z.infer<typeof BenefitClaimIdSchema>;
+export type BenefitPlanBenefitId = z.infer<typeof BenefitPlanBenefitIdSchema>;
 
 // Learning Domain (Phase 2)
 export type CourseId = z.infer<typeof CourseIdSchema>;
@@ -1169,6 +1359,11 @@ export type PaymentDistributionId = z.infer<typeof PaymentDistributionIdSchema>;
 export type ApplicantDocumentId = z.infer<typeof ApplicantDocumentIdSchema>;
 export type InterviewFeedbackFormId = z.infer<typeof InterviewFeedbackFormIdSchema>;
 export type OfferLetterId = z.infer<typeof OfferLetterIdSchema>;
+
+// HR upgrade guide closures
+export type HrPolicyDocumentId = z.infer<typeof HrPolicyDocumentIdSchema>;
+export type EmployeePolicyAcknowledgmentId = z.infer<typeof EmployeePolicyAcknowledgmentIdSchema>;
+export type ShiftSwapRequestId = z.infer<typeof ShiftSwapRequestIdSchema>;
 
 // ============================================================================
 // EXPORT SUMMARY & DEVELOPER REFERENCE
@@ -1202,6 +1397,9 @@ export type OfferLetterId = z.infer<typeof OfferLetterIdSchema>;
  *    ├─ trainingEnrollmentWorkflow → registered → in_progress → completed/failed
  *    ├─ contractLifecycleWorkflow → draft → active → expired/terminated/renewed
  *    ├─ onboardingWorkflow → not_started → in_progress → completed
+ *    ├─ grievanceWorkflow → submitted → acknowledged → investigation → resolved → closed/appealed
+ *    ├─ loanWorkflow → applied → disbursed → repaying → completed/defaulted
+ *    ├─ shiftSwapWorkflow → draft → counterparty → manager → approved → completed
  *    └─ Usage: import { leaveRequestStateSchema } from "./_zodShared"
  *
  * 4. CROSS-FIELD REFINEMENTS (15+ factories)

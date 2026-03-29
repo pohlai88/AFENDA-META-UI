@@ -1,20 +1,16 @@
 // ============================================================================
-// HR DOMAIN: STRATEGIC WORKFORCE MANAGEMENT MODULE (Phase 7)
-// Implements: succession_plans, talent_pools, talent_pool_members, career_paths,
-// career_path_steps, career_aspirations, compensation_cycles, compensation_budgets
+// HR DOMAIN: SUCCESSION & CAREER PLANNING (Phase 7)
+// Covers succession plans, talent pools, and career path progression.
+// Tables: succession_plans, talent_pools, talent_pool_members, career_paths, career_path_steps, career_aspirations
 // ============================================================================
-
 import { sql } from "drizzle-orm";
 import {
-  boolean,
   check,
   foreignKey,
   index,
   integer,
-  numeric,
   text,
   date,
-  timestamp,
   uuid,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -29,12 +25,7 @@ import {
 } from "../../columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
-import {
-  successionReadinessEnum,
-  talentPoolStatusEnum,
-  careerPathStatusEnum,
-  compensationCycleStatusEnum,
-} from "./_enums.js";
+import { successionReadinessEnum, talentPoolStatusEnum, careerPathStatusEnum } from "./_enums.js";
 import { employees, departments, jobPositions } from "./people.js";
 import {
   SuccessionPlanIdSchema,
@@ -43,11 +34,11 @@ import {
   CareerPathIdSchema,
   CareerPathStepIdSchema,
   CareerAspirationIdSchema,
-  CompensationCycleIdSchema,
-  CompensationBudgetIdSchema,
-  currencyAmountSchema,
+  JobPositionIdSchema,
+  EmployeeIdSchema,
+  DepartmentIdSchema,
   refineDateRange,
-  refineAmountRange,
+  hrTenantIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -319,105 +310,15 @@ export const careerAspirations = hrSchema.table(
 );
 
 // ============================================================================
-// TABLE: compensation_cycles
-// Annual compensation planning cycles
-// ============================================================================
-export const compensationCycles = hrSchema.table(
-  "compensation_cycles",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: integer("tenant_id").notNull(),
-    cycleCode: text("cycle_code").notNull(),
-    ...nameColumn,
-    fiscalYear: integer("fiscal_year").notNull(),
-    startDate: date("start_date", { mode: "string" }).notNull(),
-    endDate: date("end_date", { mode: "string" }).notNull(),
-    budgetAmount: numeric("budget_amount", { precision: 15, scale: 2 }).notNull(),
-    currency: text("currency").notNull().default("USD"),
-    status: compensationCycleStatusEnum("status").notNull().default("planning"),
-    guidelines: text("guidelines"), // JSON
-    ...timestampColumns,
-    ...softDeleteColumns,
-    ...auditColumns,
-  },
-  (table) => [
-    foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
-    uniqueIndex("compensation_cycles_tenant_code_unique")
-      .on(table.tenantId, table.cycleCode)
-      .where(sql`${table.deletedAt} IS NULL`),
-    check("compensation_cycles_date_range", sql`${table.endDate} >= ${table.startDate}`),
-    check("compensation_cycles_budget_positive", sql`${table.budgetAmount} > 0`),
-    check("compensation_cycles_fiscal_year_valid", sql`${table.fiscalYear} >= 2000`),
-    index("compensation_cycles_tenant_idx").on(table.tenantId),
-    index("compensation_cycles_fiscal_year_idx").on(table.tenantId, table.fiscalYear),
-    index("compensation_cycles_status_idx").on(table.tenantId, table.status),
-    ...tenantIsolationPolicies("compensation_cycles"),
-    serviceBypassPolicy("compensation_cycles"),
-  ]
-);
-
-// ============================================================================
-// TABLE: compensation_budgets
-// Department/position budgets
-// ============================================================================
-export const compensationBudgets = hrSchema.table(
-  "compensation_budgets",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: integer("tenant_id").notNull(),
-    cycleId: uuid("cycle_id").notNull(),
-    departmentId: uuid("department_id"),
-    positionId: uuid("position_id"),
-    budgetAmount: numeric("budget_amount", { precision: 15, scale: 2 }).notNull(),
-    allocatedAmount: numeric("allocated_amount", { precision: 15, scale: 2 })
-      .notNull()
-      .default("0"),
-    remainingAmount: numeric("remaining_amount", { precision: 15, scale: 2 }).notNull(),
-    currency: text("currency").notNull().default("USD"),
-    notes: text("notes"),
-    ...timestampColumns,
-    ...auditColumns,
-  },
-  (table) => [
-    foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
-    foreignKey({
-      columns: [table.tenantId, table.cycleId],
-      foreignColumns: [compensationCycles.tenantId, compensationCycles.id],
-    }),
-    foreignKey({
-      columns: [table.tenantId, table.departmentId],
-      foreignColumns: [departments.tenantId, departments.id],
-    }),
-    foreignKey({
-      columns: [table.tenantId, table.positionId],
-      foreignColumns: [jobPositions.tenantId, jobPositions.id],
-    }),
-    check("compensation_budgets_budget_positive", sql`${table.budgetAmount} >= 0`),
-    check("compensation_budgets_allocated_positive", sql`${table.allocatedAmount} >= 0`),
-    check("compensation_budgets_remaining_valid", sql`${table.remainingAmount} >= 0`),
-    check(
-      "compensation_budgets_allocation_valid",
-      sql`${table.allocatedAmount} <= ${table.budgetAmount}`
-    ),
-    index("compensation_budgets_tenant_idx").on(table.tenantId),
-    index("compensation_budgets_cycle_idx").on(table.tenantId, table.cycleId),
-    index("compensation_budgets_department_idx").on(table.tenantId, table.departmentId),
-    index("compensation_budgets_position_idx").on(table.tenantId, table.positionId),
-    ...tenantIsolationPolicies("compensation_budgets"),
-    serviceBypassPolicy("compensation_budgets"),
-  ]
-);
-
-// ============================================================================
 // ZOD INSERT SCHEMAS
 // ============================================================================
 
 export const insertSuccessionPlanSchema = z.object({
   id: SuccessionPlanIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   planCode: z.string().min(3).max(50),
-  criticalPositionId: z.string().uuid(),
-  successorEmployeeId: z.string().uuid(),
+  criticalPositionId: JobPositionIdSchema,
+  successorEmployeeId: EmployeeIdSchema,
   readiness: z.enum(["ready_now", "ready_1_year", "ready_2_years", "not_ready"]),
   developmentPlan: z.string().max(2000).optional(),
   targetDate: z.string().date().optional(),
@@ -427,7 +328,7 @@ export const insertSuccessionPlanSchema = z.object({
 
 export const insertTalentPoolSchema = z.object({
   id: TalentPoolIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   poolCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
@@ -438,9 +339,9 @@ export const insertTalentPoolSchema = z.object({
 
 export const insertTalentPoolMemberSchema = z.object({
   id: TalentPoolMemberIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  poolId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  poolId: TalentPoolIdSchema,
+  employeeId: EmployeeIdSchema,
   joinedDate: z.string().date(),
   readiness: z.enum(["ready_now", "ready_1_year", "ready_2_years", "not_ready"]),
   performanceRating: z.string().max(50).optional(),
@@ -451,21 +352,21 @@ export const insertTalentPoolMemberSchema = z.object({
 
 export const insertCareerPathSchema = z.object({
   id: CareerPathIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   pathCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
-  departmentId: z.string().uuid().optional(),
+  departmentId: DepartmentIdSchema.optional(),
   status: z.enum(["active", "inactive", "archived"]).default("active"),
 });
 
 export const insertCareerPathStepSchema = z.object({
   id: CareerPathStepIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  pathId: z.string().uuid(),
-  positionId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  pathId: CareerPathIdSchema,
+  positionId: JobPositionIdSchema,
   stepOrder: z.number().int().positive(),
-  prerequisiteStepId: z.string().uuid().optional(),
+  prerequisiteStepId: CareerPathStepIdSchema.optional(),
   minYearsExperience: z.number().int().nonnegative().optional(),
   requiredSkills: z.string().optional(), // JSON string
   description: z.string().max(1000).optional(),
@@ -474,10 +375,10 @@ export const insertCareerPathStepSchema = z.object({
 export const insertCareerAspirationSchema = z
   .object({
     id: CareerAspirationIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    employeeId: z.string().uuid(),
-    targetPositionId: z.string().uuid().optional(),
-    targetPathId: z.string().uuid().optional(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
+    targetPositionId: JobPositionIdSchema.optional(),
+    targetPathId: CareerPathIdSchema.optional(),
     aspirationDate: z.string().date(),
     targetDate: z.string().date().optional(),
     currentSkillGaps: z.string().optional(), // JSON string
@@ -486,44 +387,3 @@ export const insertCareerAspirationSchema = z
     status: z.enum(["active", "achieved", "abandoned", "on_hold"]).default("active"),
   })
   .superRefine(refineDateRange("aspirationDate", "targetDate"));
-
-export const insertCompensationCycleSchema = z
-  .object({
-    id: CompensationCycleIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    cycleCode: z.string().min(3).max(50),
-    name: z.string().min(2).max(100),
-    fiscalYear: z.number().int().min(2000).max(2100),
-    startDate: z.string().date(),
-    endDate: z.string().date(),
-    budgetAmount: currencyAmountSchema(2),
-    currency: z.string().length(3).default("USD"),
-    status: z.enum(["planning", "budgeting", "review", "approved", "closed"]).default("planning"),
-    guidelines: z.string().optional(), // JSON string
-  })
-  .superRefine(refineDateRange("startDate", "endDate"));
-
-export const insertCompensationBudgetSchema = z
-  .object({
-    id: CompensationBudgetIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    cycleId: z.string().uuid(),
-    departmentId: z.string().uuid().optional(),
-    positionId: z.string().uuid().optional(),
-    budgetAmount: currencyAmountSchema(2),
-    allocatedAmount: currencyAmountSchema(2).default("0"),
-    remainingAmount: currencyAmountSchema(2),
-    currency: z.string().length(3).default("USD"),
-    notes: z.string().max(1000).optional(),
-  })
-  .superRefine((data, ctx) => {
-    const budget = parseFloat(data.budgetAmount);
-    const allocated = parseFloat(data.allocatedAmount);
-    if (allocated > budget) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Allocated amount cannot exceed budget amount",
-        path: ["allocatedAmount"],
-      });
-    }
-  });

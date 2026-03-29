@@ -15,7 +15,7 @@
  */
 
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { readdirSync, existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 
@@ -181,6 +181,16 @@ function runGate(gate, args = []) {
 }
 
 function getModeArgsForGate(gate) {
+  if (gate.name === 'drizzle-schema-quality') {
+    const repoRoot = resolve(__dirname, '..', '..');
+    const args = [
+      `--baseline=${join(repoRoot, 'tools/ci-gate/drizzle-schema-quality/baseline.json')}`,
+    ];
+    if (options.mode === 'fast') args.unshift('--mode=fast');
+    if (options.verbose) args.push('--verbose');
+    return args;
+  }
+
   if (options.mode !== 'fast') {
     return [];
   }

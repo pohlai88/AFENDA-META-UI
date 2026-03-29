@@ -1,0 +1,4 @@
+{
+  "_comment": "baseline.{file::table::ruleId}: { ruleId, severity, reason }. Empty until needed; mention baseline edits in commit messages.",
+  "baseline": {}
+}

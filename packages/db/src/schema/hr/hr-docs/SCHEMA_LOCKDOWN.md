@@ -4,18 +4,19 @@
 
 ## File Organisation
 
-| File | Domain | Tables |
-|------|--------|--------|
-| `people.ts` | Org structure | departments, jobTitles, jobPositions, employees, costCenters |
-| `employment.ts` | Contracts & benefits | employmentContracts, benefitPlans, employeeBenefits |
-| `payroll.ts` | Compensation | salaryComponents, employeeSalaries, payrollPeriods, payrollEntries, payrollLines |
-| `attendance.ts` | Leave & time | leaveTypeConfigs, leaveAllocations, leaveRequests, holidayCalendars, holidays, timeSheets, timeSheetLines, attendanceRecords, shiftSchedules, shiftAssignments |
-| `talent.ts` | Performance & skills | performanceReviewCycles, performanceReviews, goals, skills, employeeSkills, certifications, employeeCertifications |
-| `recruitment.ts` | Hiring | jobOpenings, jobApplications, interviews, jobOffers |
-| `training.ts` | L&D | trainingPrograms, trainingSessions, trainingAttendance |
-| `operations.ts` | Ops & compliance | employeeDocuments, expenseClaims, expenseLines, disciplinaryActions, exitInterviews, onboardingChecklists, onboardingTasks, onboardingProgress |
+**Authoritative map:** [HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md) → **P0 domain placement audit** (every domain file, table count, bounded context). All modules use `hrSchema` from `_schema.ts` (`pgSchema("hr")`).
 
-**New tables** go into the file whose domain they belong to. If no domain fits, discuss before creating a new file.
+**Placement rules (summary):**
+
+- **People / org:** `people.ts` — departments, titles, positions, employees, cost centers.
+- **Contracts + legacy benefit catalog:** `employment.ts` — not the same as `benefits.ts` (provider-centric enrollments/claims); see audit note on dual benefit models.
+- **Expenses:** `expenses.ts` only — not `operations.ts`.
+- **Exit / lifecycle:** `lifecycle.ts` — e.g. `hrExitInterviews`; not `operations.ts`.
+- **Onboarding & employee documents:** `operations.ts` — with optional policy link to `policyAcknowledgments.ts`.
+- **Attendance core vs extensions:** `attendance.ts` vs `attendanceEnhancements.ts` (requests, OT rules, biometric, shift swap).
+- **Performance vs skills taxonomy:** `talent.ts` vs `skills.ts` — intentional split.
+
+**New tables** must extend the domain file that matches the bounded context in the audit. If two domains apply, pick the narrower module, wire FKs in `_relations.ts`, and update the audit table in the same PR.
 
 ## Mandatory Patterns
 

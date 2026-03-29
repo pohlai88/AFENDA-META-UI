@@ -1,3 +1,7 @@
+// ============================================================================
+// HR ENUMS CATALOG
+// Centralized pgEnum and Zod enum definitions for all HR domains.
+// ============================================================================
 import { z } from "zod/v4";
 
 import { hrSchema } from "./_schema.js";
@@ -44,6 +48,15 @@ export const leaveTypes = [
 
 // Leave Status
 export const leaveStatuses = ["draft", "submitted", "approved", "rejected", "cancelled"] as const;
+
+// General approval workflow statuses (deferred via P0 cleanup)
+export const approvalStatuses = [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "cancelled",
+] as const;
 
 // Attendance Status
 export const attendanceStatuses = ["present", "absent", "late", "half_day", "on_leave"] as const;
@@ -335,6 +348,189 @@ export const terminationReasons = [
   "death",
 ] as const;
 
+// Departure Reason (Enhanced)
+export const departureReasons = [
+  "resignation",
+  "termination",
+  "retirement",
+  "layoff",
+  "contract_end",
+  "mutual_agreement",
+  "death",
+  "other",
+] as const;
+
+// Skill Type Category
+export const skillTypeCategories = [
+  "technical",
+  "soft_skills",
+  "languages",
+  "certifications",
+  "domain_knowledge",
+  "tools",
+  "other",
+] as const;
+
+// Resume Line Type
+export const resumeLineTypes = [
+  "experience",
+  "education",
+  "certification",
+  "project",
+  "publication",
+  "award",
+  "volunteer",
+  "other",
+] as const;
+
+// Expense Category
+export const expenseCategories = [
+  "travel",
+  "accommodation",
+  "meals",
+  "transport",
+  "supplies",
+  "training",
+  "entertainment",
+  "communication",
+  "equipment",
+  "other",
+] as const;
+
+// Approval Level
+export const approvalLevels = ["level_1", "level_2", "level_3", "final"] as const;
+
+// Bonus Point Transaction Type
+export const bonusPointTransactionTypes = ["earned", "redeemed", "expired", "adjusted"] as const;
+
+// Bonus Point Trigger Event
+export const bonusPointTriggerEvents = [
+  "attendance_streak",
+  "goal_completion",
+  "training_completion",
+  "referral",
+  "performance_rating",
+  "anniversary",
+  "manual",
+  "other",
+] as const;
+
+// Disciplinary Action Severity
+export const disciplinaryActionSeverities = [
+  "minor",
+  "moderate",
+  "serious",
+  "critical",
+  "severe",
+] as const;
+
+// Disciplinary Action Status
+export const disciplinaryActionStatuses = [
+  "pending",
+  "under_review",
+  "confirmed",
+  "appealed",
+  "closed",
+  "withdrawn",
+] as const;
+
+// Compensatory Leave Status
+export const compensatoryLeaveStatuses = [
+  "pending",
+  "approved",
+  "rejected",
+  "expired",
+  "used",
+] as const;
+
+// Leave Encashment Status
+export const leaveEncashmentStatuses = [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "paid",
+  "cancelled",
+] as const;
+
+// Tax Exemption Category Type
+export const taxExemptionCategoryTypes = [
+  "housing",
+  "education",
+  "medical",
+  "insurance",
+  "investment",
+  "donation",
+  "other",
+] as const;
+
+// Tax Declaration Status
+export const taxDeclarationStatuses = [
+  "draft",
+  "submitted",
+  "verified",
+  "approved",
+  "rejected",
+] as const;
+
+// Attendance Request Type
+export const attendanceRequestTypes = [
+  "correction",
+  "missing_punch",
+  "work_from_home",
+  "overtime",
+  "early_departure",
+  "late_arrival",
+] as const;
+
+// Overtime Rule Type
+export const overtimeRuleTypes = ["daily", "weekly", "monthly", "holiday", "special"] as const;
+
+// Biometric Device Type
+export const biometricDeviceTypes = ["fingerprint", "face", "card", "pin", "iris"] as const;
+
+// Promotion Type
+export const promotionTypes = ["vertical", "horizontal", "grade_change", "title_change"] as const;
+
+// Transfer Type
+export const transferTypes = ["permanent", "temporary", "deputation", "secondment"] as const;
+
+// Separation Type
+export const separationTypes = [
+  "resignation",
+  "termination",
+  "retirement",
+  "layoff",
+  "contract_end",
+  "mutual_agreement",
+  "death",
+] as const;
+
+// Travel Request Status
+export const travelRequestStatuses = [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "completed",
+  "cancelled",
+] as const;
+
+// Travel Segment Type
+export const travelSegmentTypes = ["flight", "train", "bus", "car", "hotel", "other"] as const;
+
+// Vehicle Status
+export const vehicleStatuses = [
+  "available",
+  "assigned",
+  "maintenance",
+  "retired",
+  "disposed",
+] as const;
+
+// Fuel Type
+export const fuelTypes = ["petrol", "diesel", "electric", "hybrid", "cng", "other"] as const;
+
 // Onboarding Status
 export const onboardingStatuses = ["not_started", "in_progress", "completed", "cancelled"] as const;
 
@@ -413,6 +609,7 @@ export const maritalStatusEnum = hrSchema.enum("marital_status", [...maritalStat
 export const employeeCategoryEnum = hrSchema.enum("employee_category", [...employeeCategories]);
 export const leaveTypeEnum = hrSchema.enum("leave_type", [...leaveTypes]);
 export const leaveStatusEnum = hrSchema.enum("leave_status", [...leaveStatuses]);
+export const approvalStatusEnum = hrSchema.enum("approval_status", [...approvalStatuses]);
 export const attendanceStatusEnum = hrSchema.enum("attendance_status", [...attendanceStatuses]);
 export const contractTypeEnum = hrSchema.enum("contract_type", [...contractTypes]);
 export const contractStatusEnum = hrSchema.enum("contract_status", [...contractStatuses]);
@@ -476,6 +673,53 @@ export const learningPathStatusEnum = hrSchema.enum("learning_path_status", [
   ...learningPathStatuses,
 ]);
 
+// New Enums for Schema Upgrades
+export const departureReasonEnum = hrSchema.enum("departure_reason", [...departureReasons]);
+export const skillTypeCategoryEnum = hrSchema.enum("skill_type_category", [...skillTypeCategories]);
+export const resumeLineTypeEnum = hrSchema.enum("resume_line_type", [...resumeLineTypes]);
+export const expenseCategoryEnum = hrSchema.enum("expense_category", [...expenseCategories]);
+export const approvalLevelEnum = hrSchema.enum("approval_level", [...approvalLevels]);
+export const bonusPointTransactionTypeEnum = hrSchema.enum("bonus_point_transaction_type", [
+  ...bonusPointTransactionTypes,
+]);
+export const bonusPointTriggerEventEnum = hrSchema.enum("bonus_point_trigger_event", [
+  ...bonusPointTriggerEvents,
+]);
+export const disciplinaryActionSeverityEnum = hrSchema.enum("disciplinary_action_severity", [
+  ...disciplinaryActionSeverities,
+]);
+export const disciplinaryActionStatusEnum = hrSchema.enum("disciplinary_action_status", [
+  ...disciplinaryActionStatuses,
+]);
+export const compensatoryLeaveStatusEnum = hrSchema.enum("compensatory_leave_status", [
+  ...compensatoryLeaveStatuses,
+]);
+export const leaveEncashmentStatusEnum = hrSchema.enum("leave_encashment_status", [
+  ...leaveEncashmentStatuses,
+]);
+export const taxExemptionCategoryTypeEnum = hrSchema.enum("tax_exemption_category_type", [
+  ...taxExemptionCategoryTypes,
+]);
+export const taxDeclarationStatusEnum = hrSchema.enum("tax_declaration_status", [
+  ...taxDeclarationStatuses,
+]);
+export const attendanceRequestTypeEnum = hrSchema.enum("attendance_request_type", [
+  ...attendanceRequestTypes,
+]);
+export const overtimeRuleTypeEnum = hrSchema.enum("overtime_rule_type", [...overtimeRuleTypes]);
+export const biometricDeviceTypeEnum = hrSchema.enum("biometric_device_type", [
+  ...biometricDeviceTypes,
+]);
+export const promotionTypeEnum = hrSchema.enum("promotion_type", [...promotionTypes]);
+export const transferTypeEnum = hrSchema.enum("transfer_type", [...transferTypes]);
+export const separationTypeEnum = hrSchema.enum("separation_type", [...separationTypes]);
+export const travelRequestStatusEnum = hrSchema.enum("travel_request_status", [
+  ...travelRequestStatuses,
+]);
+export const travelSegmentTypeEnum = hrSchema.enum("travel_segment_type", [...travelSegmentTypes]);
+export const vehicleStatusEnum = hrSchema.enum("vehicle_status", [...vehicleStatuses]);
+export const fuelTypeEnum = hrSchema.enum("fuel_type", [...fuelTypes]);
+
 // ============================================================================
 // ZOD SCHEMAS
 // ============================================================================
@@ -536,6 +780,31 @@ export const CertificationLevelStatusSchema = z.enum(certificationLevelStatuses)
 export const FeedbackStatusSchema = z.enum(feedbackStatuses);
 export const LearningPathStatusSchema = z.enum(learningPathStatuses);
 
+// New Zod Schemas for Schema Upgrades
+export const DepartureReasonSchema = z.enum(departureReasons);
+export const SkillTypeCategorySchema = z.enum(skillTypeCategories);
+export const ResumeLineTypeSchema = z.enum(resumeLineTypes);
+export const ExpenseCategorySchema = z.enum(expenseCategories);
+export const ApprovalLevelSchema = z.enum(approvalLevels);
+export const BonusPointTransactionTypeSchema = z.enum(bonusPointTransactionTypes);
+export const BonusPointTriggerEventSchema = z.enum(bonusPointTriggerEvents);
+export const DisciplinaryActionSeveritySchema = z.enum(disciplinaryActionSeverities);
+export const DisciplinaryActionStatusSchema = z.enum(disciplinaryActionStatuses);
+export const CompensatoryLeaveStatusSchema = z.enum(compensatoryLeaveStatuses);
+export const LeaveEncashmentStatusSchema = z.enum(leaveEncashmentStatuses);
+export const TaxExemptionCategoryTypeSchema = z.enum(taxExemptionCategoryTypes);
+export const TaxDeclarationStatusSchema = z.enum(taxDeclarationStatuses);
+export const AttendanceRequestTypeSchema = z.enum(attendanceRequestTypes);
+export const OvertimeRuleTypeSchema = z.enum(overtimeRuleTypes);
+export const BiometricDeviceTypeSchema = z.enum(biometricDeviceTypes);
+export const PromotionTypeSchema = z.enum(promotionTypes);
+export const TransferTypeSchema = z.enum(transferTypes);
+export const SeparationTypeSchema = z.enum(separationTypes);
+export const TravelRequestStatusSchema = z.enum(travelRequestStatuses);
+export const TravelSegmentTypeSchema = z.enum(travelSegmentTypes);
+export const VehicleStatusSchema = z.enum(vehicleStatuses);
+export const FuelTypeSchema = z.enum(fuelTypes);
+
 export type EmploymentStatus = (typeof employmentStatuses)[number];
 export type EmploymentType = (typeof employmentTypes)[number];
 export type Gender = (typeof genders)[number];
@@ -591,6 +860,31 @@ export type AttemptStatus = (typeof attemptStatuses)[number];
 export type CertificationLevelStatus = (typeof certificationLevelStatuses)[number];
 export type FeedbackStatus = (typeof feedbackStatuses)[number];
 export type LearningPathStatus = (typeof learningPathStatuses)[number];
+
+// New Type Exports for Schema Upgrades
+export type DepartureReason = (typeof departureReasons)[number];
+export type SkillTypeCategory = (typeof skillTypeCategories)[number];
+export type ResumeLineType = (typeof resumeLineTypes)[number];
+export type ExpenseCategory = (typeof expenseCategories)[number];
+export type ApprovalLevel = (typeof approvalLevels)[number];
+export type BonusPointTransactionType = (typeof bonusPointTransactionTypes)[number];
+export type BonusPointTriggerEvent = (typeof bonusPointTriggerEvents)[number];
+export type DisciplinaryActionSeverity = (typeof disciplinaryActionSeverities)[number];
+export type DisciplinaryActionStatus = (typeof disciplinaryActionStatuses)[number];
+export type CompensatoryLeaveStatus = (typeof compensatoryLeaveStatuses)[number];
+export type LeaveEncashmentStatus = (typeof leaveEncashmentStatuses)[number];
+export type TaxExemptionCategoryType = (typeof taxExemptionCategoryTypes)[number];
+export type TaxDeclarationStatus = (typeof taxDeclarationStatuses)[number];
+export type AttendanceRequestType = (typeof attendanceRequestTypes)[number];
+export type OvertimeRuleType = (typeof overtimeRuleTypes)[number];
+export type BiometricDeviceType = (typeof biometricDeviceTypes)[number];
+export type PromotionType = (typeof promotionTypes)[number];
+export type TransferType = (typeof transferTypes)[number];
+export type SeparationType = (typeof separationTypes)[number];
+export type TravelRequestStatus = (typeof travelRequestStatuses)[number];
+export type TravelSegmentType = (typeof travelSegmentTypes)[number];
+export type VehicleStatus = (typeof vehicleStatuses)[number];
+export type FuelType = (typeof fuelTypes)[number];
 
 // ============================================================================
 // PHASE 6-9 ENHANCEMENTS: NEW ENUMS
@@ -678,6 +972,101 @@ export const complianceStatuses = [
   "remediated",
 ] as const;
 
+// SWOT Proposal: Grievance Management
+export const grievanceCategoryTypes = [
+  "harassment",
+  "discrimination",
+  "workplace_safety",
+  "compensation",
+  "management",
+  "policy_violation",
+  "work_conditions",
+  "bullying",
+  "retaliation",
+  "other",
+] as const;
+export const grievanceStatuses = [
+  "submitted",
+  "acknowledged",
+  "under_investigation",
+  "resolved",
+  "closed",
+  "appealed",
+  "withdrawn",
+] as const;
+export const grievancePriorities = ["low", "medium", "high", "critical"] as const;
+
+// SWOT Proposal: Loan Management
+export const loanCategories = [
+  "salary_advance",
+  "personal_loan",
+  "housing_loan",
+  "vehicle_loan",
+  "education_loan",
+  "medical_loan",
+  "emergency_loan",
+  "other",
+] as const;
+export const loanStatuses = [
+  "applied",
+  "approved",
+  "disbursed",
+  "repaying",
+  "completed",
+  "defaulted",
+  "cancelled",
+] as const;
+export const loanRepaymentFrequencies = ["monthly", "bi_weekly", "weekly"] as const;
+
+// SWOT Proposal: Onboarding Checklists
+export const onboardingTaskStatuses = [
+  "pending",
+  "in_progress",
+  "completed",
+  "skipped",
+  "overdue",
+  "blocked",
+] as const;
+export const onboardingTaskCategories = [
+  "documentation",
+  "it_setup",
+  "training",
+  "compliance",
+  "facilities",
+  "introduction",
+  "benefits_enrollment",
+  "security",
+  "other",
+] as const;
+
+// HR policy documents & shift swap (P0 upgrade guide closure)
+export const shiftSwapStatuses = [
+  "draft",
+  "submitted",
+  "counterparty_pending",
+  "counterparty_accepted",
+  "counterparty_declined",
+  "manager_pending",
+  "approved",
+  "rejected",
+  "cancelled",
+  "completed",
+] as const;
+
+export const policyDocumentCategories = [
+  "handbook",
+  "code_of_conduct",
+  "safety",
+  "it_security",
+  "harassment_prevention",
+  "benefits_summary",
+  "remote_work",
+  "privacy",
+  "other",
+] as const;
+
+export const policyAcknowledgmentMethods = ["electronic", "written", "witnessed"] as const;
+
 // ============================================================================
 // PHASE 6-9: PG ENUMS
 // ============================================================================
@@ -718,6 +1107,31 @@ export const permitStatusEnum = hrSchema.enum("permit_status", [...permitStatuse
 export const complianceTypeEnum = hrSchema.enum("compliance_type", [...complianceTypes]);
 export const complianceStatusEnum = hrSchema.enum("compliance_status", [...complianceStatuses]);
 
+// SWOT Proposals
+export const grievanceCategoryTypeEnum = hrSchema.enum("grievance_category_type", [
+  ...grievanceCategoryTypes,
+]);
+export const grievanceStatusEnum = hrSchema.enum("grievance_status", [...grievanceStatuses]);
+export const grievancePriorityEnum = hrSchema.enum("grievance_priority", [...grievancePriorities]);
+export const loanCategoryEnum = hrSchema.enum("loan_category", [...loanCategories]);
+export const loanStatusEnum = hrSchema.enum("loan_status", [...loanStatuses]);
+export const loanRepaymentFrequencyEnum = hrSchema.enum("loan_repayment_frequency", [
+  ...loanRepaymentFrequencies,
+]);
+export const onboardingTaskStatusEnum = hrSchema.enum("onboarding_task_status", [
+  ...onboardingTaskStatuses,
+]);
+export const onboardingTaskCategoryEnum = hrSchema.enum("onboarding_task_category", [
+  ...onboardingTaskCategories,
+]);
+export const shiftSwapStatusEnum = hrSchema.enum("shift_swap_status", [...shiftSwapStatuses]);
+export const policyDocumentCategoryEnum = hrSchema.enum("policy_document_category", [
+  ...policyDocumentCategories,
+]);
+export const policyAcknowledgmentMethodEnum = hrSchema.enum("policy_acknowledgment_method", [
+  ...policyAcknowledgmentMethods,
+]);
+
 // ============================================================================
 // PHASE 6-9: ZOD SCHEMAS
 // ============================================================================
@@ -750,6 +1164,19 @@ export const PermitStatusSchema = z.enum(permitStatuses);
 export const ComplianceTypeSchema = z.enum(complianceTypes);
 export const ComplianceStatusSchema = z.enum(complianceStatuses);
 
+// SWOT Proposals
+export const GrievanceCategoryTypeSchema = z.enum(grievanceCategoryTypes);
+export const GrievanceStatusSchema = z.enum(grievanceStatuses);
+export const GrievancePrioritySchema = z.enum(grievancePriorities);
+export const LoanCategorySchema = z.enum(loanCategories);
+export const LoanStatusSchema = z.enum(loanStatuses);
+export const LoanRepaymentFrequencySchema = z.enum(loanRepaymentFrequencies);
+export const OnboardingTaskStatusSchema = z.enum(onboardingTaskStatuses);
+export const OnboardingTaskCategorySchema = z.enum(onboardingTaskCategories);
+export const ShiftSwapStatusSchema = z.enum(shiftSwapStatuses);
+export const PolicyDocumentCategorySchema = z.enum(policyDocumentCategories);
+export const PolicyAcknowledgmentMethodSchema = z.enum(policyAcknowledgmentMethods);
+
 // ============================================================================
 // PHASE 6-9: TYPE EXPORTS
 // ============================================================================
@@ -781,3 +1208,16 @@ export type PermitType = (typeof permitTypes)[number];
 export type PermitStatus = (typeof permitStatuses)[number];
 export type ComplianceType = (typeof complianceTypes)[number];
 export type ComplianceStatus = (typeof complianceStatuses)[number];
+
+// SWOT Proposals
+export type GrievanceCategoryType = (typeof grievanceCategoryTypes)[number];
+export type GrievanceStatus = (typeof grievanceStatuses)[number];
+export type GrievancePriority = (typeof grievancePriorities)[number];
+export type LoanCategory = (typeof loanCategories)[number];
+export type LoanStatus = (typeof loanStatuses)[number];
+export type LoanRepaymentFrequency = (typeof loanRepaymentFrequencies)[number];
+export type OnboardingTaskStatus = (typeof onboardingTaskStatuses)[number];
+export type OnboardingTaskCategory = (typeof onboardingTaskCategories)[number];
+export type ShiftSwapStatus = (typeof shiftSwapStatuses)[number];
+export type PolicyDocumentCategory = (typeof policyDocumentCategories)[number];
+export type PolicyAcknowledgmentMethod = (typeof policyAcknowledgmentMethods)[number];

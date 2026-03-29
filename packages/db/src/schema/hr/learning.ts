@@ -1,9 +1,8 @@
 // ============================================================================
-// HR DOMAIN: LEARNING MODULE (Phase 2)
-// Enhanced Learning Management System with LMS, assessments, certifications
-// Implements: 11 tables for full learning lifecycle
+// HR DOMAIN: LEARNING & DEVELOPMENT (Phase 2)
+// Learning management, assessments, certification, and training cost tracking
+// Tables: courses, course_modules, learning_paths, assessments, assessment_questions
 // ============================================================================
-
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -47,11 +46,13 @@ import {
   CertificateIdSchema,
   CoursePrerequisiteIdSchema,
   CourseMaterialIdSchema,
+  EmployeeIdSchema,
   personNameSchema,
   statusSchema,
   boundedPercentageSchema,
   currencyAmountSchema,
   trainingEnrollmentWorkflow,
+  hrTenantIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -105,11 +106,11 @@ export const courses = hrSchema.table(
     ),
     check("cost_positive", sql`${table.cost} IS NULL OR ${table.cost} >= 0`),
     check("max_capacity_positive", sql`${table.maxCapacity} IS NULL OR ${table.maxCapacity} > 0`),
-    index().on(table.tenantId),
-    index().on(table.level),
-    index().on(table.deliveryMethod),
-    index().on(table.categoryId),
-    index().on(table.instructorId),
+    index("courses_tenant_idx").on(table.tenantId),
+    index("courses_level_idx").on(table.level),
+    index("courses_delivery_method_idx").on(table.deliveryMethod),
+    index("courses_category_id_idx").on(table.categoryId),
+    index("courses_instructor_id_idx").on(table.instructorId),
     ...tenantIsolationPolicies("courses"),
     serviceBypassPolicy("courses"),
   ]
@@ -146,8 +147,8 @@ export const courseModules = hrSchema.table(
     }),
     check("duration_positive", sql`${table.duration} > 0`),
     check("order_positive", sql`${table.moduleOrder} > 0`),
-    index().on(table.tenantId),
-    index().on(table.courseId),
+    index("course_modules_tenant_idx").on(table.tenantId),
+    index("course_modules_course_id_idx").on(table.courseId),
     ...tenantIsolationPolicies("course_modules"),
     serviceBypassPolicy("course_modules"),
   ]
@@ -172,8 +173,8 @@ export const learningPaths = hrSchema.table(
     ...auditColumns,
   },
   (table) => [
-    index().on(table.tenantId),
-    index().on(table.targetRole),
+    index("learning_paths_tenant_idx").on(table.tenantId),
+    index("learning_paths_target_role_idx").on(table.targetRole),
     ...tenantIsolationPolicies("learning_paths"),
     serviceBypassPolicy("learning_paths"),
   ]
@@ -203,8 +204,12 @@ export const learningPathCourses = hrSchema.table(
       columns: [table.tenantId, table.courseId],
       foreignColumns: [courses.tenantId, courses.id],
     }),
-    uniqueIndex().on(table.tenantId, table.learningPathId, table.courseId),
-    index().on(table.tenantId),
+    uniqueIndex("learning_path_courses_path_course_unique").on(
+      table.tenantId,
+      table.learningPathId,
+      table.courseId
+    ),
+    index("learning_path_courses_tenant_idx").on(table.tenantId),
     ...tenantIsolationPolicies("learning_path_courses"),
     serviceBypassPolicy("learning_path_courses"),
   ]
@@ -237,8 +242,8 @@ export const assessments = hrSchema.table(
     }),
     check("passing_score_valid", sql`${table.passingScore} >= 0 AND ${table.passingScore} <= 100`),
     check("time_limit_positive", sql`${table.timeLimit} IS NULL OR ${table.timeLimit} > 0`),
-    index().on(table.tenantId),
-    index().on(table.courseModuleId),
+    index("assessments_tenant_idx").on(table.tenantId),
+    index("assessments_course_module_id_idx").on(table.courseModuleId),
     ...tenantIsolationPolicies("assessments"),
     serviceBypassPolicy("assessments"),
   ]
@@ -269,8 +274,8 @@ export const assessmentQuestions = hrSchema.table(
       foreignColumns: [assessments.tenantId, assessments.id],
     }),
     check("points_positive", sql`${table.points} > 0`),
-    index().on(table.tenantId),
-    index().on(table.assessmentId),
+    index("assessment_questions_tenant_idx").on(table.tenantId),
+    index("assessment_questions_assessment_id_idx").on(table.assessmentId),
     ...tenantIsolationPolicies("assessment_questions"),
     serviceBypassPolicy("assessment_questions"),
   ]
@@ -309,7 +314,7 @@ export const assessmentAttempts = hrSchema.table(
       columns: [table.tenantId, table.courseEnrollmentId],
       foreignColumns: [courseEnrollments.tenantId, courseEnrollments.id],
     }),
-    uniqueIndex().on(
+    uniqueIndex("assessment_attempts_tenant_assessment_enrollment_attempt_unique").on(
       table.tenantId,
       table.assessmentId,
       table.courseEnrollmentId,
@@ -332,10 +337,10 @@ export const assessmentAttempts = hrSchema.table(
       "time_spent_positive",
       sql`${table.timeSpentMinutes} IS NULL OR ${table.timeSpentMinutes} >= 0`
     ),
-    index().on(table.tenantId),
-    index().on(table.assessmentId),
-    index().on(table.courseEnrollmentId),
-    index().on(table.status),
+    index("assessment_attempts_tenant_idx").on(table.tenantId),
+    index("assessment_attempts_assessment_id_idx").on(table.assessmentId),
+    index("assessment_attempts_course_enrollment_id_idx").on(table.courseEnrollmentId),
+    index("assessment_attempts_status_idx").on(table.status),
     ...tenantIsolationPolicies("assessment_attempts"),
     serviceBypassPolicy("assessment_attempts"),
   ]
@@ -373,9 +378,9 @@ export const courseSessions = hrSchema.table(
     }),
     check("date_order", sql`${table.endDate} >= ${table.startDate}`),
     check("capacity_positive", sql`${table.maxCapacity} > 0`),
-    index().on(table.tenantId),
-    index().on(table.courseId),
-    index().on(table.startDate),
+    index("course_sessions_tenant_idx").on(table.tenantId),
+    index("course_sessions_course_id_idx").on(table.courseId),
+    index("course_sessions_start_date_idx").on(table.startDate),
     ...tenantIsolationPolicies("course_sessions"),
     serviceBypassPolicy("course_sessions"),
   ]
@@ -418,9 +423,9 @@ export const courseEnrollments = hrSchema.table(
       "score_valid",
       sql`${table.finalScore} IS NULL OR (${table.finalScore} >= 0 AND ${table.finalScore} <= 100)`
     ),
-    index().on(table.tenantId),
-    index().on(table.employeeId),
-    index().on(table.status),
+    index("course_enrollments_tenant_idx").on(table.tenantId),
+    index("course_enrollments_employee_id_idx").on(table.employeeId),
+    index("course_enrollments_status_idx").on(table.status),
     ...tenantIsolationPolicies("course_enrollments"),
     serviceBypassPolicy("course_enrollments"),
   ]
@@ -452,13 +457,17 @@ export const learningProgress = hrSchema.table(
       columns: [table.tenantId, table.courseModuleId],
       foreignColumns: [courseModules.tenantId, courseModules.id],
     }),
-    uniqueIndex().on(table.tenantId, table.courseEnrollmentId, table.courseModuleId),
+    uniqueIndex("learning_progress_tenant_enrollment_module_unique").on(
+      table.tenantId,
+      table.courseEnrollmentId,
+      table.courseModuleId
+    ),
     check(
       "score_valid",
       sql`${table.scorePercentage} IS NULL OR (${table.scorePercentage} >= 0 AND ${table.scorePercentage} <= 100)`
     ),
-    index().on(table.tenantId),
-    index().on(table.status),
+    index("learning_progress_tenant_idx").on(table.tenantId),
+    index("learning_progress_status_idx").on(table.status),
     ...tenantIsolationPolicies("learning_progress"),
     serviceBypassPolicy("learning_progress"),
   ]
@@ -492,8 +501,8 @@ export const trainingFeedback = hrSchema.table(
       "instructor_rating_valid",
       sql`${table.instructorRating} IS NULL OR (${table.instructorRating} >= 1 AND ${table.instructorRating} <= 5)`
     ),
-    index().on(table.tenantId),
-    index().on(table.courseEnrollmentId),
+    index("training_feedback_tenant_idx").on(table.tenantId),
+    index("training_feedback_course_enrollment_id_idx").on(table.courseEnrollmentId),
     ...tenantIsolationPolicies("training_feedback"),
     serviceBypassPolicy("training_feedback"),
   ]
@@ -523,8 +532,8 @@ export const trainingCosts = hrSchema.table(
       foreignColumns: [courseSessions.tenantId, courseSessions.id],
     }),
     check("amount_positive", sql`${table.amount} > 0`),
-    index().on(table.tenantId),
-    index().on(table.courseSessionId),
+    index("training_costs_tenant_idx").on(table.tenantId),
+    index("training_costs_course_session_id_idx").on(table.courseSessionId),
     ...tenantIsolationPolicies("training_costs"),
     serviceBypassPolicy("training_costs"),
   ]
@@ -563,9 +572,9 @@ export const learningPathEnrollments = hrSchema.table(
       "progress_valid",
       sql`${table.progressPercentage} >= 0 AND ${table.progressPercentage} <= 100`
     ),
-    index().on(table.tenantId),
-    index().on(table.employeeId),
-    index().on(table.status),
+    index("learning_path_enrollments_tenant_idx").on(table.tenantId),
+    index("learning_path_enrollments_employee_id_idx").on(table.employeeId),
+    index("learning_path_enrollments_status_idx").on(table.status),
     ...tenantIsolationPolicies("learning_path_enrollments"),
     serviceBypassPolicy("learning_path_enrollments"),
   ]
@@ -619,11 +628,11 @@ export const certificates = hrSchema.table(
       "date_order",
       sql`${table.expiryDate} IS NULL OR ${table.expiryDate} >= ${table.issuedDate}`
     ),
-    index().on(table.tenantId),
-    index().on(table.courseEnrollmentId),
-    index().on(table.employeeId),
-    index().on(table.courseId),
-    index().on(table.verificationCode),
+    index("certificates_tenant_idx").on(table.tenantId),
+    index("certificates_course_enrollment_id_idx").on(table.courseEnrollmentId),
+    index("certificates_employee_id_idx").on(table.employeeId),
+    index("certificates_course_id_idx").on(table.courseId),
+    index("certificates_verification_code_idx").on(table.verificationCode),
     ...tenantIsolationPolicies("certificates"),
     serviceBypassPolicy("certificates"),
   ]
@@ -655,11 +664,15 @@ export const coursePrerequisites = hrSchema.table(
       columns: [table.tenantId, table.prerequisiteCourseId],
       foreignColumns: [courses.tenantId, courses.id],
     }),
-    uniqueIndex().on(table.tenantId, table.courseId, table.prerequisiteCourseId),
+    uniqueIndex("course_prerequisites_tenant_course_prereq_unique").on(
+      table.tenantId,
+      table.courseId,
+      table.prerequisiteCourseId
+    ),
     check("not_self_reference", sql`${table.courseId} != ${table.prerequisiteCourseId}`),
-    index().on(table.tenantId),
-    index().on(table.courseId),
-    index().on(table.prerequisiteCourseId),
+    index("course_prerequisites_tenant_idx").on(table.tenantId),
+    index("course_prerequisites_course_id_idx").on(table.courseId),
+    index("course_prerequisites_prerequisite_course_id_idx").on(table.prerequisiteCourseId),
     ...tenantIsolationPolicies("course_prerequisites"),
     serviceBypassPolicy("course_prerequisites"),
   ]
@@ -708,11 +721,11 @@ export const courseMaterials = hrSchema.table(
     check("order_positive", sql`${table.order} >= 0`),
     check("file_size_positive", sql`${table.fileSize} IS NULL OR ${table.fileSize} > 0`),
     check("duration_positive", sql`${table.duration} IS NULL OR ${table.duration} > 0`),
-    index().on(table.tenantId),
-    index().on(table.courseId),
-    index().on(table.courseModuleId),
-    index().on(table.materialType),
-    index().on([table.courseId, table.order]),
+    index("course_materials_tenant_idx").on(table.tenantId),
+    index("course_materials_course_id_idx").on(table.courseId),
+    index("course_materials_course_module_id_idx").on(table.courseModuleId),
+    index("course_materials_material_type_idx").on(table.materialType),
+    index("course_materials_course_id_order_idx").on(table.courseId, table.order),
     ...tenantIsolationPolicies("course_materials"),
     serviceBypassPolicy("course_materials"),
   ]
@@ -724,7 +737,7 @@ export const courseMaterials = hrSchema.table(
 
 export const insertCourseSchema = z.object({
   id: CourseIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   courseCode: z.string().min(3).max(20),
   name: personNameSchema,
   description: z.string().max(2000).optional(),
@@ -732,7 +745,7 @@ export const insertCourseSchema = z.object({
   level: z.enum(["beginner", "intermediate", "advanced"]).default("beginner"),
   deliveryMethod: z.enum(["online", "in_person", "blended"]).default("blended"),
   categoryId: z.number().int().positive().optional(),
-  instructorId: z.string().uuid().optional(),
+  instructorId: EmployeeIdSchema.optional(),
   cost: z.number().positive().optional(),
   currencyId: z.number().int().positive().optional(),
   accreditation: z.string().max(200).optional(),
@@ -746,13 +759,13 @@ export const insertCourseSchema = z.object({
 export const insertCourseSessionSchema = z
   .object({
     id: CourseSessionIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     courseId: CourseIdSchema,
     name: personNameSchema,
     startDate: z.string().date(),
     endDate: z.string().date(),
     maxCapacity: z.number().int().positive(),
-    instructorId: z.string().uuid().optional(),
+    instructorId: EmployeeIdSchema.optional(),
     location: z.string().max(200).optional(),
     status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]).default("scheduled"),
   })
@@ -763,8 +776,8 @@ export const insertCourseSessionSchema = z
 
 export const insertCourseEnrollmentSchema = z.object({
   id: CourseEnrollmentIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  employeeId: z.string().uuid("Invalid employee ID"),
+  tenantId: hrTenantIdSchema,
+  employeeId: EmployeeIdSchema,
   courseSessionId: CourseSessionIdSchema,
   enrollmentDate: z.string().date(),
   completionDate: z.string().date().optional(),
@@ -777,8 +790,8 @@ export const insertCourseEnrollmentSchema = z.object({
 
 export const insertLearningPathEnrollmentSchema = z.object({
   id: LearningPathEnrollmentIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  employeeId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  employeeId: EmployeeIdSchema,
   learningPathId: LearningPathIdSchema,
   enrollmentDate: z.string().date(),
   targetCompletionDate: z.string().date().optional(),
@@ -789,7 +802,7 @@ export const insertLearningPathEnrollmentSchema = z.object({
 
 export const insertAssessmentSchema = z.object({
   id: AssessmentIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   courseModuleId: CourseModuleIdSchema,
   name: personNameSchema,
   description: z.string().max(1000).optional(),
@@ -801,7 +814,7 @@ export const insertAssessmentSchema = z.object({
 
 export const insertAssessmentQuestionSchema = z.object({
   id: AssessmentQuestionIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   assessmentId: AssessmentIdSchema,
   questionText: z.string().min(10).max(1000),
   questionType: z.enum(["multiple_choice", "short_answer", "essay"]),
@@ -812,7 +825,7 @@ export const insertAssessmentQuestionSchema = z.object({
 
 export const insertTrainingFeedbackSchema = z.object({
   id: TrainingFeedbackIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   courseEnrollmentId: CourseEnrollmentIdSchema,
   courseRating: z.number().min(1).max(5),
   instructorRating: z.number().min(1).max(5).optional(),
@@ -823,7 +836,7 @@ export const insertTrainingFeedbackSchema = z.object({
 
 export const insertTrainingCostSchema = z.object({
   id: TrainingCostIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   courseSessionId: CourseSessionIdSchema,
   costCategory: z.enum(["instructor", "materials", "venue", "other"]),
   amount: z.number().positive(),
@@ -833,7 +846,7 @@ export const insertTrainingCostSchema = z.object({
 
 export const insertLearningProgressSchema = z.object({
   id: LearningProgressIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   courseEnrollmentId: CourseEnrollmentIdSchema,
   courseModuleId: CourseModuleIdSchema,
   startedAt: z.string().date(),
@@ -844,7 +857,7 @@ export const insertLearningProgressSchema = z.object({
 
 export const insertAssessmentAttemptSchema = z.object({
   id: AssessmentAttemptIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   assessmentId: AssessmentIdSchema,
   courseEnrollmentId: CourseEnrollmentIdSchema,
   attemptNumber: z.number().int().positive(),
@@ -861,10 +874,10 @@ export const insertAssessmentAttemptSchema = z.object({
 
 export const insertCertificateSchema = z.object({
   id: CertificateIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   certificateNumber: z.string().min(5).max(50),
   courseEnrollmentId: CourseEnrollmentIdSchema,
-  employeeId: z.string().uuid(),
+  employeeId: EmployeeIdSchema,
   courseId: CourseIdSchema,
   issuedDate: z.string().date(),
   expiryDate: z.string().date().optional(),
@@ -880,7 +893,7 @@ export const insertCertificateSchema = z.object({
 export const insertCoursePrerequisiteSchema = z
   .object({
     id: CoursePrerequisiteIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     courseId: CourseIdSchema,
     prerequisiteCourseId: CourseIdSchema,
     isMandatory: z.boolean().default(true),
@@ -894,7 +907,7 @@ export const insertCoursePrerequisiteSchema = z
 
 export const insertCourseMaterialSchema = z.object({
   id: CourseMaterialIdSchema.optional(),
-  tenantId: z.number().int().positive(),
+  tenantId: hrTenantIdSchema,
   courseId: CourseIdSchema,
   courseModuleId: CourseModuleIdSchema.optional(),
   title: z.string().min(1).max(200),

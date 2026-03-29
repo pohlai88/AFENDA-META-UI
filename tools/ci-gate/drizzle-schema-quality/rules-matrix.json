@@ -1,0 +1,41 @@
+{
+  "_comment": "Canonical severity + descriptions for drizzle-schema-quality.",
+  "rules": {
+    "FK_TENANT_ORDER": {
+      "severity": "error",
+      "description": "Composite FK to employees must start with tenantId"
+    },
+    "RLS_COUNT_MISMATCH": {
+      "severity": "error",
+      "description": "Mismatch between table count and RLS/bypass policy calls"
+    },
+    "RLS_ZERO_POLICIES": {
+      "severity": "error",
+      "description": "File declares tables but has zero RLS helpers"
+    },
+    "INDEX_ANONYMOUS": {
+      "severity": "warn",
+      "description": "Anonymous or non-string index names"
+    },
+    "UNIQUE_INDEX_ANONYMOUS": {
+      "severity": "warn",
+      "description": "Anonymous or non-string uniqueIndex names"
+    },
+    "TABLE_PARSE_ERROR": {
+      "severity": "error",
+      "description": "Extractor failed to parse schema file or table block"
+    },
+    "RELATIONS_DRIFT": {
+      "severity": "error",
+      "description": "HR hrRelations catalog vs extracted HR foreignKey edges"
+    },
+    "ZOD_PARITY": {
+      "severity": "warn",
+      "description": "Insert z.object paired with hrSchema.table — tenantId / uuid *Id heuristic drift"
+    },
+    "ORPHAN_UUID_COLUMN": {
+      "severity": "warn",
+      "description": "UUID *_id column without foreign key (Phase 2)"
+    }
+  }
+}

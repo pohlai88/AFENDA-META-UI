@@ -1,5 +1,5 @@
 {
-  "$schema": "Custom SQL entries that live outside Drizzle-generated migrations",
+  "description": "Custom SQL entries that live outside Drizzle-generated migrations",
   "version": 1,
   "instructions": "When generating next migration, append the SQL from 'pending' entries to the migration file, then update status to 'applied' and set migration field.",
   "entries": [
@@ -9,9 +9,9 @@
       "circularFkRef": "CIRC-001",
       "description": "Deferred FK: departments.managerId → employees.id (composite with tenantId)",
       "tables": ["hr.departments", "hr.employees"],
-      "migration": null,
-      "status": "pending",
-      "sql": "ALTER TABLE hr.departments ADD CONSTRAINT fk_departments_manager FOREIGN KEY (tenant_id, manager_id) REFERENCES hr.employees(tenant_id, id);"
+      "migration": "0001_add_circular_fk_constraints.sql",
+      "status": "applied",
+      "sql": "ALTER TABLE hr.departments ADD CONSTRAINT fk_departments_manager_id FOREIGN KEY (tenant_id, manager_id) REFERENCES hr.employees(tenant_id, id) DEFERRABLE INITIALLY DEFERRED;"
     },
     {
       "csqlId": "CSQL-002",
@@ -19,9 +19,9 @@
       "circularFkRef": "CIRC-002",
       "description": "Deferred FK: departments.costCenterId → costCenters.id (composite with tenantId)",
       "tables": ["hr.departments", "hr.cost_centers"],
-      "migration": null,
-      "status": "pending",
-      "sql": "ALTER TABLE hr.departments ADD CONSTRAINT fk_departments_cost_center FOREIGN KEY (tenant_id, cost_center_id) REFERENCES hr.cost_centers(tenant_id, id);"
+      "migration": "0001_add_circular_fk_constraints.sql",
+      "status": "applied",
+      "sql": "ALTER TABLE hr.departments ADD CONSTRAINT fk_departments_cost_center_id FOREIGN KEY (tenant_id, cost_center_id) REFERENCES hr.cost_centers(tenant_id, id) DEFERRABLE INITIALLY DEFERRED;"
     }
   ]
 }

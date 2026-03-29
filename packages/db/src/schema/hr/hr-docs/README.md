@@ -1,63 +1,49 @@
 # HR Schema Documentation Index
 
 **Last Updated:** 2026-03-29
-**Schema Version:** 2.0
-**Status:** Production Ready
+**Schema Version:** 2.2
+**Status:** Production Ready (Phase 10 Commission Release)
 
 ---
 
-## 📚 Core Documentation (Keep)
+## Active documentation
 
-### Essential References
+### Reference Suite
 
-- **[README.md](../README.md)** - Complete table catalog and quick start
-- **[SCHEMA_LOCKDOWN.md](./SCHEMA_LOCKDOWN.md)** - Governance, conventions, and standards
-- **[CIRCULAR_FKS.md](./CIRCULAR_FKS.md)** - Circular foreign key documentation
+- **[HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md)** - P0 cadence, domain placement audit, version timeline, and upgrade workflow.
+- **[README.md](../README.md)** - Complete table catalog, domain map, and quick start guidance for HR developers.
+- **[SCHEMA_LOCKDOWN.md](./SCHEMA_LOCKDOWN.md)** - Governance rules, naming conventions, and RLS/tenant policies enforced across the HR schema.
+- **[CIRCULAR_FKS.md](./CIRCULAR_FKS.md)** - Current circular foreign-key registry and resolution guidance.
+- **[RELATIONS_DRIFT_REMEDIATION.md](./RELATIONS_DRIFT_REMEDIATION.md)** - Living checklist to align `hrRelations` with `foreignKey()` (drizzle-schema-quality `RELATIONS_DRIFT`).
 
 ### Architecture Decisions
 
-- **[ADR-001-domain-file-split.md](./ADR-001-domain-file-split.md)** - Domain separation rationale
-- **[ADR-002-circular-fk-handling.md](./ADR-002-circular-fk-handling.md)** - Circular FK resolution strategy
-- **[ADR-003-meta-types-integration.md](./ADR-003-meta-types-integration.md)** - Meta-types integration decision
+- **[ADR-001-domain-file-split.md](./ADR-001-domain-file-split.md)** - Why the schema is split into domains instead of a monolithic table list.
+- **[ADR-002-circular-fk-handling.md](./ADR-002-circular-fk-handling.md)** - Deferred FK handling strategy for the HR schema.
+- **[ADR-003-meta-types-integration.md](./ADR-003-meta-types-integration.md)** - Philosophy and outcomes of adopting `@afenda/meta-types` for validation and workflows.
 
 ### Diagrams & Visualizations
 
-- **[SCHEMA_DIAGRAM.md](./SCHEMA_DIAGRAM.md)** - ERDs and workflow diagrams
+- **[SCHEMA_DIAGRAM.md](./SCHEMA_DIAGRAM.md)** - Mermaid ERDs, module overviews, and workflow diagrams for the current release.
 
-### Project Overview
+### Project Resources
 
-- **[PROJECT-INDEX.md](./PROJECT-INDEX.md)** - Complete project documentation index
-- **[UPGRADE-EXECUTIVE-SUMMARY.md](./UPGRADE-EXECUTIVE-SUMMARY.md)** - Executive summary of upgrades
-- **[UPGRADE-PLAN.md](./UPGRADE-PLAN.md)** - Technical implementation plan
-- **[UPGRADE-QUICKREF.md](./UPGRADE-QUICKREF.md)** - Developer quick reference
-
-### Migration Guides
-
-- **[TRAINING-TO-LEARNING-MIGRATION.md](./TRAINING-TO-LEARNING-MIGRATION.md)** - Training to learning module migration
+- **[PROJECT-INDEX.md](./PROJECT-INDEX.md)** - This document, refreshed with a chronological release index and ownership information.
+- **[TRAINING-TO-LEARNING-MIGRATION.md](./TRAINING-TO-LEARNING-MIGRATION.md)** - Migration guidance for moving training tables into the learning module.
 
 ---
 
-## 📦 Archived Documentation
+## 🆕 Latest Releases
 
-The following documents have been moved to the `archive/` folder as they are no longer needed for day-to-day operations:
+- **P0 / v2.2 (Upgrade guide closure):** HR policy catalog + employee acknowledgments, shift swap workflow (`shift_swap_requests` + `shiftSwapWorkflow`), onboarding task category/status wired with DB CHECK + Zod, GIN indexes on JSON text payloads (analytics, exports, dimensions, overtime scope, biometric logs, notifications), payroll adjustment Zod aligned to pgEnum, full `_relations` catalog aligned to `foreignKey()` with `pnpm ci:gate:schema-quality` / **`RELATIONS_DRIFT` as error**, extractor support for self-table composite second legs, `staffing_plans.approved_by` → employees, grievance category composite self-FK. See `HR_SCHEMA_UPGRADE_GUIDE.md` and `SCHEMA_DIAGRAM.md`.
+- **SWOT Proposal Release:** Adds Grievance Management (2 tables) and Loan Management (2 tables) based on senior HR director SWOT analysis. Closes critical legal/compliance gap (grievances) and APAC/MEA market gap (salary advances/loans). New workflow state machines, branded IDs, 8 new pgEnums, ERDs, and Zod insert schemas. See `.reports/hr-schema-swot-analysis.md`.
+- **Phase 10 (Commission & Sales Team Release):** Adds commission plans, tiers, entries, territories, territory rules, sales teams, and members so compensation can be modeled end-to-end. It closes the strategic HR gap for incentive and territory management while keeping all data within tenant boundaries.
+- **Phase 9 to 6 Recap:** Employee Experience, Workforce Strategy, People Analytics, and Global Workforce domains remain active, with analytics fact tables partitioned manually as documented in `SCHEMA_DIAGRAM.md`.
 
-### Legacy Analysis
+## 🧭 Naming & Domain Sequencing
 
-- `LEGACY-COMPARISON-ANALYSIS.md` - Detailed comparison with legacy system
-- `LEGACY-GAP-SUMMARY.md` - Summary of gaps identified
-
-### Phase Implementation Details
-
-- `PHASE0-REFERENCE.md` - Phase 0 reference documentation
-- `PHASE0-STATUS.md` - Phase 0 status tracking
-- `PHASE0-VALIDATION-COMPLETE.md` - Phase 0 validation completion
-- `PHASE2-IMPLEMENTATION-SUMMARY.md` - Phase 2 implementation summary
-- `PHASE3-IMPLEMENTATION-SUMMARY.md` - Phase 3 implementation summary
-- `PHASE4-IMPLEMENTATION-SUMMARY.md` - Phase 4 implementation summary
-
-### Implementation Proposals
-
-- `IMPLEMENTATION-PROPOSAL.md` - Original detailed implementation proposal
+- Naming conventions mirror the root schema README: tables use the `hr.` prefix, lower_snake_case identifiers, tenant-scoped UUID PKs, and enums defined centrally in `_enums.ts`. Consult `../README.md` for the canonical list and naming rules before adding new tables.
+- Domains are grouped by business responsibility, not the chronological creation order. Use `SCHEMA_DIAGRAM.md` for the current domain map and the `HR_SCHEMA_UPGRADE_GUIDE.md` (below) for past upgrade sequencing, so future modules preserve the structural narrative.
 
 ---
 
@@ -66,59 +52,50 @@ The following documents have been moved to the `archive/` folder as they are no 
 ```
 hr-docs/
 ├── README.md (this file)
-├── archive/                          # Archived documents
-│   ├── LEGACY-COMPARISON-ANALYSIS.md
-│   ├── LEGACY-GAP-SUMMARY.md
-│   ├── PHASE0-REFERENCE.md
-│   ├── PHASE0-STATUS.md
-│   ├── PHASE0-VALIDATION-COMPLETE.md
-│   ├── PHASE2-IMPLEMENTATION-SUMMARY.md
-│   ├── PHASE3-IMPLEMENTATION-SUMMARY.md
-│   ├── PHASE4-IMPLEMENTATION-SUMMARY.md
-│   └── IMPLEMENTATION-PROPOSAL.md
 ├── ADR-001-domain-file-split.md
 ├── ADR-002-circular-fk-handling.md
 ├── ADR-003-meta-types-integration.md
 ├── CIRCULAR_FKS.md
+├── RELATIONS_DRIFT_REMEDIATION.md
 ├── PROJECT-INDEX.md
+├── HR_SCHEMA_UPGRADE_GUIDE.md
 ├── SCHEMA_DIAGRAM.md
 ├── SCHEMA_LOCKDOWN.md
-├── TRAINING-TO-LEARNING-MIGRATION.md
-├── UPGRADE-EXECUTIVE-SUMMARY.md
-├── UPGRADE-PLAN.md
-└── UPGRADE-QUICKREF.md
+└── TRAINING-TO-LEARNING-MIGRATION.md
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-1. **New to the HR Schema?** Start with [README.md](../README.md)
-2. **Need to understand conventions?** Read [SCHEMA_LOCKDOWN.md](./SCHEMA_LOCKDOWN.md)
-3. **Looking for specific tables?** Check the table catalog in [README.md](../README.md)
-4. **Need to understand relationships?** View [SCHEMA_DIAGRAM.md](./SCHEMA_DIAGRAM.md)
-5. **Implementing changes?** Review [ADR-003](./ADR-003-meta-types-integration.md) for meta-types usage
+1. **New to the HR Schema?** Start with [README.md](../README.md).
+2. **Need governance clarity?** Read [SCHEMA_LOCKDOWN.md](./SCHEMA_LOCKDOWN.md).
+3. **Looking for relationships?** View [SCHEMA_DIAGRAM.md](./SCHEMA_DIAGRAM.md).
+4. **Planning upgrades?** Follow [HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md) for P0 cadence and documentation expectations.
+5. **Implementing cross-domain changes?** Reference [ADR-003](./ADR-003-meta-types-integration.md) to understand shared validation helpers.
+6. **Planning a migration?** Follow [TRAINING-TO-LEARNING-MIGRATION.md](./TRAINING-TO-LEARNING-MIGRATION.md).
+7. **Changing FKs or `hrRelations`?** Run `pnpm ci:gate:schema-quality` from the repo root (`RELATIONS_DRIFT` is an error). See [RELATIONS_DRIFT_REMEDIATION.md](./RELATIONS_DRIFT_REMEDIATION.md).
 
 ---
 
 ## 📊 Schema Statistics
 
-- **Total Tables:** 97
-- **Total Enums:** 80+
-- **Total Domains:** 13 (People, Employment, Benefits, Payroll, Attendance, Talent, Recruitment, Learning, Operations, Employee Experience, Workforce Strategy, People Analytics, Global Workforce)
+- **Total Tables:** 146 (see `HR_SCHEMA_UPGRADE_GUIDE.md` P0 domain placement audit)
+- **Total Enums:** 94+
+- **Total Domain modules:** 27 (+ `_schema`, `_enums`, `_zodShared`, `_relations`, `index`, `onboarding` pointer)
 - **Documentation Files:** 8 active
-- **Last Major Update:** Phase 6-9 Strategic Enhancements (2026-03-29)
+- **Last Major Update:** SWOT Proposal Release — Grievance & Loan Management (2026-03)
 
 ---
 
 ## 🔄 Maintenance
 
-- Archive phase-specific documents after implementation completion
-- Keep ADRs and core references indefinitely
-- Update PROJECT-INDEX.md when adding new documentation
-- Review archived documents annually for potential deletion
+- Archive supporting phase documentation only after the associated domain has stabilized and the knowledge has been captured elsewhere.
+- Retain ADRs, governance, and diagram documents indefinitely.
+- Update this README and `PROJECT-INDEX.md` whenever a new release or governance change lands.
+- Quarterly-review the circular FK registry and soft-delete strategy for drift.
 
 ---
 
-**Generated:** 2026-03-29
+**Generated:** 2026-10-02
 **Maintained by:** Database Architecture Team

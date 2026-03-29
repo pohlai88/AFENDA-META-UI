@@ -3,8 +3,14 @@
 > **Schema:** `hr` (`pgSchema("hr")`)
 > **Package:** `@afenda/db`
 > **Path:** `packages/db/src/schema/hr/`
-
 > **Status:** Production-ready with comprehensive meta-types integration and enterprise-grade validation
+
+## Schema Content & Naming Overview
+
+- **What the schema carries:** the HR schema orchestrates every tenant-scoped HR domain, from org hierarchy and compensation to learning, mobility, experience, analytics, and the newly added grievance and loan management modules. Each domain file groups logically related tables even if their physical creation order changed over time (newer modules appended, not interleaved).
+- **Domain catalog note:** table definitions live in domain files by responsibility (e.g., `people.ts` for org structure, `learning.ts` for LMS, `globalWorkforce.ts` for mobility). The organization reflects business groupings rather than chronology; refer to `hr-docs/SCHEMA_DIAGRAM.md` for the ERD map and version timeline.
+- **Naming conventions:** every table begins with `hr.` (via `pgSchema("hr")`) and uses lower_snake_case with plural nouns; columns also follow lower_snake_case, UUID primary keys, `(tenantId, ...)` composite foreign keys, and `tenantIsolationPolicies` guard each domain table. Enum names are defined in `_enums.ts` and referenced via `hrSchema.enum`; Zod schemas (e.g., `insertEmployeeSchema`) mirror table constraints and use branded UUID schemas from `_zodShared.ts`.
+- **Upgrade focus:** schema updates follow the global upgrade guide (`hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md`) to ensure consistent domain sequencing, migration scripts, and documentation of new modules before releasing.
 
 ## 📚 Documentation Index
 
@@ -13,6 +19,7 @@
 - **[CIRCULAR_FKS.md](./hr-docs/CIRCULAR_FKS.md)** — Deferred FK documentation
 - **[SCHEMA_DIAGRAM.md](./hr-docs/SCHEMA_DIAGRAM.md)** — ERD diagrams for all domains
 - **[PROJECT-INDEX.md](./hr-docs/PROJECT-INDEX.md)** — Project structure and file index
+- **[HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md)** — P0 cleanup cadence, version timeline, and upgrade workflow
 - **[ADR-001](./hr-docs/ADR-001-domain-file-split.md)** — Domain split rationale
 - **[ADR-002](./hr-docs/ADR-002-circular-fk-handling.md)** — Circular FK handling
 - **[ADR-003](./hr-docs/ADR-003-meta-types-integration.md)** — meta-types integration rationale
@@ -24,34 +31,27 @@
 ```
 hr/
 ├── README.md                  ← You are here
-├── hr-docs/                   ← Documentation directory
-│   ├── README.md              ← Documentation index
-│   ├── SCHEMA_LOCKDOWN.md     ← Governance & conventions
-│   ├── CIRCULAR_FKS.md        ← Deferred FK documentation
-│   ├── SCHEMA_DIAGRAM.md      ← ERD diagrams
-│   ├── PROJECT-INDEX.md       ← Project structure
-│   └── ADR-*.md               ← Architecture decision records
-├── _schema.ts                 ← pgSchema("hr") definition
-├── _enums.ts                  ← 80+ pgEnum + Zod enum definitions
-├── _zodShared.ts              ← Branded ID schemas + meta-types integration
-├── _relations.ts              ← String-based relation catalog
-├── index.ts                   ← Barrel re-exports (sole public API)
-├── people.ts                  ← Org structure (5 tables)
-├── employment.ts              ← Contracts & benefits (3 tables)
-├── benefits.ts                ← Benefits management (5 tables)
-├── payroll.ts                 ← Compensation (10 tables)
-├── attendance.ts              ← Leave & time (10 tables)
-├── talent.ts                  ← Performance & skills (7 tables)
-├── recruitment.ts             ← Hiring pipeline (7 tables)
-├── learning.ts                ← Learning & development (16 tables)
-├── operations.ts              ← Ops & compliance (8 tables)
-├── employeeExperience.ts      ← Self-service & engagement (6 tables)
-├── workforceStrategy.ts       ← Succession & career planning (8 tables)
-├── peopleAnalytics.ts         ← Analytics & reporting (6 tables)
-└── globalWorkforce.ts         ← Global mobility & compliance (6 tables)
+├── hr-docs/                   ← Docs incl. HR_SCHEMA_UPGRADE_GUIDE.md (P0 domain registry)
+├── _schema.ts                 ← pgSchema("hr") — every table is hr.*
+├── _enums.ts                  ← pgEnum + Zod mirrors
+├── _zodShared.ts              ← Branded IDs, workflows
+├── _relations.ts              ← Relation catalog
+├── index.ts                   ← Barrel exports (public API)
+├── people.ts (5)              employment.ts (3)           benefits.ts (5)
+├── payroll.ts (10)            attendance.ts (10)          attendanceEnhancements.ts (5)
+├── talent.ts (5)              skills.ts (7)               recruitment.ts (10)
+├── learning.ts (16)           operations.ts (5)           policyAcknowledgments.ts (2)
+├── employeeExperience.ts (6)  workforceStrategy.ts (6)    peopleAnalytics.ts (6)
+├── globalWorkforce.ts (6)     expenses.ts (6)            engagement.ts (3)
+├── leaveEnhancements.ts (3)   taxCompliance.ts (5)       lifecycle.ts (4)
+├── travel.ts (4)              workforcePlanning.ts (2)   appraisalTemplates.ts (3)
+├── compensation.ts (5)        grievances.ts (2)          loans.ts (2)
+└── onboarding.ts              ← Pointer only (tables in operations.ts)
 ```
 
-**Total: 97 tables across 13 domain files, 80+ enums, 100+ branded ID schemas**
+**Total: 146 tables across 27 domain modules (+ infra files), 90+ enums, 100+ branded ID schemas**
+
+Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md) (P0 domain placement audit).
 
 ---
 
@@ -59,15 +59,13 @@ hr/
 
 ### `people.ts` — Org Structure (5 tables)
 
-| Table                       | SQL Name                         | Purpose                                 | Unique Key                                        |
-| --------------------------- | -------------------------------- | --------------------------------------- | ------------------------------------------------- |
-| `departments`               | `hr.departments`                 | Organisational units with hierarchy     | `(tenantId, departmentCode)`                      |
-| `jobPositions`              | `hr.job_positions`               | Roles within departments with headcount | `(tenantId, positionCode)`                        |
-| `employees`                 | `hr.employees`                   | Core employee master record             | `(tenantId, employeeNumber)`, `(tenantId, email)` |
-| `employeeDependents`        | `hr.employee_dependents`         | Dependent family members                | —                                                 |
-| `employeeEmergencyContacts` | `hr.employee_emergency_contacts` | Emergency contact information           | —                                                 |
-| `employeeAddresses`         | `hr.employee_addresses`          | Residential and postal addresses        | —                                                 |
-| `costCenters`               | `hr.cost_centers`                | Financial cost allocation units         | `(tenantId, costCenterCode)`                      |
+| Table            | SQL Name           | Purpose                                 | Unique Key                                        |
+| ---------------- | ------------------ | --------------------------------------- | ------------------------------------------------- |
+| `departments`    | `hr.departments`   | Organisational units with hierarchy     | `(tenantId, departmentCode)`                      |
+| `jobTitles`      | `hr.job_titles`    | Normalized job title catalog            | `(tenantId, titleCode)`                           |
+| `jobPositions`   | `hr.job_positions` | Roles within departments with headcount | `(tenantId, positionCode)`                        |
+| `employees`      | `hr.employees`     | Core employee master record             | `(tenantId, employeeNumber)`, `(tenantId, email)` |
+| `costCenters`    | `hr.cost_centers`  | Financial cost allocation units         | `(tenantId, costCenterCode)`                      |
 
 **Self-references:**
 
@@ -83,15 +81,17 @@ hr/
 
 ---
 
-### `employment.ts` — Contracts & Benefits (3 tables)
+### `employment.ts` — Contracts & legacy benefit catalog (3 tables)
 
 | Table                 | SQL Name                  | Purpose                              | Unique Key                   |
 | --------------------- | ------------------------- | ------------------------------------ | ---------------------------- |
 | `employmentContracts` | `hr.employment_contracts` | Contract records per employee        | `(tenantId, contractNumber)` |
-| `benefitPlans`        | `hr.benefit_plans`        | Company-wide benefit plans catalog   | `(tenantId, planCode)`       |
-| `employeeBenefits`    | `hr.employee_benefits`    | Employee enrollment in benefit plans | —                            |
+| `benefitPlans`        | `hr.benefit_plans`        | Simpler plan catalog (legacy path)   | `(tenantId, planCode)`       |
+| `employeeBenefits`    | `hr.employee_benefits`    | Enrollment rows tied to `benefitPlans` | —                          |
 
-**Key relationships:** employmentContracts → employees, employeeBenefits → employees + benefitPlans
+**Key relationships:** employmentContracts → employees, employeeBenefits → employees + benefitPlans.
+
+**Note:** Rich benefits (providers, claims, dependent coverage) live in `benefits.ts`. The two models do not share FKs; see P0 domain audit in `HR_SCHEMA_UPGRADE_GUIDE.md` before consolidating.
 
 ---
 
@@ -99,10 +99,10 @@ hr/
 
 | Table                       | SQL Name                         | Purpose                            | Unique Key                 |
 | --------------------------- | -------------------------------- | ---------------------------------- | -------------------------- |
-| `benefitProviders`          | `hr.benefit_providers`           | Insurance and benefits providers   | `(tenantId, providerCode)` |
+| `benefitProviders`          | `hr.benefit_providers`           | Insurance and benefits providers   | —                          |
 | `benefitPlanBenefits`       | `hr.benefit_plan_benefits`       | Provider-plan associations         | —                          |
 | `benefitEnrollments`        | `hr.benefit_enrollments`         | Employee enrollment in benefits    | —                          |
-| `benefitDependentCoverages` | `hr.benefit_dependent_coverages` | Dependent coverage details         | —                          |
+| `benefitDependentCoverage`  | `hr.benefit_dependent_coverage`  | Dependent coverage details         | —                          |
 | `benefitClaims`             | `hr.benefit_claims`              | Insurance and reimbursement claims | `(tenantId, claimNumber)`  |
 
 ---
@@ -218,25 +218,33 @@ hr/
 
 ---
 
-### `operations.ts` — Ops & Compliance (8 tables)
+### `policyAcknowledgments.ts` — HR policies & attestations (2 tables)
+
+| Table                            | SQL Name                             | Purpose                                      | Unique Key                                               |
+| -------------------------------- | ------------------------------------ | -------------------------------------------- | -------------------------------------------------------- |
+| `hrPolicyDocuments`              | `hr.hr_policy_documents`             | Versioned policy PDFs / URLs by category     | `(tenantId, policyCode, versionLabel)` (soft-delete aware) |
+| `employeePolicyAcknowledgments`    | `hr.employee_policy_acknowledgments` | Employee attestation per policy version      | `(tenantId, employeeId, policyDocumentId, policyVersionAtAck)` |
+
+**CHECK constraints:** `hr_policy_documents_effective_range` — `effectiveTo` is null or on/after `effectiveFrom`.
+
+---
+
+### `operations.ts` — Ops & Compliance (5 tables)
 
 | Table                  | SQL Name                   | Purpose                               | Unique Key                                 |
 | ---------------------- | -------------------------- | ------------------------------------- | ------------------------------------------ |
 | `employeeDocuments`    | `hr.employee_documents`    | Employee document management          | `(tenantId, documentNumber)`               |
-| `expenseClaims`        | `hr.expense_claims`        | Expense reimbursement requests        | `(tenantId, claimNumber)`                  |
-| `expenseLines`         | `hr.expense_lines`         | Line items per expense claim          | —                                          |
 | `disciplinaryActions`  | `hr.disciplinary_actions`  | Formal disciplinary records           | `(tenantId, actionNumber)`                 |
-| `exitInterviews`       | `hr.exit_interviews`       | Exit interview feedback records       | `(tenantId, interviewNumber)`              |
 | `onboardingChecklists` | `hr.onboarding_checklists` | Template checklists per dept/position | `(tenantId, checklistCode)`                |
-| `onboardingTasks`      | `hr.onboarding_tasks`      | Individual task definitions           | —                                          |
-| `onboardingProgress`   | `hr.onboarding_progress`   | Employee progress per task            | `(tenantId, employeeId, onboardingTaskId)` |
+| `onboardingTasks`      | `hr.onboarding_tasks`      | Task definitions (category, doc/ack flags, optional link to `hr_policy_documents`) | —                                          |
+| `onboardingProgress`   | `hr.onboarding_progress`   | Per-employee task state (`detailedTaskStatus`, optional submitted document URL, task acknowledgment timestamp) | `(tenantId, employeeId, onboardingTaskId)` |
 
 **CHECK constraints:**
 
-- `expense_claims_total_amount_check`: `totalAmount >= 0`
-- `expense_lines_amount_check`: `amount > 0`
 - `onboarding_tasks_order_check`: `taskOrder > 0`
 - `onboarding_tasks_days_check`: `daysFromStart >= 0`
+- `onboarding_tasks_policy_when_ack_required`: acknowledgment tasks must reference a policy document
+- `onboarding_progress_completed_implies_detailed_done`: coarse `onboarding_status = completed` requires `detailed_task_status` in (`completed`, `skipped`)
 
 ---
 
@@ -283,7 +291,7 @@ hr/
 | `reportSubscriptions` | `hr.report_subscriptions` | Scheduled report delivery                          | —                           |
 | `analyticsDimensions` | `hr.analytics_dimensions` | Slowly changing dimensions for historical analysis | —                           |
 
-**Key features:** Data warehouse with partitioned fact tables, KPI tracking, dashboards, and scheduled reporting
+**Key features:** Data warehouse with partitioned fact tables, KPI tracking, dashboards, and scheduled reporting. JSON-serialized dashboard and export payloads use **GIN** expression indexes (`::jsonb`) for containment-style queries at scale.
 
 ---
 
@@ -325,6 +333,9 @@ Defined in `_enums.ts`. Each has a `pgEnum` for the database and a matching `z.e
 | **Workforce Strategy**  | `successionReadiness`, `talentPoolStatus`, `careerPathStatus`, `compensationCycleStatus`                                                                         |
 | **Analytics**           | `metricType`, `metricFrequency`, `exportFormat`, `exportStatus`, `dashboardType`                                                                                 |
 | **Global**              | `assignmentType`, `assignmentStatus`, `permitType`, `permitStatus`, `complianceType`, `complianceStatus`                                                         |
+| **Grievance / Loan**    | `grievanceCategoryType`, `grievanceStatus`, `grievancePriority`, `loanCategory`, `loanStatus`, `loanRepaymentFrequency`                                         |
+| **Onboarding / Policy** | `onboardingTaskStatus`, `onboardingTaskCategory`, `policyDocumentCategory`, `policyAcknowledgmentMethod`                                                        |
+| **Attendance upgrade**  | `shiftSwapStatus` (shift swap workflow), plus existing `attendanceRequestType`, `overtimeRuleType`, `biometricDeviceType`                                          |
 
 ---
 

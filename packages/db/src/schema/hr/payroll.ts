@@ -1,3 +1,9 @@
+// ============================================================================
+// HR DOMAIN: PAYROLL & COMPENSATION (Phase 2)
+// Salary, pay periods, entries/lines, tax & statutory, adjustments, payslips, payment distributions (10 tables).
+// Tables: salary_components, employee_salaries, payroll_periods, payroll_entries, payroll_lines,
+//         tax_brackets, statutory_deductions, payroll_adjustments, payslips, payment_distributions
+// ============================================================================
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -31,6 +37,7 @@ import {
   taxTypeEnum,
   statutoryDeductionTypeEnum,
   payrollAdjustmentTypeEnum,
+  PayrollAdjustmentTypeSchema,
 } from "./_enums.js";
 import { employees } from "./people.js";
 import {
@@ -39,6 +46,13 @@ import {
   PayrollAdjustmentIdSchema,
   PayslipIdSchema,
   PaymentDistributionIdSchema,
+  SalaryComponentIdSchema,
+  EmployeeSalaryIdSchema,
+  PayrollPeriodIdSchema,
+  PayrollEntryIdSchema,
+  PayrollLineIdSchema,
+  EmployeeIdSchema,
+  hrTenantIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -88,8 +102,8 @@ export const employeeSalaries = hrSchema.table(
     salaryComponentId: uuid("salary_component_id").notNull(),
     amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
     currencyId: integer("currency_id").notNull(),
-    effectiveDate: date("effective_date").notNull(),
-    endDate: date("end_date"),
+    effectiveDate: date("effective_date", { mode: "string" }).notNull(),
+    endDate: date("end_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -126,9 +140,9 @@ export const payrollPeriods = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     periodCode: text("period_code").notNull(),
     ...nameColumn,
-    startDate: date("start_date").notNull(),
-    endDate: date("end_date").notNull(),
-    paymentDate: date("payment_date").notNull(),
+    startDate: date("start_date", { mode: "string" }).notNull(),
+    endDate: date("end_date", { mode: "string" }).notNull(),
+    paymentDate: date("payment_date", { mode: "string" }).notNull(),
     payrollStatus: payrollStatusEnum("payroll_status").notNull().default("draft"),
     notes: text("notes"),
     ...timestampColumns,
@@ -167,7 +181,7 @@ export const payrollEntries = hrSchema.table(
     currencyId: integer("currency_id").notNull(),
     paymentMethod: paymentMethodEnum("payment_method").notNull().default("bank_transfer"),
     paymentReference: text("payment_reference"),
-    paymentDate: date("payment_date"),
+    paymentDate: date("payment_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -193,6 +207,10 @@ export const payrollEntries = hrSchema.table(
     ),
     index("payroll_entries_tenant_idx").on(table.tenantId),
     index("payroll_entries_period_idx").on(table.tenantId, table.payrollPeriodId),
+    index("payroll_entries_employee_idx").on(table.tenantId, table.employeeId),
+    index("payroll_entries_employee_payment_idx")
+      .on(table.tenantId, table.employeeId, table.paymentDate)
+      .where(sql`${table.deletedAt} IS NULL`),
     ...tenantIsolationPolicies("payroll_entries"),
     serviceBypassPolicy("payroll_entries"),
   ]
@@ -248,8 +266,8 @@ export const taxBrackets = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     country: countryEnum("country").notNull(),
     taxType: taxTypeEnum("tax_type").notNull(),
-    effectiveFrom: date("effective_from").notNull(),
-    effectiveTo: date("effective_to"),
+    effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
+    effectiveTo: date("effective_to", { mode: "string" }),
     minIncome: numeric("min_income", { precision: 15, scale: 2 }).notNull(),
     maxIncome: numeric("max_income", { precision: 15, scale: 2 }),
     rate: numeric("rate", { precision: 5, scale: 4 }).notNull(), // Tax rate as decimal (e.g., 0.2250 for 22.5%)
@@ -292,8 +310,8 @@ export const statutoryDeductions = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     country: countryEnum("country").notNull(),
     deductionType: statutoryDeductionTypeEnum("deduction_type").notNull(),
-    effectiveFrom: date("effective_from").notNull(),
-    effectiveTo: date("effective_to"),
+    effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
+    effectiveTo: date("effective_to", { mode: "string" }),
     employeeRate: numeric("employee_rate", { precision: 5, scale: 4 }).notNull(), // Employee contribution rate
     employerRate: numeric("employer_rate", { precision: 5, scale: 4 }).notNull(), // Employer contribution rate
     maxMonthlySalary: numeric("max_monthly_salary", { precision: 15, scale: 2 }), // Salary cap for calculation
@@ -399,7 +417,7 @@ export const payslips = hrSchema.table(
     payrollEntryId: uuid("payroll_entry_id").notNull(),
     payslipNumber: text("payslip_number").notNull(),
     payslipPeriod: text("payslip_period").notNull(), // e.g., "January 2024"
-    payDate: date("pay_date").notNull(),
+    payDate: date("pay_date", { mode: "string" }).notNull(),
     documentUrl: text("document_url"), // URL to PDF payslip
     documentHash: text("document_hash"), // For integrity verification
     isAccessible: boolean("is_accessible").notNull().default(true), // Employee can view
@@ -488,8 +506,8 @@ export const paymentDistributions = hrSchema.table(
 // ============================================================================
 
 export const insertSalaryComponentSchema = z.object({
-  id: z.string().uuid().optional(),
-  tenantId: z.number().int().positive(),
+  id: SalaryComponentIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
   componentCode: z.string().min(2).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
@@ -513,10 +531,10 @@ export const insertSalaryComponentSchema = z.object({
 });
 
 export const insertEmployeeSalarySchema = z.object({
-  id: z.string().uuid().optional(),
-  tenantId: z.number().int().positive(),
-  employeeId: z.string().uuid(),
-  salaryComponentId: z.string().uuid(),
+  id: EmployeeSalaryIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  employeeId: EmployeeIdSchema,
+  salaryComponentId: SalaryComponentIdSchema,
   amount: z.number().positive(),
   currencyId: z.number().int().positive(),
   effectiveDate: z.string().date(),
@@ -525,8 +543,8 @@ export const insertEmployeeSalarySchema = z.object({
 });
 
 export const insertPayrollPeriodSchema = z.object({
-  id: z.string().uuid().optional(),
-  tenantId: z.number().int().positive(),
+  id: PayrollPeriodIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
   periodCode: z.string().min(2).max(50),
   name: z.string().min(2).max(100),
   startDate: z.string().date(),
@@ -537,10 +555,10 @@ export const insertPayrollPeriodSchema = z.object({
 });
 
 export const insertPayrollEntrySchema = z.object({
-  id: z.string().uuid().optional(),
-  tenantId: z.number().int().positive(),
-  payrollPeriodId: z.string().uuid(),
-  employeeId: z.string().uuid(),
+  id: PayrollEntryIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  payrollPeriodId: PayrollPeriodIdSchema,
+  employeeId: EmployeeIdSchema,
   grossPay: z.number().nonnegative().default(0),
   totalDeductions: z.number().nonnegative().default(0),
   netPay: z.number().nonnegative().default(0),
@@ -554,10 +572,10 @@ export const insertPayrollEntrySchema = z.object({
 });
 
 export const insertPayrollLineSchema = z.object({
-  id: z.string().uuid().optional(),
-  tenantId: z.number().int().positive(),
-  payrollEntryId: z.string().uuid(),
-  salaryComponentId: z.string().uuid(),
+  id: PayrollLineIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  payrollEntryId: PayrollEntryIdSchema,
+  salaryComponentId: SalaryComponentIdSchema,
   amount: z.number(),
   quantity: z.number().positive().default(1),
   notes: z.string().max(500).optional(),
@@ -567,7 +585,7 @@ export const insertPayrollLineSchema = z.object({
 export const insertTaxBracketSchema = z
   .object({
     id: TaxBracketIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     country: z.enum([
       "US",
       "SG",
@@ -612,7 +630,7 @@ export const insertTaxBracketSchema = z
 export const insertStatutoryDeductionSchema = z
   .object({
     id: StatutoryDeductionIdSchema.optional(),
-    tenantId: z.number().int().positive(),
+    tenantId: hrTenantIdSchema,
     country: z.enum([
       "US",
       "SG",
@@ -675,24 +693,12 @@ export const insertStatutoryDeductionSchema = z
 export const insertPayrollAdjustmentSchema = z
   .object({
     id: PayrollAdjustmentIdSchema.optional(),
-    tenantId: z.number().int().positive(),
-    payrollEntryId: z.string().uuid(),
-    adjustmentType: z.enum([
-      "bonus",
-      "commission",
-      "overtime",
-      "allowance",
-      "deduction",
-      "correction",
-      "backpay",
-      "reimbursement",
-      "loan",
-      "garnishment",
-      "other",
-    ]),
+    tenantId: hrTenantIdSchema,
+    payrollEntryId: PayrollEntryIdSchema,
+    adjustmentType: PayrollAdjustmentTypeSchema,
     amount: z.number(),
     reason: z.string().min(5).max(500),
-    approvedBy: z.string().uuid().optional(),
+    approvedBy: EmployeeIdSchema.optional(),
     approvedAt: z.string().date().optional(),
     isTaxable: z.boolean().default(true),
     isRecurring: z.boolean().default(false),
@@ -713,8 +719,8 @@ export const insertPayrollAdjustmentSchema = z
 
 export const insertPayslipSchema = z.object({
   id: PayslipIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  payrollEntryId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  payrollEntryId: PayrollEntryIdSchema,
   payslipNumber: z.string().min(5).max(50),
   payslipPeriod: z.string().min(3).max(50),
   payDate: z.string().date(),
@@ -728,8 +734,8 @@ export const insertPayslipSchema = z.object({
 
 export const insertPaymentDistributionSchema = z.object({
   id: PaymentDistributionIdSchema.optional(),
-  tenantId: z.number().int().positive(),
-  payrollEntryId: z.string().uuid(),
+  tenantId: hrTenantIdSchema,
+  payrollEntryId: PayrollEntryIdSchema,
   batchId: z.string().min(3).max(50),
   transactionId: z.string().max(100).optional(),
   paymentMethod: z.enum(["bank_transfer", "cash", "check", "payroll_card"]),

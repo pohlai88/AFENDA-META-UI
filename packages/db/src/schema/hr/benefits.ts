@@ -1,12 +1,10 @@
 // ============================================================================
-// HR DOMAIN: BENEFITS MODULE (Phase 1)
-// Implements: benefit_providers, benefit_enrollments, benefit_dependent_coverage,
-// benefit_claims, benefit_plan_benefits
+// HR DOMAIN: BENEFITS & COVERAGE (Phase 1)
+// Defines provider catalogs, plan mappings, enrollments, dependent coverage, and claims.
+// Tables: benefit_providers, benefit_enrollments, benefit_dependent_coverage, benefit_claims, benefit_plan_benefits
 // ============================================================================
-
 import { sql } from "drizzle-orm";
 import {
-  boolean,
   check,
   foreignKey,
   index,
@@ -20,6 +18,7 @@ import {
 import { z } from "zod/v4";
 
 import { hrSchema } from "./_schema.js";
+import { employees } from "./people.js";
 import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
 import {
   auditColumns,
@@ -32,14 +31,15 @@ import {
   BenefitEnrollmentIdSchema,
   BenefitDependentCoverageIdSchema,
   BenefitClaimIdSchema,
+  BenefitPlanBenefitIdSchema,
+  EmployeeIdSchema,
   businessEmailSchema,
   internationalPhoneSchema,
   bankAccountSchema,
   personNameSchema,
-  statusSchema,
   currencyAmountSchema,
-  refineDateRange,
-  refineConditionalRequired,
+  hrTenantIdSchema,
+  hrAuditUserIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -61,8 +61,8 @@ export const benefitProviders = hrSchema.table(
     ...auditColumns,
   },
   (table) => [
-    index().on(table.tenantId),
-    index().on(table.status),
+    index("benefit_providers_tenant_idx").on(table.tenantId),
+    index("benefit_providers_status_idx").on(table.status),
     ...tenantIsolationPolicies("benefit_providers"),
     serviceBypassPolicy("benefit_providers"),
   ]
@@ -92,6 +92,10 @@ export const benefitEnrollments = hrSchema.table(
       columns: [table.tenantId, table.benefitProviderId],
       foreignColumns: [benefitProviders.tenantId, benefitProviders.id],
     }),
+    foreignKey({
+      columns: [table.tenantId, table.employeeId],
+      foreignColumns: [employees.tenantId, employees.id],
+    }),
     check(
       "enrollment_date_order",
       sql`${table.expiryDate} IS NULL OR ${table.expiryDate} >= ${table.enrollmentDate}`
@@ -100,9 +104,9 @@ export const benefitEnrollments = hrSchema.table(
       "enrollment_status_valid",
       sql`${table.status} IN ('pending', 'active', 'cancelled', 'expired')`
     ),
-    index().on(table.tenantId),
-    index().on(table.employeeId),
-    index().on(table.status),
+    index("benefit_enrollments_tenant_idx").on(table.tenantId),
+    index("benefit_enrollments_employee_idx").on(table.employeeId),
+    index("benefit_enrollments_status_idx").on(table.status),
     ...tenantIsolationPolicies("benefit_enrollments"),
     serviceBypassPolicy("benefit_enrollments"),
   ]
@@ -135,8 +139,8 @@ export const benefitDependentCoverage = hrSchema.table(
       "valid_relationship",
       sql`${table.relationship} IN ('spouse', 'child', 'parent', 'sibling', 'other')`
     ),
-    index().on(table.tenantId),
-    index().on(table.benefitEnrollmentId),
+    index("benefit_dependent_coverage_tenant_idx").on(table.tenantId),
+    index("benefit_dependent_coverage_enrollment_idx").on(table.benefitEnrollmentId),
     ...tenantIsolationPolicies("benefit_dependent_coverage"),
     serviceBypassPolicy("benefit_dependent_coverage"),
   ]
@@ -168,6 +172,10 @@ export const benefitClaims = hrSchema.table(
       columns: [table.tenantId, table.benefitEnrollmentId],
       foreignColumns: [benefitEnrollments.tenantId, benefitEnrollments.id],
     }),
+    foreignKey({
+      columns: [table.tenantId, table.reviewedBy],
+      foreignColumns: [employees.tenantId, employees.id],
+    }),
     check("claim_amount_positive", sql`${table.claimAmount} > 0`),
     check(
       "approved_amount_valid",
@@ -177,9 +185,9 @@ export const benefitClaims = hrSchema.table(
       "claim_status_valid",
       sql`${table.claimStatus} IN ('submitted', 'under_review', 'approved', 'rejected', 'paid')`
     ),
-    index().on(table.tenantId),
-    index().on(table.benefitEnrollmentId),
-    index().on(table.claimStatus),
+    index("benefit_claims_tenant_idx").on(table.tenantId),
+    index("benefit_claims_enrollment_idx").on(table.benefitEnrollmentId),
+    index("benefit_claims_claim_status_idx").on(table.claimStatus),
     ...tenantIsolationPolicies("benefit_claims"),
     serviceBypassPolicy("benefit_claims"),
   ]
@@ -210,14 +218,14 @@ export const benefitPlanBenefits = hrSchema.table(
       columns: [table.tenantId, table.benefitProviderId],
       foreignColumns: [benefitProviders.tenantId, benefitProviders.id],
     }),
-    uniqueIndex()
+    uniqueIndex("benefit_plan_benefits_tenant_provider_plan_active_unique")
       .on(table.tenantId, table.benefitProviderId, table.planName)
       .where(sql`${table.deletedAt} IS NULL`),
     check("premium_positive", sql`${table.monthlyPremium} > 0`),
     check("deductible_valid", sql`${table.deductible} IS NULL OR ${table.deductible} >= 0`),
-    index().on(table.tenantId),
-    index().on(table.benefitProviderId),
-    index().on(table.coverageType),
+    index("benefit_plan_benefits_tenant_idx").on(table.tenantId),
+    index("benefit_plan_benefits_provider_idx").on(table.benefitProviderId),
+    index("benefit_plan_benefits_coverage_type_idx").on(table.coverageType),
     ...tenantIsolationPolicies("benefit_plan_benefits"),
     serviceBypassPolicy("benefit_plan_benefits"),
   ]
@@ -233,14 +241,14 @@ export const benefitPlanBenefits = hrSchema.table(
  */
 export const insertBenefitProviderSchema = z.object({
   id: BenefitProviderIdSchema.optional(),
-  tenantId: z.string().uuid("Invalid tenant ID"),
+  tenantId: hrTenantIdSchema,
   name: personNameSchema,
   email: businessEmailSchema.optional(),
   phone: internationalPhoneSchema.optional(),
   bankAccount: bankAccountSchema.optional(),
   status: z.enum(["active", "inactive"]).default("active"),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional(),
+  createdBy: hrAuditUserIdSchema.optional(),
+  updatedBy: hrAuditUserIdSchema.optional(),
 });
 
 /**
@@ -250,15 +258,15 @@ export const insertBenefitProviderSchema = z.object({
 export const insertBenefitEnrollmentSchema = z
   .object({
     id: BenefitEnrollmentIdSchema.optional(),
-    tenantId: z.string().uuid("Invalid tenant ID"),
-    employeeId: z.string().uuid("Invalid employee ID"),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
     benefitProviderId: BenefitProviderIdSchema,
     planName: z.string().min(1, "Plan name required").max(100),
     enrollmentDate: z.string().date("Invalid enrollment date"),
     expiryDate: z.string().date("Invalid expiry date").optional(),
     status: z.enum(["pending", "active", "cancelled", "expired"]).default("pending"),
-    createdBy: z.string().uuid().optional(),
-    updatedBy: z.string().uuid().optional(),
+    createdBy: hrAuditUserIdSchema.optional(),
+    updatedBy: hrAuditUserIdSchema.optional(),
   })
   .refine(
     (data) => {
@@ -277,14 +285,14 @@ export const insertBenefitEnrollmentSchema = z
  */
 export const insertBenefitDependentCoverageSchema = z.object({
   id: BenefitDependentCoverageIdSchema.optional(),
-  tenantId: z.string().uuid("Invalid tenant ID"),
+  tenantId: hrTenantIdSchema,
   benefitEnrollmentId: BenefitEnrollmentIdSchema,
-  dependentName: personNameSchema,
+  name: personNameSchema,
   relationship: z.enum(["spouse", "child", "parent", "sibling", "other"]),
   dateOfBirth: z.string().date("Invalid date of birth"),
   status: z.enum(["active", "inactive"]).default("active"),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional(),
+  createdBy: hrAuditUserIdSchema.optional(),
+  updatedBy: hrAuditUserIdSchema.optional(),
 });
 
 /**
@@ -294,7 +302,7 @@ export const insertBenefitDependentCoverageSchema = z.object({
 export const insertBenefitClaimSchema = z
   .object({
     id: BenefitClaimIdSchema.optional(),
-    tenantId: z.string().uuid("Invalid tenant ID"),
+    tenantId: hrTenantIdSchema,
     benefitEnrollmentId: BenefitEnrollmentIdSchema,
     claimDate: z.string().date("Invalid claim date"),
     claimAmount: currencyAmountSchema(2),
@@ -304,9 +312,9 @@ export const insertBenefitClaimSchema = z
       .default("submitted"),
     description: z.string().max(500).optional(),
     reviewedAt: z.string().date().optional(),
-    reviewedBy: z.string().uuid().optional(),
-    createdBy: z.string().uuid().optional(),
-    updatedBy: z.string().uuid().optional(),
+    reviewedBy: EmployeeIdSchema.optional(),
+    createdBy: hrAuditUserIdSchema.optional(),
+    updatedBy: hrAuditUserIdSchema.optional(),
   })
   .refine(
     (data) => {
@@ -334,8 +342,8 @@ export const insertBenefitClaimSchema = z
  * Validates: plan name, coverage type, premium amount
  */
 export const insertBenefitPlanBenefitSchema = z.object({
-  id: z.string().uuid().optional(),
-  tenantId: z.string().uuid("Invalid tenant ID"),
+  id: BenefitPlanBenefitIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
   benefitProviderId: BenefitProviderIdSchema,
   planName: z.string().min(1, "Plan name required").max(100),
   description: z.string().max(500).optional(),
@@ -351,6 +359,6 @@ export const insertBenefitPlanBenefitSchema = z.object({
   deductible: currencyAmountSchema(2).optional(),
   monthlyPremium: currencyAmountSchema(2),
   status: z.enum(["active", "inactive"]).default("active"),
-  createdBy: z.string().uuid().optional(),
-  updatedBy: z.string().uuid().optional(),
+  createdBy: hrAuditUserIdSchema.optional(),
+  updatedBy: hrAuditUserIdSchema.optional(),
 });
