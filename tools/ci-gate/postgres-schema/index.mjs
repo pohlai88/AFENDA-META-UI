@@ -39,17 +39,17 @@ async function main() {
 
   // Phase 1: Extract truth model from Drizzle source
   const schemaPaths = [
-    resolve(repoRoot, "packages/db/src/schema-domain/sales/tables.ts"),
-    resolve(repoRoot, "packages/db/src/schema-platform/core/tenants.ts"),
-    resolve(repoRoot, "packages/db/src/schema-platform/core/appModules.ts"),
-    resolve(repoRoot, "packages/db/src/schema-platform/security/users.ts"),
-    resolve(repoRoot, "packages/db/src/schema-platform/security/roles.ts"),
-    resolve(repoRoot, "packages/db/src/schema-platform/security/permissions.ts"),
-    resolve(repoRoot, "packages/db/src/schema-platform/security/userRoles.ts"),
-    resolve(repoRoot, "packages/db/src/schema-meta/platform.ts"),
-    resolve(repoRoot, "packages/db/src/schema-meta/metadata.ts"),
-    resolve(repoRoot, "packages/db/src/schema-meta/tenantOverrides.ts"),
-    resolve(repoRoot, "packages/db/src/schema-meta/decisionAudit.ts"),
+    resolve(repoRoot, "packages/db/src/schema/sales/tables.ts"),
+    resolve(repoRoot, "packages/db/src/schema/core/tenants.ts"),
+    resolve(repoRoot, "packages/db/src/schema/core/appModules.ts"),
+    resolve(repoRoot, "packages/db/src/schema/security/users.ts"),
+    resolve(repoRoot, "packages/db/src/schema/security/roles.ts"),
+    resolve(repoRoot, "packages/db/src/schema/security/permissions.ts"),
+    resolve(repoRoot, "packages/db/src/schema/security/userRoles.ts"),
+    resolve(repoRoot, "packages/db/src/schema/meta/platform.ts"),
+    resolve(repoRoot, "packages/db/src/schema/meta/metadata.ts"),
+    resolve(repoRoot, "packages/db/src/schema/meta/tenantOverrides.ts"),
+    resolve(repoRoot, "packages/db/src/schema/meta/decisionAudit.ts"),
   ];
 
   console.log("📂 Extracting schema from domain/platform/meta files");
