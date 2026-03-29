@@ -138,6 +138,10 @@ export const LearningProgressIdSchema = z.uuid().brand<"LearningProgressId">();
 export const TrainingFeedbackIdSchema = z.uuid().brand<"TrainingFeedbackId">();
 export const TrainingCostIdSchema = z.uuid().brand<"TrainingCostId">();
 export const LearningPathEnrollmentIdSchema = z.uuid().brand<"LearningPathEnrollmentId">();
+export const AssessmentAttemptIdSchema = z.uuid().brand<"AssessmentAttemptId">();
+export const CertificateIdSchema = z.uuid().brand<"CertificateIdSchema">();
+export const CoursePrerequisiteIdSchema = z.uuid().brand<"CoursePrerequisiteId">();
+export const CourseMaterialIdSchema = z.uuid().brand<"CourseMaterialId">();
 
 // New: Payroll Enhancement (Phase 3)
 export const TaxBracketIdSchema = z.uuid().brand<"TaxBracketId">();
@@ -150,6 +154,44 @@ export const PaymentDistributionIdSchema = z.uuid().brand<"PaymentDistributionId
 export const ApplicantDocumentIdSchema = z.uuid().brand<"ApplicantDocumentId">();
 export const InterviewFeedbackFormIdSchema = z.uuid().brand<"InterviewFeedbackFormId">();
 export const OfferLetterIdSchema = z.uuid().brand<"OfferLetterId">();
+
+// ============================================================================
+// PHASE 6-9 ENHANCEMENTS: BRANDED ID SCHEMAS
+// ============================================================================
+
+// Phase 6: Employee Experience & Self-Service
+export const EmployeeSelfServiceProfileIdSchema = z.uuid().brand<"EmployeeSelfServiceProfileId">();
+export const EmployeeRequestIdSchema = z.uuid().brand<"EmployeeRequestId">();
+export const EmployeeNotificationIdSchema = z.uuid().brand<"EmployeeNotificationId">();
+export const EmployeePreferenceIdSchema = z.uuid().brand<"EmployeePreferenceId">();
+export const EmployeeSurveyIdSchema = z.uuid().brand<"EmployeeSurveyId">();
+export const SurveyResponseIdSchema = z.uuid().brand<"SurveyResponseId">();
+
+// Phase 7: Strategic Workforce Management
+export const SuccessionPlanIdSchema = z.uuid().brand<"SuccessionPlanId">();
+export const TalentPoolIdSchema = z.uuid().brand<"TalentPoolId">();
+export const TalentPoolMemberIdSchema = z.uuid().brand<"TalentPoolMemberId">();
+export const CareerPathIdSchema = z.uuid().brand<"CareerPathId">();
+export const CareerPathStepIdSchema = z.uuid().brand<"CareerPathStepId">();
+export const CareerAspirationIdSchema = z.uuid().brand<"CareerAspirationId">();
+export const CompensationCycleIdSchema = z.uuid().brand<"CompensationCycleId">();
+export const CompensationBudgetIdSchema = z.uuid().brand<"CompensationBudgetId">();
+
+// Phase 8: People Analytics & Intelligence
+export const AnalyticsFactIdSchema = z.uuid().brand<"AnalyticsFactId">();
+export const HrMetricIdSchema = z.uuid().brand<"HrMetricId">();
+export const AnalyticsDashboardIdSchema = z.uuid().brand<"AnalyticsDashboardId">();
+export const DataExportIdSchema = z.uuid().brand<"DataExportId">();
+export const ReportSubscriptionIdSchema = z.uuid().brand<"ReportSubscriptionId">();
+export const AnalyticsDimensionIdSchema = z.uuid().brand<"AnalyticsDimensionId">();
+
+// Phase 9: Global Mobility & Compliance
+export const InternationalAssignmentIdSchema = z.uuid().brand<"InternationalAssignmentId">();
+export const AssignmentAllowanceIdSchema = z.uuid().brand<"AssignmentAllowanceId">();
+export const WorkPermitIdSchema = z.uuid().brand<"WorkPermitId">();
+export const ComplianceTrackingIdSchema = z.uuid().brand<"ComplianceTrackingId">();
+export const RelocationServiceIdSchema = z.uuid().brand<"RelocationServiceId">();
+export const DeiMetricIdSchema = z.uuid().brand<"DeiMetricId">();
 
 // ============================================================================
 // BUSINESS TYPE VALIDATORS (meta-types integration)
@@ -1111,6 +1153,10 @@ export type LearningProgressId = z.infer<typeof LearningProgressIdSchema>;
 export type TrainingFeedbackId = z.infer<typeof TrainingFeedbackIdSchema>;
 export type TrainingCostId = z.infer<typeof TrainingCostIdSchema>;
 export type LearningPathEnrollmentId = z.infer<typeof LearningPathEnrollmentIdSchema>;
+export type AssessmentAttemptId = z.infer<typeof AssessmentAttemptIdSchema>;
+export type CertificateId = z.infer<typeof CertificateIdSchema>;
+export type CoursePrerequisiteId = z.infer<typeof CoursePrerequisiteIdSchema>;
+export type CourseMaterialId = z.infer<typeof CourseMaterialIdSchema>;
 
 // Payroll Enhancement (Phase 3)
 export type TaxBracketId = z.infer<typeof TaxBracketIdSchema>;

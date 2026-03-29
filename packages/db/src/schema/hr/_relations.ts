@@ -533,4 +533,296 @@ export const hrRelations = {
     fromField: "id",
     toField: "cost_center_id",
   },
+
+  // Learning Domain Relations (Phase 2)
+  // Course relationships
+  courseToModules: {
+    from: "courses",
+    to: "course_modules",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_id",
+  },
+  courseToSessions: {
+    from: "courses",
+    to: "course_sessions",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_id",
+  },
+  courseToPrerequisites: {
+    from: "courses",
+    to: "course_prerequisites",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_id",
+  },
+  courseToMaterials: {
+    from: "courses",
+    to: "course_materials",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_id",
+  },
+  courseInstructor: {
+    from: "courses",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "instructor_id",
+    toField: "id",
+  },
+
+  // Course Module relationships
+  courseModuleToCourse: {
+    from: "course_modules",
+    to: "courses",
+    kind: "many-to-one",
+    fromField: "course_id",
+    toField: "id",
+  },
+  courseModuleToAssessments: {
+    from: "course_modules",
+    to: "assessments",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_module_id",
+  },
+  courseModuleToProgress: {
+    from: "course_modules",
+    to: "learning_progress",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_module_id",
+  },
+  courseModulePrerequisite: {
+    from: "course_modules",
+    to: "course_modules",
+    kind: "self-reference",
+    fromField: "prerequisite_module_id",
+    toField: "id",
+  },
+
+  // Learning Path relationships
+  learningPathToCourses: {
+    from: "learning_paths",
+    to: "learning_path_courses",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "learning_path_id",
+  },
+  learningPathToEnrollments: {
+    from: "learning_paths",
+    to: "learning_path_enrollments",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "learning_path_id",
+  },
+
+  // Assessment relationships
+  assessmentToQuestions: {
+    from: "assessments",
+    to: "assessment_questions",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "assessment_id",
+  },
+  assessmentToAttempts: {
+    from: "assessments",
+    to: "assessment_attempts",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "assessment_id",
+  },
+
+  // Course Session relationships
+  courseSessionToEnrollments: {
+    from: "course_sessions",
+    to: "course_enrollments",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_session_id",
+  },
+  courseSessionToCosts: {
+    from: "course_sessions",
+    to: "training_costs",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_session_id",
+  },
+  courseSessionInstructor: {
+    from: "course_sessions",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "instructor_id",
+    toField: "id",
+  },
+
+  // Course Enrollment relationships
+  courseEnrollmentToProgress: {
+    from: "course_enrollments",
+    to: "learning_progress",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_enrollment_id",
+  },
+  courseEnrollmentToFeedback: {
+    from: "course_enrollments",
+    to: "training_feedback",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_enrollment_id",
+  },
+  courseEnrollmentToCertificates: {
+    from: "course_enrollments",
+    to: "certificates",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "course_enrollment_id",
+  },
+  courseEnrollmentEmployee: {
+    from: "course_enrollments",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "employee_id",
+    toField: "id",
+  },
+
+  // Certificate relationships
+  certificateToEnrollment: {
+    from: "certificates",
+    to: "course_enrollments",
+    kind: "many-to-one",
+    fromField: "course_enrollment_id",
+    toField: "id",
+  },
+  certificateEmployee: {
+    from: "certificates",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "employee_id",
+    toField: "id",
+  },
+
+  // Payroll Enhancement Relations (Phase 3)
+  // Tax Bracket relationships
+  taxBracketToCountry: {
+    from: "tax_brackets",
+    to: "countries",
+    kind: "many-to-one",
+    fromField: "country",
+    toField: "code",
+  },
+
+  // Statutory Deduction relationships
+  statutoryDeductionToCountry: {
+    from: "statutory_deductions",
+    to: "countries",
+    kind: "many-to-one",
+    fromField: "country",
+    toField: "code",
+  },
+
+  // Payroll Adjustment relationships
+  payrollAdjustmentToEntry: {
+    from: "payroll_adjustments",
+    to: "payroll_entries",
+    kind: "many-to-one",
+    fromField: "payroll_entry_id",
+    toField: "id",
+  },
+  payrollAdjustmentApprover: {
+    from: "payroll_adjustments",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "approved_by",
+    toField: "id",
+  },
+
+  // Payslip relationships
+  payslipToEntry: {
+    from: "payslips",
+    to: "payroll_entries",
+    kind: "many-to-one",
+    fromField: "payroll_entry_id",
+    toField: "id",
+  },
+
+  // Payment Distribution relationships
+  paymentDistributionToEntry: {
+    from: "payment_distributions",
+    to: "payroll_entries",
+    kind: "many-to-one",
+    fromField: "payroll_entry_id",
+    toField: "id",
+  },
+  paymentDistributionToCurrency: {
+    from: "payment_distributions",
+    to: "currencies",
+    kind: "many-to-one",
+    fromField: "currency_id",
+    toField: "currency_id",
+  },
+
+  // Recruitment Enhancement Relations (Phase 4)
+  // Applicant Document relationships
+  applicantDocumentToApplication: {
+    from: "applicant_documents",
+    to: "job_applications",
+    kind: "many-to-one",
+    fromField: "application_id",
+    toField: "id",
+  },
+  applicantDocumentUploader: {
+    from: "applicant_documents",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "uploaded_by",
+    toField: "id",
+  },
+  applicantDocumentVerifier: {
+    from: "applicant_documents",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "verified_by",
+    toField: "id",
+  },
+
+  // Interview Feedback relationships
+  interviewFeedbackToInterview: {
+    from: "interview_feedback",
+    to: "interviews",
+    kind: "many-to-one",
+    fromField: "interview_id",
+    toField: "id",
+  },
+  interviewFeedbackToInterviewer: {
+    from: "interview_feedback",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "interviewer_id",
+    toField: "id",
+  },
+
+  // Offer Letter relationships
+  offerLetterToJobOffer: {
+    from: "offer_letters",
+    to: "job_offers",
+    kind: "many-to-one",
+    fromField: "job_offer_id",
+    toField: "id",
+  },
+  offerLetterGenerator: {
+    from: "offer_letters",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "generated_by",
+    toField: "id",
+  },
+  offerLetterSender: {
+    from: "offer_letters",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "sent_by",
+    toField: "id",
+  },
 } as const satisfies Record<string, HRRelationDefinition>;
