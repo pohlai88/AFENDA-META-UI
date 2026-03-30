@@ -10,10 +10,10 @@ The prior analysis stated we're "missing" infrastructure layers. **That's wrong.
 
 | Layer | Current AFENDA-META-UI | Legacy afenda-hybrid | Verdict |
 |-------|----------------------|---------------------|---------|
-| **Wire Format Schemas** | columns/zodWire.ts — `nullableOptional()`, `dateStringSchema`, `timestamptzWireSchema`, `isoDateWireString()`, `parseUnknownToEpochMs()` | `_shared/zodWire.ts` — Same patterns | **Parity** — Current already has this |
-| **Session Management** | session/setSessionContext.ts — **8 GUC params** (`tenant_id`, `user_id`, `actor_type`, `correlation_id`, `request_id`, `session_id`, `ip_address`, `user_agent`) | `_session/` — 2 params (`tenant_id`, `user_id`) | **Current is SUPERIOR** |
-| **RLS Policies** | rls/tenant-policies.ts — `appUserRole` + `serviceRole` with per-operation policies + service bypass | `_rls/` — Similar pattern | **Parity** |
-| **Seed Data** | seeds/ — 12 domain subdirectories + factories + scenarios + snapshot testing | `_seeds/` — Bootstrap data | **Current is SUPERIOR** |
+| **Wire Format Schemas** | infra-utils/columns/wire/zodWire.ts — `nullableOptional()`, `dateStringSchema`, `timestamptzWireSchema`, `isoDateWireString()`, `parseUnknownToEpochMs()` | `_shared/zodWire.ts` — Same patterns | **Parity** — Current already has this |
+| **Session Management** | infra-utils/session/setSessionContext.ts — **8 GUC params** (`tenant_id`, `user_id`, `actor_type`, `correlation_id`, `request_id`, `session_id`, `ip_address`, `user_agent`) | `_session/` — 2 params (`tenant_id`, `user_id`) | **Current is SUPERIOR** |
+| **RLS Policies** | infra-utils/rls/tenant-policies.ts — `appUserRole` + `serviceRole` with per-operation policies + service bypass | `_rls/` — Similar pattern | **Parity** |
+| **Seed Data** | infra-utils/seeds/ — 12 domain subdirectories + factories + scenarios + snapshot testing | `_seeds/` — Bootstrap data | **Current is SUPERIOR** |
 | **Graph Validation** | graph-validation/ — FK catalog, health scoring, orphan detection, tenant isolation, index remediation | Not present | **Current only** |
 | **Triggers** | triggers/ — `status-transitions.sql` | Custom SQL in migrations | **Parity** |
 | **Maintenance** | maintenance/ — Partitioning, retention plans, status triggers | Not present | **Current only** |

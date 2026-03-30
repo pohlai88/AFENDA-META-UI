@@ -2,13 +2,13 @@ import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { db } from "../db.js";
-import { clearSessionContext, setSessionContext } from "../session/index.js";
+import { clearSessionContext, setSessionContext } from "../infra-utils/session/index.js";
 import {
   appUserRole,
   serviceRole,
   tenantIsolationCheck,
   tenantIsolationPolicies,
-} from "../rls/index.js";
+} from "../infra-utils/rls/index.js";
 
 describe("RLS tenant isolation helpers", () => {
   it("creates a reusable SQL tenant isolation check", () => {

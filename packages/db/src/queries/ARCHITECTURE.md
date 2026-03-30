@@ -32,8 +32,8 @@ apps/api, workers, jobs
         │
         ▼
 @afenda/db  src/schema/    ← tables, relations
-@afenda/db  src/rls/       ← tenant policies
-@afenda/db  src/session/   ← session context
+@afenda/db  src/infra-utils/rls/       ← tenant policies
+@afenda/db  src/infra-utils/session/   ← session context
         │
         ▼
 @afenda/meta-types         ← optional type contracts; see below

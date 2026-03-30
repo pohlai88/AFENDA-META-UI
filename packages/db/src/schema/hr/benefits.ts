@@ -34,13 +34,13 @@ import {
 } from "./_enums.js";
 import { employees } from "./people.js";
 import { currencies } from "../reference/index.js";
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../columns/index.js";
+} from "../../infra-utils/columns/index.js";
 import {
   BenefitProviderIdSchema,
   BenefitEnrollmentIdSchema,

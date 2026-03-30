@@ -19,20 +19,20 @@
       "types": "./dist/client/index.d.ts"
     },
     "./shared": {
-      "import": "./dist/columns/index.js",
-      "types": "./dist/columns/index.d.ts"
+      "import": "./dist/infra-utils/columns/index.js",
+      "types": "./dist/infra-utils/columns/index.d.ts"
     },
     "./columns": {
-      "import": "./dist/columns/index.js",
-      "types": "./dist/columns/index.d.ts"
+      "import": "./dist/infra-utils/columns/index.js",
+      "types": "./dist/infra-utils/columns/index.d.ts"
     },
     "./session": {
-      "import": "./dist/session/index.js",
-      "types": "./dist/session/index.d.ts"
+      "import": "./dist/infra-utils/session/index.js",
+      "types": "./dist/infra-utils/session/index.d.ts"
     },
     "./rls": {
-      "import": "./dist/rls/index.js",
-      "types": "./dist/rls/index.d.ts"
+      "import": "./dist/infra-utils/rls/index.js",
+      "types": "./dist/infra-utils/rls/index.d.ts"
     },
     "./relations": {
       "import": "./dist/relations.js",
@@ -129,7 +129,7 @@
     "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__test__",
     "check:all": "pnpm run typecheck && pnpm run truth:check && pnpm run test:db",
     "gate:early": "pnpm run check:all",
-    "seed": "tsx src/seeds/index.ts",
+    "seed": "tsx src/infra-utils/seeds/index.ts",
     "archival": "tsx src/archival/runner.ts",
     "graph-validation": "tsx src/graph-validation/runner.ts",
     "truth:generate": "tsx src/truth-compiler/generate-truth-sql.ts",

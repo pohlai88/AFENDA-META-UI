@@ -73,17 +73,8 @@ export {
 // META-TYPES IMPORTS
 // ============================================================================
 
-// Core utilities for runtime type guards and branded types
-import { isJsonObject, assertNever } from "@afenda/meta-types/core";
-import type { Brand, NonEmptyArray } from "@afenda/meta-types/core";
-
-// Schema validation for field types and business types
-import {
-  FieldTypeSchema,
-  BusinessTypeSchema,
-  ConditionOperatorSchema,
-  FieldConstraintsSchema,
-} from "@afenda/meta-types/schema";
+// Core utilities for runtime type guards (see JSDoc below for schema alignment notes)
+import { isJsonObject } from "@afenda/meta-types/core";
 
 // ============================================================================
 // BRANDED ID SCHEMAS

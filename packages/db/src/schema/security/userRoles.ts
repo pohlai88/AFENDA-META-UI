@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { timestampColumns } from "../../columns/index.js";
+import { timestampColumns } from "../../infra-utils/columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { roles } from "./roles.js";
 import { securitySchema, users } from "./users.js";

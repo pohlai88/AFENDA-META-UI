@@ -112,21 +112,25 @@ packages/db/
 │   │   inventory/                           # pgSchema("inventory")
 │   │   purchasing/                          # pgSchema("purchasing")
 │   │
-│   ├── columns/                             # ── Layer 3a: Shared Column Mixins ──
-│   │   ├── index.ts                         # Barrel: timestamps, audit, name, Zod wire
-│   │   ├── timestamps.ts                    # createdAt, updatedAt, deletedAt columns
-│   │   ├── auditColumns.ts                  # createdBy, updatedBy audit tracking
-│   │   ├── nameColumns.ts                   # Standard name/description text column
-│   │   └── zodWire.ts                       # Date/timestamp Zod schemas for API wire format
-│   │
-│   ├── session/                             # ── Layer 3b: Session Context ──
-│   │   ├── index.ts                         # Barrel: setSessionContext, withTenantContext
-│   │   ├── setSessionContext.ts             # PostgreSQL session variable management
-│   │   └── withTenantContext.ts             # Tenant context extraction from HTTP headers
-│   │
-│   ├── rls/                                 # ── Layer 3c: Row-Level Security ──
-│   │   ├── index.ts                         # Barrel: policies, roles
-│   │   └── tenant-policies.ts               # Tenant isolation RLS (select/insert/update/delete)
+│   ├── infra-utils/                         # ── Layer 3a–c: Shared DB infrastructure ──
+│   │   ├── columns/                         # Drizzle mixins, fingerprints, Zod wire
+│   │   │   ├── index.ts                     # Public barrel (re-exported as @afenda/db/columns)
+│   │   │   ├── drizzle-mixins/            # timestampColumns, auditColumns, nameColumn, …
+│   │   │   ├── fingerprints/              # governance string descriptors
+│   │   │   └── wire/                      # zodWire.ts — date/timestamp API wire schemas
+│   │   ├── session/                       # Session context (exported as @afenda/db/session)
+│   │   │   ├── index.ts
+│   │   │   ├── setSessionContext.ts
+│   │   │   └── withTenantContext.ts
+│   │   ├── rls/                           # RLS policies (exported as @afenda/db/rls)
+│   │   │   ├── index.ts
+│   │   │   └── tenant-policies.ts
+│   │   ├── seeds/                         # ── Layer 5b: Data Seeding (CLI; not a package subpath) ──
+│   │   │   ├── index.ts                   # Seed orchestrator
+│   │   │   ├── factories.ts, scenarios.ts, seed-types.ts, …
+│   │   │   ├── domains/                   # Domain-specific seeders
+│   │   │   └── performance/               # Stress / partition validation scripts
+│   │   └── index.ts                       # Optional barrel: columns + session + rls
 │   │
 │   ├── relations.ts                         # ── Layer 3d: FK Relations (Drizzle v2) ──
 │   │                                        #    Comprehensive: sales, partners, products, taxes
@@ -166,32 +170,6 @@ packages/db/
 │   │   ├── runner.ts                        # CLI runner
 │   │   ├── README.md                        # Graph validation documentation
 │   │   └── __test__/                        # Validation tests
-│   │
-│   ├── seeds/                               # ── Layer 5b: Data Seeding ──
-│   │   ├── index.ts                         # Seed orchestrator (baseline, demo, stress, 1M)
-│   │   ├── factories.ts                     # Data factory functions
-│   │   ├── scenarios.ts                     # Test data scenarios
-│   │   ├── seed-types.ts                    # Seed type definitions
-│   │   ├── seed-ids.ts                      # ID generation
-│   │   ├── money.ts                         # Currency/decimal helpers
-│   │   ├── snapshot.ts                      # Post-seed verification
-│   │   ├── clear.ts                         # Data cleanup
-│   │   ├── domains/                         # Domain-specific seeders
-│   │   │   ├── foundation/                  # Tenants, users baseline
-│   │   │   ├── partner/                     # Customers, vendors
-│   │   │   ├── product/                     # Product catalog
-│   │   │   ├── sales/                       # Sales orders
-│   │   │   ├── tax/                         # Tax configuration
-│   │   │   ├── commercial-policy/           # Pricelists, payment terms
-│   │   │   ├── commissions/                 # Commission plans
-│   │   │   ├── consignment/                 # Consignment agreements
-│   │   │   ├── subscriptions/               # Recurring billing
-│   │   │   ├── returns/                     # Return orders
-│   │   │   └── metadata/                    # Schema registry seeds
-│   │   ├── performance/                     # Load testing generators
-│   │   │   ├── load-test-generator.ts       # 1M+ row generation
-│   │   │   └── validate-partitions.ts       # Partition verification
-│   │   └── __test__/                        # Seed tests
 │   │
 │   ├── maintenance/                         # ── Layer 5c: Database Operations ──
 │   │   ├── apply-status-triggers.ts         # SQL trigger management
@@ -326,7 +304,7 @@ schema/{domain}/
 
 Infrastructure modules provide cross-cutting concerns consumed by all schema domains.
 
-#### 3a. Column Mixins (`columns/`)
+#### 3a. Column Mixins (`infra-utils/columns/`)
 
 Reusable column definitions that ensure consistency across all tables:
 
@@ -350,13 +328,13 @@ export const myTable = pgSchema("domain").table("my_table", {
 | `nameColumn`                 | `name`                   | Entities with display names |
 | `appendOnlyTimestampColumns` | `createdAt` only         | Append-only logs            |
 
-**Zod wire schemas** (`zodWire.ts`) provide date/timestamp validation for API serialization:
+**Zod wire schemas** (`infra-utils/columns/wire/zodWire.ts`) provide date/timestamp validation for API serialization:
 
 ```typescript
 import { dateStringSchema, timestamptzWireSchema } from "@afenda/db/columns";
 ```
 
-#### 3b. Session Context (`session/`)
+#### 3b. Session Context (`infra-utils/session/`)
 
 PostgreSQL session variable management for multi-tenant RLS enforcement:
 
@@ -384,7 +362,7 @@ await setSessionContext(db, {
 | `afenda.ip_address`     | `string`                              | Audit logging        |
 | `afenda.user_agent`     | `string`                              | Audit logging        |
 
-#### 3c. Row-Level Security (`rls/`)
+#### 3c. Row-Level Security (`infra-utils/rls/`)
 
 Tenant isolation enforced at the PostgreSQL level:
 
@@ -541,9 +519,9 @@ Cold storage integration with Cloudflare R2 for aged data.
 | `./schema/reference` | `src/schema/reference/` | ✅      | Currencies, countries, UOM               | apps/api                          |
 | `./schema/meta`      | `src/schema/meta/`      | ✅      | Schema registry, metadata, overrides     | apps/api                          |
 | `./schema/sales`     | `src/schema/sales/`     | ✅      | Full sales domain (35+ tables)           | apps/api, truth-test              |
-| `./columns`          | `src/columns/`          | ✅      | Shared column mixins + Zod wire schemas  | apps/api, truth-test, new domains |
-| `./session`          | `src/session/`          | ✅      | Session context management               | apps/api                          |
-| `./rls`              | `src/rls/`              | ✅      | RLS policies + roles                     | schema definitions                |
+| `./columns`          | `src/infra-utils/columns/` | ✅      | Shared column mixins + Zod wire schemas  | apps/api, truth-test, new domains |
+| `./session`          | `src/infra-utils/session/` | ✅      | Session context management               | apps/api                          |
+| `./rls`              | `src/infra-utils/rls/`     | ✅      | RLS policies + roles                     | schema definitions                |
 | `./relations`        | `src/relations.ts`      | ✅      | Drizzle v2 FK relations                  | apps/api, truth-test              |
 | `./truth-compiler`   | `src/truth-compiler/`   | ✅      | Truth engine (invariants, policies, FSM) | apps/api, truth-test              |
 
@@ -644,8 +622,8 @@ export const {domain}Schema = pgSchema("{domain}");
 ```typescript
 // src/schema/{domain}/tables.ts
 import { {domain}Schema } from "./_schema.js";
-import { timestampColumns, softDeleteColumns, auditColumns } from "../../columns/index.js";
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
+import { timestampColumns, softDeleteColumns, auditColumns } from "../../infra-utils/columns/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
 
 export const myEntity = {domain}Schema.table("my_entity", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -686,7 +664,7 @@ Define entity defs, invariants, and state machines in `truth-compiler/truth-conf
 
 ### 8. Add Seed Data
 
-Create `src/seeds/domains/{domain}/` with seed factories.
+Create `src/infra-utils/seeds/domains/{domain}/` with seed factories.
 
 ### 9. Generate Migration
 
@@ -857,4 +835,3 @@ A domain is "truth-engine ready" only when all checks pass:
 - [archival/README.md](./src/archival/README.md) — Data archival documentation
 - [@afenda/meta-types ARCHITECTURE.md](../meta-types/ARCHITECTURE.md) — Type contract layer
 - [@afenda/truth-test ARCHITECTURE.md](../truth-test/ARCHITECTURE.md) — Truth testing infrastructure
-- [docs/archive/restructure-wave4-2026-03.md](./docs/archive/restructure-wave4-2026-03.md) — Historical Wave 4 restructure plan (completed March 2026)

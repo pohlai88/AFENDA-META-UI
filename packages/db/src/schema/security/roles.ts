@@ -8,7 +8,7 @@ import {
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../columns/index.js";
+} from "../../infra-utils/columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { securitySchema } from "./users.js";
 

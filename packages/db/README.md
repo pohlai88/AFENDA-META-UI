@@ -227,7 +227,7 @@ pnpm db:migrate      # Apply pending migrations
 3. Add subpath export in `package.json`
 4. Update `src/relations.ts` with FK relations
 5. Optionally add truth config in `truth-compiler/truth-config.ts`
-6. Add seeds in `src/seeds/domains/{domain}/`
+6. Add seeds in `src/infra-utils/seeds/domains/{domain}/`
 7. Run `pnpm db:generate` + `pnpm db:migrate`
 
 See [ARCHITECTURE.md — Adding a New Domain](./ARCHITECTURE.md#adding-a-new-domain) for details.

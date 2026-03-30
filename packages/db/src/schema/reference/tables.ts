@@ -17,13 +17,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
 import {
   appendOnlyTimestampColumns,
   auditColumns,
   softDeleteColumns,
   timestampColumns,
-} from "../../columns/index.js";
+} from "../../infra-utils/columns/index.js";
 import { applicationStorageKeySchema } from "../../r2/objectKey.js";
 import { tenants } from "../core/tenants.js";
 import { users } from "../security/users.js";

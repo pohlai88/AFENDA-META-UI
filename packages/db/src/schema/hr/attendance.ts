@@ -20,14 +20,14 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
 import {
   appendOnlyTimestampColumns,
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../columns/index.js";
+} from "../../infra-utils/columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { countries, states } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";

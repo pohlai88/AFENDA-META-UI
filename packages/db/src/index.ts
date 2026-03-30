@@ -25,6 +25,6 @@ export {
   SALES_TRUTH_MODEL,
 } from "./truth-compiler/truth-config.js";
 
-export * from "./columns/index.js";
-export * from "./session/index.js";
-export * from "./rls/index.js";
+export * from "./infra-utils/columns/index.js";
+export * from "./infra-utils/session/index.js";
+export * from "./infra-utils/rls/index.js";

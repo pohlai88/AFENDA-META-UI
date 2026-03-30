@@ -7,7 +7,7 @@ import {
   auditColumns,
   softDeleteColumns,
   timestampColumns,
-} from "../columns/index.js";
+} from "../infra-utils/columns/index.js";
 
 describe("shared column mixins", () => {
   it("exports timestamp columns", () => {

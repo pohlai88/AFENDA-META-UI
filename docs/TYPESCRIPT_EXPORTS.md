@@ -282,7 +282,7 @@ packages/ui/src/
 **Expected Docs:**
 - `packages/ui/src/_private/README.md`
 
-`@afenda/db` does not use `_private/`; internal helpers live next to their feature areas (e.g. `src/columns/`, `src/_shared/`) and are exported only via explicit subpaths.
+`@afenda/db` does not use `_private/`; cross-cutting infra lives under `src/infra-utils/` (columns, session, RLS, seeds) and is exported only via explicit subpaths.
 
 ---
 

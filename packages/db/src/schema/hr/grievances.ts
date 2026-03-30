@@ -19,13 +19,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../columns/index.js";
+} from "../../infra-utils/columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
