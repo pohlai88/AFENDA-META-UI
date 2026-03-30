@@ -62,7 +62,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "catalog:",
     "@rjsf/core": "^5.19.4",
-    "@rjsf/utils": "^5.19.4",
+    "@rjsf/utils": "^6.4.2",
     "@rjsf/validator-ajv8": "^5.19.4",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-devtools": "^5.95.2",
