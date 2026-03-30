@@ -32,7 +32,7 @@
 
 **Symptom:** Finding points at a `.ts` file: “foreignKey … has no matching hrRelations entry”.
 
-**Fix:** Add a `hrRelations` entry with correct `from`, `to`, `kind`, `fromField`, `toField` (physical edge after `kind` mapping). Use a stable camelCase key name.
+**Fix:** Add a `hrRelations` entry with correct `from`, `to`, `kind`, `fromField`, `toField` (physical edge after `kind` mapping). Use a stable camelCase key name (naming is human-facing only; CI dedupes by physical FK key — see comment block at top of `_relations.ts`).
 
 ### Checklist
 

@@ -15,6 +15,7 @@ import {
   uuid,
   uniqueIndex,
   numeric,
+  jsonb,
   timestamp,
 } from "drizzle-orm/pg-core";
 
@@ -28,7 +29,16 @@ import {
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
-import { compensationCycleStatusEnum } from "./_enums.js";
+import {
+  compensationCycleStatusEnum,
+  equityVestingTypeEnum,
+  equityGrantTypeEnum,
+  equityGrantStatusEnum,
+  EquityVestingTypeSchema,
+  EquityGrantTypeSchema,
+  EquityGrantStatusSchema,
+  CompensationCycleStatusSchema,
+} from "./_enums.js";
 import { employees, departments, jobPositions } from "./people.js";
 import { z } from "zod/v4";
 import {
@@ -57,10 +67,14 @@ export const vestingSchedules = hrSchema.table(
     scheduleCode: text("schedule_code").notNull(),
     ...nameColumn,
     description: text("description"),
-    vestingType: text("vesting_type").notNull(), // 'cliff' | 'graded' | 'immediate'
+    vestingType: equityVestingTypeEnum("vesting_type").notNull(),
     cliffMonths: integer("cliff_months"), // Months before first vesting
     totalMonths: integer("total_months").notNull(), // Total vesting period
-    vestingPercentages: text("vesting_percentages"), // JSON array: [{month: 12, percentage: 25}, ...]
+    vestingPercentages: jsonb("vesting_percentages").$type<
+      { month: number; percentage: number }[]
+    >(),
+    effectiveFrom: date("effective_from", { mode: "string" }),
+    effectiveTo: date("effective_to", { mode: "string" }),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
     ...auditColumns,
@@ -75,6 +89,17 @@ export const vestingSchedules = hrSchema.table(
     index("vesting_schedules_type_idx").on(table.tenantId, table.vestingType),
     sql`CONSTRAINT vesting_schedules_total_months_positive CHECK (total_months > 0)`,
     sql`CONSTRAINT vesting_schedules_cliff_valid CHECK (cliff_months IS NULL OR (cliff_months >= 0 AND cliff_months < total_months))`,
+    check(
+      "vesting_schedules_effective_range",
+      sql`(effective_from IS NULL OR effective_to IS NULL OR effective_from <= effective_to)`
+    ),
+    sql`CONSTRAINT vesting_schedules_percentages_sum_100 CHECK (
+      vesting_percentages IS NULL
+      OR (
+        jsonb_typeof(vesting_percentages) = 'array'
+        AND hr.vesting_percentages_total_pct(vesting_percentages) = 100::numeric
+      )
+    )`,
     ...tenantIsolationPolicies("vesting_schedules"),
     serviceBypassPolicy("vesting_schedules"),
   ]
@@ -98,6 +123,8 @@ export const compensationCycles = hrSchema.table(
     currency: text("currency").notNull().default("USD"),
     status: compensationCycleStatusEnum("status").notNull().default("planning"),
     guidelines: text("guidelines"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -110,6 +137,10 @@ export const compensationCycles = hrSchema.table(
     check("compensation_cycles_date_range", sql`${table.endDate} >= ${table.startDate}`),
     check("compensation_cycles_budget_positive", sql`${table.budgetAmount} > 0`),
     check("compensation_cycles_fiscal_year_valid", sql`${table.fiscalYear} >= 2000`),
+    check(
+      "compensation_cycles_published_closed_order",
+      sql`(${table.publishedAt} IS NULL OR ${table.closedAt} IS NULL OR ${table.closedAt} >= ${table.publishedAt})`
+    ),
     index("compensation_cycles_tenant_idx").on(table.tenantId),
     index("compensation_cycles_fiscal_year_idx").on(table.tenantId, table.fiscalYear),
     index("compensation_cycles_status_idx").on(table.tenantId, table.status),
@@ -137,6 +168,7 @@ export const compensationBudgets = hrSchema.table(
     remainingAmount: numeric("remaining_amount", { precision: 15, scale: 2 }).notNull(),
     currency: text("currency").notNull().default("USD"),
     notes: text("notes"),
+    adjustmentReason: text("adjustment_reason"),
     ...timestampColumns,
     ...auditColumns,
   },
@@ -161,6 +193,10 @@ export const compensationBudgets = hrSchema.table(
       "compensation_budgets_allocation_valid",
       sql`${table.allocatedAmount} <= ${table.budgetAmount}`
     ),
+    check(
+      "compensation_budgets_remaining_matches",
+      sql`${table.remainingAmount} = ${table.budgetAmount} - ${table.allocatedAmount}`
+    ),
     index("compensation_budgets_tenant_idx").on(table.tenantId),
     index("compensation_budgets_cycle_idx").on(table.tenantId, table.cycleId),
     index("compensation_budgets_department_idx").on(table.tenantId, table.departmentId),
@@ -173,6 +209,10 @@ export const compensationBudgets = hrSchema.table(
 // ============================================================================
 // EQUITY GRANTS - Employee equity grants (stock options, RSUs, ESPP)
 // ============================================================================
+// Lifecycle: see `equityGrantStatuses` in `_enums.ts` and `hr-docs/ADR-005-equity-grant-lifecycle.md`.
+// Valid transitions are product-owned; document changes in `hr-docs/` ADRs before tightening CHECK constraints or app rules.
+// `equity_grants_expired_requires_expiry`: migration `20260330180000_hr_compensation_hardening` normalizes legacy
+// `expired` rows (null or future `expiry_date`) before adding this CHECK so deploys do not fail on old data.
 
 export const equityGrants = hrSchema.table(
   "equity_grants",
@@ -181,7 +221,7 @@ export const equityGrants = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     grantNumber: text("grant_number").notNull(),
     employeeId: uuid("employee_id").notNull(),
-    grantType: text("grant_type").notNull(), // 'stock_option' | 'rsu' | 'espp' | 'sar'
+    grantType: equityGrantTypeEnum("grant_type").notNull(),
     grantDate: date("grant_date", { mode: "string" }).notNull(),
     vestingScheduleId: uuid("vesting_schedule_id").notNull(),
     totalShares: numeric("total_shares", { precision: 15, scale: 4 }).notNull(),
@@ -193,7 +233,8 @@ export const equityGrants = hrSchema.table(
     currentPrice: numeric("current_price", { precision: 15, scale: 4 }), // Current market price
     currencyId: integer("currency_id").notNull(),
     expiryDate: date("expiry_date", { mode: "string" }),
-    status: text("status").notNull().default("active"), // 'active' | 'vested' | 'exercised' | 'expired' | 'cancelled'
+    status: equityGrantStatusEnum("status").notNull().default("active"),
+    documentHash: text("document_hash"),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -228,6 +269,10 @@ export const equityGrants = hrSchema.table(
       (grant_price IS NULL OR grant_price >= 0) AND
       (current_price IS NULL OR current_price >= 0)
     )`,
+    sql`CONSTRAINT equity_grants_expired_requires_expiry CHECK (
+      status::text <> 'expired'
+      OR (expiry_date IS NOT NULL AND expiry_date <= CURRENT_DATE)
+    )`,
     ...tenantIsolationPolicies("equity_grants"),
     serviceBypassPolicy("equity_grants"),
   ]
@@ -252,6 +297,7 @@ export const marketBenchmarks = hrSchema.table(
     percentile75: numeric("percentile_75", { precision: 15, scale: 2 }).notNull(),
     percentile90: numeric("percentile_90", { precision: 15, scale: 2 }), // Optional
     currencyId: integer("currency_id").notNull(),
+    sampleSize: integer("sample_size"),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -285,6 +331,10 @@ export const marketBenchmarks = hrSchema.table(
       percentile_75 > 0 AND
       (percentile_90 IS NULL OR percentile_90 > 0)
     )`,
+    check(
+      "market_benchmarks_sample_size_positive",
+      sql`${table.sampleSize} IS NULL OR ${table.sampleSize} > 0`
+    ),
     ...tenantIsolationPolicies("market_benchmarks"),
     serviceBypassPolicy("market_benchmarks"),
   ]
@@ -294,18 +344,58 @@ export const marketBenchmarks = hrSchema.table(
 // ZOD INSERT SCHEMAS
 // ============================================================================
 
-export const insertVestingScheduleSchema = z.object({
-  id: VestingScheduleIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  scheduleCode: z.string().min(2).max(50),
-  name: z.string().min(2).max(100),
-  description: z.string().max(500).optional(),
-  vestingType: z.enum(["cliff", "graded", "immediate"]),
-  cliffMonths: z.number().int().min(0).optional(),
-  totalMonths: z.number().int().positive(),
-  vestingPercentages: z.string().optional(),
-  isActive: z.boolean().default(true),
-});
+export const insertVestingScheduleSchema = z
+  .object({
+    id: VestingScheduleIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    scheduleCode: z.string().min(2).max(50),
+    name: z.string().min(2).max(100),
+    description: z.string().max(500).optional(),
+    vestingType: EquityVestingTypeSchema,
+    cliffMonths: z.number().int().min(0).optional(),
+    totalMonths: z.number().int().positive(),
+    vestingPercentages: z
+      .array(
+        z.object({
+          month: z.number().int().nonnegative(),
+          percentage: z.number().min(0).max(100),
+        })
+      )
+      .optional(),
+    effectiveFrom: z.iso.date().optional(),
+    effectiveTo: z.iso.date().optional(),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.effectiveFrom && data.effectiveTo && data.effectiveFrom > data.effectiveTo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "effectiveFrom must be on or before effectiveTo",
+        path: ["effectiveTo"],
+      });
+    }
+
+    if (data.vestingPercentages && data.vestingPercentages.length > 0) {
+      const sumPct = data.vestingPercentages.reduce((s, row) => s + row.percentage, 0);
+      if (Math.abs(sumPct - 100) > 1e-6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "vestingPercentages must sum to 100 when provided",
+          path: ["vestingPercentages"],
+        });
+      }
+      for (let i = 0; i < data.vestingPercentages.length; i++) {
+        const m = data.vestingPercentages[i]!.month;
+        if (m > data.totalMonths) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `month must not exceed totalMonths (${data.totalMonths})`,
+            path: ["vestingPercentages", i, "month"],
+          });
+        }
+      }
+    }
+  });
 
 export const insertEquityGrantSchema = z
   .object({
@@ -313,8 +403,8 @@ export const insertEquityGrantSchema = z
     tenantId: hrTenantIdSchema,
     grantNumber: z.string().min(1).max(50),
     employeeId: EmployeeIdSchema,
-    grantType: z.enum(["stock_option", "rsu", "espp", "sar"]),
-    grantDate: z.string().date(),
+    grantType: EquityGrantTypeSchema,
+    grantDate: z.iso.date(),
     vestingScheduleId: VestingScheduleIdSchema,
     totalShares: z
       .string()
@@ -331,14 +421,34 @@ export const insertEquityGrantSchema = z
     grantPrice: currencyAmountSchema(4).optional(),
     currentPrice: currencyAmountSchema(4).optional(),
     currencyId: z.number().int().positive(),
-    expiryDate: z.string().date().optional(),
-    status: z.enum(["active", "vested", "exercised", "expired", "cancelled"]).default("active"),
+    expiryDate: z.iso.date().optional(),
+    status: EquityGrantStatusSchema.default("active"),
+    documentHash: z.string().max(128).optional(),
     notes: z.string().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
     const totalShares = parseFloat(data.totalShares);
     const vestedShares = parseFloat(data.vestedShares);
     const exercisedShares = parseFloat(data.exercisedShares);
+
+    if (data.status === "expired") {
+      if (!data.expiryDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "expiryDate is required when status is expired",
+          path: ["expiryDate"],
+        });
+      } else {
+        const today = new Date().toISOString().slice(0, 10);
+        if (data.expiryDate > today) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "expiryDate must be on or before today when status is expired",
+            path: ["expiryDate"],
+          });
+        }
+      }
+    }
 
     if (vestedShares > totalShares) {
       ctx.addIssue({
@@ -364,14 +474,25 @@ export const insertCompensationCycleSchema = z
     cycleCode: z.string().min(3).max(50),
     name: z.string().min(2).max(100),
     fiscalYear: z.number().int().min(2000).max(2100),
-    startDate: z.string().date(),
-    endDate: z.string().date(),
+    startDate: z.iso.date(),
+    endDate: z.iso.date(),
     budgetAmount: currencyAmountSchema(2),
     currency: z.string().length(3).default("USD"),
-    status: z.enum(["planning", "budgeting", "review", "approved", "closed"]).default("planning"),
+    status: CompensationCycleStatusSchema.default("planning"),
     guidelines: z.string().optional(),
+    publishedAt: z.iso.datetime().optional(),
+    closedAt: z.iso.datetime().optional(),
   })
-  .superRefine(refineDateRange("startDate", "endDate"));
+  .superRefine(refineDateRange("startDate", "endDate"))
+  .superRefine((data, ctx) => {
+    if (data.publishedAt && data.closedAt && data.closedAt < data.publishedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "closedAt must be on or after publishedAt",
+        path: ["closedAt"],
+      });
+    }
+  });
 
 export const insertCompensationBudgetSchema = z
   .object({
@@ -385,15 +506,25 @@ export const insertCompensationBudgetSchema = z
     remainingAmount: currencyAmountSchema(2),
     currency: z.string().length(3).default("USD"),
     notes: z.string().max(1000).optional(),
+    adjustmentReason: z.string().max(500).optional(),
   })
   .superRefine((data, ctx) => {
     const budget = parseFloat(data.budgetAmount);
     const allocated = parseFloat(data.allocatedAmount);
+    const remaining = parseFloat(data.remainingAmount);
     if (allocated > budget) {
       ctx.addIssue({
         code: "custom",
         message: "Allocated amount cannot exceed budget amount",
         path: ["allocatedAmount"],
+      });
+    }
+    const expectedRemaining = budget - allocated;
+    if (Math.abs(remaining - expectedRemaining) > 0.005) {
+      ctx.addIssue({
+        code: "custom",
+        message: "remainingAmount must equal budgetAmount minus allocatedAmount",
+        path: ["remainingAmount"],
       });
     }
   });
@@ -405,7 +536,7 @@ export const insertMarketBenchmarkSchema = z
     jobPositionId: JobPositionIdSchema,
     region: z.string().min(2).max(10),
     industry: z.string().max(100).optional(),
-    benchmarkDate: z.string().date(),
+    benchmarkDate: z.iso.date(),
     source: z.string().min(2).max(100),
     percentile25: currencyAmountSchema(2).refine(
       (val) => parseFloat(val) > 0,
@@ -423,6 +554,7 @@ export const insertMarketBenchmarkSchema = z
       .refine((val) => parseFloat(val) > 0, "Percentile 90 must be positive")
       .optional(),
     currencyId: z.number().int().positive(),
+    sampleSize: z.number().int().positive().optional(),
     notes: z.string().max(2000).optional(),
   })
   .superRefine((data, ctx) => {

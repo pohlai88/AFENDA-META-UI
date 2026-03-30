@@ -48,11 +48,14 @@ const enriched = await db.query.salesOrders.findMany({
 | `@afenda/db/schema/reference` | Currencies, countries, banks, UOM, sequences                |
 | `@afenda/db/schema/meta`      | Schema registry, metadata, overrides, audit                 |
 | `@afenda/db/schema/sales`     | Partners, products, orders, subscriptions (35+ tables)      |
+| `@afenda/db/queries/hr`       | Generated `*.access.ts` barrel (DB access layer)              |
+| `@afenda/db/queries/sales`    | Generated `*.access.ts` barrel (DB access layer)              |
 | `@afenda/db/columns`          | Shared column mixins: timestamps, audit, name, zodWire      |
 | `@afenda/db/session`          | `setSessionContext`, `withTenantContext`                    |
 | `@afenda/db/rls`              | RLS policies + tenant isolation                             |
 | `@afenda/db/relations`        | Drizzle Relations v2 (FK relational queries)                |
 | `@afenda/db/truth-compiler`   | Truth engine: invariants, state machines, mutation policies |
+| `@afenda/db/r2`               | Cloudflare R2 (S3 API) port — see [src/r2/README.md](./src/r2/README.md) |
 
 ---
 
@@ -243,6 +246,7 @@ See [ARCHITECTURE.md — Adding a New Domain](./ARCHITECTURE.md#adding-a-new-dom
 ## See Also
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — Full design rationale, layer descriptions, and patterns
+- [src/queries/README.md](./src/queries/README.md) — Named read/reporting query layer (governance: [ARCHITECTURE.md](./src/queries/ARCHITECTURE.md))
 - [graph-validation/README.md](./src/graph-validation/README.md) — FK integrity validation
 - [archival/README.md](./src/archival/README.md) — Data archival documentation
 - [@afenda/meta-types](../meta-types/README.md) — Type contract layer

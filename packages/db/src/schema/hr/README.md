@@ -3,7 +3,10 @@
 > **Schema:** `hr` (`pgSchema("hr")`)
 > **Package:** `@afenda/db`
 > **Path:** `packages/db/src/schema/hr/`
-> **Status:** Production-ready with comprehensive meta-types integration and enterprise-grade validation
+> **Tables:** **167** (`hrSchema.table(` in domain `*.ts`, excluding `_*.ts`)
+> **Doc index:** [hr-docs/README.md](./hr-docs/README.md) · **Upgrade guide:** [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md) (v2.3)
+> **Relations catalog:** `_relations.ts` — validated vs `foreignKey()` by `pnpm ci:gate:schema-quality` (`RELATIONS_DRIFT`)
+> **Status:** Production-ready with meta-types integration and enterprise-grade validation
 
 ## Schema Content & Naming Overview
 
@@ -15,14 +18,18 @@
 ## 📚 Documentation Index
 
 - **[README.md](./README.md)** — This file (domain overview, table catalog)
+- **[hr-docs/README.md](./hr-docs/README.md)** — Documentation suite index (ADRs, JSONB, enums, drift remediation)
 - **[SCHEMA_LOCKDOWN.md](./hr-docs/SCHEMA_LOCKDOWN.md)** — Governance & conventions
 - **[CIRCULAR_FKS.md](./hr-docs/CIRCULAR_FKS.md)** — Deferred FK documentation
 - **[SCHEMA_DIAGRAM.md](./hr-docs/SCHEMA_DIAGRAM.md)** — ERD diagrams for all domains
 - **[PROJECT-INDEX.md](./hr-docs/PROJECT-INDEX.md)** — Project structure and file index
-- **[HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md)** — P0 cleanup cadence, version timeline, and upgrade workflow
+- **[HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md)** — P0 cleanup cadence, domain placement audit, version timeline
+- **[RELATIONS_DRIFT_REMEDIATION.md](./hr-docs/RELATIONS_DRIFT_REMEDIATION.md)** — Aligning `_relations.ts` with the drift gate
 - **[ADR-001](./hr-docs/ADR-001-domain-file-split.md)** — Domain split rationale
 - **[ADR-002](./hr-docs/ADR-002-circular-fk-handling.md)** — Circular FK handling
 - **[ADR-003](./hr-docs/ADR-003-meta-types-integration.md)** — meta-types integration rationale
+- **[ADR-006](./hr-docs/ADR-006-people-org-deferred-fks-and-hierarchy.md)** — People/org deferred FKs and hierarchy
+- **[ADR-007](./hr-docs/ADR-007-ess-workflow-and-events.md)** — ESS workflow, events/outbox, survey versions (`employeeExperience.ts`)
 
 ---
 
@@ -35,21 +42,21 @@ hr/
 ├── _schema.ts                 ← pgSchema("hr") — every table is hr.*
 ├── _enums.ts                  ← pgEnum + Zod mirrors
 ├── _zodShared.ts              ← Branded IDs, workflows
-├── _relations.ts              ← Relation catalog
+├── _relations.ts              ← hrRelations catalog (RELATIONS_DRIFT)
 ├── index.ts                   ← Barrel exports (public API)
+├── disposableEmailDomains.ts  ← Email blocklist helpers (no DB table)
 ├── people.ts (5)              employment.ts (3)           benefits.ts (5)
-├── payroll.ts (10)            attendance.ts (10)          attendanceEnhancements.ts (5)
-├── talent.ts (5)              skills.ts (7)               recruitment.ts (10)
-├── learning.ts (16)           operations.ts (5)           policyAcknowledgments.ts (2)
-├── employeeExperience.ts (6)  workforceStrategy.ts (6)    peopleAnalytics.ts (6)
-├── globalWorkforce.ts (6)     expenses.ts (6)            engagement.ts (3)
-├── leaveEnhancements.ts (3)   taxCompliance.ts (5)       lifecycle.ts (4)
-├── travel.ts (4)              workforcePlanning.ts (2)   appraisalTemplates.ts (3)
-├── compensation.ts (5)        grievances.ts (2)          loans.ts (2)
-└── onboarding.ts              ← Pointer only (tables in operations.ts)
+├── payroll.ts (10)            compensation.ts (5)       attendance.ts (11)
+├── attendanceEnhancements.ts (5)  talent.ts (5)         skills.ts (9)
+├── recruitment.ts (10)        learning.ts (16)          operations.ts (5)
+├── policyAcknowledgments.ts (2)  employeeExperience.ts (17)  workforceStrategy.ts (8)
+├── peopleAnalytics.ts (7)     globalWorkforce.ts (6)    expenses.ts (7)
+├── engagement.ts (5)         leaveEnhancements.ts (3)  taxCompliance.ts (5)
+├── lifecycle.ts (4)          travel.ts (4)             workforcePlanning.ts (2)
+├── appraisalTemplates.ts (3) grievances.ts (2)         loans.ts (3)
 ```
 
-**Total: 146 tables across 27 domain modules (+ infra files), 90+ enums, 100+ branded ID schemas**
+**Total: 167 tables across 27 domain modules (+ `_schema`, `_enums`, `_zodShared`, `_relations`, `index`, helpers), 94+ enums, 100+ branded ID schemas**
 
 Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md) (P0 domain placement audit).
 
@@ -74,7 +81,7 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 - `employees.managerId` → `employees.id`
 - `costCenters.parentCostCenterId` → `costCenters.id`
 
-**Circular FKs (deferred — see [CIRCULAR_FKS.md](CIRCULAR_FKS.md)):**
+**Circular FKs (deferred — see [CIRCULAR_FKS.md](./hr-docs/CIRCULAR_FKS.md)):**
 
 - `departments.managerId` → `employees.id` (cannot declare — departments defined before employees)
 - `departments.costCenterId` → `costCenters.id` (cannot declare — departments defined before costCenters)
@@ -103,11 +110,11 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 | `benefitPlanBenefits`       | `hr.benefit_plan_benefits`       | Provider-plan associations         | —                          |
 | `benefitEnrollments`        | `hr.benefit_enrollments`         | Employee enrollment in benefits    | —                          |
 | `benefitDependentCoverage`  | `hr.benefit_dependent_coverage`  | Dependent coverage details         | —                          |
-| `benefitClaims`             | `hr.benefit_claims`              | Insurance and reimbursement claims | `(tenantId, claimNumber)`  |
+| `benefitClaims`             | `hr.benefit_claims`              | Insurance and reimbursement claims | —                          |
 
 ---
 
-### `payroll.ts` — Compensation (10 tables)
+### `payroll.ts` — Payroll runs & statutory (10 tables)
 
 | Table                  | SQL Name                   | Purpose                               | Unique Key                                |
 | ---------------------- | -------------------------- | ------------------------------------- | ----------------------------------------- |
@@ -132,13 +139,26 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 
 ---
 
-### `attendance.ts` — Leave & Time (10 tables)
+### `compensation.ts` — Equity, cycles & benchmarks (5 tables)
+
+| Table                 | SQL Name                 | Purpose                                      | Unique Key                |
+| --------------------- | ------------------------ | -------------------------------------------- | ------------------------- |
+| `vestingSchedules`    | `hr.vesting_schedules`   | Vesting schedule definitions                 | `(tenantId, scheduleCode)` |
+| `compensationCycles`  | `hr.compensation_cycles` | Compensation planning cycles                 | `(tenantId, cycleCode)`   |
+| `compensationBudgets` | `hr.compensation_budgets`| Budget envelopes (cycle / dept / position) | —                         |
+| `equityGrants`        | `hr.equity_grants`       | Equity grant lines per employee            | —                         |
+| `marketBenchmarks`    | `hr.market_benchmarks`   | External salary / role benchmarks          | —                         |
+
+---
+
+### `attendance.ts` — Leave & Time (11 tables)
 
 | Table               | SQL Name                | Purpose                               | Unique Key                                                  |
 | ------------------- | ----------------------- | ------------------------------------- | ----------------------------------------------------------- |
 | `leaveTypeConfigs`  | `hr.leave_type_configs` | Per-tenant leave type settings        | `(tenantId, leaveType)`                                     |
 | `leaveAllocations`  | `hr.leave_allocations`  | Annual leave balance per employee     | `(tenantId, employeeId, leaveTypeConfigId, allocationYear)` |
 | `leaveRequests`     | `hr.leave_requests`     | Leave request with approval workflow  | `(tenantId, requestNumber)`                                 |
+| `leaveRequestStatusHistory` | `hr.leave_request_status_history` | Immutable status transitions for a request | —                           |
 | `holidayCalendars`  | `hr.holiday_calendars`  | Regional holiday calendar definitions | `(tenantId, calendarCode)`                                  |
 | `holidays`          | `hr.holidays`           | Individual holiday entries            | —                                                           |
 | `timeSheets`        | `hr.time_sheets`        | Weekly/periodic time tracking         | `(tenantId, timesheetNumber)`                               |
@@ -161,33 +181,50 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 
 ---
 
-### `talent.ts` — Performance & Skills (7 tables)
+### `talent.ts` — Performance & certifications (5 tables)
 
 | Table                     | SQL Name                       | Purpose                           | Unique Key                        |
 | ------------------------- | ------------------------------ | --------------------------------- | --------------------------------- |
 | `performanceReviewCycles` | `hr.performance_review_cycles` | Review period definitions         | `(tenantId, cycleCode)`           |
 | `performanceReviews`      | `hr.performance_reviews`       | Individual reviews within a cycle | `(tenantId, reviewNumber)`        |
 | `goals`                   | `hr.goals`                     | Employee goal tracking            | `(tenantId, goalCode)`            |
-| `skills`                  | `hr.skills`                    | Skill catalog                     | `(tenantId, skillCode)`           |
-| `employeeSkills`          | `hr.employee_skills`           | Employee skill assessments        | `(tenantId, employeeId, skillId)` |
 | `certifications`          | `hr.certifications`            | Certification catalog             | `(tenantId, certificationCode)`   |
 | `employeeCertifications`  | `hr.employee_certifications`   | Employee certification records    | —                                 |
 
-**Key patterns:** reviewerId and verifiedBy columns reference employees (same-schema FK).
+**Key patterns:** `reviewerId` and similar columns reference `employees` (composite tenant FKs).
 
 ---
 
-### `recruitment.ts` — Hiring Pipeline (7 tables)
+### `skills.ts` — Skills taxonomy & resume lines (9 tables)
 
-| Table                | SQL Name                 | Purpose                               | Unique Key                      |
-| -------------------- | ------------------------ | ------------------------------------- | ------------------------------- |
-| `jobOpenings`        | `hr.job_openings`        | Posted positions for hiring           | `(tenantId, openingCode)`       |
-| `jobApplications`    | `hr.job_applications`    | Applicant records per opening         | `(tenantId, applicationNumber)` |
-| `interviews`         | `hr.interviews`          | Interview records per application     | —                               |
-| `jobOffers`          | `hr.job_offers`          | Formal offer management               | `(tenantId, offerNumber)`       |
-| `applicantDocuments` | `hr.applicant_documents` | Resume, cover letter, certifications  | —                               |
-| `interviewFeedback`  | `hr.interview_feedback`  | Structured feedback forms             | —                               |
-| `offerLetters`       | `hr.offer_letters`       | Generated offer letters with workflow | `(tenantId, offerLetterNumber)` |
+| Table                            | SQL Name                              | Purpose                                |
+| -------------------------------- | ------------------------------------- | -------------------------------------- |
+| `skillTypes`                     | `hr.skill_types`                      | Skill categories / UI metadata         |
+| `hrSkillLevels`                  | `hr.skill_levels`                     | Level ladder per tenant                |
+| `skills`                       | `hr.skills`                           | Skill definitions                      |
+| `employeeSkills`               | `hr.employee_skills`                  | Employee proficiency rows              |
+| `jobPositionSkills`            | `hr.job_position_skills`              | Required skills per position           |
+| `hrResumeLineTypes`            | `hr.resume_line_types`                | Resume section type catalog            |
+| `employeeResumeLines`          | `hr.employee_resume_lines`            | Structured resume bullets              |
+| `employeeResumeLineAchievements` | `hr.employee_resume_line_achievements` | Achievements per line               |
+| `employeeResumeLineSkillEntries` | `hr.employee_resume_line_skill_entries` | Skill tags per line              |
+
+---
+
+### `recruitment.ts` — Hiring pipeline (10 tables)
+
+| Table                      | SQL Name                      | Purpose                                 | Unique Key                      |
+| -------------------------- | ----------------------------- | --------------------------------------- | ------------------------------- |
+| `jobOpenings`              | `hr.job_openings`             | Posted positions                        | `(tenantId, openingCode)`       |
+| `jobApplications`        | `hr.job_applications`         | Applicant records per opening           | `(tenantId, applicationNumber)` |
+| `interviews`               | `hr.interviews`               | Interview records per application       | —                               |
+| `jobOffers`                | `hr.job_offers`               | Formal offers                           | `(tenantId, offerNumber)`       |
+| `applicantDocuments`       | `hr.applicant_documents`      | Uploaded applicant files                | —                               |
+| `interviewFeedback`        | `hr.interview_feedback`       | Structured interviewer feedback         | —                               |
+| `offerLetters`             | `hr.offer_letters`            | Generated offer letters                 | `(tenantId, offerLetterNumber)` |
+| `recruitmentPipelineStages`| `hr.recruitment_pipeline_stages` | Configurable pipeline stages         | —                               |
+| `recruitmentAnalytics`     | `hr.recruitment_analytics`    | Pipeline analytics aggregates           | —                               |
+| `resumeParsedData`         | `hr.resume_parsed_data`       | Parsed resume payload per application   | —                               |
 
 **Pipeline:** jobOpenings → jobApplications → interviews → jobOffers
 
@@ -198,23 +235,23 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 | Table                     | SQL Name                       | Purpose                            | Unique Key                      |
 | ------------------------- | ------------------------------ | ---------------------------------- | ------------------------------- |
 | `courses`                 | `hr.courses`                   | Course catalog with metadata       | `(tenantId, courseCode)`        |
+| `courseModules`           | `hr.course_modules`            | Modules within a course            | —                               |
 | `courseSessions`          | `hr.course_sessions`           | Scheduled course sessions          | `(tenantId, sessionCode)`       |
 | `courseEnrollments`       | `hr.course_enrollments`        | Employee enrollments with progress | —                               |
 | `coursePrerequisites`     | `hr.course_prerequisites`      | Course prerequisite relationships  | —                               |
 | `courseMaterials`         | `hr.course_materials`          | Learning resources and materials   | —                               |
-| `assessmentAttempts`      | `hr.assessment_attempts`       | Quiz/exam attempt records          | —                               |
+| `assessments`             | `hr.assessments`               | Quizzes and exams                  | `(tenantId, assessmentCode)`    |
+| `assessmentQuestions`     | `hr.assessment_questions`      | Question bank                      | —                               |
+| `assessmentAttempts`      | `hr.assessment_attempts`       | Attempt records per enrollment     | —                               |
 | `certificates`            | `hr.certificates`              | Issued certification records       | `(tenantId, certificateNumber)` |
 | `learningPaths`           | `hr.learning_paths`            | Learning path definitions          | `(tenantId, pathCode)`          |
 | `learningPathCourses`     | `hr.learning_path_courses`     | Course associations with paths     | —                               |
-| `assessments`             | `hr.assessments`               | Quizzes and exams                  | `(tenantId, assessmentCode)`    |
-| `assessmentQuestions`     | `hr.assessment_questions`      | Question bank                      | —                               |
-| `assessmentAttempts`      | `hr.assessment_attempts`       | Individual attempts tracking       | —                               |
+| `learningPathEnrollments` | `hr.learning_path_enrollments` | Employee path enrollments          | —                               |
 | `learningProgress`        | `hr.learning_progress`         | Module-level completion tracking   | —                               |
 | `trainingFeedback`        | `hr.training_feedback`         | Post-training evaluations          | —                               |
-| `trainingCosts`           | `hr.training_costs`            | Budget tracking                    | —                               |
-| `learningPathEnrollments` | `hr.learning_path_enrollments` | Employee path enrollments          | —                               |
+| `trainingCosts`           | `hr.training_costs`            | Budget / cost rows                 | —                               |
 
-**Key features:** Comprehensive LMS with course modules, learning paths, assessments, certificates, and progress tracking
+**Key features:** LMS with modules, paths, assessments, certificates, and progress tracking.
 
 ---
 
@@ -248,50 +285,62 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 
 ---
 
-### `employeeExperience.ts` — Self-Service & Engagement (6 tables)
+### `employeeExperience.ts` — Employee self-service (ESS) (17 tables)
 
-| Table                         | SQL Name                            | Purpose                                                     | Unique Key                              |
-| ----------------------------- | ----------------------------------- | ----------------------------------------------------------- | --------------------------------------- |
-| `employeeSelfServiceProfiles` | `hr.employee_self_service_profiles` | Portal access and login tracking                            | `(tenantId, employeeId)`                |
-| `employeeRequests`            | `hr.employee_requests`              | Generic request workflow (time off, documents, pay changes) | `(tenantId, requestNumber)`             |
-| `employeeNotifications`       | `hr.employee_notifications`         | System notifications and alerts                             | —                                       |
-| `employeePreferences`         | `hr.employee_preferences`           | UI, communication, privacy settings                         | `(tenantId, employeeId, preferenceKey)` |
-| `employeeSurveys`             | `hr.employee_surveys`               | Survey definitions (engagement, pulse, exit)                | `(tenantId, surveyCode)`                |
-| `surveyResponses`             | `hr.survey_responses`               | Anonymous survey responses                                  | —                                       |
+| Table                                  | SQL Name                                   | Purpose                                      |
+| -------------------------------------- | ------------------------------------------ | -------------------------------------------- |
+| `essEscalationPolicies`                | `hr.ess_escalation_policies`               | SLA / escalation catalog                     |
+| `employeeSelfServiceProfiles`          | `hr.employee_self_service_profiles`        | Portal profile per employee                  |
+| `employeeRequests`                     | `hr.employee_requests`                    | Request aggregate (SLA, approvals, versioning) |
+| `employeeRequestApprovalTasks`         | `hr.employee_request_approval_tasks`       | Multi-step approval tasks                    |
+| `employeeRequestHistory`               | `hr.employee_request_history`              | Immutable request transitions                |
+| `employeeNotifications`              | `hr.employee_notifications`                | In-app / channel notifications               |
+| `employeePreferences`                | `hr.employee_preferences`                  | UI and communication preferences             |
+| `employeeSurveys`                    | `hr.employee_surveys`                      | Survey definitions                           |
+| `employeeSurveyQuestionnaireVersions`  | `hr.employee_survey_questionnaire_versions` | Locked questionnaire snapshots            |
+| `surveyResponses`                    | `hr.survey_responses`                      | Responses (versioned questionnaire)          |
+| `surveyInvitations`                  | `hr.survey_invitations`                    | Targeted survey invites                    |
+| `employeePushEndpoints`              | `hr.employee_push_endpoints`               | Mobile push registration                     |
+| `essEventTypes`                      | `hr.ess_event_types`                       | Allowed ESS event codes per tenant           |
+| `essDomainEvents`                    | `hr.ess_domain_events`                     | Domain events (e.g. request lifecycle)       |
+| `essOutbox`                          | `hr.ess_outbox`                            | Outbox / fan-out delivery                    |
+| `essWorkflowDefinitions`           | `hr.ess_workflow_definitions`              | Workflow template header                     |
+| `essWorkflowSteps`                   | `hr.ess_workflow_steps`                    | Workflow template steps                      |
 
-**Key features:** Employee self-service portal with request management, notifications, and engagement surveys
-
----
-
-### `workforceStrategy.ts` — Succession & Career Planning (8 tables)
-
-| Table                 | SQL Name                  | Purpose                                  | Unique Key              |
-| --------------------- | ------------------------- | ---------------------------------------- | ----------------------- |
-| `successionPlans`     | `hr.succession_plans`     | Leadership replacement plans             | `(tenantId, planCode)`  |
-| `talentPools`         | `hr.talent_pools`         | Talent pool definitions                  | `(tenantId, poolCode)`  |
-| `talentPoolMembers`   | `hr.talent_pool_members`  | Pool membership with readiness tracking  | —                       |
-| `careerPaths`         | `hr.career_paths`         | Career progression tracks                | `(tenantId, pathCode)`  |
-| `careerPathSteps`     | `hr.career_path_steps`    | Steps in career paths with prerequisites | —                       |
-| `careerAspirations`   | `hr.career_aspirations`   | Employee career goals                    | —                       |
-| `compensationCycles`  | `hr.compensation_cycles`  | Annual compensation planning cycles      | `(tenantId, cycleCode)` |
-| `compensationBudgets` | `hr.compensation_budgets` | Department/position budgets              | —                       |
-
-**Key features:** Strategic workforce planning with succession, talent pools, career paths, and compensation planning
+**Docs:** [ADR-007](./hr-docs/ADR-007-ess-workflow-and-events.md) · **Diagram:** [SCHEMA_DIAGRAM.md](./hr-docs/SCHEMA_DIAGRAM.md) (ESS ERD).
 
 ---
 
-### `peopleAnalytics.ts` — Analytics & Reporting (6 tables)
+### `workforceStrategy.ts` — Succession & career paths (8 tables)
 
-| Table                 | SQL Name                  | Purpose                                            | Unique Key                  |
-| --------------------- | ------------------------- | -------------------------------------------------- | --------------------------- |
-| `analyticsFacts`      | `hr.analytics_facts`      | Partitioned fact table for daily HR metrics        | —                           |
-| `hrMetrics`           | `hr.hr_metrics`           | KPI definitions and calculations                   | `(tenantId, metricCode)`    |
-| `analyticsDashboards` | `hr.analytics_dashboards` | Dashboard configurations                           | `(tenantId, dashboardCode)` |
-| `dataExports`         | `hr.data_exports`         | Export job tracking                                | `(tenantId, exportCode)`    |
-| `reportSubscriptions` | `hr.report_subscriptions` | Scheduled report delivery                          | —                           |
-| `analyticsDimensions` | `hr.analytics_dimensions` | Slowly changing dimensions for historical analysis | —                           |
+| Table                       | SQL Name                     | Purpose                                  | Unique Key             |
+| --------------------------- | ---------------------------- | ---------------------------------------- | ---------------------- |
+| `successionPlans`           | `hr.succession_plans`        | Leadership replacement plans             | `(tenantId, planCode)` |
+| `talentPools`               | `hr.talent_pools`            | Talent pool definitions                  | `(tenantId, poolCode)` |
+| `talentPoolMembers`         | `hr.talent_pool_members`     | Pool membership with readiness           | —                      |
+| `careerPaths`               | `hr.career_paths`            | Career progression tracks                | `(tenantId, pathCode)` |
+| `careerPathSteps`           | `hr.career_path_steps`       | Steps with prerequisites                 | —                      |
+| `careerPathStepSkills`      | `hr.career_path_step_skills` | Skills required per step                 | —                      |
+| `careerAspirations`         | `hr.career_aspirations`      | Employee-stated career goals             | —                      |
+| `careerAspirationSkillGaps` | `hr.career_aspiration_skill_gaps` | Gap analysis vs target path      | —                      |
 
-**Key features:** Data warehouse with partitioned fact tables, KPI tracking, dashboards, and scheduled reporting. JSON-serialized dashboard and export payloads use **GIN** expression indexes (`::jsonb`) for containment-style queries at scale.
+**Note:** Compensation cycles and budgets live in **`compensation.ts`**, not this module.
+
+---
+
+### `peopleAnalytics.ts` — Analytics & reporting (7 tables)
+
+| Table                          | SQL Name                           | Purpose                                            | Unique Key                  |
+| ------------------------------ | ---------------------------------- | -------------------------------------------------- | --------------------------- |
+| `analyticsFacts`               | `hr.analytics_facts`               | Partitioned fact table for HR metrics              | —                           |
+| `hrMetrics`                    | `hr.hr_metrics`                    | KPI definitions and calculations                   | `(tenantId, metricCode)`    |
+| `analyticsDashboards`          | `hr.analytics_dashboards`          | Dashboard configurations                           | `(tenantId, dashboardCode)` |
+| `dataExports`                  | `hr.data_exports`                  | Export job tracking                                | `(tenantId, exportCode)`    |
+| `reportSubscriptions`          | `hr.report_subscriptions`          | Scheduled report delivery                          | —                           |
+| `reportSubscriptionRecipients` | `hr.report_subscription_recipients` | Recipients per subscription                     | —                           |
+| `analyticsDimensions`          | `hr.analytics_dimensions`          | Slowly changing dimensions                         | —                           |
+
+**Key features:** Partitioned facts, KPIs, dashboards, exports, subscriptions. JSON payloads use **GIN** expression indexes (`::jsonb`) where documented in migrations.
 
 ---
 
@@ -310,9 +359,31 @@ Authoritative file → table map: [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHE
 
 ---
 
-## Enums (80+ total)
+### Other domain modules (summary)
 
-Defined in `_enums.ts`. Each has a `pgEnum` for the database and a matching `z.enum()` Zod schema.
+Full file → table counts and bounded contexts are in **[HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md)** (P0 domain placement audit). In addition to the sections above:
+
+| File | Tables | Topics |
+| ---- | -----: | ------ |
+| `attendanceEnhancements.ts` | 5 | Attendance change requests, overtime rules, biometric devices/logs, shift swap |
+| `expenses.ts` | 7 | HR expense categories, policies, claims, reports, lines, approvals, cash advances |
+| `engagement.ts` | 5 | Bonus point rules, balances, transactions, reward catalog, redemption requests |
+| `appraisalTemplates.ts` | 3 | Appraisal templates, template KRAs, employee KRAs |
+| `leaveEnhancements.ts` | 3 | Compensatory leave, restrictions, encashment |
+| `taxCompliance.ts` | 5 | Tax exemption catalog, declarations, line items, proofs |
+| `lifecycle.ts` | 4 | Promotions, transfers, exit interviews, full & final settlement |
+| `travel.ts` | 4 | Travel requests, itineraries, fleet vehicles, vehicle logs |
+| `grievances.ts` | 2 | Grievance categories, employee grievances |
+| `loans.ts` | 3 | Loan types, employee loans, installment schedule |
+| `workforcePlanning.ts` | 2 | Staffing plans and line details |
+
+**Diagrams:** [SCHEMA_DIAGRAM.md](./hr-docs/SCHEMA_DIAGRAM.md) · **Relations:** `_relations.ts`
+
+---
+
+## Enums (94+ total)
+
+Defined in `_enums.ts`. Each has a `pgEnum` for the database and a matching `z.enum()` Zod schema. **Maintenance:** when you add or rename enums, update this table only if it helps navigation — the source of truth is always `_enums.ts` and the domain `.ts` files; table counts above stay aligned via [HR_SCHEMA_UPGRADE_GUIDE.md](./hr-docs/HR_SCHEMA_UPGRADE_GUIDE.md).
 
 | Category                | Enums                                                                                                                                                            |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -320,7 +391,8 @@ Defined in `_enums.ts`. Each has a `pgEnum` for the database and a matching `z.e
 | **Personal**            | `gender`, `maritalStatus`, `workLocationType`                                                                                                                    |
 | **Leave/Time**          | `leaveType`, `leaveStatus`, `attendanceStatus`, `shiftType`                                                                                                      |
 | **Payroll**             | `payrollStatus`, `paymentMethod`, `componentType`, `country`, `taxType`, `statutoryDeductionType`, `payrollAdjustmentType`                                       |
-| **Benefits**            | `benefitType`, `benefitStatus`, `providerType`, `planType`, `coverageLevel`, `claimStatus`, `claimType`                                                          |
+| **Benefits** (`benefits.ts`) | Provider-centric module: `benefit_catalog_status`, `benefit_enrollment_workflow_status`, `benefit_dependent_relationship`, `dependent_coverage_status`, `benefit_claim_status`, `benefit_plan_coverage_type` (pgEnums + `Benefit*Schema` / `DependentCoverageStatusSchema` in `_enums.ts`) |
+| **Benefits** (`employment.ts`, legacy) | Simpler catalog path: `benefit_type`, `benefit_status` on `benefit_plans` / `employee_benefits` only — does not share FKs with `benefits.ts` |
 | **Performance**         | `performanceReviewStatus`, `performanceRating`, `goalStatus`, `goalPriority`                                                                                     |
 | **Recruitment**         | `recruitmentStatus`, `applicationStatus`, `interviewStage`, `interviewResult`, `offerStatus`, `documentType`, `feedbackCriteria`                                 |
 | **Learning**            | `courseStatus`, `courseLevel`, `enrollmentStatus`, `assessmentType`, `assessmentStatus`, `questionType`, `attemptStatus`, `feedbackStatus`, `learningPathStatus` |
@@ -329,31 +401,31 @@ Defined in `_enums.ts`. Each has a `pgEnum` for the database and a matching `z.e
 | **Discipline**          | `disciplinaryActionType`                                                                                                                                         |
 | **Skills**              | `skillLevel`, `certificationStatus`                                                                                                                              |
 | **Org**                 | `departmentType`, `costCenterType`, `terminationReason`, `exitInterviewStatus`, `onboardingStatus`                                                               |
-| **Employee Experience** | `requestType`, `requestStatus`, `notificationPriority`, `notificationStatus`, `surveyType`                                                                       |
+| **Employee Experience** | `requestType`, `requestStatus`, ESS SLA/approval/outbox/survey enums (see `_enums.ts`)                                                                           |
 | **Workforce Strategy**  | `successionReadiness`, `talentPoolStatus`, `careerPathStatus`, `compensationCycleStatus`                                                                         |
 | **Analytics**           | `metricType`, `metricFrequency`, `exportFormat`, `exportStatus`, `dashboardType`                                                                                 |
 | **Global**              | `assignmentType`, `assignmentStatus`, `permitType`, `permitStatus`, `complianceType`, `complianceStatus`                                                         |
 | **Grievance / Loan**    | `grievanceCategoryType`, `grievanceStatus`, `grievancePriority`, `loanCategory`, `loanStatus`, `loanRepaymentFrequency`                                         |
 | **Onboarding / Policy** | `onboardingTaskStatus`, `onboardingTaskCategory`, `policyDocumentCategory`, `policyAcknowledgmentMethod`                                                        |
-| **Attendance upgrade**  | `shiftSwapStatus` (shift swap workflow), plus existing `attendanceRequestType`, `overtimeRuleType`, `biometricDeviceType`                                          |
+| **Attendance upgrade**  | `shiftSwapStatus`, `attendanceRequestType`, `overtimeRuleType`, `biometricDeviceType`                                                                              |
+| **Engagement**          | Bonus point / redemption workflow enums                                                                                                                          |
 
 ---
 
 ## Cross-Schema References
 
-| From (HR)                                                            | To (External)                             | Via                                  |
-| -------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------ |
-| All tables                                                           | `core.tenants`                            | `tenantId → tenants.tenantId`        |
-| employees                                                            | `security.users`                          | `userId → users.userId`              |
-| employees                                                            | `reference.states`, `reference.countries` | `stateId`, `countryId`               |
-| holidayCalendars                                                     | `reference.states`, `reference.countries` | `stateId`, `countryId`               |
-| jobTitles, trainingPrograms, benefitPlans, jobOffers, payrollEntries | `reference.currencies`                    | `currencyId → currencies.currencyId` |
+| From (HR) | To (External) | Via |
+| --------- | ------------- | --- |
+| All domain tables | `core.tenants` | `tenant_id → tenants.tenant_id` |
+| `employees` (optional) | `security.users` | `user_id → users.user_id` |
+| `employees`, `holiday_calendars`, others | `reference.states`, `reference.countries` | `state_id`, `country_id` (where declared) |
+| `employee_salaries`, `payroll_entries`, `job_offers`, `payment_distributions`, `employee_loans`, `benefit_plan_benefits`, `training_costs`, `courses` (optional), … | `reference.currencies` | `currency_id → currencies.currency_id` |
 
 ---
 
 ## Shared Patterns
 
-Every table follows the conventions in [SCHEMA_LOCKDOWN.md](SCHEMA_LOCKDOWN.md):
+Every table follows the conventions in [SCHEMA_LOCKDOWN.md](./hr-docs/SCHEMA_LOCKDOWN.md):
 
 - **Composite FKs:** All intra-HR FKs include `tenantId` (except self-refs and reference table FKs)
 - **Tenant-leading indexes:** Non-unique indexes start with `tenantId`
@@ -382,7 +454,9 @@ import { employees } from "../hr/people.js"; // WRONG
 ## Migration Workflow
 
 1. Edit table definition in the appropriate domain file
-2. Run `pnpm drizzle-kit generate` to produce migration SQL
-3. If circular FKs involved, append custom SQL per [CIRCULAR_FKS.md](CIRCULAR_FKS.md)
-4. Review migration in `packages/db/migrations/`
-5. Run `pnpm drizzle-kit migrate` to apply
+2. Add or update `foreignKey()` and matching **`hrRelations`** rows in `_relations.ts` for edges in the drift gate scope (HR→HR single-column and documented composite legs) — see [RELATIONS_DRIFT_REMEDIATION.md](./hr-docs/RELATIONS_DRIFT_REMEDIATION.md) and `tools/ci-gate/drizzle-schema-quality/LIMITATIONS.md`
+3. Run `pnpm drizzle-kit generate` to produce migration SQL
+4. If circular FKs are involved, append custom SQL per [CIRCULAR_FKS.md](./hr-docs/CIRCULAR_FKS.md)
+5. Review migration in `packages/db/migrations/`
+6. From repo root: `pnpm ci:gate:schema-quality` (must stay green; `RELATIONS_DRIFT` is an error)
+7. Run `pnpm drizzle-kit migrate` to apply

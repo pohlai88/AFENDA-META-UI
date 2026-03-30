@@ -5,6 +5,8 @@
 **Last Updated**: 2026-03-28
 **Priority**: 6 (Enterprise Data Lifecycle Management)
 
+**Generic R2 layer:** Domain-agnostic object storage (keys + `R2ObjectRepo`) lives in [`../r2/`](../r2/) (`@afenda/db/r2`). This folder remains the **sales-partition CLI + warm/cold orchestration**; new work should use `createR2ObjectRepo` instead of duplicating S3/R2 clients.
+
 ---
 
 ## Overview
@@ -87,7 +89,7 @@ packages/db/
 ├── src/
 │   └── archival/
 │       ├── runner.ts              # CLI orchestrator (promote, archive, restore, health)
-│       ├── r2-integration.ts      # R2 client + Parquet export/import utilities
+│       ├── r2-integration.ts      # Archival orchestration (uses createR2ObjectRepo from ../r2/)
 │       └── README.md              # This file
 ├── migrations/
 │   └── partitioning/

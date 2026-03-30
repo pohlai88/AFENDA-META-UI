@@ -1,7 +1,9 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import multer, { MulterError } from "multer";
-import { persistUploadFile } from "../uploads/storage.js";
+import { db } from "../db/index.js";
 import { asyncHandler, ValidationError } from "../middleware/errorHandler.js";
+import { resolveNumericTenantId } from "../tenant/resolveNumericTenantId.js";
+import { persistUploadFile } from "../uploads/storage.js";
 
 const router = Router();
 
@@ -69,10 +71,26 @@ router.post("/uploads", upload.single("file"), asyncHandler(async (req: Request,
     });
   }
 
+  const headerTenant =
+    typeof req.headers["x-tenant-id"] === "string" ? req.headers["x-tenant-id"].trim() : "";
+  const contextTenant = req.tenantContext?.tenantId?.trim() ?? "";
+  const rawTenant = headerTenant || contextTenant || "";
+  const tenantNumericId =
+    rawTenant.length > 0 ? await resolveNumericTenantId(db, rawTenant) : null;
+
+  const idempotencyHeader = req.headers["idempotency-key"];
+  const idempotencyKey =
+    typeof idempotencyHeader === "string" && idempotencyHeader.trim().length >= 8
+      ? idempotencyHeader.trim().slice(0, 200)
+      : undefined;
+
   const stored = await persistUploadFile({
     buffer: req.file.buffer,
     originalName: req.file.originalname,
     mimeType,
+    kind,
+    tenantNumericId,
+    idempotencyKey,
   });
 
   res.status(201).json({

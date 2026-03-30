@@ -54,6 +54,21 @@
 // ============================================================================
 import { z } from "zod/v4";
 
+import { standardApprovalWorkflowStatuses } from "./_enums.js";
+import {
+  disposableEmailDomainSet,
+  isDisposableEmail,
+} from "./disposableEmailDomains.js";
+
+export {
+  DEFAULT_DISPOSABLE_EMAIL_DOMAINS,
+  disposableEmailDomainSet,
+  extractEmailDomainForDisposableCheck,
+  isDisposableEmail,
+  normalizeDisposableEmailDomain,
+  type DisposableEmailDomainSetOptions,
+} from "./disposableEmailDomains.js";
+
 // ============================================================================
 // META-TYPES IMPORTS
 // ============================================================================
@@ -87,6 +102,7 @@ export const PayrollLineIdSchema = z.uuid().brand<"PayrollLineId">();
 export const LeaveTypeConfigIdSchema = z.uuid().brand<"LeaveTypeConfigId">();
 export const LeaveAllocationIdSchema = z.uuid().brand<"LeaveAllocationId">();
 export const LeaveRequestIdSchema = z.uuid().brand<"LeaveRequestId">();
+export const LeaveRequestStatusHistoryIdSchema = z.uuid().brand<"LeaveRequestStatusHistoryId">();
 export const HolidayCalendarIdSchema = z.uuid().brand<"HolidayCalendarId">();
 export const HolidayIdSchema = z.uuid().brand<"HolidayId">();
 export const TimeSheetIdSchema = z.uuid().brand<"TimeSheetId">();
@@ -148,7 +164,7 @@ export const TrainingFeedbackIdSchema = z.uuid().brand<"TrainingFeedbackId">();
 export const TrainingCostIdSchema = z.uuid().brand<"TrainingCostId">();
 export const LearningPathEnrollmentIdSchema = z.uuid().brand<"LearningPathEnrollmentId">();
 export const AssessmentAttemptIdSchema = z.uuid().brand<"AssessmentAttemptId">();
-export const CertificateIdSchema = z.uuid().brand<"CertificateIdSchema">();
+export const CertificateIdSchema = z.uuid().brand<"CertificateId">();
 export const CoursePrerequisiteIdSchema = z.uuid().brand<"CoursePrerequisiteId">();
 export const CourseMaterialIdSchema = z.uuid().brand<"CourseMaterialId">();
 
@@ -168,7 +184,9 @@ export const OfferLetterIdSchema = z.uuid().brand<"OfferLetterId">();
 export const hrTenantIdSchema = z.number().int().positive();
 
 /** Matches `integer("created_by")` / `integer("updated_by")` from shared `auditColumns` (e.g. `security.users.user_id`). */
-export const hrAuditUserIdSchema = z.number().int().positive();
+export const hrAuditUserIdSchema = z.number().int().positive().brand<"HrAuditUserId">();
+
+export type HrAuditUserId = z.infer<typeof hrAuditUserIdSchema>;
 
 // ============================================================================
 // PHASE 6-9 ENHANCEMENTS: BRANDED ID SCHEMAS
@@ -188,7 +206,9 @@ export const TalentPoolIdSchema = z.uuid().brand<"TalentPoolId">();
 export const TalentPoolMemberIdSchema = z.uuid().brand<"TalentPoolMemberId">();
 export const CareerPathIdSchema = z.uuid().brand<"CareerPathId">();
 export const CareerPathStepIdSchema = z.uuid().brand<"CareerPathStepId">();
+export const CareerPathStepSkillIdSchema = z.uuid().brand<"CareerPathStepSkillId">();
 export const CareerAspirationIdSchema = z.uuid().brand<"CareerAspirationId">();
+export const CareerAspirationSkillGapIdSchema = z.uuid().brand<"CareerAspirationSkillGapId">();
 export const CompensationCycleIdSchema = z.uuid().brand<"CompensationCycleId">();
 export const CompensationBudgetIdSchema = z.uuid().brand<"CompensationBudgetId">();
 
@@ -198,6 +218,7 @@ export const HrMetricIdSchema = z.uuid().brand<"HrMetricId">();
 export const AnalyticsDashboardIdSchema = z.uuid().brand<"AnalyticsDashboardId">();
 export const DataExportIdSchema = z.uuid().brand<"DataExportId">();
 export const ReportSubscriptionIdSchema = z.uuid().brand<"ReportSubscriptionId">();
+export const ReportSubscriptionRecipientIdSchema = z.uuid().brand<"ReportSubscriptionRecipientId">();
 export const AnalyticsDimensionIdSchema = z.uuid().brand<"AnalyticsDimensionId">();
 
 // Phase 9: Global Mobility & Compliance
@@ -214,12 +235,17 @@ export const SkillLevelIdSchema = z.uuid().brand<"SkillLevelId">();
 export const JobPositionSkillIdSchema = z.uuid().brand<"JobPositionSkillId">();
 export const ResumeLineTypeIdSchema = z.uuid().brand<"ResumeLineTypeId">();
 export const EmployeeResumeLineIdSchema = z.uuid().brand<"EmployeeResumeLineId">();
+export const EmployeeResumeLineAchievementIdSchema = z
+  .uuid()
+  .brand<"EmployeeResumeLineAchievementId">();
+export const EmployeeResumeLineSkillEntryIdSchema = z.uuid().brand<"EmployeeResumeLineSkillEntryId">();
 
 // Schema Upgrade: Expense Management
 export const ExpenseCategoryIdSchema = z.uuid().brand<"ExpenseCategoryId">();
 export const ExpensePolicyIdSchema = z.uuid().brand<"ExpensePolicyId">();
 export const ExpenseReportIdSchema = z.uuid().brand<"ExpenseReportId">();
 export const ExpenseApprovalIdSchema = z.uuid().brand<"ExpenseApprovalId">();
+export const CashAdvanceIdSchema = z.uuid().brand<"CashAdvanceId">();
 /** Optional `expense_lines.project_id` when no cross-schema FK is defined. */
 export const ExpenseLineProjectRefIdSchema = z.uuid().brand<"ExpenseLineProjectRefId">();
 
@@ -229,6 +255,21 @@ export const EmployeeBonusPointIdSchema = z.uuid().brand<"EmployeeBonusPointId">
 export const BonusPointTransactionIdSchema = z.uuid().brand<"BonusPointTransactionId">();
 /** Polymorphic `bonus_point_transactions.reference_id` (pairs with `reference_type`). */
 export const BonusPointTransactionReferenceIdSchema = z.uuid().brand<"BonusPointTransactionReferenceId">();
+export const BonusPointRedemptionRequestIdSchema = z.uuid().brand<"BonusPointRedemptionRequestId">();
+export const BonusPointRewardCatalogIdSchema = z.uuid().brand<"BonusPointRewardCatalogId">();
+export const EmployeeRequestHistoryIdSchema = z.uuid().brand<"EmployeeRequestHistoryId">();
+export const EssEscalationPolicyIdSchema = z.uuid().brand<"EssEscalationPolicyId">();
+export const EmployeeRequestApprovalTaskIdSchema = z.uuid().brand<"EmployeeRequestApprovalTaskId">();
+export const EssEventTypeIdSchema = z.uuid().brand<"EssEventTypeId">();
+export const EssDomainEventIdSchema = z.uuid().brand<"EssDomainEventId">();
+export const EssOutboxIdSchema = z.uuid().brand<"EssOutboxId">();
+export const EssWorkflowDefinitionIdSchema = z.uuid().brand<"EssWorkflowDefinitionId">();
+export const EssWorkflowStepIdSchema = z.uuid().brand<"EssWorkflowStepId">();
+export const EmployeeSurveyQuestionnaireVersionIdSchema = z
+  .uuid()
+  .brand<"EmployeeSurveyQuestionnaireVersionId">();
+export const SurveyInvitationIdSchema = z.uuid().brand<"SurveyInvitationId">();
+export const EmployeePushEndpointIdSchema = z.uuid().brand<"EmployeePushEndpointId">();
 export const DisciplinaryActionTypeIdSchema = z.uuid().brand<"DisciplinaryActionTypeId">();
 export const DisciplinaryActionRecordIdSchema = z.uuid().brand<"DisciplinaryActionRecordId">();
 
@@ -290,6 +331,7 @@ export const GrievanceIdSchema = z.uuid().brand<"GrievanceId">();
 // SWOT Proposal: Loan Management
 export const LoanTypeIdSchema = z.uuid().brand<"LoanTypeId">();
 export const EmployeeLoanIdSchema = z.uuid().brand<"EmployeeLoanId">();
+export const EmployeeLoanInstallmentIdSchema = z.uuid().brand<"EmployeeLoanInstallmentId">();
 
 // HR upgrade guide: policy acknowledgments & shift swap
 export const HrPolicyDocumentIdSchema = z.uuid().brand<"HrPolicyDocumentId">();
@@ -313,22 +355,31 @@ export const ShiftSwapRequestIdSchema = z.uuid().brand<"ShiftSwapRequestId">();
  * - RFC 5322 compliant
  *
  * Aligns with BusinessTypeSchema: "email"
+ *
+ * For tenant-specific lists use {@link createBusinessEmailSchema} (`additionalBlockedDomains`,
+ * `removeDefaultDisposableDomains`, `strictDisposableDomainListShape`).
+ * Memoize the returned schema per tenant in the app layer if you build it on every request.
  */
-export const businessEmailSchema = z
-  .string()
-  .email("Must be a valid email address")
-  .toLowerCase()
-  .refine((email) => {
-    const disposableDomains = [
-      "tempmail.com",
-      "guerrillamail.com",
-      "10minutemail.com",
-      "mailinator.com",
-      "throwaway.email",
-    ];
-    const domain = email.split("@")[1];
-    return !disposableDomains.includes(domain);
-  }, "Disposable email domains not allowed");
+export function createBusinessEmailSchema(options?: {
+  additionalBlockedDomains?: readonly string[];
+  /** Allow specific default disposable domains (e.g. `mailinator.com` in sandbox). */
+  removeDefaultDisposableDomains?: readonly string[];
+  /** When true (default), extra/removal entries must match a hostname-shaped pattern. */
+  strictDisposableDomainListShape?: boolean;
+}) {
+  const blocked = disposableEmailDomainSet({
+    additional: options?.additionalBlockedDomains,
+    removeDefaults: options?.removeDefaultDisposableDomains,
+    strictDomainShape: options?.strictDisposableDomainListShape,
+  });
+  return z
+    .string()
+    .email("Must be a valid email address")
+    .toLowerCase()
+    .refine((email) => !isDisposableEmail(email, blocked), "Disposable email domains not allowed");
+}
+
+export const businessEmailSchema = createBusinessEmailSchema();
 
 /**
  * Phone number validator with international format support
@@ -357,6 +408,21 @@ export const currencyAmountSchema = (maxDecimals = 2) =>
       const num = parseFloat(val);
       return !isNaN(num) && isFinite(num);
     }, "Must be a finite number");
+
+/**
+ * Accept numeric input (API / forms), emit a decimal string suitable for numeric/text DB columns.
+ * Pipes into {@link currencyAmountSchema} for the same regex/finite checks as string-first payloads.
+ */
+export function currencyAmountFromNumberSchema(maxDecimals = 2) {
+  return z
+    .number()
+    .finite("Must be a finite number")
+    .transform((n) => {
+      const fixed = n.toFixed(maxDecimals);
+      return fixed.includes(".") ? fixed.replace(/\.?0+$/, "") || "0" : fixed;
+    })
+    .pipe(currencyAmountSchema(maxDecimals));
+}
 
 /**
  * Percentage validator (0-100, up to 2 decimals)
@@ -464,6 +530,87 @@ export const vatNumberSchema = z
   .describe("Value Added Tax registration number");
 
 /**
+ * India Aadhaar (12 digits, leading digit 1–9).
+ * Does not run Verhoeff checksum; add a dedicated check if your policy requires it.
+ */
+export const aadhaarNumberSchema = z
+  .string()
+  .regex(/^[1-9]\d{11}$/, "Must be a 12-digit Aadhaar number")
+  .describe("India Aadhaar number");
+
+/**
+ * UK National Insurance number (NINO) — common formatted pattern.
+ */
+export const ukNationalInsuranceNumberSchema = z
+  .string()
+  .regex(
+    /^[A-CEGHJ-PR-TW-Z]{1}[A-CEGHJ-NPR-TW-Z]{1}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]{1}$/i,
+    "Must be a valid UK National Insurance number"
+  )
+  .describe("UK National Insurance number");
+
+/**
+ * ISO 3166-1 alpha-2 → common EU/EEA (+ CH, NO) national person ID patterns.
+ * For production payroll/HR, pair with authoritative verification; these catch obvious typos only.
+ */
+const EU_NATIONAL_PERSON_ID_PATTERNS: Partial<
+  Record<string, { pattern: RegExp; description: string }>
+> = {
+  AT: { pattern: /^\d{10}$/, description: "Austria SVNR (10 digits)" },
+  BE: {
+    pattern: /^\d{2}\.?\d{2}\.?\d{2}-?\d{3}\.?\d{2}$|^\d{11}$/,
+    description: "Belgian national number",
+  },
+  HR: { pattern: /^\d{11}$/, description: "Croatia OIB (11 digits)" },
+  CY: { pattern: /^\d{8}[A-Z]$|^\d{6}[A-Z]$/i, description: "Cyprus identity card number (simplified)" },
+  CZ: { pattern: /^\d{6}\/?\d{3,4}$/, description: "Czech birth number" },
+  DK: { pattern: /^\d{6}-\d{4}$|^\d{10}$/, description: "Danish CPR" },
+  EE: { pattern: /^[1-6]\d{10}[A-Za-z]?$/, description: "Estonian personal ID code" },
+  FI: { pattern: /^\d{6}[-+A]\d{3}[A-Z0-9]$/i, description: "Finnish HETU" },
+  FR: { pattern: /^\d{15}$/, description: "France NIR (15 digits)" },
+  DE: { pattern: /^\d{11}$/, description: "Germany Steuer-ID (11 digits)" },
+  GR: { pattern: /^\d{9}$/, description: "Greece AFM (9 digits)" },
+  HU: { pattern: /^\d{9}$/, description: "Hungary TAJ (9 digits)" },
+  IS: { pattern: /^\d{10}$/, description: "Iceland kennitala (10 digits)" },
+  IE: { pattern: /^\d{7}[A-W][A-IW]?$/i, description: "Irish PPS number" },
+  IT: {
+    pattern: /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/i,
+    description: "Italian codice fiscale",
+  },
+  LV: { pattern: /^\d{6}-\d{5}$/, description: "Latvia personal code" },
+  LT: { pattern: /^\d{11}$/, description: "Lithuania personal code" },
+  LU: { pattern: /^\d{11,12}$/, description: "Luxembourg matricule (simplified)" },
+  MT: { pattern: /^\d{7,8}[A-Z]?$/i, description: "Malta ID number (simplified)" },
+  NL: { pattern: /^\d{9}$/, description: "Netherlands BSN (9 digits)" },
+  NO: { pattern: /^\d{11}$/, description: "Norway fødselsnummer (11 digits)" },
+  PL: { pattern: /^\d{11}$/, description: "Poland PESEL (11 digits)" },
+  PT: { pattern: /^\d{9}$/, description: "Portugal NIF (9 digits)" },
+  RO: { pattern: /^\d{13}$/, description: "Romania CNP (13 digits)" },
+  SK: { pattern: /^\d{9,10}$/, description: "Slovakia birth number (simplified)" },
+  SI: { pattern: /^\d{8}$/, description: "Slovenia EMŠO (simplified)" },
+  ES: { pattern: /^\d{8}[A-Z]$|^[XYZ]\d{7,8}[A-Z]$/i, description: "Spain DNI or NIE" },
+  SE: { pattern: /^\d{8}-\d{4}$|^\d{10,12}$/, description: "Sweden personnummer" },
+  CH: { pattern: /^756\.?\d{4}\.?\d{4}\.?\d{2}$/, description: "Switzerland AHV number (simplified)" },
+};
+
+export function euNationalPersonIdSchemaFactory(isoAlpha2Country: string) {
+  const cc = isoAlpha2Country.trim().toUpperCase();
+  if (cc === "GB" || cc === "XI") {
+    return ukNationalInsuranceNumberSchema;
+  }
+  const row = EU_NATIONAL_PERSON_ID_PATTERNS[cc];
+  const config = row ?? {
+    pattern: /^[A-Z0-9./\s-]{5,40}$/i,
+    description:
+      "Generic national identifier — confirm against official rules for this jurisdiction",
+  };
+  return z
+    .string()
+    .regex(config.pattern, `Invalid ${cc} national person ID (${config.description})`)
+    .describe(`${cc}: ${config.description}`);
+}
+
+/**
  * Person name validator (first, middle, last names)
  *
  * Aligns with BusinessTypeSchema: "person_name"
@@ -555,6 +702,191 @@ export const metadataSchema = z
   .describe("Flexible metadata object for storing custom attributes");
 
 /**
+ * Optional/nullable plain JSON object (no default). Root value must be an object, not an array or primitive.
+ * Use for nullable `jsonb` columns where the product stores a single object document (audience filters, pool criteria, etc.).
+ */
+export const jsonObjectNullishSchema = z
+  .record(z.string(), z.unknown())
+  .refine((value) => isJsonObject(value), {
+    message: "Value must be a valid JSON object",
+  })
+  .nullish()
+  .describe("Optional JSON object (plain object at root)");
+
+// ---------------------------------------------------------------------------
+// JSONB payload sizing + structured HR blobs (auditable defaults)
+// ---------------------------------------------------------------------------
+
+/** API validation caps (serialized UTF-16-ish length via JSON.stringify). Tune with ops; see HR_JSONB_INDEX_AND_PARTITION_RUNBOOK.md */
+export const HR_JSONB_DEFAULT_MAX_BYTES = {
+  biometricRawData: 65_536,
+  recruitmentAutoAdvanceCriteria: 131_072,
+  assessmentAnswers: 524_288,
+  surveyQuestionsDocument: 1_048_576,
+  surveyResponsesDocument: 1_048_576,
+} as const;
+
+export type HrJsonbPayloadCapKey = keyof typeof HR_JSONB_DEFAULT_MAX_BYTES;
+
+/** Resolve max serialized JSON bytes (e.g. tenant tier overrides from app config). */
+export function hrJsonbMaxBytes(
+  key: HrJsonbPayloadCapKey,
+  tenantOverrides?: Partial<Record<HrJsonbPayloadCapKey, number>>
+): number {
+  const o = tenantOverrides?.[key];
+  return typeof o === "number" && o > 0 ? o : HR_JSONB_DEFAULT_MAX_BYTES[key];
+}
+
+export function addIssueIfSerializedJsonExceeds(
+  val: unknown,
+  ctx: z.RefinementCtx,
+  maxBytes: number,
+  path: PropertyKey[] = []
+): void {
+  if (val === undefined || val === null) return;
+  try {
+    if (JSON.stringify(val).length > maxBytes) {
+      ctx.addIssue({
+        code: "custom" as const,
+        message: `JSON payload exceeds ${maxBytes} bytes (serialized length)`,
+        path,
+      });
+    }
+  } catch {
+    ctx.addIssue({
+      code: "custom" as const,
+      message: "Value is not JSON-serializable",
+      path,
+    });
+  }
+}
+
+const hrSurveyQuestionOptionSchema = z
+  .object({
+    value: z.string().min(1).max(500),
+    label: z.string().min(1).max(500).optional(),
+  })
+  .passthrough();
+
+const hrSurveyQuestionOptionEntrySchema = z.union([
+  hrSurveyQuestionOptionSchema,
+  z.string().min(1).max(500),
+]);
+
+/**
+ * One ESS survey question: structured core fields + `.passthrough()` for tenant extensions (branching keys, scale metadata).
+ * `prompt` / `text` / `label` and `type` / `kind` remain interchangeable for backward compatibility.
+ */
+export const hrSurveyQuestionSchema = z
+  .object({
+    questionId: z.string().min(1).max(128).optional(),
+    prompt: z.string().min(1).max(5000).optional(),
+    text: z.string().min(1).max(5000).optional(),
+    label: z.string().min(1).max(5000).optional(),
+    type: z.string().min(1).max(64).optional(),
+    kind: z.string().min(1).max(64).optional(),
+    options: z.array(hrSurveyQuestionOptionEntrySchema).max(500).optional(),
+    required: z.boolean().optional(),
+    scoringWeight: z.number().finite().min(0).max(100).optional(),
+  })
+  .passthrough()
+  .superRefine((val, ctx) => {
+    const prompt =
+      typeof val.prompt === "string"
+        ? val.prompt
+        : typeof val.text === "string"
+          ? val.text
+          : typeof val.label === "string"
+            ? val.label
+            : null;
+    if (prompt === null || prompt.length < 1 || prompt.length > 5000) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Each question must include prompt, text, or label (1-5000 characters)",
+      });
+    }
+    const typ =
+      typeof val.type === "string"
+        ? val.type
+        : typeof val.kind === "string"
+          ? val.kind
+          : null;
+    if (typ === null || typ.length < 1 || typ.length > 64) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Each question must include type or kind (1-64 characters)",
+        path: ["type"],
+      });
+    }
+  });
+
+/**
+ * One survey answer row: string-keyed JSON map (structured `{ questionId, value }` or flat `{ q1: "yes" }`).
+ */
+export const hrSurveyResponseItemSchema = z
+  .record(z.string(), z.json())
+  .superRefine((val, ctx) => {
+    if (Object.keys(val).length === 0) {
+      ctx.addIssue({ code: "custom", message: "Each response item must be a non-empty object" });
+    }
+  });
+
+/** Pipeline auto-advance rules: root must be object or array; bounded size. */
+export const recruitmentAutoAdvanceCriteriaSchema = z
+  .json()
+  .optional()
+  .superRefine((val, ctx) => {
+    if (val === undefined) return;
+    if (val === null || typeof val !== "object") {
+      ctx.addIssue({
+        code: "custom",
+        message: "autoAdvanceCriteria must be a JSON object or array",
+      });
+      return;
+    }
+    addIssueIfSerializedJsonExceeds(
+      val,
+      ctx,
+      HR_JSONB_DEFAULT_MAX_BYTES.recruitmentAutoAdvanceCriteria
+    );
+  });
+
+/** Biometric vendor payload: object or array only, bounded size. */
+export const biometricDevicePayloadSchema = z
+  .json()
+  .optional()
+  .superRefine((val, ctx) => {
+    if (val === undefined) return;
+    if (val === null || typeof val !== "object") {
+      ctx.addIssue({
+        code: "custom",
+        message: "rawData must be a JSON object or array",
+      });
+      return;
+    }
+    addIssueIfSerializedJsonExceeds(val, ctx, HR_JSONB_DEFAULT_MAX_BYTES.biometricRawData);
+  });
+
+const biometricLogRawDataObjectSchema = z
+  .object({
+    deviceEvent: z.string().max(500).optional(),
+    payload: z.unknown().optional(),
+  })
+  .passthrough();
+
+/**
+ * Biometric log `raw_data`: preferred `{ deviceEvent?, payload? }` envelope with passthrough keys;
+ * top-level JSON arrays still accepted for legacy vendor dumps.
+ */
+export const biometricLogRawDataSchema = z
+  .union([biometricLogRawDataObjectSchema, z.array(z.unknown())])
+  .optional()
+  .superRefine((val, ctx) => {
+    if (val === undefined) return;
+    addIssueIfSerializedJsonExceeds(val, ctx, HR_JSONB_DEFAULT_MAX_BYTES.biometricRawData);
+  });
+
+/**
  * Strict metadata validator - no empty objects allowed
  *
  * Use when metadata is required to have at least one key-value pair.
@@ -612,51 +944,11 @@ export function createTypedMetadataSchema<T extends z.ZodRawShape>(
   );
 }
 
-// ============================================================================
-// LEGACY VALIDATORS (maintained for backward compatibility)
-// ============================================================================
-
-/** @deprecated Use currencyAmountSchema() instead */
-export const salaryAmountSchema = currencyAmountSchema(2);
-
-/** @deprecated Use boundedPercentageSchema or custom range validator */
-export const hoursWorkedSchema = z
-  .string()
-  .regex(/^\d+(\.\d{1,2})?$/, "Must be valid hours (e.g., 8.00, 8.5)")
-  .refine((value) => Number(value) >= 0 && Number(value) <= 24, "Hours must be between 0 and 24");
-
-/** @deprecated Use boundedPercentageSchema instead */
-export const percentageSchema = z
-  .string()
-  .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid percentage")
-  .refine(
-    (value) => Number(value) >= 0 && Number(value) <= 100,
-    "Percentage must be between 0 and 100"
-  );
-
 export const employeeCodeSchema = z
   .string()
   .regex(/^[A-Z0-9-]+$/, "Employee code must contain only uppercase letters, numbers, and hyphens")
   .min(3, "Employee code must be at least 3 characters")
   .max(20, "Employee code must not exceed 20 characters");
-
-/** @deprecated Use internationalPhoneSchema instead */
-export const phoneNumberSchema = z
-  .string()
-  .regex(/^\+?[\d\s\-()]+$/, "Must be a valid phone number format");
-
-/** @deprecated Use businessEmailSchema instead */
-export const emailSchema = z.string().email("Must be a valid email address");
-
-/** @deprecated Use taxIdSchemaFactory(countryCode) instead */
-export const taxIdSchema = z
-  .string()
-  .regex(/^[A-Z0-9-]+$/, "Tax ID must contain only uppercase letters, numbers, and hyphens");
-
-/** @deprecated Use bankAccountSchema or ibanSchema instead */
-export const bankAccountSchema_legacy = z
-  .string()
-  .regex(/^[A-Z0-9]+$/, "Bank account must contain only uppercase letters and numbers");
 
 // ============================================================================
 // WORKFLOW STATE VALIDATORS (meta-types/workflow integration)
@@ -688,10 +980,10 @@ export function createWorkflowStateSchema<S extends string>(workflowDef: {
 }
 
 /**
- * Leave request workflow states
+ * Leave request workflow — states match `standardApprovalWorkflowStatuses` / `leave_status` pgEnum.
  */
 export const leaveRequestWorkflow = {
-  states: ["draft", "submitted", "approved", "rejected", "cancelled"] as const,
+  states: standardApprovalWorkflowStatuses,
   transitions: {
     draft: ["submitted", "cancelled"],
     submitted: ["approved", "rejected", "cancelled"],
@@ -1034,6 +1326,20 @@ export function refineBoundedHours(field: string, min = 0, max = 24, message?: s
 // ============================================================================
 
 /**
+ * **Zod 4 ISO strings**
+ *
+ * - Calendar dates (`YYYY-MM-DD`): `z.iso.date()` — not `z.string().date()`.
+ * - Instants: `z.iso.datetime()` — not `z.string().datetime()`.
+ * - Time of day: `z.iso.time()` — not `z.string().time()`.
+ * - ISO durations: `z.iso.duration()` — not `z.string().duration()`.
+ *
+ * Upstream: `node_modules/zod/v4/classic/schemas.d.ts` (`ZodString#date`, `#datetime`, `#time`, `#duration`).
+ *
+ * HR insert schemas import `z` from `zod/v4` and align string columns with Drizzle `date` / `timestamp`
+ * modes.
+ */
+
+/**
  * Generic date range validator factory
  * Validates that endField >= startField when both are present
  *
@@ -1144,6 +1450,201 @@ export function refineConditionalRequired<T extends Record<string, unknown>>(
         message: message || `${String(field)} is required when condition is met`,
         path: [String(field)],
       });
+    }
+  };
+}
+
+/**
+ * When `statusField` equals `approvedValue`, require a non-null actor (e.g. `approvedBy`, `decidedBy`).
+ * Optionally require a decision timestamp column (`approvedAt`, `decidedAt`).
+ */
+export function refineApprovedRequiresActor<T extends Record<string, unknown>>(params: {
+  statusField: keyof T;
+  approvedValue: string;
+  actorField: keyof T;
+  atField?: keyof T;
+  messages?: { actor?: string; at?: string };
+}): (data: T, ctx: z.RefinementCtx) => void {
+  const { statusField, approvedValue, actorField, atField, messages } = params;
+  return (data: T, ctx: z.RefinementCtx) => {
+    if (String(data[statusField]) !== approvedValue) return;
+    const actor = data[actorField];
+    if (actor == null || actor === "") {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          messages?.actor ??
+          `${String(actorField)} is required when ${String(statusField)} is ${approvedValue}`,
+        path: [String(actorField)],
+      });
+    }
+    if (atField != null) {
+      const at = data[atField];
+      if (at == null || at === "") {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            messages?.at ??
+            `${String(atField)} is required when ${String(statusField)} is ${approvedValue}`,
+          path: [String(atField)],
+        });
+      }
+    }
+  };
+}
+
+/**
+ * When `statusField` equals `rejectedValue`, require a non-empty reason string (`rejectionReason`, `decisionReason`, …).
+ */
+export function refineRejectedRequiresReason<T extends Record<string, unknown>>(params: {
+  statusField: keyof T;
+  rejectedValue: string;
+  reasonField: keyof T;
+  trim?: boolean;
+  message?: string;
+}): (data: T, ctx: z.RefinementCtx) => void {
+  const { statusField, rejectedValue, reasonField, trim = true, message } = params;
+  return (data: T, ctx: z.RefinementCtx) => {
+    if (String(data[statusField]) !== rejectedValue) return;
+    const raw = data[reasonField];
+    const str = raw == null ? "" : String(raw);
+    const ok = trim ? str.trim().length > 0 : str.length > 0;
+    if (!ok) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          message ??
+          `${String(reasonField)} is required when ${String(statusField)} is ${rejectedValue}`,
+        path: [String(reasonField)],
+      });
+    }
+  };
+}
+
+/**
+ * When `statusField` is not `approvedValue`, approval stamp fields must be unset (mirrors common `CHECK` pairs on HR tables).
+ */
+export function refineApprovalFieldsAbsentUnlessApproved<T extends Record<string, unknown>>(params: {
+  statusField: keyof T;
+  approvedValue: string;
+  actorField: keyof T;
+  atField?: keyof T;
+  messages?: { actor?: string; at?: string };
+}): (data: T, ctx: z.RefinementCtx) => void {
+  const { statusField, approvedValue, actorField, atField, messages } = params;
+  const isSet = (v: unknown) => v != null && v !== "";
+  return (data: T, ctx: z.RefinementCtx) => {
+    if (String(data[statusField]) === approvedValue) return;
+    if (isSet(data[actorField])) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          messages?.actor ??
+          `${String(actorField)} must be omitted unless ${String(statusField)} is ${approvedValue}`,
+        path: [String(actorField)],
+      });
+    }
+    if (atField != null && isSet(data[atField])) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          messages?.at ??
+          `${String(atField)} must be omitted unless ${String(statusField)} is ${approvedValue}`,
+        path: [String(atField)],
+      });
+    }
+  };
+}
+
+/**
+ * When `statusField` is not `rejectedValue`, the rejection reason field must be empty/absent.
+ */
+export function refineReasonAbsentUnlessRejected<T extends Record<string, unknown>>(params: {
+  statusField: keyof T;
+  rejectedValue: string;
+  reasonField: keyof T;
+  message?: string;
+}): (data: T, ctx: z.RefinementCtx) => void {
+  const { statusField, rejectedValue, reasonField, message } = params;
+  return (data: T, ctx: z.RefinementCtx) => {
+    if (String(data[statusField]) === rejectedValue) return;
+    const raw = data[reasonField];
+    if (raw != null && String(raw).trim() !== "") {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          message ??
+          `${String(reasonField)} must be omitted unless ${String(statusField)} is ${rejectedValue}`,
+        path: [String(reasonField)],
+      });
+    }
+  };
+}
+
+/**
+ * When `status` is one of `statusesWithApprovalStamp`, require approver (+ optional timestamp);
+ * otherwise both must be absent. Use for `completed` / `paid` style workflows.
+ */
+export function refineApprovalStampLifecycle<T extends Record<string, unknown>>(params: {
+  statusField: keyof T;
+  statusesWithApprovalStamp: readonly string[];
+  actorField: keyof T;
+  atField?: keyof T;
+  messages?: {
+    requireActor?: string;
+    requireAt?: string;
+    omitActor?: string;
+    omitAt?: string;
+  };
+}): (data: T, ctx: z.RefinementCtx) => void {
+  const { statusField, statusesWithApprovalStamp, actorField, atField, messages } = params;
+  const stampStatuses = new Set(statusesWithApprovalStamp);
+  const isSet = (v: unknown) => v != null && v !== "";
+  const label = statusesWithApprovalStamp.join(", ");
+  return (data: T, ctx: z.RefinementCtx) => {
+    const st = String(data[statusField]);
+    if (stampStatuses.has(st)) {
+      const actor = data[actorField];
+      if (actor == null || actor === "") {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            messages?.requireActor ??
+            `${String(actorField)} is required when ${String(statusField)} is one of: ${label}`,
+          path: [String(actorField)],
+        });
+      }
+      if (atField != null) {
+        const at = data[atField];
+        if (at == null || at === "") {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              messages?.requireAt ??
+              `${String(atField)} is required when ${String(statusField)} is one of: ${label}`,
+            path: [String(atField)],
+          });
+        }
+      }
+    } else {
+      if (isSet(data[actorField])) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            messages?.omitActor ??
+            `${String(actorField)} must be omitted unless ${String(statusField)} is one of: ${label}`,
+          path: [String(actorField)],
+        });
+      }
+      if (atField != null && isSet(data[atField])) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            messages?.omitAt ??
+            `${String(atField)} must be omitted unless ${String(statusField)} is one of: ${label}`,
+          path: [String(atField)],
+        });
+      }
     }
   };
 }
@@ -1279,6 +1780,7 @@ export type PayrollLineId = z.infer<typeof PayrollLineIdSchema>;
 export type LeaveTypeConfigId = z.infer<typeof LeaveTypeConfigIdSchema>;
 export type LeaveAllocationId = z.infer<typeof LeaveAllocationIdSchema>;
 export type LeaveRequestId = z.infer<typeof LeaveRequestIdSchema>;
+export type LeaveRequestStatusHistoryId = z.infer<typeof LeaveRequestStatusHistoryIdSchema>;
 export type HolidayCalendarId = z.infer<typeof HolidayCalendarIdSchema>;
 export type HolidayId = z.infer<typeof HolidayIdSchema>;
 export type TimeSheetId = z.infer<typeof TimeSheetIdSchema>;
@@ -1404,15 +1906,13 @@ export type ShiftSwapRequestId = z.infer<typeof ShiftSwapRequestIdSchema>;
  *
  * 4. CROSS-FIELD REFINEMENTS (15+ factories)
  *    ├─ Date range: refineEndDateOnOrAfterStartDate, refineDateRange, refineTerminationAfterHire
- *    ├─ Amount validation: refineNonNegativeAmount, refinePositiveAmount, refineAmountRange, refineBoundedHours
- *    ├─ Conditional logic: refineConditionalRequired, refineEnumValue
+ *    ├─ Amount validation: refineNonNegativeAmount, refinePositiveAmount, refineAmountRange, refineBoundedHours, currencyAmountFromNumberSchema
+ *    ├─ Conditional logic: refineConditionalRequired, refineEnumValue, refineApprovedRequiresActor, refineRejectedRequiresReason, refineApprovalFieldsAbsentUnlessApproved, refineReasonAbsentUnlessRejected, refineApprovalStampLifecycle
  *    ├─ Complex patterns: refineMutuallyExclusive, refineAtLeastOne, refineUniqueArray
  *    └─ Usage: createInsertSchema(table).superRefine(refineEndDateOnOrAfterStartDate())
  *
- * 5. LEGACY VALIDATORS (deprecated but maintained)
- *    ├─ salaryAmountSchema, hoursWorkedSchema, percentageSchema
- *    ├─ employeeCodeSchema, phoneNumberSchema, emailSchema, taxIdSchema
- *    └─ Note: Use new validators instead (imported from meta-types)
+ * 5. IDENTIFIER / CODE HELPERS
+ *    └─ employeeCodeSchema (HR employee codes)
  *
  * **Integration Examples:**
  *

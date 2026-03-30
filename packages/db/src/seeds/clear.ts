@@ -29,6 +29,9 @@ import {
   decisionAuditChains,
   decisionAuditEntries,
   documentAttachments,
+  tenantStorageQuotaRequests,
+  tenantStorageUsage,
+  tenantStoragePolicies,
   entities,
   events,
   fields,
@@ -104,7 +107,10 @@ export async function clearExistingData(tx: Tx): Promise<void> {
   await tx.delete(entities).execute();
   // ── Phase 10: Commissions & Teams ─────────────────────────────────────────
   await tx.delete(approvalLogs).execute();
+  await tx.delete(tenantStorageQuotaRequests).execute();
   await tx.delete(documentAttachments).execute();
+  await tx.delete(tenantStorageUsage).execute();
+  await tx.delete(tenantStoragePolicies).execute();
   await tx.delete(commissionEntries).execute();
   await tx.delete(commissionPlanTiers).execute();
   await tx.delete(commissionPlans).execute();

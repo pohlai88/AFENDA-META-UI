@@ -18,7 +18,22 @@ import {
 import { z } from "zod/v4";
 
 import { hrSchema } from "./_schema.js";
+import {
+  benefitCatalogStatusEnum,
+  benefitEnrollmentWorkflowStatusEnum,
+  benefitDependentRelationshipEnum,
+  benefitClaimStatusEnum,
+  benefitPlanCoverageTypeEnum,
+  dependentCoverageStatusEnum,
+  BenefitCatalogStatusSchema,
+  BenefitEnrollmentWorkflowStatusSchema,
+  BenefitDependentRelationshipSchema,
+  BenefitClaimStatusSchema,
+  BenefitPlanCoverageTypeSchema,
+  DependentCoverageStatusSchema,
+} from "./_enums.js";
 import { employees } from "./people.js";
+import { currencies } from "../reference/index.js";
 import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
 import {
   auditColumns,
@@ -40,6 +55,7 @@ import {
   currencyAmountSchema,
   hrTenantIdSchema,
   hrAuditUserIdSchema,
+  refineConditionalRequired,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -55,7 +71,7 @@ export const benefitProviders = hrSchema.table(
     email: text("email"),
     phone: text("phone"),
     bankAccount: text("bank_account"),
-    status: text("status").notNull().default("active"),
+    status: benefitCatalogStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -82,7 +98,7 @@ export const benefitEnrollments = hrSchema.table(
     planName: text("plan_name").notNull(),
     enrollmentDate: date("enrollment_date", { mode: "string" }).notNull(),
     expiryDate: date("expiry_date", { mode: "string" }),
-    status: text("status").notNull().default("pending"),
+    status: benefitEnrollmentWorkflowStatusEnum("status").notNull().default("pending"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -101,8 +117,8 @@ export const benefitEnrollments = hrSchema.table(
       sql`${table.expiryDate} IS NULL OR ${table.expiryDate} >= ${table.enrollmentDate}`
     ),
     check(
-      "enrollment_status_valid",
-      sql`${table.status} IN ('pending', 'active', 'cancelled', 'expired')`
+      "benefit_enrollments_active_expiry_current",
+      sql`${table.status} <> 'active' OR ${table.expiryDate} IS NULL OR ${table.expiryDate} >= CURRENT_DATE`
     ),
     index("benefit_enrollments_tenant_idx").on(table.tenantId),
     index("benefit_enrollments_employee_idx").on(table.employeeId),
@@ -123,9 +139,9 @@ export const benefitDependentCoverage = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     benefitEnrollmentId: uuid("benefit_enrollment_id").notNull(),
     ...nameColumn,
-    relationship: text("relationship").notNull(), // spouse, child, parent, etc.
+    relationship: benefitDependentRelationshipEnum("relationship").notNull(),
     dateOfBirth: date("date_of_birth", { mode: "string" }).notNull(),
-    status: text("status").notNull().default("active"),
+    status: dependentCoverageStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -135,10 +151,6 @@ export const benefitDependentCoverage = hrSchema.table(
       columns: [table.tenantId, table.benefitEnrollmentId],
       foreignColumns: [benefitEnrollments.tenantId, benefitEnrollments.id],
     }),
-    check(
-      "valid_relationship",
-      sql`${table.relationship} IN ('spouse', 'child', 'parent', 'sibling', 'other')`
-    ),
     index("benefit_dependent_coverage_tenant_idx").on(table.tenantId),
     index("benefit_dependent_coverage_enrollment_idx").on(table.benefitEnrollmentId),
     ...tenantIsolationPolicies("benefit_dependent_coverage"),
@@ -159,7 +171,7 @@ export const benefitClaims = hrSchema.table(
     claimDate: date("claim_date", { mode: "string" }).notNull(),
     claimAmount: numeric("claim_amount", { precision: 12, scale: 2 }).notNull(),
     approvedAmount: numeric("approved_amount", { precision: 12, scale: 2 }),
-    claimStatus: text("claim_status").notNull().default("submitted"),
+    claimStatus: benefitClaimStatusEnum("claim_status").notNull().default("submitted"),
     description: text("description"),
     reviewedAt: date("reviewed_at", { mode: "string" }),
     reviewedBy: uuid("reviewed_by"),
@@ -182,8 +194,8 @@ export const benefitClaims = hrSchema.table(
       sql`${table.approvedAmount} IS NULL OR (${table.approvedAmount} >= 0 AND ${table.approvedAmount} <= ${table.claimAmount})`
     ),
     check(
-      "claim_status_valid",
-      sql`${table.claimStatus} IN ('submitted', 'under_review', 'approved', 'rejected', 'paid')`
+      "benefit_claims_approved_requires_amount",
+      sql`${table.claimStatus} <> 'approved' OR ${table.approvedAmount} IS NOT NULL`
     ),
     index("benefit_claims_tenant_idx").on(table.tenantId),
     index("benefit_claims_enrollment_idx").on(table.benefitEnrollmentId),
@@ -205,10 +217,11 @@ export const benefitPlanBenefits = hrSchema.table(
     benefitProviderId: uuid("benefit_provider_id").notNull(),
     planName: text("plan_name").notNull(),
     description: text("description"),
-    coverageType: text("coverage_type").notNull(), // medical, dental, vision, 401k, etc.
+    coverageType: benefitPlanCoverageTypeEnum("coverage_type").notNull(),
     deductible: numeric("deductible", { precision: 10, scale: 2 }),
     monthlyPremium: numeric("monthly_premium", { precision: 10, scale: 2 }).notNull(),
-    status: text("status").notNull().default("active"),
+    currencyId: integer("currency_id").notNull(),
+    status: benefitCatalogStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -218,6 +231,10 @@ export const benefitPlanBenefits = hrSchema.table(
       columns: [table.tenantId, table.benefitProviderId],
       foreignColumns: [benefitProviders.tenantId, benefitProviders.id],
     }),
+    foreignKey({
+      columns: [table.currencyId],
+      foreignColumns: [currencies.currencyId],
+    }),
     uniqueIndex("benefit_plan_benefits_tenant_provider_plan_active_unique")
       .on(table.tenantId, table.benefitProviderId, table.planName)
       .where(sql`${table.deletedAt} IS NULL`),
@@ -225,6 +242,7 @@ export const benefitPlanBenefits = hrSchema.table(
     check("deductible_valid", sql`${table.deductible} IS NULL OR ${table.deductible} >= 0`),
     index("benefit_plan_benefits_tenant_idx").on(table.tenantId),
     index("benefit_plan_benefits_provider_idx").on(table.benefitProviderId),
+    index("benefit_plan_benefits_currency_idx").on(table.currencyId),
     index("benefit_plan_benefits_coverage_type_idx").on(table.coverageType),
     ...tenantIsolationPolicies("benefit_plan_benefits"),
     serviceBypassPolicy("benefit_plan_benefits"),
@@ -246,7 +264,7 @@ export const insertBenefitProviderSchema = z.object({
   email: businessEmailSchema.optional(),
   phone: internationalPhoneSchema.optional(),
   bankAccount: bankAccountSchema.optional(),
-  status: z.enum(["active", "inactive"]).default("active"),
+  status: BenefitCatalogStatusSchema.default("active"),
   createdBy: hrAuditUserIdSchema.optional(),
   updatedBy: hrAuditUserIdSchema.optional(),
 });
@@ -262,9 +280,9 @@ export const insertBenefitEnrollmentSchema = z
     employeeId: EmployeeIdSchema,
     benefitProviderId: BenefitProviderIdSchema,
     planName: z.string().min(1, "Plan name required").max(100),
-    enrollmentDate: z.string().date("Invalid enrollment date"),
-    expiryDate: z.string().date("Invalid expiry date").optional(),
-    status: z.enum(["pending", "active", "cancelled", "expired"]).default("pending"),
+    enrollmentDate: z.iso.date("Invalid enrollment date"),
+    expiryDate: z.iso.date("Invalid expiry date").optional(),
+    status: BenefitEnrollmentWorkflowStatusSchema.default("pending"),
     createdBy: hrAuditUserIdSchema.optional(),
     updatedBy: hrAuditUserIdSchema.optional(),
   })
@@ -275,6 +293,18 @@ export const insertBenefitEnrollmentSchema = z
     },
     {
       message: "Expiry date must be after enrollment date",
+      path: ["expiryDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.status !== "active") return true;
+      if (!data.expiryDate) return true;
+      const today = new Date().toISOString().slice(0, 10);
+      return data.expiryDate >= today;
+    },
+    {
+      message: "Active enrollment requires null expiry or expiry on or after today",
       path: ["expiryDate"],
     }
   );
@@ -288,9 +318,9 @@ export const insertBenefitDependentCoverageSchema = z.object({
   tenantId: hrTenantIdSchema,
   benefitEnrollmentId: BenefitEnrollmentIdSchema,
   name: personNameSchema,
-  relationship: z.enum(["spouse", "child", "parent", "sibling", "other"]),
-  dateOfBirth: z.string().date("Invalid date of birth"),
-  status: z.enum(["active", "inactive"]).default("active"),
+  relationship: BenefitDependentRelationshipSchema,
+  dateOfBirth: z.iso.date("Invalid date of birth"),
+  status: DependentCoverageStatusSchema.default("active"),
   createdBy: hrAuditUserIdSchema.optional(),
   updatedBy: hrAuditUserIdSchema.optional(),
 });
@@ -304,14 +334,12 @@ export const insertBenefitClaimSchema = z
     id: BenefitClaimIdSchema.optional(),
     tenantId: hrTenantIdSchema,
     benefitEnrollmentId: BenefitEnrollmentIdSchema,
-    claimDate: z.string().date("Invalid claim date"),
+    claimDate: z.iso.date("Invalid claim date"),
     claimAmount: currencyAmountSchema(2),
     approvedAmount: currencyAmountSchema(2).optional(),
-    claimStatus: z
-      .enum(["submitted", "under_review", "approved", "rejected", "paid"])
-      .default("submitted"),
+    claimStatus: BenefitClaimStatusSchema.default("submitted"),
     description: z.string().max(500).optional(),
-    reviewedAt: z.string().date().optional(),
+    reviewedAt: z.iso.date().optional(),
     reviewedBy: EmployeeIdSchema.optional(),
     createdBy: hrAuditUserIdSchema.optional(),
     updatedBy: hrAuditUserIdSchema.optional(),
@@ -326,15 +354,12 @@ export const insertBenefitClaimSchema = z
       path: ["approvedAmount"],
     }
   )
-  .refine(
-    (data) => {
-      if (data.claimStatus === "approved" && !data.approvedAmount) return false;
-      return true;
-    },
-    {
-      message: "Approved amount required when status is approved",
-      path: ["approvedAmount"],
-    }
+  .superRefine(
+    refineConditionalRequired(
+      "approvedAmount",
+      (data) => data.claimStatus === "approved",
+      "Approved amount required when status is approved"
+    )
   );
 
 /**
@@ -347,18 +372,11 @@ export const insertBenefitPlanBenefitSchema = z.object({
   benefitProviderId: BenefitProviderIdSchema,
   planName: z.string().min(1, "Plan name required").max(100),
   description: z.string().max(500).optional(),
-  coverageType: z.enum([
-    "medical",
-    "dental",
-    "vision",
-    "retirement",
-    "life",
-    "disability",
-    "other",
-  ]),
+  coverageType: BenefitPlanCoverageTypeSchema,
   deductible: currencyAmountSchema(2).optional(),
   monthlyPremium: currencyAmountSchema(2),
-  status: z.enum(["active", "inactive"]).default("active"),
+  currencyId: z.number().int().positive(),
+  status: BenefitCatalogStatusSchema.default("active"),
   createdBy: hrAuditUserIdSchema.optional(),
   updatedBy: hrAuditUserIdSchema.optional(),
 });

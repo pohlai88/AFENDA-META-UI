@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildStoredUploadName, resolvePublicUploadUrl } from "../storage.js";
+import {
+  buildStoredUploadName,
+  buildUntrackedR2StorageKey,
+  resolvePublicUploadUrl,
+} from "../storage.js";
 
 describe("upload storage utilities", () => {
   it("preserves a safe extension when generating stored upload names", () => {
@@ -17,5 +21,16 @@ describe("upload storage utilities", () => {
 
   it("encodes public upload URLs", () => {
     expect(resolvePublicUploadUrl("space name.png")).toBe("/uploads/space%20name.png");
+  });
+
+  it("builds schema-safe R2 keys for unenforced quota uploads", () => {
+    const out = buildUntrackedR2StorageKey({
+      kind: "file",
+      originalName: "contract.pdf",
+      tenantNumericId: null,
+    });
+
+    expect(out.fileName.endsWith(".pdf")).toBe(true);
+    expect(out.storageKey).toMatch(/^shared\/uploads\/file\/\d+-[a-f0-9-]{36}\.pdf$/);
   });
 });

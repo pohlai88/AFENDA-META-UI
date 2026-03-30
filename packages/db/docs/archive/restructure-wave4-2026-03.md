@@ -49,7 +49,7 @@ Quick-start usage guide covering:
 | `src/_rls/`         | `src/rls/`         | Already a public subpath export                               |
 | `src/_seeds/`       | `src/seeds/`       | CLI entrypoint, not internal                                  |
 | `src/_maintenance/` | `src/maintenance/` | Ops scripts, not internal                                     |
-| `src/_private/`     | **Kept as-is**     | Contains internal README; not exported, intentionally private |
+| `src/_private/`     | **Removed**        | Was README-only placeholder; no code; `@afenda/db` uses explicit subpaths instead |
 
 **Step 2.2 — Consolidate schema directories** _(parallel with 2.1)_ — ✅ DONE
 
@@ -148,7 +148,7 @@ src/schema/purchasing/   # Purchase orders, vendor bills
 
 **Modified:** package.json (exports), `src/index.ts`, `src/schema/index.ts`, `src/db.ts` (rewritten), ~30 consumer import files
 
-**Kept (not deleted):** `src/_private/` (intentionally internal), `apps/api/src/db/schema/` (contains local legacy tables with unique definitions)
+**Kept (not deleted):** `apps/api/src/db/schema/` (contains local legacy tables with unique definitions)
 
 ---
 

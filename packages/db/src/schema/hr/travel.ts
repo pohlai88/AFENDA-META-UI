@@ -2,10 +2,14 @@
 // HR DOMAIN: TRAVEL & VEHICLE MANAGEMENT (Upgrade Module)
 // Handles travel requests, itineraries, vehicle logs, and expense interoperability.
 // Tables: travel_requests, travel_itineraries, company_vehicles, vehicle_logs
+//
+// `distance_traveled` is a STORED generated column (end − start odometer).
+// Zod reuses `_enums` schemas so labels stay aligned with PostgreSQL enums.
 // ============================================================================
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -20,7 +24,6 @@ import {
 import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
 import {
   auditColumns,
-  nameColumn,
   softDeleteColumns,
   timestampColumns,
 } from "../../columns/index.js";
@@ -32,8 +35,14 @@ import {
   travelSegmentTypeEnum,
   vehicleStatusEnum,
   fuelTypeEnum,
+  TravelRequestStatusSchema,
+  TravelSegmentTypeSchema,
+  VehicleStatusSchema,
+  FuelTypeSchema,
 } from "./_enums.js";
 import { employees } from "./people.js";
+import { expenseClaims } from "./expenses.js";
+import { staffingPlans } from "./workforcePlanning.js";
 import { z } from "zod/v4";
 import {
   TravelRequestIdSchema,
@@ -41,8 +50,12 @@ import {
   CompanyVehicleIdSchema,
   VehicleLogIdSchema,
   EmployeeIdSchema,
+  ExpenseClaimIdSchema,
+  StaffingPlanIdSchema,
   currencyAmountSchema,
   hrTenantIdSchema,
+  refineApprovedRequiresActor,
+  refineApprovalFieldsAbsentUnlessApproved,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -66,7 +79,14 @@ export const travelRequests = hrSchema.table(
     advanceAmount: numeric("advance_amount", { precision: 15, scale: 2 }),
     status: travelRequestStatusEnum("status").notNull().default("draft"),
     approvedBy: uuid("approved_by"),
-    approvedDate: timestamp("approved_date"),
+    approvedDate: timestamp("approved_date", { withTimezone: true }),
+    /** Optional link to a reimbursement claim once travel is expensed. */
+    expenseClaimId: uuid("expense_claim_id"),
+    /** Optional link to departmental workforce / travel budget context. */
+    staffingPlanId: uuid("staffing_plan_id"),
+    requestVersion: integer("request_version").notNull().default(1),
+    /** Set when status is `cancelled` (audit trail). */
+    cancelledDate: date("cancelled_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -86,14 +106,64 @@ export const travelRequests = hrSchema.table(
       columns: [table.currencyId],
       foreignColumns: [currencies.currencyId],
     }),
+    foreignKey({
+      columns: [table.tenantId, table.expenseClaimId],
+      foreignColumns: [expenseClaims.tenantId, expenseClaims.id],
+    }),
+    foreignKey({
+      columns: [table.tenantId, table.staffingPlanId],
+      foreignColumns: [staffingPlans.tenantId, staffingPlans.id],
+    }),
     uniqueIndex("travel_requests_tenant_number_unique")
       .on(table.tenantId, table.requestNumber)
       .where(sql`${table.deletedAt} IS NULL`),
     index("travel_requests_tenant_idx").on(table.tenantId),
     index("travel_requests_employee_idx").on(table.tenantId, table.employeeId),
     index("travel_requests_status_idx").on(table.tenantId, table.status),
+    index("travel_requests_tenant_status_version_idx").on(
+      table.tenantId,
+      table.status,
+      table.requestVersion
+    ),
     index("travel_requests_departure_date_idx").on(table.tenantId, table.departureDate),
-    sql`CONSTRAINT travel_requests_date_range CHECK (return_date >= departure_date)`,
+    index("travel_requests_date_range_idx").on(
+      table.tenantId,
+      table.departureDate,
+      table.returnDate
+    ),
+    check("travel_requests_date_range", sql`${table.returnDate} >= ${table.departureDate}`),
+    check(
+      "travel_requests_approval_fields_match_status",
+      sql`(
+        (${table.status} = 'approved'::hr.travel_request_status AND ${table.approvedBy} IS NOT NULL AND ${table.approvedDate} IS NOT NULL)
+        OR
+        (${table.status} <> 'approved'::hr.travel_request_status AND ${table.approvedBy} IS NULL AND ${table.approvedDate} IS NULL)
+      )`
+    ),
+    check(
+      "travel_requests_advance_only_when_required",
+      sql`${table.advanceAmount} IS NULL OR ${table.advanceRequired} = true`
+    ),
+    check(
+      "travel_requests_currency_when_estimated_cost",
+      sql`${table.estimatedCost} IS NULL OR ${table.currencyId} IS NOT NULL`
+    ),
+    check(
+      "travel_requests_notes_max_len",
+      sql`${table.notes} IS NULL OR char_length(${table.notes}) <= 2000`
+    ),
+    check(
+      "travel_requests_expense_claim_only_when_completed",
+      sql`${table.expenseClaimId} IS NULL OR ${table.status} = 'completed'::hr.travel_request_status`
+    ),
+    check(
+      "travel_requests_cancelled_date_matches_status",
+      sql`(
+        (${table.cancelledDate} IS NULL OR ${table.status} = 'cancelled'::hr.travel_request_status)
+        AND
+        (${table.status} <> 'cancelled'::hr.travel_request_status OR ${table.cancelledDate} IS NOT NULL)
+      )`
+    ),
     ...tenantIsolationPolicies("travel_requests"),
     serviceBypassPolicy("travel_requests"),
   ]
@@ -128,14 +198,30 @@ export const travelItineraries = hrSchema.table(
     foreignKey({
       columns: [table.tenantId, table.travelRequestId],
       foreignColumns: [travelRequests.tenantId, travelRequests.id],
-    }),
+      name: "travel_itineraries_travel_request_fk",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
     foreignKey({
       columns: [table.currencyId],
       foreignColumns: [currencies.currencyId],
     }),
     index("travel_itineraries_tenant_idx").on(table.tenantId),
     index("travel_itineraries_request_idx").on(table.tenantId, table.travelRequestId),
+    index("travel_itineraries_request_sort_idx").on(
+      table.tenantId,
+      table.travelRequestId,
+      table.sortOrder
+    ),
     index("travel_itineraries_departure_idx").on(table.tenantId, table.departureDateTime),
+    check(
+      "travel_itineraries_currency_when_cost",
+      sql`${table.cost} IS NULL OR ${table.currencyId} IS NOT NULL`
+    ),
+    check(
+      "travel_itineraries_notes_max_len",
+      sql`${table.notes} IS NULL OR char_length(${table.notes}) <= 2000`
+    ),
     ...tenantIsolationPolicies("travel_itineraries"),
     serviceBypassPolicy("travel_itineraries"),
   ]
@@ -163,6 +249,9 @@ export const companyVehicles = hrSchema.table(
     lastServiceDate: date("last_service_date", { mode: "string" }),
     nextServiceDate: date("next_service_date", { mode: "string" }),
     status: vehicleStatusEnum("status").notNull().default("available"),
+    retirementDate: date("retirement_date", { mode: "string" }),
+    disposedDate: date("disposed_date", { mode: "string" }),
+    vehicleVersion: integer("vehicle_version").notNull().default(1),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -182,8 +271,42 @@ export const companyVehicles = hrSchema.table(
       .where(sql`${table.deletedAt} IS NULL`),
     index("company_vehicles_tenant_idx").on(table.tenantId),
     index("company_vehicles_status_idx").on(table.tenantId, table.status),
+    index("company_vehicles_tenant_status_version_idx").on(
+      table.tenantId,
+      table.status,
+      table.vehicleVersion
+    ),
     index("company_vehicles_assigned_idx").on(table.tenantId, table.assignedEmployeeId),
     sql`CONSTRAINT company_vehicles_mileage_non_negative CHECK (mileage >= 0)`,
+    check(
+      "company_vehicles_lifecycle_dates_match_status",
+      sql`(
+        (
+          ${table.status} IN (
+            'available'::hr.vehicle_status,
+            'assigned'::hr.vehicle_status,
+            'maintenance'::hr.vehicle_status
+          )
+          AND ${table.retirementDate} IS NULL
+          AND ${table.disposedDate} IS NULL
+        )
+        OR
+        (
+          ${table.status} = 'retired'::hr.vehicle_status
+          AND ${table.retirementDate} IS NOT NULL
+          AND ${table.disposedDate} IS NULL
+        )
+        OR
+        (
+          ${table.status} = 'disposed'::hr.vehicle_status
+          AND ${table.disposedDate} IS NOT NULL
+        )
+      )`
+    ),
+    check(
+      "company_vehicles_notes_max_len",
+      sql`${table.notes} IS NULL OR char_length(${table.notes}) <= 2000`
+    ),
     ...tenantIsolationPolicies("company_vehicles"),
     serviceBypassPolicy("company_vehicles"),
   ]
@@ -204,10 +327,13 @@ export const vehicleLogs = hrSchema.table(
     purpose: text("purpose").notNull(),
     startOdometer: integer("start_odometer").notNull(),
     endOdometer: integer("end_odometer").notNull(),
-    distanceTraveled: integer("distance_traveled").notNull(), // Calculated
+    distanceTraveled: integer("distance_traveled")
+      .generatedAlwaysAs(sql`(end_odometer - start_odometer)`)
+      .notNull(),
     fuelConsumed: numeric("fuel_consumed", { precision: 10, scale: 2 }),
     fuelCost: numeric("fuel_cost", { precision: 15, scale: 2 }),
     currencyId: integer("currency_id"),
+    expenseClaimId: uuid("expense_claim_id"),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -218,7 +344,10 @@ export const vehicleLogs = hrSchema.table(
     foreignKey({
       columns: [table.tenantId, table.vehicleId],
       foreignColumns: [companyVehicles.tenantId, companyVehicles.id],
-    }),
+      name: "vehicle_logs_vehicle_fk",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
     foreignKey({
       columns: [table.tenantId, table.employeeId],
       foreignColumns: [employees.tenantId, employees.id],
@@ -227,12 +356,23 @@ export const vehicleLogs = hrSchema.table(
       columns: [table.currencyId],
       foreignColumns: [currencies.currencyId],
     }),
+    foreignKey({
+      columns: [table.tenantId, table.expenseClaimId],
+      foreignColumns: [expenseClaims.tenantId, expenseClaims.id],
+    }),
     index("vehicle_logs_tenant_idx").on(table.tenantId),
     index("vehicle_logs_vehicle_idx").on(table.tenantId, table.vehicleId),
     index("vehicle_logs_employee_idx").on(table.tenantId, table.employeeId),
     index("vehicle_logs_date_idx").on(table.tenantId, table.tripDate),
-    sql`CONSTRAINT vehicle_logs_odometer_valid CHECK (end_odometer >= start_odometer)`,
-    sql`CONSTRAINT vehicle_logs_distance_positive CHECK (distance_traveled >= 0)`,
+    check("vehicle_logs_odometer_valid", sql`${table.endOdometer} >= ${table.startOdometer}`),
+    check(
+      "vehicle_logs_currency_when_fuel_cost",
+      sql`${table.fuelCost} IS NULL OR ${table.currencyId} IS NOT NULL`
+    ),
+    check(
+      "vehicle_logs_notes_max_len",
+      sql`${table.notes} IS NULL OR char_length(${table.notes}) <= 2000`
+    ),
     ...tenantIsolationPolicies("vehicle_logs"),
     serviceBypassPolicy("vehicle_logs"),
   ]
@@ -242,6 +382,18 @@ export const vehicleLogs = hrSchema.table(
 // ZOD INSERT SCHEMAS
 // ============================================================================
 
+/** Aligns with `numeric(10, 2)`; inserts as a number for Drizzle/pg numeric. */
+const optionalFuelConsumedLitersSchema = z
+  .number()
+  .nonnegative()
+  .max(99_999_999.99)
+  .refine((n) => {
+    const scaled = n * 100;
+    return Math.abs(scaled - Math.round(scaled)) < 1e-9;
+  }, "At most 2 decimal places")
+  .optional()
+  .transform((n) => (n === undefined ? undefined : Math.round(n * 100) / 100));
+
 export const insertTravelRequestSchema = z
   .object({
     id: TravelRequestIdSchema.optional(),
@@ -250,17 +402,19 @@ export const insertTravelRequestSchema = z
     employeeId: EmployeeIdSchema,
     travelPurpose: z.string().min(10).max(500),
     destination: z.string().min(2).max(200),
-    departureDate: z.string().date(),
-    returnDate: z.string().date(),
+    departureDate: z.iso.date(),
+    returnDate: z.iso.date(),
     estimatedCost: currencyAmountSchema(2).optional(),
     currencyId: z.number().int().positive().optional(),
     advanceRequired: z.boolean().default(false),
     advanceAmount: currencyAmountSchema(2).optional(),
-    status: z
-      .enum(["draft", "submitted", "approved", "rejected", "completed", "cancelled"])
-      .default("draft"),
+    status: TravelRequestStatusSchema.default("draft"),
     approvedBy: EmployeeIdSchema.optional(),
-    approvedDate: z.date().optional(),
+    approvedDate: z.iso.datetime().optional(),
+    expenseClaimId: ExpenseClaimIdSchema.optional(),
+    staffingPlanId: StaffingPlanIdSchema.optional(),
+    requestVersion: z.number().int().min(1).default(1),
+    cancelledDate: z.iso.date().optional(),
     notes: z.string().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
@@ -271,65 +425,168 @@ export const insertTravelRequestSchema = z
         path: ["departureDate"],
       });
     }
-    if (data.advanceRequired && !data.advanceAmount) {
+    if (data.estimatedCost != null && data.currencyId == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "currencyId is required when estimatedCost is set",
+        path: ["currencyId"],
+      });
+    }
+    if (data.advanceRequired && data.advanceAmount == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Advance amount is required when advance is requested",
         path: ["advanceAmount"],
       });
     }
-  });
+    if (!data.advanceRequired && data.advanceAmount != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "advanceAmount is only allowed when advanceRequired is true",
+        path: ["advanceAmount"],
+      });
+    }
+    if (data.status === "cancelled") {
+      if (data.cancelledDate == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "cancelledDate is required when status is cancelled",
+          path: ["cancelledDate"],
+        });
+      }
+    } else if (data.cancelledDate != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "cancelledDate must be omitted unless status is cancelled",
+        path: ["cancelledDate"],
+      });
+    }
+    if (data.expenseClaimId != null && data.status !== "completed") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "expenseClaimId is only allowed when status is completed",
+        path: ["expenseClaimId"],
+      });
+    }
+  })
+  .superRefine(
+    refineApprovedRequiresActor({
+      statusField: "status",
+      approvedValue: "approved",
+      actorField: "approvedBy",
+      atField: "approvedDate",
+    })
+  )
+  .superRefine(
+    refineApprovalFieldsAbsentUnlessApproved({
+      statusField: "status",
+      approvedValue: "approved",
+      actorField: "approvedBy",
+      atField: "approvedDate",
+    })
+  );
 
 export const insertTravelItinerarySchema = z
   .object({
     id: TravelItineraryIdSchema.optional(),
     tenantId: hrTenantIdSchema,
     travelRequestId: TravelRequestIdSchema,
-    segmentType: z.enum(["flight", "train", "bus", "car", "hotel", "other"]),
+    segmentType: TravelSegmentTypeSchema,
     fromLocation: z.string().min(2).max(200),
     toLocation: z.string().min(2).max(200),
-    departureDateTime: z.date(),
-    arrivalDateTime: z.date().optional(),
+    departureDateTime: z.iso.datetime(),
+    arrivalDateTime: z.iso.datetime().optional(),
     bookingReference: z.string().max(100).optional(),
     cost: currencyAmountSchema(2).optional(),
     currencyId: z.number().int().positive().optional(),
-    notes: z.string().max(1000).optional(),
+    notes: z.string().max(2000).optional(),
     sortOrder: z.number().int().default(0),
   })
   .superRefine((data, ctx) => {
-    if (
-      data.departureDateTime &&
-      data.arrivalDateTime &&
-      data.departureDateTime >= data.arrivalDateTime
-    ) {
+    if (data.cost != null && data.currencyId == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Departure time must be before arrival time",
-        path: ["departureDateTime"],
+        message: "currencyId is required when cost is set",
+        path: ["currencyId"],
       });
+    }
+    if (data.arrivalDateTime) {
+      const dep = Date.parse(data.departureDateTime);
+      const arr = Date.parse(data.arrivalDateTime);
+      if (Number.isFinite(dep) && Number.isFinite(arr) && dep >= arr) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Departure time must be before arrival time",
+          path: ["departureDateTime"],
+        });
+      }
     }
   });
 
-export const insertCompanyVehicleSchema = z.object({
-  id: CompanyVehicleIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  vehicleCode: z.string().min(2).max(50),
-  make: z.string().min(2).max(100),
-  model: z.string().min(2).max(100),
-  year: z.number().int().min(1900).max(2100).optional(),
-  registrationNumber: z.string().min(2).max(50),
-  purchaseDate: z.string().date().optional(),
-  assignedEmployeeId: EmployeeIdSchema.optional(),
-  fuelType: z.enum(["petrol", "diesel", "electric", "hybrid", "cng", "other"]),
-  mileage: z.number().int().min(0).default(0),
-  insuranceExpiry: z.string().date().optional(),
-  lastServiceDate: z.string().date().optional(),
-  nextServiceDate: z.string().date().optional(),
-  status: z
-    .enum(["available", "assigned", "maintenance", "retired", "disposed"])
-    .default("available"),
-  notes: z.string().max(2000).optional(),
-});
+export const insertCompanyVehicleSchema = z
+  .object({
+    id: CompanyVehicleIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    vehicleCode: z.string().min(2).max(50),
+    make: z.string().min(2).max(100),
+    model: z.string().min(2).max(100),
+    year: z.number().int().min(1900).max(2100).optional(),
+    registrationNumber: z.string().min(2).max(50),
+    purchaseDate: z.iso.date().optional(),
+    assignedEmployeeId: EmployeeIdSchema.optional(),
+    fuelType: FuelTypeSchema,
+    mileage: z.number().int().min(0).default(0),
+    insuranceExpiry: z.iso.date().optional(),
+    lastServiceDate: z.iso.date().optional(),
+    nextServiceDate: z.iso.date().optional(),
+    status: VehicleStatusSchema.default("available"),
+    retirementDate: z.iso.date().optional(),
+    disposedDate: z.iso.date().optional(),
+    vehicleVersion: z.number().int().min(1).default(1),
+    notes: z.string().max(2000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const s = data.status;
+    if (s === "available" || s === "assigned" || s === "maintenance") {
+      if (data.retirementDate != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "retirementDate must be omitted unless status is retired or disposed",
+          path: ["retirementDate"],
+        });
+      }
+      if (data.disposedDate != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "disposedDate must be omitted unless status is disposed",
+          path: ["disposedDate"],
+        });
+      }
+    } else if (s === "retired") {
+      if (data.retirementDate == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "retirementDate is required when status is retired",
+          path: ["retirementDate"],
+        });
+      }
+      if (data.disposedDate != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "disposedDate must be omitted when status is retired",
+          path: ["disposedDate"],
+        });
+      }
+    } else if (s === "disposed") {
+      if (data.disposedDate == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "disposedDate is required when status is disposed",
+          path: ["disposedDate"],
+        });
+      }
+    }
+  });
 
 export const insertVehicleLogSchema = z
   .object({
@@ -337,33 +594,29 @@ export const insertVehicleLogSchema = z
     tenantId: hrTenantIdSchema,
     vehicleId: CompanyVehicleIdSchema,
     employeeId: EmployeeIdSchema,
-    tripDate: z.string().date(),
+    tripDate: z.iso.date(),
     purpose: z.string().min(5).max(500),
     startOdometer: z.number().int().min(0),
     endOdometer: z.number().int().min(0),
-    distanceTraveled: z.number().int().min(0),
-    fuelConsumed: z
-      .string()
-      .regex(/^\d+(\.\d{1,2})?$/)
-      .optional(),
+    fuelConsumed: optionalFuelConsumedLitersSchema,
     fuelCost: currencyAmountSchema(2).optional(),
     currencyId: z.number().int().positive().optional(),
-    notes: z.string().max(1000).optional(),
+    expenseClaimId: ExpenseClaimIdSchema.optional(),
+    notes: z.string().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.startOdometer && data.endOdometer && data.startOdometer > data.endOdometer) {
+    if (data.startOdometer > data.endOdometer) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Start odometer cannot be greater than end odometer",
         path: ["startOdometer"],
       });
     }
-    const calculatedDistance = data.endOdometer - data.startOdometer;
-    if (data.distanceTraveled !== calculatedDistance) {
+    if (data.fuelCost != null && data.currencyId == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Distance traveled must equal end odometer minus start odometer (${calculatedDistance})`,
-        path: ["distanceTraveled"],
+        message: "currencyId is required when fuelCost is set",
+        path: ["currencyId"],
       });
     }
   });

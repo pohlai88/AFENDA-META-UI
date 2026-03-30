@@ -77,7 +77,20 @@ Every table must include both policies:
 serviceBypassPolicy("table_name"),
 ```
 
-### 6. Column Helpers
+### 6. Enums vs `jsonb` vs plain `text`
+
+Use the right Postgres type for the kind of data you are storing. This keeps workflow states consistent and tenant customization auditable.
+
+| Kind of data | Use | Notes |
+|--------------|-----|--------|
+| **Workflow / lifecycle invariants** | `pgEnum` in `_enums.ts` | Same state names for every tenant; never encode status as unstructured JSON. |
+| **Tenant scope, metadata, mappings, rule payloads** | Native `jsonb` + Zod | No “JSON in `text`” with casts at query time; pair columns with Zod (`_zodShared.ts` helpers such as `metadataSchema`, `jsonObjectNullishSchema`, `z.json()`, or typed arrays/objects). Add GIN on `jsonb` when you filter or contain-query the payload. For production GIN/partition tuning, see [HR_JSONB_INDEX_AND_PARTITION_RUNBOOK.md](./HR_JSONB_INDEX_AND_PARTITION_RUNBOOK.md). |
+| **Human prose, DSL strings, RRULE** | `text` | Examples: `calculation_formula`, `recurrence_rule`, long descriptions. Do not migrate these to `jsonb` unless the product adopts a structured AST or schema. |
+| **Highly structured repeating data** | Normalized tables | Prefer junction/child rows (e.g. skills achievements) over large JSON blobs when the domain already has a normalization path. |
+
+**`biometric_logs.raw_data`:** Treat as **JSON-only** at the boundary: invalid legacy rows should be nulled during migration; devices should emit JSON objects or arrays. If a vendor sends opaque non-JSON bytes, store a string wrapper in JSON (e.g. `{ "opaque": "..." }`) in application code rather than bypassing the type.
+
+### 7. Column Helpers
 
 Use shared column helpers — never define `created_at`, `updated_at`, `deleted_at`, `name`, or audit fields manually:
 

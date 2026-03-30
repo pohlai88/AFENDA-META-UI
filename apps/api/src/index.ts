@@ -55,6 +55,8 @@ import tenantRouter from "./routes/tenant.js";
 import organizationRouter from "./routes/organization.js";
 import expEngineRouter from "./routes/expEngine.js";
 import uploadsRouter from "./routes/uploads.js";
+import storageRouter from "./routes/storage.js";
+import truthRouter from "./routes/truth.js";
 import searchRouter from "./routes/search.js";
 import salesRouter from "./routes/sales.js";
 import sandboxRouter from "./routes/sandbox.js";
@@ -235,6 +237,8 @@ if (config.rateLimitEnabled) {
   app.use("/api/rules", apiLimiter); // Rule evaluation
   app.use("/api/expressions", apiLimiter); // Expression testing
   app.use("/api/uploads", apiLimiter);
+  app.use("/api/storage", apiLimiter);
+  app.use("/api/truth", apiLimiter);
   app.use("/api/sales", apiLimiter);
   app.use("/api/sandbox", apiLimiter);
   app.use("/api/ops", apiLimiter);
@@ -246,7 +250,9 @@ app.use("/api/tenants", tenantRouter);
 app.use("/api/organizations", organizationRouter);
 app.use("/api/rules", expEngineRouter);
 app.use("/api/expressions", expEngineRouter);
-app.use("/api", uploadsRouter);
+  app.use("/api", storageRouter);
+  app.use("/api", truthRouter);
+  app.use("/api", uploadsRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/sandbox", sandboxRouter);
 app.use("/api/ops", opsRouter);

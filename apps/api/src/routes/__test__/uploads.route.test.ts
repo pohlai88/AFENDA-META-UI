@@ -19,6 +19,45 @@ vi.mock("../../uploads/storage.js", () => ({
   persistUploadFile: persistUploadFileMock,
 }));
 
+vi.mock("../../db/index.js", () => ({
+  db: {},
+}));
+
+vi.mock("../../tenant/resolveNumericTenantId.js", () => ({
+  resolveNumericTenantId: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("../../policy/mutation-command-gateway.js", () => {
+  class MutationPolicyViolationError extends Error {
+    declare statusCode: number;
+    declare code: string;
+    declare model: string;
+    declare operation: string;
+    declare mutationPolicy: string;
+    declare policy: unknown;
+    declare source: string;
+    constructor(
+      message: string,
+      model = "",
+      operation = "",
+      mutationPolicy = "",
+      policy: unknown = undefined,
+      source = ""
+    ) {
+      super(message);
+      this.statusCode = 409;
+      this.code = "MUTATION_POLICY_VIOLATION";
+      this.model = model;
+      this.operation = operation;
+      this.mutationPolicy = mutationPolicy;
+      this.policy = policy;
+      this.source = source;
+    }
+  }
+  return { MutationPolicyViolationError };
+});
+
+import { AppError } from "../../middleware/errorHandler.js";
 import uploadsRouter from "../uploads.js";
 
 function createApp() {
@@ -26,6 +65,15 @@ function createApp() {
   app.use("/api", uploadsRouter);
   app.use(
     (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({
+          error: error.name,
+          message: error.message,
+          code: error.code,
+          details: error.details,
+        });
+        return;
+      }
       res.status(500).json({
         error: error instanceof Error ? error.message : "Unhandled error",
       });
@@ -51,7 +99,7 @@ describe("/api/uploads route contract", () => {
       .field("note", "missing file field");
 
     expect(response.status).toBe(400);
-    expect(response.body.error).toContain("No file uploaded");
+    expect(response.body.message).toContain("No file uploaded");
     expect(persistUploadFileMock).not.toHaveBeenCalled();
   });
 
@@ -104,7 +152,10 @@ describe("/api/uploads route contract", () => {
       });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe("UNSUPPORTED_MIME_TYPE");
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+    expect(
+      (response.body.details as { code?: string } | undefined)?.code
+    ).toBe("UNSUPPORTED_MIME_TYPE");
     expect(persistUploadFileMock).not.toHaveBeenCalled();
   });
 
@@ -135,6 +186,6 @@ describe("/api/uploads route contract", () => {
       });
 
     expect(response.status).toBe(500);
-    expect(response.body.error).toBe("Failed to persist uploaded file");
+    expect(response.body.error).toBe("r2 unavailable");
   });
 });

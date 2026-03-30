@@ -6,6 +6,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -36,6 +37,14 @@ import {
   workLocationTypeEnum,
   departmentTypeEnum,
   costCenterTypeEnum,
+  CostCenterTypeSchema,
+  DepartmentTypeSchema,
+  EmployeeCategorySchema,
+  EmploymentStatusSchema,
+  EmploymentTypeSchema,
+  GenderSchema,
+  MaritalStatusSchema,
+  WorkLocationTypeSchema,
 } from "./_enums.js";
 import { z } from "zod/v4";
 import {
@@ -66,8 +75,12 @@ export const departments = hrSchema.table(
     description: text("description"),
     departmentType: departmentTypeEnum("department_type").notNull(),
     parentDepartmentId: uuid("parent_department_id"),
-    managerId: uuid("manager_id"), // FK deferred — see CIRCULAR_FKS.md CIRC-001
-    costCenterId: uuid("cost_center_id"), // FK deferred — see CIRCULAR_FKS.md CIRC-002
+    managerId: uuid("manager_id"), // FK deferred — see CIRCULAR_FKS.md CIRC-001; ADR-006
+    costCenterId: uuid("cost_center_id"), // FK deferred — see CIRCULAR_FKS.md CIRC-002; ADR-006
+    /** App-maintained materialized path for subtree queries (tenant convention). */
+    hierarchyPath: text("hierarchy_path"),
+    /** App-maintained depth from root (0 = root). */
+    treeDepth: integer("tree_depth"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
     ...auditColumns,
@@ -120,6 +133,10 @@ export const jobTitles = hrSchema.table(
       .where(sql`${table.deletedAt} IS NULL`),
     index("job_titles_tenant_idx").on(table.tenantId),
     index("job_titles_department_idx").on(table.tenantId, table.departmentId),
+    check(
+      "job_titles_salary_requires_currency",
+      sql`(${table.minSalary} IS NULL AND ${table.maxSalary} IS NULL) OR ${table.currencyId} IS NOT NULL`
+    ),
     ...tenantIsolationPolicies("job_titles"),
     serviceBypassPolicy("job_titles"),
   ]
@@ -164,6 +181,18 @@ export const jobPositions = hrSchema.table(
       .where(sql`${table.deletedAt} IS NULL`),
     index("job_positions_tenant_idx").on(table.tenantId),
     index("job_positions_department_idx").on(table.tenantId, table.departmentId),
+    check(
+      "job_positions_max_headcount_positive",
+      sql`${table.maxHeadcount} > 0`
+    ),
+    check(
+      "job_positions_current_lte_max",
+      sql`${table.currentHeadcount} <= ${table.maxHeadcount}`
+    ),
+    check(
+      "job_positions_current_non_negative",
+      sql`${table.currentHeadcount} >= 0`
+    ),
     ...tenantIsolationPolicies("job_positions"),
     serviceBypassPolicy("job_positions"),
   ]
@@ -197,6 +226,8 @@ export const employees = hrSchema.table(
     managerId: uuid("manager_id"),
     employmentType: employmentTypeEnum("employment_type").notNull(),
     employmentStatus: employmentStatusEnum("employment_status").notNull(),
+    /** Last time `employment_status` changed (app-maintained). */
+    statusChangeDate: date("status_change_date", { mode: "string" }),
     employeeCategory: employeeCategoryEnum("employee_category").notNull(),
     hireDate: date("hire_date", { mode: "string" }).notNull(),
     confirmationDate: date("confirmation_date", { mode: "string" }),
@@ -257,6 +288,7 @@ export const employees = hrSchema.table(
     index("employees_status_idx")
       .on(table.tenantId, table.employmentStatus)
       .where(sql`${table.deletedAt} IS NULL`),
+    index("employees_status_change_date_idx").on(table.tenantId, table.statusChangeDate),
     ...tenantIsolationPolicies("employees"),
     serviceBypassPolicy("employees"),
   ]
@@ -278,6 +310,7 @@ export const costCenters = hrSchema.table(
     parentCostCenterId: uuid("parent_cost_center_id"),
     managerId: uuid("manager_id"),
     isActive: boolean("is_active").notNull().default(true),
+    closedDate: date("closed_date", { mode: "string" }),
     ...timestampColumns,
     ...auditColumns,
     ...softDeleteColumns,
@@ -293,6 +326,7 @@ export const costCenters = hrSchema.table(
       .on(table.tenantId, table.costCenterCode)
       .where(sql`${table.deletedAt} IS NULL`),
     index("cost_centers_tenant_idx").on(table.tenantId),
+    index("cost_centers_closed_date_idx").on(table.tenantId, table.closedDate),
     ...tenantIsolationPolicies("cost_centers"),
     serviceBypassPolicy("cost_centers"),
   ]
@@ -308,19 +342,12 @@ export const insertDepartmentSchema = z.object({
   departmentCode: z.string().min(2).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
-  departmentType: z.enum([
-    "operations",
-    "sales",
-    "marketing",
-    "finance",
-    "hr",
-    "it",
-    "legal",
-    "other",
-  ]),
+  departmentType: DepartmentTypeSchema,
   parentDepartmentId: DepartmentIdSchema.optional(),
   managerId: EmployeeIdSchema.optional(),
   costCenterId: CostCenterIdSchema.optional(),
+  hierarchyPath: z.string().max(4000).optional(),
+  treeDepth: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -350,20 +377,41 @@ export const insertJobTitleSchema = z
         path: ["minSalary"],
       });
     }
+    const hasSalaryBand =
+      data.minSalary !== undefined || data.maxSalary !== undefined;
+    if (hasSalaryBand && data.currencyId == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "currencyId is required when minSalary or maxSalary is set",
+        path: ["currencyId"],
+      });
+    }
   });
 
-export const insertJobPositionSchema = z.object({
-  id: JobPositionIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  positionCode: z.string().min(2).max(50),
-  name: z.string().min(2).max(100),
-  description: z.string().max(1000).optional(),
-  jobTitleId: JobTitleIdSchema,
-  departmentId: DepartmentIdSchema,
-  reportsToPositionId: JobPositionIdSchema.optional(),
-  headcount: z.number().int().positive().default(1),
-  isActive: z.boolean().default(true),
-});
+export const insertJobPositionSchema = z
+  .object({
+    id: JobPositionIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    positionCode: z.string().min(2).max(50),
+    name: z.string().min(2).max(100),
+    description: z.string().max(1000).optional(),
+    jobTitleId: JobTitleIdSchema,
+    departmentId: DepartmentIdSchema,
+    reportsToPositionId: JobPositionIdSchema.optional(),
+    employmentType: EmploymentTypeSchema,
+    maxHeadcount: z.number().int().min(1).default(1),
+    currentHeadcount: z.number().int().min(0).default(0),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.currentHeadcount > data.maxHeadcount) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "currentHeadcount cannot exceed maxHeadcount",
+        path: ["currentHeadcount"],
+      });
+    }
+  });
 
 export const insertEmployeeSchema = z
   .object({
@@ -377,23 +425,27 @@ export const insertEmployeeSchema = z
     email: businessEmailSchema,
     phoneNumber: internationalPhoneSchema.optional(),
     mobileNumber: internationalPhoneSchema.optional(),
-    dateOfBirth: z.string().date().optional(),
-    gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
-    maritalStatus: z.enum(["single", "married", "divorced", "widowed", "separated"]).optional(),
+    dateOfBirth: z.iso.date().optional(),
+    gender: GenderSchema.optional(),
+    maritalStatus: MaritalStatusSchema.optional(),
     nationality: z.string().max(100).optional(),
     nationalId: z.string().max(100).optional(),
     passportNumber: z.string().max(50).optional(),
     jobPositionId: JobPositionIdSchema,
     departmentId: DepartmentIdSchema,
     managerId: EmployeeIdSchema.optional(),
-    employmentType: z.enum(["full_time", "part_time", "contract", "temporary", "intern"]),
-    employmentStatus: z.enum(["active", "on_leave", "suspended", "terminated", "resigned"]),
-    employeeCategory: z.enum(["permanent", "probation", "contract", "consultant"]),
-    hireDate: z.string().date(),
-    confirmationDate: z.string().date().optional(),
-    terminationDate: z.string().date().optional(),
+    employmentType: EmploymentTypeSchema,
+    employmentStatus: EmploymentStatusSchema,
+    statusChangeDate: z.iso.date().optional(),
+    employeeCategory: EmployeeCategorySchema,
+    hireDate: z.iso.date(),
+    confirmationDate: z.iso.date().optional(),
+    terminationDate: z.iso.date().optional(),
+    departureReasonId: z.uuid().optional(),
+    departureDate: z.iso.date().optional(),
+    rehireEligible: z.boolean().optional(),
     workLocationId: HrWorkLocationUuidSchema.optional(),
-    workLocationType: z.enum(["office", "remote", "hybrid"]).default("office"),
+    workLocationType: WorkLocationTypeSchema.default("office"),
     addressLine1: z.string().max(200).optional(),
     addressLine2: z.string().max(200).optional(),
     city: z.string().max(100).optional(),
@@ -402,7 +454,15 @@ export const insertEmployeeSchema = z
     postalCode: z.string().max(20).optional(),
     emergencyContactName: z.string().max(100).optional(),
     emergencyContactPhone: internationalPhoneSchema.optional(),
-    emergencyContactRelationship: z.string().max(50).optional(),
+    emergencyContactRelation: z.string().max(50).optional(),
+    bankName: z.string().max(120).optional(),
+    bankBranch: z.string().max(120).optional(),
+    /** Prefer tokenized/vaulted storage in production; length guard only here. */
+    bankAccountNumber: z.string().max(34).optional(),
+    taxId: z.string().max(50).optional(),
+    socialSecurityNumber: z.string().max(32).optional(),
+    profilePhotoUrl: z.string().max(2048).optional(),
+    notes: z.string().max(5000).optional(),
     isActive: z.boolean().default(true),
   })
   .superRefine((data, ctx) => {
@@ -420,6 +480,25 @@ export const insertEmployeeSchema = z
         path: ["hireDate"],
       });
     }
+    if (
+      data.departureDate &&
+      data.terminationDate &&
+      data.departureDate < data.terminationDate
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "departureDate cannot be before terminationDate",
+        path: ["departureDate"],
+      });
+    }
+    const terminal = data.employmentStatus === "terminated" || data.employmentStatus === "retired";
+    if (terminal && data.terminationDate == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "terminationDate is required when employmentStatus is terminated or retired",
+        path: ["terminationDate"],
+      });
+    }
   });
 
 export const insertCostCenterSchema = z.object({
@@ -428,8 +507,9 @@ export const insertCostCenterSchema = z.object({
   costCenterCode: z.string().min(2).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
-  costCenterType: z.enum(["department", "project", "product", "location", "other"]),
+  costCenterType: CostCenterTypeSchema,
   parentCostCenterId: CostCenterIdSchema.optional(),
   managerId: EmployeeIdSchema.optional(),
   isActive: z.boolean().default(true),
+  closedDate: z.iso.date().optional(),
 });

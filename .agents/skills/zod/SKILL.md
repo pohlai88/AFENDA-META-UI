@@ -100,8 +100,12 @@ const isActiveSchema = z.boolean();
 // Date
 const createdAtSchema = z.date().min(new Date("2020-01-01")).max(new Date());
 
-const dateStringSchema = z.string().datetime(); // ISO 8601
-const dateOnlySchema = z.string().date(); // YYYY-MM-DD
+// Zod 4: prefer top-level ISO helpers (`import { z } from "zod/v4"` or `zod`)
+// Do not use z.string().date|datetime|time|duration — deprecated; repo CI enforces z.iso.*
+const dateStringSchema = z.iso.datetime(); // ISO 8601 instant
+const dateOnlySchema = z.iso.date(); // YYYY-MM-DD
+const timeOnlySchema = z.iso.time(); // time of day (ISO)
+const durationSchema = z.iso.duration(); // ISO 8601 duration
 ```
 
 ### Special Types
@@ -1230,8 +1234,8 @@ export const paginationSchema = z.object({
 export const filterSchema = z.object({
   search: z.string().optional(),
   status: z.enum(["active", "inactive", "pending"]).optional(),
-  dateFrom: z.string().datetime().optional(),
-  dateTo: z.string().datetime().optional(),
+  dateFrom: z.iso.datetime().optional(),
+  dateTo: z.iso.datetime().optional(),
 });
 
 // API response wrapper
@@ -1240,7 +1244,7 @@ export const apiResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
     success: z.boolean(),
     data: dataSchema.optional(),
     error: z.string().optional(),
-    timestamp: z.string().datetime(),
+    timestamp: z.iso.datetime(),
   });
 
 const userResponseSchema = apiResponseSchema(UserSchema);

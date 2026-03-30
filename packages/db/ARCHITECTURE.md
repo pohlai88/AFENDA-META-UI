@@ -131,6 +131,12 @@ packages/db/
 │   ├── relations.ts                         # ── Layer 3d: FK Relations (Drizzle v2) ──
 │   │                                        #    Comprehensive: sales, partners, products, taxes
 │   │
+│   ├── queries/                             # ── Layer 3e: DB access surface (reads + mechanical archive) ──
+│   │   ├── ARCHITECTURE.md                  # Generated *.access.ts vs human reports; CI: db-access-layer
+│   │   ├── README.md                        # Quick start, pnpm ci:gate:db-access*
+│   │   ├── _shared/                         # Paging, date-range, non-domain SQL helpers
+│   │   └── <domain>/                        # *.access.ts + human modules; barrels; ERP domains only
+│   │
 │   ├── truth-compiler/                      # ── Layer 4: Truth Compiler ──
 │   │   ├── index.ts                         # Public barrel (all compiler exports)
 │   │   ├── truth-config.ts                  # Entity defs, state machines, invariants, policies
@@ -202,9 +208,6 @@ packages/db/
 │   │
 │   ├── triggers/                            # ── SQL Triggers ──
 │   │   └── status-transitions.sql           # Status change trigger definitions
-│   │
-│   ├── _private/                             # Internal types (NOT exported)
-│   │   └── README.md
 │   │
 │   └── __test__/                            # ── Integration Tests ──
 │       ├── invariants.test.ts               # Invariant enforcement tests

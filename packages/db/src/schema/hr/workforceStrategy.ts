@@ -1,7 +1,12 @@
 // ============================================================================
 // HR DOMAIN: SUCCESSION & CAREER PLANNING (Phase 7)
-// Covers succession plans, talent pools, and career path progression.
-// Tables: succession_plans, talent_pools, talent_pool_members, career_paths, career_path_steps, career_aspirations
+// Covers succession plans, talent pools, career paths, aspirations, and normalized skill links.
+//
+// Skill catalog + employee proficiency: `skills.ts` (`skills`, `employee_skills`).
+// Career path / aspiration skill data: `career_path_step_skills`, `career_aspiration_skill_gaps` (this file).
+//
+// Zod 4 (`zod/v4`): ISO dates use `z.iso.date()`; instants use `z.iso.datetime()` — not deprecated
+// `z.string().date()` / `.datetime()` (see `v4/classic/schemas.d.ts`).
 // ============================================================================
 import { sql } from "drizzle-orm";
 import {
@@ -9,6 +14,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   text,
   date,
   uuid,
@@ -25,20 +31,48 @@ import {
 } from "../../columns/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
-import { successionReadinessEnum, talentPoolStatusEnum, careerPathStatusEnum } from "./_enums.js";
+import {
+  successionReadinessEnum,
+  successionRiskLevelEnum,
+  successionPlanStatusEnum,
+  talentPoolStatusEnum,
+  talentPoolTypeEnum,
+  careerAspirationStatusEnum,
+  careerPathStatusEnum,
+  stepSkillImportanceEnum,
+  careerAspirationSkillGapLevelEnum,
+  successionPotentialRatingEnum,
+  performanceRatingEnum,
+  SuccessionReadinessSchema,
+  SuccessionRiskLevelSchema,
+  SuccessionPlanStatusSchema,
+  TalentPoolStatusSchema,
+  TalentPoolTypeSchema,
+  CareerAspirationStatusSchema,
+  CareerPathStatusSchema,
+  StepSkillImportanceSchema,
+  CareerAspirationSkillGapLevelSchema,
+  SuccessionPotentialRatingSchema,
+  PerformanceRatingSchema,
+} from "./_enums.js";
 import { employees, departments, jobPositions } from "./people.js";
+import { skills } from "./skills.js";
 import {
   SuccessionPlanIdSchema,
   TalentPoolIdSchema,
   TalentPoolMemberIdSchema,
   CareerPathIdSchema,
   CareerPathStepIdSchema,
+  CareerPathStepSkillIdSchema,
   CareerAspirationIdSchema,
+  CareerAspirationSkillGapIdSchema,
   JobPositionIdSchema,
   EmployeeIdSchema,
   DepartmentIdSchema,
+  SkillIdSchema,
   refineDateRange,
   hrTenantIdSchema,
+  jsonObjectNullishSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -56,7 +90,8 @@ export const successionPlans = hrSchema.table(
     readiness: successionReadinessEnum("readiness").notNull(),
     developmentPlan: text("development_plan"),
     targetDate: date("target_date", { mode: "string" }),
-    riskLevel: text("risk_level").notNull(), // low, medium, high, critical
+    riskLevel: successionRiskLevelEnum("risk_level").notNull(),
+    status: successionPlanStatusEnum("status").notNull().default("active"),
     notes: text("notes"),
     ...timestampColumns,
     ...softDeleteColumns,
@@ -75,14 +110,16 @@ export const successionPlans = hrSchema.table(
     uniqueIndex("succession_plans_tenant_code_unique")
       .on(table.tenantId, table.planCode)
       .where(sql`${table.deletedAt} IS NULL`),
-    check(
-      "succession_plans_risk_level_valid",
-      sql`${table.riskLevel} IN ('low', 'medium', 'high', 'critical')`
-    ),
     index("succession_plans_tenant_idx").on(table.tenantId),
     index("succession_plans_position_idx").on(table.tenantId, table.criticalPositionId),
     index("succession_plans_successor_idx").on(table.tenantId, table.successorEmployeeId),
     index("succession_plans_readiness_idx").on(table.tenantId, table.readiness),
+    index("succession_plans_tenant_readiness_risk_idx").on(
+      table.tenantId,
+      table.readiness,
+      table.riskLevel
+    ),
+    index("succession_plans_status_idx").on(table.tenantId, table.status),
     ...tenantIsolationPolicies("succession_plans"),
     serviceBypassPolicy("succession_plans"),
   ]
@@ -100,9 +137,9 @@ export const talentPools = hrSchema.table(
     poolCode: text("pool_code").notNull(),
     ...nameColumn,
     description: text("description"),
-    poolType: text("pool_type").notNull(), // leadership, technical, high_potential, critical_skills
+    poolType: talentPoolTypeEnum("pool_type").notNull(),
     status: talentPoolStatusEnum("status").notNull().default("active"),
-    criteria: text("criteria"), // JSON
+    criteria: jsonb("criteria").$type<Record<string, unknown>>(),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -112,10 +149,6 @@ export const talentPools = hrSchema.table(
     uniqueIndex("talent_pools_tenant_code_unique")
       .on(table.tenantId, table.poolCode)
       .where(sql`${table.deletedAt} IS NULL`),
-    check(
-      "talent_pools_type_valid",
-      sql`${table.poolType} IN ('leadership', 'technical', 'high_potential', 'critical_skills')`
-    ),
     index("talent_pools_tenant_idx").on(table.tenantId),
     index("talent_pools_status_idx").on(table.tenantId, table.status),
     index("talent_pools_type_idx").on(table.tenantId, table.poolType),
@@ -137,8 +170,8 @@ export const talentPoolMembers = hrSchema.table(
     employeeId: uuid("employee_id").notNull(),
     joinedDate: date("joined_date", { mode: "string" }).notNull(),
     readiness: successionReadinessEnum("readiness").notNull(),
-    performanceRating: text("performance_rating"),
-    potentialRating: text("potential_rating"), // low, medium, high
+    performanceRating: performanceRatingEnum("performance_rating"),
+    potentialRating: successionPotentialRatingEnum("potential_rating"),
     developmentPlan: text("development_plan"),
     notes: text("notes"),
     ...timestampColumns,
@@ -159,14 +192,15 @@ export const talentPoolMembers = hrSchema.table(
       table.poolId,
       table.employeeId
     ),
-    check(
-      "talent_pool_members_potential_valid",
-      sql`${table.potentialRating} IS NULL OR ${table.potentialRating} IN ('low', 'medium', 'high')`
-    ),
     index("talent_pool_members_tenant_idx").on(table.tenantId),
     index("talent_pool_members_pool_idx").on(table.tenantId, table.poolId),
     index("talent_pool_members_employee_idx").on(table.tenantId, table.employeeId),
     index("talent_pool_members_readiness_idx").on(table.tenantId, table.readiness),
+    index("talent_pool_members_employee_readiness_idx").on(
+      table.tenantId,
+      table.employeeId,
+      table.readiness
+    ),
     ...tenantIsolationPolicies("talent_pool_members"),
     serviceBypassPolicy("talent_pool_members"),
   ]
@@ -221,7 +255,6 @@ export const careerPathSteps = hrSchema.table(
     stepOrder: integer("step_order").notNull(),
     prerequisiteStepId: uuid("prerequisite_step_id"), // Self-reference
     minYearsExperience: integer("min_years_experience"),
-    requiredSkills: text("required_skills"), // JSON
     description: text("description"),
     ...timestampColumns,
   },
@@ -230,7 +263,10 @@ export const careerPathSteps = hrSchema.table(
     foreignKey({
       columns: [table.tenantId, table.pathId],
       foreignColumns: [careerPaths.tenantId, careerPaths.id],
-    }),
+      name: "career_path_steps_path_fk",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
     foreignKey({
       columns: [table.tenantId, table.positionId],
       foreignColumns: [jobPositions.tenantId, jobPositions.id],
@@ -246,6 +282,10 @@ export const careerPathSteps = hrSchema.table(
     ),
     check("career_path_steps_order_positive", sql`${table.stepOrder} > 0`),
     check(
+      "career_path_steps_prerequisite_not_self",
+      sql`${table.prerequisiteStepId} IS NULL OR ${table.prerequisiteStepId} <> ${table.id}`
+    ),
+    check(
       "career_path_steps_experience_positive",
       sql`${table.minYearsExperience} IS NULL OR ${table.minYearsExperience} >= 0`
     ),
@@ -254,6 +294,48 @@ export const careerPathSteps = hrSchema.table(
     index("career_path_steps_position_idx").on(table.tenantId, table.positionId),
     ...tenantIsolationPolicies("career_path_steps"),
     serviceBypassPolicy("career_path_steps"),
+  ]
+);
+
+// ============================================================================
+// TABLE: career_path_step_skills
+// Required/preferred skills per career path step (normalized; replaces JSON on steps).
+// ============================================================================
+export const careerPathStepSkills = hrSchema.table(
+  "career_path_step_skills",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    stepId: uuid("step_id").notNull(),
+    skillId: uuid("skill_id").notNull(),
+    importance: stepSkillImportanceEnum("importance").notNull().default("mandatory"),
+    notes: text("notes"),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
+    foreignKey({
+      columns: [table.tenantId, table.stepId],
+      foreignColumns: [careerPathSteps.tenantId, careerPathSteps.id],
+      name: "career_path_step_skills_step_fk",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.skillId],
+      foreignColumns: [skills.tenantId, skills.id],
+    }),
+    uniqueIndex("career_path_step_skills_step_skill_unique").on(
+      table.tenantId,
+      table.stepId,
+      table.skillId
+    ),
+    index("career_path_step_skills_tenant_idx").on(table.tenantId),
+    index("career_path_step_skills_step_idx").on(table.tenantId, table.stepId),
+    index("career_path_step_skills_skill_idx").on(table.tenantId, table.skillId),
+    ...tenantIsolationPolicies("career_path_step_skills"),
+    serviceBypassPolicy("career_path_step_skills"),
   ]
 );
 
@@ -271,10 +353,8 @@ export const careerAspirations = hrSchema.table(
     targetPathId: uuid("target_path_id"),
     aspirationDate: date("aspiration_date", { mode: "string" }).notNull(),
     targetDate: date("target_date", { mode: "string" }),
-    currentSkillGaps: text("current_skill_gaps"), // JSON
-    developmentActions: text("development_actions"), // JSON
     managerNotes: text("manager_notes"),
-    status: text("status").notNull().default("active"),
+    status: careerAspirationStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...auditColumns,
   },
@@ -293,10 +373,6 @@ export const careerAspirations = hrSchema.table(
       foreignColumns: [careerPaths.tenantId, careerPaths.id],
     }),
     check(
-      "career_aspirations_status_valid",
-      sql`${table.status} IN ('active', 'achieved', 'abandoned', 'on_hold')`
-    ),
-    check(
       "career_aspirations_target_date_valid",
       sql`${table.targetDate} IS NULL OR ${table.targetDate} >= ${table.aspirationDate}`
     ),
@@ -310,6 +386,49 @@ export const careerAspirations = hrSchema.table(
 );
 
 // ============================================================================
+// TABLE: career_aspiration_skill_gaps
+// Per-skill gaps for an aspiration (normalized; replaces JSON on aspirations).
+// ============================================================================
+export const careerAspirationSkillGaps = hrSchema.table(
+  "career_aspiration_skill_gaps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    aspirationId: uuid("aspiration_id").notNull(),
+    skillId: uuid("skill_id").notNull(),
+    gapLevel: careerAspirationSkillGapLevelEnum("gap_level").notNull(),
+    developmentAction: text("development_action"),
+    notes: text("notes"),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
+    foreignKey({
+      columns: [table.tenantId, table.aspirationId],
+      foreignColumns: [careerAspirations.tenantId, careerAspirations.id],
+      name: "career_aspiration_skill_gaps_aspiration_fk",
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    foreignKey({
+      columns: [table.tenantId, table.skillId],
+      foreignColumns: [skills.tenantId, skills.id],
+    }),
+    uniqueIndex("career_aspiration_skill_gaps_aspiration_skill_unique").on(
+      table.tenantId,
+      table.aspirationId,
+      table.skillId
+    ),
+    index("career_aspiration_skill_gaps_tenant_idx").on(table.tenantId),
+    index("career_aspiration_skill_gaps_aspiration_idx").on(table.tenantId, table.aspirationId),
+    index("career_aspiration_skill_gaps_skill_idx").on(table.tenantId, table.skillId),
+    ...tenantIsolationPolicies("career_aspiration_skill_gaps"),
+    serviceBypassPolicy("career_aspiration_skill_gaps"),
+  ]
+);
+
+// ============================================================================
 // ZOD INSERT SCHEMAS
 // ============================================================================
 
@@ -319,11 +438,12 @@ export const insertSuccessionPlanSchema = z.object({
   planCode: z.string().min(3).max(50),
   criticalPositionId: JobPositionIdSchema,
   successorEmployeeId: EmployeeIdSchema,
-  readiness: z.enum(["ready_now", "ready_1_year", "ready_2_years", "not_ready"]),
-  developmentPlan: z.string().max(2000).optional(),
-  targetDate: z.string().date().optional(),
-  riskLevel: z.enum(["low", "medium", "high", "critical"]),
-  notes: z.string().max(1000).optional(),
+  readiness: SuccessionReadinessSchema,
+  developmentPlan: z.string().max(2000).nullish(),
+  targetDate: z.iso.date().optional(),
+  riskLevel: SuccessionRiskLevelSchema,
+  status: SuccessionPlanStatusSchema.default("active"),
+  notes: z.string().max(2000).optional(),
 });
 
 export const insertTalentPoolSchema = z.object({
@@ -332,9 +452,9 @@ export const insertTalentPoolSchema = z.object({
   poolCode: z.string().min(3).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
-  poolType: z.enum(["leadership", "technical", "high_potential", "critical_skills"]),
-  status: z.enum(["active", "inactive"]).default("active"),
-  criteria: z.string().optional(), // JSON string
+  poolType: TalentPoolTypeSchema,
+  status: TalentPoolStatusSchema.default("active"),
+  criteria: jsonObjectNullishSchema,
 });
 
 export const insertTalentPoolMemberSchema = z.object({
@@ -342,12 +462,12 @@ export const insertTalentPoolMemberSchema = z.object({
   tenantId: hrTenantIdSchema,
   poolId: TalentPoolIdSchema,
   employeeId: EmployeeIdSchema,
-  joinedDate: z.string().date(),
-  readiness: z.enum(["ready_now", "ready_1_year", "ready_2_years", "not_ready"]),
-  performanceRating: z.string().max(50).optional(),
-  potentialRating: z.enum(["low", "medium", "high"]).optional(),
-  developmentPlan: z.string().max(2000).optional(),
-  notes: z.string().max(1000).optional(),
+  joinedDate: z.iso.date(),
+  readiness: SuccessionReadinessSchema,
+  performanceRating: PerformanceRatingSchema.optional(),
+  potentialRating: SuccessionPotentialRatingSchema.optional(),
+  developmentPlan: z.string().max(2000).nullish(),
+  notes: z.string().max(2000).optional(),
 });
 
 export const insertCareerPathSchema = z.object({
@@ -357,19 +477,41 @@ export const insertCareerPathSchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
   departmentId: DepartmentIdSchema.optional(),
-  status: z.enum(["active", "inactive", "archived"]).default("active"),
+  status: CareerPathStatusSchema.default("active"),
 });
 
-export const insertCareerPathStepSchema = z.object({
-  id: CareerPathStepIdSchema.optional(),
+export const insertCareerPathStepSchema = z
+  .object({
+    id: CareerPathStepIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    pathId: CareerPathIdSchema,
+    positionId: JobPositionIdSchema,
+    stepOrder: z.number().int().positive(),
+    prerequisiteStepId: CareerPathStepIdSchema.optional(),
+    minYearsExperience: z.number().int().nonnegative().optional(),
+    description: z.string().max(2000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.id != null &&
+      data.prerequisiteStepId != null &&
+      data.id === data.prerequisiteStepId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "prerequisiteStepId cannot equal step id",
+        path: ["prerequisiteStepId"],
+      });
+    }
+  });
+
+export const insertCareerPathStepSkillSchema = z.object({
+  id: CareerPathStepSkillIdSchema.optional(),
   tenantId: hrTenantIdSchema,
-  pathId: CareerPathIdSchema,
-  positionId: JobPositionIdSchema,
-  stepOrder: z.number().int().positive(),
-  prerequisiteStepId: CareerPathStepIdSchema.optional(),
-  minYearsExperience: z.number().int().nonnegative().optional(),
-  requiredSkills: z.string().optional(), // JSON string
-  description: z.string().max(1000).optional(),
+  stepId: CareerPathStepIdSchema,
+  skillId: SkillIdSchema,
+  importance: StepSkillImportanceSchema.default("mandatory"),
+  notes: z.string().max(2000).optional(),
 });
 
 export const insertCareerAspirationSchema = z
@@ -379,11 +521,19 @@ export const insertCareerAspirationSchema = z
     employeeId: EmployeeIdSchema,
     targetPositionId: JobPositionIdSchema.optional(),
     targetPathId: CareerPathIdSchema.optional(),
-    aspirationDate: z.string().date(),
-    targetDate: z.string().date().optional(),
-    currentSkillGaps: z.string().optional(), // JSON string
-    developmentActions: z.string().optional(), // JSON string
-    managerNotes: z.string().max(1000).optional(),
-    status: z.enum(["active", "achieved", "abandoned", "on_hold"]).default("active"),
+    aspirationDate: z.iso.date(),
+    targetDate: z.iso.date().optional(),
+    managerNotes: z.string().max(2000).optional(),
+    status: CareerAspirationStatusSchema.default("active"),
   })
   .superRefine(refineDateRange("aspirationDate", "targetDate"));
+
+export const insertCareerAspirationSkillGapSchema = z.object({
+  id: CareerAspirationSkillGapIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  aspirationId: CareerAspirationIdSchema,
+  skillId: SkillIdSchema,
+  gapLevel: CareerAspirationSkillGapLevelSchema,
+  developmentAction: z.string().max(2000).nullish(),
+  notes: z.string().max(2000).optional(),
+});

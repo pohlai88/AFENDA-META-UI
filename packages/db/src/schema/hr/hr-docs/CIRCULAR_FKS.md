@@ -13,6 +13,14 @@ These "deferred" FKs are intentionally omitted from the Drizzle schema and must 
 via `ALTER TABLE` in a migration. They are **NOT bugs** — they are documented design
 decisions.
 
+## How to resolve in production
+
+1. **Preferred:** add the composite `FOREIGN KEY` constraints in a migration once historical rows satisfy referential integrity (see SQL blocks below).
+2. **Interim:** validate `(tenant_id, manager_id)` / `(tenant_id, cost_center_id)` in application services before insert/update.
+3. **Alternative:** PostgreSQL triggers that `RAISE` on missing referenced rows (use when migrations must lag schema deploys).
+
+See **ADR-006** (`ADR-006-people-org-deferred-fks-and-hierarchy.md`) for the same decision in ADR form.
+
 ---
 
 ## Deferred Foreign Keys
@@ -23,7 +31,7 @@ decisions.
 | ----------- | ------------------------------------------------------------------------- |
 | **Source**  | `hr.departments.manager_id`                                               |
 | **Target**  | `hr.employees.id`                                                         |
-| **File**    | `people.ts` (departments defined at line ~40, employees at line ~155)     |
+| **File**    | `people.ts` (`departments` before `employees`)                          |
 | **Reason**  | departments is defined before employees; cannot reference employees table |
 | **Reverse** | `employees.departmentId` → `departments.id` (declared as composite FK)    |
 
@@ -46,7 +54,7 @@ ALTER TABLE hr.departments
 | ----------- | ----------------------------------------------------------------------------- |
 | **Source**  | `hr.departments.cost_center_id`                                               |
 | **Target**  | `hr.cost_centers.id`                                                          |
-| **File**    | `people.ts` (departments at line ~40, costCenters at line ~240)               |
+| **File**    | `people.ts` (`departments` before `cost_centers`)                             |
 | **Reason**  | departments is defined before costCenters; cannot reference costCenters table |
 | **Reverse** | N/A (costCenters does not reference departments)                              |
 

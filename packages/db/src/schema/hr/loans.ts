@@ -1,7 +1,7 @@
 // ============================================================================
 // HR DOMAIN: LOAN MANAGEMENT (SWOT Proposal - P1)
-// Defines loan product catalogs and employee loan lifecycle records.
-// Tables: loan_types, employee_loans
+// Defines loan product catalogs, employee loan lifecycle, and per-installment rows.
+// Tables: loan_types, employee_loans, employee_loan_installments
 // ============================================================================
 import { sql } from "drizzle-orm";
 import {
@@ -28,14 +28,27 @@ import {
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
-import { loanCategoryEnum, loanStatusEnum, loanRepaymentFrequencyEnum } from "./_enums.js";
+import {
+  loanCategoryEnum,
+  loanStatusEnum,
+  loanRepaymentFrequencyEnum,
+  loanInterestTypeEnum,
+  loanInstallmentStatusEnum,
+  LoanCategorySchema,
+  LoanStatusSchema,
+  LoanRepaymentFrequencySchema,
+  LoanInterestTypeSchema,
+  LoanInstallmentStatusSchema,
+} from "./_enums.js";
 import { employees } from "./people.js";
 import {
   LoanTypeIdSchema,
   EmployeeLoanIdSchema,
+  EmployeeLoanInstallmentIdSchema,
   EmployeeIdSchema,
   currencyAmountSchema,
   hrTenantIdSchema,
+  hrAuditUserIdSchema,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -48,9 +61,12 @@ export const loanTypes = hrSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: integer("tenant_id").notNull(),
     loanCode: text("loan_code").notNull(),
+    /** Product catalog version (unique with `loan_code` per tenant). */
+    catalogVersion: integer("catalog_version").notNull().default(1),
     ...nameColumn,
     description: text("description"),
     category: loanCategoryEnum("category").notNull(),
+    interestType: loanInterestTypeEnum("interest_type").notNull().default("reducing_balance"),
     maxAmount: numeric("max_amount", { precision: 15, scale: 2 }),
     maxTenureMonths: integer("max_tenure_months"),
     interestRate: numeric("interest_rate", { precision: 5, scale: 2 }).notNull().default("0"),
@@ -65,9 +81,10 @@ export const loanTypes = hrSchema.table(
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
-    uniqueIndex("loan_types_tenant_code_unique")
-      .on(table.tenantId, table.loanCode)
+    uniqueIndex("loan_types_tenant_code_version_unique")
+      .on(table.tenantId, table.loanCode, table.catalogVersion)
       .where(sql`${table.deletedAt} IS NULL`),
+    check("loan_types_catalog_version_positive", sql`${table.catalogVersion} > 0`),
     check(
       "loan_types_max_amount_positive",
       sql`${table.maxAmount} IS NULL OR ${table.maxAmount} > 0`
@@ -87,6 +104,10 @@ export const loanTypes = hrSchema.table(
     check(
       "loan_types_min_service_valid",
       sql`${table.minServiceMonths} IS NULL OR ${table.minServiceMonths} >= 0`
+    ),
+    check(
+      "loan_types_description_max_len",
+      sql`${table.description} IS NULL OR char_length(${table.description}) <= 2000`
     ),
     index("loan_types_tenant_idx").on(table.tenantId),
     index("loan_types_category_idx").on(table.tenantId, table.category),
@@ -109,6 +130,8 @@ export const employeeLoans = hrSchema.table(
     employeeId: uuid("employee_id").notNull(),
     loanTypeId: uuid("loan_type_id").notNull(),
     status: loanStatusEnum("status").notNull().default("applied"),
+    /** Snapshot at origination (product `interest_type` may change later). */
+    interestType: loanInterestTypeEnum("interest_type").notNull().default("reducing_balance"),
     principalAmount: numeric("principal_amount", { precision: 15, scale: 2 }).notNull(),
     interestRate: numeric("interest_rate", { precision: 5, scale: 2 }).notNull().default("0"),
     totalRepayable: numeric("total_repayable", { precision: 15, scale: 2 }).notNull(),
@@ -117,12 +140,14 @@ export const employeeLoans = hrSchema.table(
       .notNull()
       .default("monthly"),
     tenureMonths: integer("tenure_months").notNull(),
-    currencyId: integer("currency_id"),
+    currencyId: integer("currency_id").notNull(),
     applicationDate: date("application_date", { mode: "string" }).notNull(),
     approvalDate: date("approval_date", { mode: "string" }),
     disbursementDate: date("disbursement_date", { mode: "string" }),
     firstDeductionDate: date("first_deduction_date", { mode: "string" }),
     lastDeductionDate: date("last_deduction_date", { mode: "string" }),
+    closedDate: date("closed_date", { mode: "string" }),
+    defaultedDate: date("defaulted_date", { mode: "string" }),
     totalPaid: numeric("total_paid", { precision: 15, scale: 2 }).notNull().default("0"),
     totalOutstanding: numeric("total_outstanding", { precision: 15, scale: 2 }).notNull(),
     installmentsPaid: integer("installments_paid").notNull().default(0),
@@ -165,8 +190,20 @@ export const employeeLoans = hrSchema.table(
     check("employee_loans_tenure_positive", sql`${table.tenureMonths} > 0`),
     check("employee_loans_total_paid_valid", sql`${table.totalPaid} >= 0`),
     check("employee_loans_outstanding_valid", sql`${table.totalOutstanding} >= 0`),
+    check(
+      "employee_loans_outstanding_equals_repayable_minus_paid",
+      sql`${table.totalOutstanding} = ${table.totalRepayable} - ${table.totalPaid}`
+    ),
+    check(
+      "employee_loans_total_paid_lte_repayable",
+      sql`${table.totalPaid} <= ${table.totalRepayable}`
+    ),
     check("employee_loans_installments_paid_valid", sql`${table.installmentsPaid} >= 0`),
     check("employee_loans_installments_remaining_valid", sql`${table.installmentsRemaining} >= 0`),
+    check(
+      "employee_loans_installments_sum_tenure",
+      sql`${table.installmentsPaid} + ${table.installmentsRemaining} = ${table.tenureMonths}`
+    ),
     check(
       "employee_loans_approval_after_application",
       sql`${table.approvalDate} IS NULL OR ${table.approvalDate} >= ${table.applicationDate}`
@@ -183,13 +220,76 @@ export const employeeLoans = hrSchema.table(
       "employee_loans_last_after_first_deduction",
       sql`${table.lastDeductionDate} IS NULL OR ${table.firstDeductionDate} IS NULL OR ${table.lastDeductionDate} >= ${table.firstDeductionDate}`
     ),
+    check(
+      "employee_loans_reason_max_len",
+      sql`${table.reason} IS NULL OR char_length(${table.reason}) <= 2000`
+    ),
+    check(
+      "employee_loans_notes_max_len",
+      sql`${table.notes} IS NULL OR char_length(${table.notes}) <= 2000`
+    ),
     index("employee_loans_tenant_idx").on(table.tenantId),
     index("employee_loans_employee_idx").on(table.tenantId, table.employeeId),
     index("employee_loans_status_idx").on(table.tenantId, table.status),
     index("employee_loans_type_idx").on(table.tenantId, table.loanTypeId),
     index("employee_loans_application_date_idx").on(table.tenantId, table.applicationDate),
+    index("employee_loans_closed_date_idx").on(table.tenantId, table.closedDate),
+    index("employee_loans_defaulted_date_idx").on(table.tenantId, table.defaultedDate),
     ...tenantIsolationPolicies("employee_loans"),
     serviceBypassPolicy("employee_loans"),
+  ]
+);
+
+// ============================================================================
+// TABLE: employee_loan_installments
+// Per-EMI schedule rows (optional; aggregates on `employee_loans` remain for reporting).
+// ============================================================================
+export const employeeLoanInstallments = hrSchema.table(
+  "employee_loan_installments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: integer("tenant_id").notNull(),
+    employeeLoanId: uuid("employee_loan_id").notNull(),
+    installmentNumber: integer("installment_number").notNull(),
+    dueDate: date("due_date", { mode: "string" }).notNull(),
+    amountDue: numeric("amount_due", { precision: 15, scale: 2 }).notNull(),
+    amountPaid: numeric("amount_paid", { precision: 15, scale: 2 }).notNull().default("0"),
+    paidDate: date("paid_date", { mode: "string" }),
+    status: loanInstallmentStatusEnum("status").notNull().default("pending"),
+    notes: text("notes"),
+    ...timestampColumns,
+    ...auditColumns,
+  },
+  (table) => [
+    foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
+    foreignKey({
+      columns: [table.tenantId, table.employeeLoanId],
+      foreignColumns: [employeeLoans.tenantId, employeeLoans.id],
+    })
+      .onDelete("cascade")
+      .onUpdate("cascade"),
+    uniqueIndex("employee_loan_installments_loan_number_unique").on(
+      table.tenantId,
+      table.employeeLoanId,
+      table.installmentNumber
+    ),
+    check("employee_loan_installments_number_positive", sql`${table.installmentNumber} > 0`),
+    check("employee_loan_installments_amount_due_positive", sql`${table.amountDue} > 0`),
+    check("employee_loan_installments_amount_paid_non_negative", sql`${table.amountPaid} >= 0`),
+    check(
+      "employee_loan_installments_amount_paid_lte_due",
+      sql`${table.amountPaid} <= ${table.amountDue}`
+    ),
+    check(
+      "employee_loan_installments_notes_max_len",
+      sql`${table.notes} IS NULL OR char_length(${table.notes}) <= 2000`
+    ),
+    index("employee_loan_installments_tenant_idx").on(table.tenantId),
+    index("employee_loan_installments_loan_idx").on(table.tenantId, table.employeeLoanId),
+    index("employee_loan_installments_due_idx").on(table.tenantId, table.dueDate),
+    index("employee_loan_installments_status_idx").on(table.tenantId, table.status),
+    ...tenantIsolationPolicies("employee_loan_installments"),
+    serviceBypassPolicy("employee_loan_installments"),
   ]
 );
 
@@ -201,18 +301,11 @@ export const insertLoanTypeSchema = z.object({
   id: LoanTypeIdSchema.optional(),
   tenantId: hrTenantIdSchema,
   loanCode: z.string().min(2).max(50),
+  catalogVersion: z.number().int().positive().default(1),
   name: z.string().min(2).max(100),
   description: z.string().max(2000).optional(),
-  category: z.enum([
-    "salary_advance",
-    "personal_loan",
-    "housing_loan",
-    "vehicle_loan",
-    "education_loan",
-    "medical_loan",
-    "emergency_loan",
-    "other",
-  ]),
+  category: LoanCategorySchema,
+  interestType: LoanInterestTypeSchema.default("reducing_balance"),
   maxAmount: currencyAmountSchema(2).optional(),
   maxTenureMonths: z.number().int().positive().optional(),
   interestRate: z
@@ -238,9 +331,8 @@ export const insertEmployeeLoanSchema = z
     loanNumber: z.string().min(3).max(50),
     employeeId: EmployeeIdSchema,
     loanTypeId: LoanTypeIdSchema,
-    status: z
-      .enum(["applied", "approved", "disbursed", "repaying", "completed", "defaulted", "cancelled"])
-      .default("applied"),
+    status: LoanStatusSchema.default("applied"),
+    interestType: LoanInterestTypeSchema.default("reducing_balance"),
     principalAmount: currencyAmountSchema(2),
     interestRate: z
       .string()
@@ -249,14 +341,16 @@ export const insertEmployeeLoanSchema = z
       .default("0"),
     totalRepayable: currencyAmountSchema(2),
     emiAmount: currencyAmountSchema(2),
-    repaymentFrequency: z.enum(["monthly", "bi_weekly", "weekly"]).default("monthly"),
+    repaymentFrequency: LoanRepaymentFrequencySchema.default("monthly"),
     tenureMonths: z.number().int().positive(),
-    currencyId: z.number().int().positive().optional(),
-    applicationDate: z.string().date(),
-    approvalDate: z.string().date().optional(),
-    disbursementDate: z.string().date().optional(),
-    firstDeductionDate: z.string().date().optional(),
-    lastDeductionDate: z.string().date().optional(),
+    currencyId: z.number().int().positive(),
+    applicationDate: z.iso.date(),
+    approvalDate: z.iso.date().optional(),
+    disbursementDate: z.iso.date().optional(),
+    firstDeductionDate: z.iso.date().optional(),
+    lastDeductionDate: z.iso.date().optional(),
+    closedDate: z.iso.date().optional(),
+    defaultedDate: z.iso.date().optional(),
     totalPaid: currencyAmountSchema(2).default("0"),
     totalOutstanding: currencyAmountSchema(2),
     installmentsPaid: z.number().int().nonnegative().default(0),
@@ -266,11 +360,36 @@ export const insertEmployeeLoanSchema = z
     notes: z.string().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
-    if (Number(data.totalRepayable) < Number(data.principalAmount)) {
+    const principal = Number(data.principalAmount);
+    const repayable = Number(data.totalRepayable);
+    const paid = Number(data.totalPaid);
+    const outstanding = Number(data.totalOutstanding);
+    if (repayable < principal) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Total repayable cannot be less than principal amount",
         path: ["totalRepayable"],
+      });
+    }
+    if (Math.abs(outstanding - (repayable - paid)) > 1e-6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "totalOutstanding must equal totalRepayable minus totalPaid",
+        path: ["totalOutstanding"],
+      });
+    }
+    if (paid - repayable > 1e-6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "totalPaid cannot exceed totalRepayable",
+        path: ["totalPaid"],
+      });
+    }
+    if (data.installmentsPaid + data.installmentsRemaining !== data.tenureMonths) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "installmentsPaid + installmentsRemaining must equal tenureMonths",
+        path: ["installmentsRemaining"],
       });
     }
     if (data.approvalDate && data.applicationDate && data.approvalDate < data.applicationDate) {
@@ -285,6 +404,54 @@ export const insertEmployeeLoanSchema = z
         code: z.ZodIssueCode.custom,
         message: "Disbursement date cannot be before approval date",
         path: ["disbursementDate"],
+      });
+    }
+    if (data.status === "completed" && data.closedDate == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "closedDate is required when status is completed",
+        path: ["closedDate"],
+      });
+    }
+    if (data.status === "defaulted" && data.defaultedDate == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "defaultedDate is required when status is defaulted",
+        path: ["defaultedDate"],
+      });
+    }
+  });
+
+export const insertEmployeeLoanInstallmentSchema = z
+  .object({
+    id: EmployeeLoanInstallmentIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    employeeLoanId: EmployeeLoanIdSchema,
+    installmentNumber: z.number().int().positive(),
+    dueDate: z.iso.date(),
+    amountDue: currencyAmountSchema(2),
+    amountPaid: currencyAmountSchema(2).default("0"),
+    paidDate: z.iso.date().optional(),
+    status: LoanInstallmentStatusSchema.default("pending"),
+    notes: z.string().max(2000).optional(),
+    createdBy: hrAuditUserIdSchema,
+    updatedBy: hrAuditUserIdSchema,
+  })
+  .superRefine((data, ctx) => {
+    const due = Number(data.amountDue);
+    const paid = Number(data.amountPaid);
+    if (paid - due > 1e-6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "amountPaid cannot exceed amountDue",
+        path: ["amountPaid"],
+      });
+    }
+    if (paid > 0 && data.paidDate == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "paidDate is required when amountPaid is greater than zero",
+        path: ["paidDate"],
       });
     }
   });

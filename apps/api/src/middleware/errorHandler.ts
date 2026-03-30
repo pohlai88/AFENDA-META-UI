@@ -14,6 +14,11 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
+import {
+  StorageIdempotencyInvalidError,
+  StorageQuotaExceededError,
+  StorageUploadBlockedError,
+} from "@afenda/db/queries/storage";
 import { logger } from "../logging/index.js";
 import { MutationPolicyViolationError } from "../policy/mutation-command-gateway.js";
 
@@ -103,6 +108,61 @@ export function errorHandler(
     "Error caught by global handler"
   );
 
+  if (err instanceof StorageQuotaExceededError) {
+    const quotaErr = err as StorageQuotaExceededError;
+    res.status(507).json({
+      error: "Insufficient storage",
+      code: quotaErr.code,
+      message: quotaErr.message,
+      details: {
+        remainingBytes: quotaErr.remainingBytes.toString(),
+        requiredBytes: quotaErr.requiredBytes.toString(),
+        effectiveLimitBytes: quotaErr.effectiveLimitBytes.toString(),
+        requestQuotaIncreasePath: "/api/storage/quota-requests",
+      },
+    });
+    return;
+  }
+
+  if (err instanceof StorageUploadBlockedError) {
+    const blockedErr = err as StorageUploadBlockedError;
+    res.status(403).json({
+      error: "Storage uploads blocked",
+      code: blockedErr.code,
+      message: blockedErr.message,
+    });
+    return;
+  }
+
+  if (err instanceof StorageIdempotencyInvalidError) {
+    const idemErr = err as StorageIdempotencyInvalidError;
+    res.status(409).json({
+      error: "Invalid idempotency key",
+      code: idemErr.code,
+      message: idemErr.message,
+    });
+    return;
+  }
+
+  const maybeCode = (err as Error & { code?: string }).code;
+  if (maybeCode === "STORAGE_TENANT_REQUIRED") {
+    res.status(400).json({
+      error: "Tenant required",
+      code: maybeCode,
+      message: err.message,
+    });
+    return;
+  }
+
+  if (maybeCode === "STORAGE_KEY_TENANT_MISMATCH") {
+    res.status(400).json({
+      error: "Storage key tenant mismatch",
+      code: maybeCode,
+      message: err.message,
+    });
+    return;
+  }
+
   // ── Mutation policy violations → 409 ──────────────────────────────────
   if (err instanceof MutationPolicyViolationError) {
     res.status(err.statusCode).json({
@@ -163,14 +223,4 @@ export function notFoundHandler(req: Request, res: Response) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Async error wrapper - catches errors in async route handlers
-// ---------------------------------------------------------------------------
-
-type AsyncHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
-
-export function asyncHandler(fn: AsyncHandler) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+export { asyncHandler } from "./asyncHandler.js";

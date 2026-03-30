@@ -73,9 +73,11 @@ function splitTableBlocks(source) {
   while ((match = tableStartRe.exec(source)) !== null) {
     const tableName = match[1];
     const startIdx = match.index;
+    const matched = match[0];
 
-    // Find the end of the table definition: matching the opening paren of .table(
-    const parenStart = source.indexOf("(", startIdx + "salesSchema.table".length);
+    // Opening `(` of `.table(` / `pgTable(` — must not use a fixed substring length (varies by schema name).
+    const parenIdx = matched.indexOf("(");
+    const parenStart = parenIdx === -1 ? source.indexOf("(", startIdx) : startIdx + parenIdx;
     const endIdx = findMatchingParen(source, parenStart);
 
     if (endIdx === -1) {

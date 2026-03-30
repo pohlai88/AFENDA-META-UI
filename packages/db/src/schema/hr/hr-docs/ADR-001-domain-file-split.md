@@ -84,7 +84,7 @@ Changes to payroll logic don't require reviewing attendance or recruitment code.
 
 ## Current state (supersedes table above)
 
-The schema has grown to **27 domain modules** and **146 tables**, all still under `pgSchema("hr")`. Expenses moved to `expenses.ts`, exit interviews to `lifecycle.ts`, skills to `skills.ts`, learning to `learning.ts`, and many upgrade modules were added. The historical table in **Decision** is frozen for context; the **authoritative** file → bounded-context map is **[HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md) → P0 domain placement audit**.
+The schema has grown to **27 domain modules** and **167 tables** (count of `hrSchema.table(` in `packages/db/src/schema/hr/*.ts`, excluding `_*.ts`), all still under `pgSchema("hr")`. Expenses moved to `expenses.ts`, exit interviews to `lifecycle.ts`, skills to `skills.ts`, learning to `learning.ts`, and many upgrade modules were added. The historical table in **Decision** is frozen for context; the **authoritative** file → bounded-context map is **[HR_SCHEMA_UPGRADE_GUIDE.md](./HR_SCHEMA_UPGRADE_GUIDE.md) → P0 domain placement audit**.
 
 ## References
 

@@ -20,11 +20,8 @@ export const IGNORE_BASENAMES = new Set(["index.ts"]);
 
 /**
  * Known stub / pointer files (relative to repo root, posix slashes).
- * Example: HR onboarding lives in operations.ts; this file is documentation-only.
  */
-export const EXTRA_IGNORE_RELATIVE = new Set([
-  "packages/db/src/schema/hr/onboarding.ts",
-]);
+export const EXTRA_IGNORE_RELATIVE = new Set([]);
 
 /**
  * Schema files under these path prefixes may define tables without per-table RLS helpers

@@ -17,22 +17,14 @@ import { join } from "node:path";
 import type { Readable } from "node:stream";
 import { sql } from "drizzle-orm";
 
+import type { R2ObjectRepo, R2RepoCredentials } from "../r2/objectRepo.types.js";
+
 // =====================================================================
 // TYPE DEFINITIONS
 // =====================================================================
 
-export interface R2Config {
-  /** Cloudflare Account ID */
-  accountId: string;
-  /** R2 Access Key ID (from R2 Tokens) */
-  accessKeyId: string;
-  /** R2 Secret Access Key */
-  secretAccessKey: string;
-  /** R2 Bucket Name */
-  bucketName: string;
-  /** R2 Jurisdiction (optional: 'eu', 'fedramp', etc.) */
-  jurisdiction?: "eu" | "fedramp";
-}
+/** @deprecated Use `R2RepoCredentials` from `@afenda/db/r2`. */
+export type R2Config = R2RepoCredentials;
 
 export interface PartitionExportOptions {
   /** Table name (e.g., 'sales_orders') */
@@ -104,155 +96,6 @@ export interface RestorationResult {
   attachedAsPartition: boolean;
   /** Error message (if failed) */
   error?: string;
-}
-
-// =====================================================================
-// R2 CLIENT WRAPPER
-// =====================================================================
-
-/**
- * Lightweight R2 client using fetch API
- * (Alternative to aws-sdk for reduced dependencies)
- */
-export class R2Client {
-  private readonly config: R2Config;
-  private readonly baseUrl: string;
-
-  constructor(config: R2Config) {
-    this.config = config;
-
-    // R2 endpoint format: https://<account-id>.r2.cloudflarestorage.com/<bucket-name>
-    const jurisdiction = config.jurisdiction ? `.${config.jurisdiction}` : "";
-    this.baseUrl = `https://${config.accountId}${jurisdiction}.r2.cloudflarestorage.com/${config.bucketName}`;
-  }
-
-  /**
-   * Upload object to R2
-   */
-  async putObject(
-    key: string,
-    body: Buffer | Readable,
-    metadata: Record<string, string>
-  ): Promise<{ etag: string }> {
-    const url = `${this.baseUrl}/${key}`;
-
-    // Generate AWS Signature V4 (simplified for R2)
-    const headers = await this.signRequest("PUT", key, {
-      "x-amz-meta-row-count": metadata.rowCount || "0",
-      "x-amz-meta-table": metadata.table || "",
-      "x-amz-meta-partition": metadata.partition || "",
-      "x-amz-meta-checksum": metadata.checksum || "",
-      "x-amz-meta-export-date": metadata.exportDate || new Date().toISOString(),
-    });
-
-    const response = await fetch(url, {
-      method: "PUT",
-      headers,
-      body: Buffer.isBuffer(body) ? body : await this.streamToBuffer(body),
-    });
-
-    if (!response.ok) {
-      throw new Error(`R2 upload failed: ${response.status} ${response.statusText}`);
-    }
-
-    return {
-      etag: response.headers.get("etag") || "",
-    };
-  }
-
-  /**
-   * Download object from R2
-   */
-  async getObject(key: string): Promise<{ body: Readable; metadata: Record<string, string> }> {
-    const url = `${this.baseUrl}/${key}`;
-    const headers = await this.signRequest("GET", key, {});
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`R2 object not found: ${key}`);
-      }
-      throw new Error(`R2 download failed: ${response.status} ${response.statusText}`);
-    }
-
-    // Extract custom metadata
-    const metadata: Record<string, string> = {};
-    for (const [key, value] of response.headers.entries()) {
-      if (key.startsWith("x-amz-meta-")) {
-        metadata[key.replace("x-amz-meta-", "")] = value;
-      }
-    }
-
-    return {
-      body: response.body as any as Readable,
-      metadata,
-    };
-  }
-
-  /**
-   * Delete object from R2
-   */
-  async deleteObject(key: string): Promise<void> {
-    const url = `${this.baseUrl}/${key}`;
-    const headers = await this.signRequest("DELETE", key, {});
-
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers,
-    });
-
-    if (!response.ok && response.status !== 404) {
-      throw new Error(`R2 delete failed: ${response.status} ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Check if object exists in R2
-   */
-  async objectExists(key: string): Promise<boolean> {
-    const url = `${this.baseUrl}/${key}`;
-    const headers = await this.signRequest("HEAD", key, {});
-
-    const response = await fetch(url, {
-      method: "HEAD",
-      headers,
-    });
-
-    return response.ok;
-  }
-
-  /**
-   * Generate AWS Signature V4 for R2 requests
-   * (Simplified implementation - for production, use aws4fetch or @aws-sdk/signature-v4)
-   */
-  private async signRequest(
-    method: string,
-    key: string,
-    customHeaders: Record<string, string>
-  ): Promise<Record<string, string>> {
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
-    const date = timestamp.substring(0, 8);
-
-    // Basic headers (in production, implement full AWS Signature V4)
-    return {
-      Authorization: `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${date}/auto/s3/aws4_request`,
-      "x-amz-date": timestamp,
-      "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
-      ...customHeaders,
-    };
-  }
-
-  private async streamToBuffer(stream: Readable): Promise<Buffer> {
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks);
-  }
 }
 
 // =====================================================================
@@ -387,7 +230,7 @@ export async function importParquetToPostgres(
  */
 export async function archivePartitionToR2(
   db: any,
-  r2Client: R2Client,
+  repo: R2ObjectRepo,
   options: PartitionExportOptions
 ): Promise<ArchivalResult> {
   const startTime = Date.now();
@@ -403,16 +246,21 @@ export async function archivePartitionToR2(
 
     const fileBuffer = await readFileToBuffer(exportResult.filePath);
 
-    const uploadResult = await r2Client.putObject(r2ObjectKey, fileBuffer, {
-      table: options.tableName,
-      partition: options.partitionName,
-      rowCount: exportResult.rowCount.toString(),
-      checksum: exportResult.checksum,
-      exportDate: new Date().toISOString(),
+    const uploadResult = await repo.putObject({
+      key: r2ObjectKey,
+      body: fileBuffer,
+      contentType: "application/vnd.apache.parquet",
+      metadata: {
+        table: options.tableName,
+        partition: options.partitionName,
+        rowcount: exportResult.rowCount.toString(),
+        checksum: exportResult.checksum,
+        exportdate: new Date().toISOString(),
+      },
     });
 
     // Step 3: Verify upload
-    const exists = await r2Client.objectExists(r2ObjectKey);
+    const exists = (await repo.headObject(r2ObjectKey)) != null;
     if (!exists) {
       throw new Error("R2 upload verification failed: object not found");
     }
@@ -438,10 +286,10 @@ export async function archivePartitionToR2(
         ${options.tableName},
         ${options.partitionName},
         ${options.schemaName || "archive"},
-        ${r2Client["config"].bucketName},
+        ${repo.bucket},
         ${r2ObjectKey},
         ${exportResult.sizeBytes},
-        ${uploadResult.etag},
+        ${uploadResult.etag ?? ""},
         ${exportResult.rowCount},
         ${parsePartitionDateRange(options.partitionName).start},
         ${parsePartitionDateRange(options.partitionName).end},
@@ -497,7 +345,7 @@ export async function archivePartitionToR2(
  */
 export async function restorePartitionFromR2(
   db: any,
-  r2Client: R2Client,
+  repo: R2ObjectRepo,
   options: RestorationOptions
 ): Promise<RestorationResult> {
   const startTime = Date.now();
@@ -506,7 +354,7 @@ export async function restorePartitionFromR2(
     console.log(`[Restore] Starting restoration of ${options.r2ObjectKey}`);
 
     // Step 1: Fetch from R2
-    const { body, metadata } = await r2Client.getObject(options.r2ObjectKey);
+    const { body, metadata } = await repo.getObjectStream(options.r2ObjectKey);
 
     // Step 2: Save to temp file
     const tempFilePath = join(tmpdir(), `restore_${Date.now()}.parquet`);
@@ -517,8 +365,11 @@ export async function restorePartitionFromR2(
 
     // Step 3: Import to PostgreSQL
     const targetSchema = options.targetSchema || "archive";
+    const metaTable = metadata.table;
+    const metaPartition = metadata.partition;
     const targetTableName =
-      options.targetTableName || `${metadata.table}_${metadata.partition}_restored`;
+      options.targetTableName ||
+      `${metaTable ?? "archive"}_${metaPartition ?? "partition"}_restored`;
 
     const importResult = await importParquetToPostgres(
       db,
@@ -533,7 +384,7 @@ export async function restorePartitionFromR2(
       await db.execute(sql`
         ALTER TABLE ${sql.raw(`sales.${options.parentTableName}`)}
         ATTACH PARTITION ${sql.raw(`${targetSchema}.${targetTableName}`)}
-        FOR VALUES FROM (${metadata["date-range-start"]}) TO (${metadata["date-range-end"]})
+        FOR VALUES FROM (${metadata["date-range-start"] ?? metadata.daterangestart}) TO (${metadata["date-range-end"] ?? metadata.daterangeend})
       `);
       attachedAsPartition = true;
     }
@@ -626,7 +477,7 @@ function parsePartitionDateRange(partitionName: string): { start: string; end: s
  */
 export async function batchArchiveToR2(
   db: any,
-  r2Client: R2Client,
+  repo: R2ObjectRepo,
   tables: Array<{ tableName: string; partitionName: string }>
 ): Promise<ArchivalResult[]> {
   const results: ArchivalResult[] = [];
@@ -634,7 +485,7 @@ export async function batchArchiveToR2(
   for (const table of tables) {
     console.log(`\n[Batch Archive] Processing ${table.tableName}.${table.partitionName}`);
 
-    const result = await archivePartitionToR2(db, r2Client, {
+    const result = await archivePartitionToR2(db, repo, {
       tableName: table.tableName,
       partitionName: table.partitionName,
       schemaName: "archive",
@@ -677,11 +528,11 @@ export async function batchArchiveToR2(
  * Example Usage:
  *
  * ```typescript
- * import { R2Client, batchArchiveToR2 } from './r2-integration';
+ * import { batchArchiveToR2 } from './r2-integration';
+ * import { createR2ObjectRepo } from '../r2/createR2ObjectRepo.js';
  * import { db } from '../client';
  *
- * // Initialize R2 client
- * const r2 = new R2Client({
+ * const repo = createR2ObjectRepo({
  *   accountId: process.env.R2_ACCOUNT_ID!,
  *   accessKeyId: process.env.R2_ACCESS_KEY_ID!,
  *   secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -689,13 +540,13 @@ export async function batchArchiveToR2(
  * });
  *
  * // Archive old partitions
- * const results = await batchArchiveToR2(db, r2, [
+ * const results = await batchArchiveToR2(db, repo, [
  *   { tableName: 'sales_orders', partitionName: '2017_01' },
  *   { tableName: 'sales_orders', partitionName: '2017_02' },
  * ]);
  *
  * // Restore partition
- * const restored = await restorePartitionFromR2(db, r2, {
+ * const restored = await restorePartitionFromR2(db, repo, {
  *   r2ObjectKey: 'sales_orders/2017/sales_orders_2017_01.parquet',
  *   targetSchema: 'archive',
  *   attachAsPartition: false,

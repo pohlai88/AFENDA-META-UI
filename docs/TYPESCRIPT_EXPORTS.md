@@ -47,7 +47,8 @@ import type { MetaField } from "@afenda/meta-types";
 **Boundary Policy:**
 - ✅ **Can import:** `@afenda/meta-types` only
 - ❌ **Cannot import:** `@afenda/ui`, `api`, `web`
-- ✅ **Exports:** Drizzle schema, query builders, seed utilities
+- ✅ **Exports:** Drizzle schema, query builders, seed utilities, **`@afenda/db/r2`** (Cloudflare R2 / S3-compatible object repo; docs: [packages/db/src/r2/README.md](../packages/db/src/r2/README.md))
+- ✅ **Doc templates:** Reusable README/ARCHITECTURE skeletons — [tools/templates/package-docs/README.md](../tools/templates/package-docs/README.md)
 - ✅ **Runtime:** Truth compiler runtime (extracted from meta-types Phase 2)
 
 **Import Examples:**
@@ -267,18 +268,21 @@ All packages must enable declaration generation in `tsconfig.json`:
 
 ### `_private/` Convention
 
-Mark internal implementation details with `_private/` directory:
+Some packages use a `_private/` directory for internal implementation details that are **not** re-exported from the package root (see package `exports` in `package.json`).
+
+Example (`@afenda/ui`):
 
 ```
-packages/db/src/
+packages/ui/src/
   index.ts          # Public API
   _private/         # Internal utilities, not exported
     README.md       # Documents internal structure
 ```
 
 **Expected Docs:**
-- `packages/db/src/_private/README.md`
 - `packages/ui/src/_private/README.md`
+
+`@afenda/db` does not use `_private/`; internal helpers live next to their feature areas (e.g. `src/columns/`, `src/_shared/`) and are exported only via explicit subpaths.
 
 ---
 

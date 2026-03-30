@@ -78,6 +78,26 @@
       "import": "./dist/schema/purchasing/index.js",
       "types": "./dist/schema/purchasing/index.d.ts"
     },
+    "./queries/hr": {
+      "import": "./dist/queries/hr/index.js",
+      "types": "./dist/queries/hr/index.d.ts"
+    },
+    "./queries/sales": {
+      "import": "./dist/queries/sales/index.js",
+      "types": "./dist/queries/sales/index.d.ts"
+    },
+    "./r2": {
+      "import": "./dist/r2/index.js",
+      "types": "./dist/r2/index.d.ts"
+    },
+    "./queries/storage": {
+      "import": "./dist/queries/storage/index.js",
+      "types": "./dist/queries/storage/index.d.ts"
+    },
+    "./queries/truth": {
+      "import": "./dist/queries/truth/index.js",
+      "types": "./dist/queries/truth/index.d.ts"
+    },
     "./schema-meta": {
       "import": "./dist/schema/meta/index.js",
       "types": "./dist/schema/meta/index.d.ts"
@@ -114,10 +134,14 @@
     "graph-validation": "tsx src/graph-validation/runner.ts",
     "truth:generate": "tsx src/truth-compiler/generate-truth-sql.ts",
     "truth:check": "tsx src/truth-compiler/generate-truth-sql.ts --check",
-    "truth:schema:compare": "tsx src/truth-compiler/compare-truth-schema.ts"
+    "truth:schema:compare": "tsx src/truth-compiler/compare-truth-schema.ts",
+    "r2:health": "tsx src/r2/healthcheck.ts"
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1019.0",
+    "@aws-sdk/lib-storage": "^3.1019.0",
+    "@aws-sdk/s3-request-presigner": "^3.1019.0",
     "@neondatabase/serverless": "^1.0.2",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "catalog:",
@@ -131,6 +155,7 @@
     "drizzle-kit": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "wrangler": "^4.78.0"
   }
 }

@@ -2,7 +2,7 @@
 
 **Status:** ✅ Phase 10 Commission Release + SWOT Proposals
 **Created:** 2024
-**Last Updated:** 2026-03-29
+**Last Updated:** 2026-03-30
 
 ---
 
@@ -60,10 +60,9 @@ This project successfully upgraded the HR schema to **exceed legacy afenda-hybri
 - [ADR-001](./ADR-001-domain-file-split.md) - Domain separation
 - [ADR-002](./ADR-002-circular-fk-handling.md) - Circular FK handling
 - [ADR-003](./ADR-003-meta-types-integration.md) - Meta-types integration
-
-#### Migration Guides
-
-- [TRAINING-TO-LEARNING-MIGRATION.md](./TRAINING-TO-LEARNING-MIGRATION.md) - Training module migration
+- [ADR-004](./ADR-004-skills-taxonomy-performance-ratings.md) - Skills taxonomy & performance ratings (Phase 5 deferred)
+- [ADR-005](./ADR-005-equity-grant-lifecycle.md) - Equity grant lifecycle enum
+- [ADR-007](./ADR-007-ess-workflow-and-events.md) - ESS SLA, approval tasks, events/outbox, survey versions
 
 #### Project References
 
@@ -73,6 +72,7 @@ This project successfully upgraded the HR schema to **exceed legacy afenda-hybri
 
 ### 🔥 Release Highlights
 
+- **v2.3:** `hr-docs` and `SCHEMA_DIAGRAM.md` aligned to current modules (table counts, Benefits provider-centric ERD, ESS ERD); `_relations.ts` header documents catalog conventions.
 - **P0 / v2.2:** Policy documents + acknowledgments, shift swap requests, onboarding enum/CHECK/Zod wiring, GIN indexes on JSON text columns, full `_relations` vs `foreignKey()` alignment (`RELATIONS_DRIFT` = CI error), `hr-fk-graph` self-composite second legs, `staffing_plans.approved_by` → employees, prior catalog fixes (grievances, loans, policies, shift swap), grievance category tenant-scoped self-FK, `CUSTOM_SQL_REGISTRY` SQL aligned to migrations. See `HR_SCHEMA_UPGRADE_GUIDE.md`.
 - **SWOT Proposals:** Grievance Management (2 tables) and Loan Management (2 tables) added based on senior HR director SWOT analysis. Closes critical legal/compliance gap and APAC/MEA market gap. Includes workflow state machines, branded IDs, 8 new pgEnums, ERDs, and Zod insert schemas. Full report: `.reports/hr-schema-swot-analysis.md`.
 - **Phase 10:** Commission plans, tiers, entries, territories, territory rules, and sales team coverage now live for regulated incentive modeling.
@@ -91,16 +91,16 @@ This project successfully upgraded the HR schema to **exceed legacy afenda-hybri
 4. **Phase 3:** Learning domain (16 tables)
 5. **Phase 4:** Payroll enhancement (5 tables) + Recruitment enhancement (3 tables)
 6. **Phase 5:** Documentation & diagrams
-7. **Phase 6:** Employee Experience & Self-Service (6 tables)
+7. **Phase 6:** Employee Experience & Self-Service — **17** tables in `employeeExperience.ts` (ESS upgrade ADR-007; `_relations.ts` block `// Employee experience`)
 8. **Phase 7:** Workforce Strategy & Succession Planning (8 tables)
-9. **Phase 8:** People Analytics & Reporting (6 tables)
+9. **Phase 8:** People Analytics & Reporting (7 tables in `peopleAnalytics.ts`)
 10. **Phase 9:** Global Workforce & Compliance (6 tables)
 11. **SWOT Proposals:** Grievance Management (2 tables) + Loan Management (2 tables)
 12. **P0 Guide Closure (v2.2):** Policy + acknowledgments (2 tables), shift swap (1 table), onboarding enhancements, indexes, relation catalog
 
 ### 📊 Final Statistics
 
-- **Total Tables:** 146 in `hr.*` (P0 audit registry in `HR_SCHEMA_UPGRADE_GUIDE.md`)
+- **Total Tables:** 167 in `hr.*` (P0 audit registry in `HR_SCHEMA_UPGRADE_GUIDE.md`, 2026-03-30 recount)
 - **Total Enums:** 94+ (from 38)
 - **Zod Validation:** 50KB+ of schemas
 - **Documentation:** World-class with ERDs and workflows

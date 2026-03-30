@@ -284,7 +284,6 @@ function checkDeclarationExports(errors) {
 function checkDocsAndBoundaryArtifacts(warnings) {
   const expectedDocs = [
     "docs/TYPESCRIPT_EXPORTS.md",
-    "packages/db/src/_private/README.md",
     "packages/ui/src/_private/README.md",
   ];
 

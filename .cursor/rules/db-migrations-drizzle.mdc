@@ -1,0 +1,11 @@
+---
+description: Prefer Drizzle-generated SQL; hand-written migrations need explicit approval
+globs: packages/db/migrations/**/*.sql,packages/db/drizzle.config.ts,packages/db/src/schema/**/*.ts
+alwaysApply: false
+---
+
+# Database migrations and SQL
+
+- **Default**: Produce schema changes in Drizzle (`packages/db/src/schema/**`) and generate migrations with **drizzle-kit** (or the repo’s documented workflow). Do not add large blocks of hand-authored SQL unless necessary.
+- **Hand-written / customized SQL**: Requires **explicit human approval** before it is added or merged (e.g. one-off data backfills, complex `DO` blocks, or constraints not expressible in Drizzle). Call out in PR/commit why Drizzle generation is insufficient.
+- **When customization is justified**: Keep the SQL minimal, idempotent where possible, and scoped to the smallest change that Drizzle cannot emit safely.

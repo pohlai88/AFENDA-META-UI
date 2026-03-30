@@ -20,8 +20,10 @@
 import { parseArgs } from "node:util";
 import { db } from "../db.js";
 import { sql } from "drizzle-orm";
+import { createR2ObjectRepo } from "../r2/createR2ObjectRepo.js";
+import { loadR2RepoCredentialsFromEnv } from "../r2/credentials.js";
+import type { R2ObjectRepo } from "../r2/objectRepo.types.js";
 import {
-  R2Client,
   batchArchiveToR2,
   restorePartitionFromR2,
   type ArchivalResult,
@@ -33,36 +35,24 @@ import {
 // =====================================================================
 
 function validateEnvironment(): void {
-  const required = [
-    "DATABASE_URL",
-    "R2_ACCOUNT_ID",
-    "R2_ACCESS_KEY_ID",
-    "R2_SECRET_ACCESS_KEY",
-    "R2_BUCKET_NAME",
-  ];
-  const missing = required.filter((key) => !process.env[key]);
-
-  if (missing.length > 0) {
+  if (!process.env.DATABASE_URL) {
     console.error("❌ Missing required environment variables:");
-    missing.forEach((key) => console.error(`   - ${key}`));
+    console.error("   - DATABASE_URL");
     console.error("\nSet these in .env or .env.local:");
     console.error("   DATABASE_URL=postgresql://user:pass@host:5432/db");
-    console.error("   R2_ACCOUNT_ID=your_cloudflare_account_id");
-    console.error("   R2_ACCESS_KEY_ID=your_r2_access_key_id");
-    console.error("   R2_SECRET_ACCESS_KEY=your_r2_secret_access_key");
-    console.error("   R2_BUCKET_NAME=afenda-archive");
+    process.exit(1);
+  }
+  try {
+    loadR2RepoCredentialsFromEnv(process.env);
+  } catch (error) {
+    console.error("❌ Invalid R2 environment configuration:");
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
 
-function getR2Client(): R2Client {
-  return new R2Client({
-    accountId: process.env.R2_ACCOUNT_ID!,
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    bucketName: process.env.R2_BUCKET_NAME!,
-    jurisdiction: process.env.R2_JURISDICTION as "eu" | "fedramp" | undefined,
-  });
+function getR2ObjectRepo(): R2ObjectRepo {
+  return createR2ObjectRepo(loadR2RepoCredentialsFromEnv(process.env));
 }
 
 // =====================================================================
@@ -150,7 +140,7 @@ async function commandArchive(dryRun: boolean, limit: number): Promise<void> {
 
   // Execute archival
   validateEnvironment();
-  const r2Client = getR2Client();
+  const r2Repo = getR2ObjectRepo();
 
   const partitions = candidates.rows.map((row: any) => ({
     tableName: row.table_name,
@@ -158,7 +148,7 @@ async function commandArchive(dryRun: boolean, limit: number): Promise<void> {
   }));
 
   console.log("\n📤 Starting R2 archival...\n");
-  const results = await batchArchiveToR2(db, r2Client, partitions);
+  const results = await batchArchiveToR2(db, r2Repo, partitions);
 
   // Summary
   const successCount = results.filter((r) => r.success).length;
@@ -192,7 +182,7 @@ async function commandRestore(r2ObjectKey: string, attachAsPartition: boolean): 
   console.log("");
 
   validateEnvironment();
-  const r2Client = getR2Client();
+  const r2Repo = getR2ObjectRepo();
 
   // Fetch metadata from catalog
   const catalogEntry = await db.execute(sql`
@@ -209,7 +199,7 @@ async function commandRestore(r2ObjectKey: string, attachAsPartition: boolean): 
 
   // Restore
   console.log("📥 Downloading from R2...");
-  const result = await restorePartitionFromR2(db, r2Client, {
+  const result = await restorePartitionFromR2(db, r2Repo, {
     r2ObjectKey,
     targetSchema: "archive",
     attachAsPartition,

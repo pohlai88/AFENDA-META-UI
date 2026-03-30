@@ -865,6 +865,27 @@ const filesToScan = glob.sync("apps/**/*.ts", {
 
 ---
 
+## Database access layer gate (`db-access-layer/`)
+
+ERP schema modules under `packages/db/src/schema/{hr,sales,inventory,accounting,purchasing}/` (excluding `index.ts`, `_*.ts`, and `hr-docs/`) must have a sibling access file:
+
+`packages/db/src/queries/<domain>/<basename>.access.ts`
+
+**v1 check:** file exists and is non-empty (no AST or export validation).
+
+**Regenerate scaffolds:** `pnpm ci:gate:db-access:generate` (`--fix --generate --force`) overwrites files that contain `@generated`. Refreshes `queries/<domain>/index.ts` barrels.
+
+**Documentation:** [db-access-layer/README.md](db-access-layer/README.md)
+
+```bash
+pnpm ci:gate:db-access
+pnpm ci:gate:db-access:fix
+pnpm ci:gate:db-access:generate
+node tools/ci-gate/index.mjs --gate=db-access-layer
+```
+
+---
+
 ## Drizzle schema quality gate (`drizzle-schema-quality/`)
 
 Glob-driven convention checks on `packages/db/src/schema/**/*.ts` (Drizzle table modules). Complements **postgres-schema** (sales/meta business matrices): **RLS** (helpers missing vs count mismatch; allowlisted `core/`, `security/`, `meta/`, `reference/` may omit RLS entirely, or add paired `tenantIsolationPolicies` + `serviceBypassPolicy` only on tenant-scoped tables without requiring one pair per file), **composite employee FKs** (`foreignColumns: [employees.tenantId, employees.id]` ⇒ `table.tenantId` first), **named indexes** (no anonymous or single-identifier names), optional **extractor** parse health. See [drizzle-schema-quality/LIMITATIONS.md](drizzle-schema-quality/LIMITATIONS.md) for regex/RLS literal-call limits.
@@ -875,7 +896,7 @@ Glob-driven convention checks on `packages/db/src/schema/**/*.ts` (Drizzle table
 
 - Any `**/_*.ts` (e.g. `_schema.ts`, `_enums.ts`)
 - `**/index.ts` barrels
-- Stub-only modules listed in `drizzle-schema-quality/config.mjs` (e.g. `hr/onboarding.ts`)
+- Stub-only modules listed in `drizzle-schema-quality/config.mjs` `EXTRA_IGNORE_RELATIVE` (if any)
 
 **Flags:**
 
@@ -917,6 +938,9 @@ From workspace root:
 | `pnpm ci:gate:logger`  | Run logger gate only              | `node tools/ci-gate/index.mjs --gate=logger` |
 | `pnpm ci:gate:schema-quality` | Drizzle schema convention gate (full + baseline) | `node tools/ci-gate/drizzle-schema-quality/index.mjs --baseline=…` |
 | `pnpm ci:gate:schema-quality:hr` | HR schema only (same baseline) | same + `--glob=packages/db/src/schema/hr/**/*.ts` |
+| `pnpm ci:gate:db-access` | Schema ↔ `queries/*.access.ts` presence | `node tools/ci-gate/db-access-layer/index.mjs` |
+| `pnpm ci:gate:db-access:fix` | Create missing `.access.ts` placeholders | `…/index.mjs --fix` |
+| `pnpm ci:gate:db-access:generate` | Full emit + overwrite `@generated` | `…/index.mjs --fix --generate --force` |
 | `pnpm ci:gate:verbose` | Run all gates with verbose output | `node tools/ci-gate/index.mjs --verbose`     |
 
 ---

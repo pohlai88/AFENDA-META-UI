@@ -30,6 +30,15 @@ export default defineConfig({
         __dirname,
         "../../packages/db/src/truth-compiler/index.ts"
       ),
+      "@afenda/db/r2": path.resolve(__dirname, "../../packages/db/src/r2/index.ts"),
+      "@afenda/db/queries/storage": path.resolve(
+        __dirname,
+        "../../packages/db/src/queries/storage/index.ts"
+      ),
+      "@afenda/db/schema/core": path.resolve(
+        __dirname,
+        "../../packages/db/src/schema/core/index.ts"
+      ),
       "@afenda/db": path.resolve(__dirname, "../../packages/db/src/index.ts"),
     },
   },

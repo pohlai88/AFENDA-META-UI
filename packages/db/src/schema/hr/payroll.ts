@@ -14,8 +14,10 @@ import {
   numeric,
   text,
   date,
+  timestamp,
   uuid,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
@@ -37,7 +39,17 @@ import {
   taxTypeEnum,
   statutoryDeductionTypeEnum,
   payrollAdjustmentTypeEnum,
+  payrollAdjustmentWorkflowStatusEnum,
+  paymentDistributionStatusEnum,
   PayrollAdjustmentTypeSchema,
+  PayrollAdjustmentWorkflowStatusSchema,
+  PayrollStatusSchema,
+  PaymentMethodSchema,
+  CountrySchema,
+  TaxTypeSchema,
+  StatutoryDeductionTypeSchema,
+  ComponentTypeSchema,
+  PaymentDistributionStatusSchema,
 } from "./_enums.js";
 import { employees } from "./people.js";
 import {
@@ -53,6 +65,9 @@ import {
   PayrollLineIdSchema,
   EmployeeIdSchema,
   hrTenantIdSchema,
+  metadataSchema,
+  refineApprovedRequiresActor,
+  refineApprovalFieldsAbsentUnlessApproved,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -121,6 +136,10 @@ export const employeeSalaries = hrSchema.table(
     }),
     foreignKey({ columns: [table.currencyId], foreignColumns: [currencies.currencyId] }),
     check("employee_salaries_amount_positive", sql`${table.amount} >= 0`),
+    check(
+      "employee_salaries_effective_end_order",
+      sql`${table.endDate} IS NULL OR ${table.endDate} >= ${table.effectiveDate}`
+    ),
     index("employee_salaries_tenant_idx").on(table.tenantId),
     index("employee_salaries_employee_idx").on(table.tenantId, table.employeeId),
     index("employee_salaries_effective_date_idx").on(table.tenantId, table.effectiveDate),
@@ -144,6 +163,8 @@ export const payrollPeriods = hrSchema.table(
     endDate: date("end_date", { mode: "string" }).notNull(),
     paymentDate: date("payment_date", { mode: "string" }).notNull(),
     payrollStatus: payrollStatusEnum("payroll_status").notNull().default("draft"),
+    /** Set when the period is finalized / locked for posting. */
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     notes: text("notes"),
     ...timestampColumns,
     ...auditColumns,
@@ -157,6 +178,7 @@ export const payrollPeriods = hrSchema.table(
       .where(sql`${table.deletedAt} IS NULL`),
     index("payroll_periods_tenant_idx").on(table.tenantId),
     index("payroll_periods_status_idx").on(table.tenantId, table.payrollStatus),
+    index("payroll_periods_closed_at_idx").on(table.tenantId, table.closedAt),
     ...tenantIsolationPolicies("payroll_periods"),
     serviceBypassPolicy("payroll_periods"),
   ]
@@ -200,6 +222,10 @@ export const payrollEntries = hrSchema.table(
     foreignKey({ columns: [table.currencyId], foreignColumns: [currencies.currencyId] }),
     check("payroll_entries_gross_positive", sql`${table.grossPay} >= 0`),
     check("payroll_entries_net_positive", sql`${table.netPay} >= 0`),
+    check(
+      "payroll_entries_net_matches_gross_minus_deductions",
+      sql`${table.netPay} = ${table.grossPay} - ${table.totalDeductions}`
+    ),
     uniqueIndex("payroll_entries_period_employee_unique").on(
       table.tenantId,
       table.payrollPeriodId,
@@ -244,6 +270,7 @@ export const payrollLines = hrSchema.table(
       foreignColumns: [salaryComponents.tenantId, salaryComponents.id],
     }),
     check("payroll_lines_quantity_positive", sql`${table.quantity} > 0`),
+    check("payroll_lines_amount_non_negative", sql`${table.amount} >= 0`),
     index("payroll_lines_tenant_idx").on(table.tenantId),
     index("payroll_lines_entry_idx").on(table.tenantId, table.payrollEntryId),
     ...tenantIsolationPolicies("payroll_lines"),
@@ -258,6 +285,7 @@ export const payrollLines = hrSchema.table(
 // ============================================================================
 // TABLE: tax_brackets
 // Country-specific tax rules
+// Cross-row non-overlap: not expressible as CHECK; see PAYROLL_TAX_BRACKET_OVERLAP.md
 // ============================================================================
 export const taxBrackets = hrSchema.table(
   "tax_brackets",
@@ -370,6 +398,9 @@ export const payrollAdjustments = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     payrollEntryId: uuid("payroll_entry_id").notNull(),
     adjustmentType: payrollAdjustmentTypeEnum("adjustment_type").notNull(),
+    workflowStatus: payrollAdjustmentWorkflowStatusEnum("workflow_status")
+      .notNull()
+      .default("draft"),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
     reason: text("reason").notNull(),
     approvedBy: uuid("approved_by"),
@@ -396,9 +427,14 @@ export const payrollAdjustments = hrSchema.table(
       "payroll_adjustments_approved_consistency",
       sql`(${table.approvedBy} IS NULL AND ${table.approvedAt} IS NULL) OR (${table.approvedBy} IS NOT NULL AND ${table.approvedAt} IS NOT NULL)`
     ),
+    check(
+      "payroll_adjustments_approved_workflow_requires_approval",
+      sql`${table.workflowStatus} <> 'approved'::hr.payroll_adjustment_workflow_status OR (${table.approvedBy} IS NOT NULL AND ${table.approvedAt} IS NOT NULL)`
+    ),
     index("payroll_adjustments_tenant_idx").on(table.tenantId),
     index("payroll_adjustments_entry_idx").on(table.tenantId, table.payrollEntryId),
     index("payroll_adjustments_type_idx").on(table.tenantId, table.adjustmentType),
+    index("payroll_adjustments_workflow_idx").on(table.tenantId, table.workflowStatus),
     index("payroll_adjustments_approved_idx").on(table.tenantId, table.approvedBy),
     ...tenantIsolationPolicies("payroll_adjustments"),
     serviceBypassPolicy("payroll_adjustments"),
@@ -423,6 +459,8 @@ export const payslips = hrSchema.table(
     isAccessible: boolean("is_accessible").notNull().default(true), // Employee can view
     accessCode: text("access_code"), // Secure access code
     emailedAt: date("emailed_at", { mode: "string" }),
+    /** When the payslip was delivered to the employee (portal, email, etc.). */
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     viewedAt: date("viewed_at", { mode: "string" }),
     ...timestampColumns,
     ...auditColumns,
@@ -442,6 +480,10 @@ export const payslips = hrSchema.table(
     index("payslips_entry_idx").on(table.tenantId, table.payrollEntryId),
     index("payslips_period_idx").on(table.tenantId, table.payslipPeriod),
     index("payslips_pay_date_idx").on(table.tenantId, table.payDate),
+    check(
+      "payslips_accessible_requires_access_code",
+      sql`NOT (${table.isAccessible} = true AND ${table.accessCode} IS NULL)`
+    ),
     ...tenantIsolationPolicies("payslips"),
     serviceBypassPolicy("payslips"),
   ]
@@ -466,12 +508,14 @@ export const paymentDistributions = hrSchema.table(
     accountName: text("account_name"),
     amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
     currencyId: integer("currency_id").notNull(),
-    status: text("status").notNull().default("pending"), // pending, processing, completed, failed, returned
+    status: paymentDistributionStatusEnum("status").notNull().default("pending"),
     processedAt: date("processed_at", { mode: "string" }),
     settledAt: date("settled_at", { mode: "string" }),
+    retryCount: integer("retry_count").notNull().default(0),
+    lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
     failureReason: text("failure_reason"),
     reference: text("reference"), // Payment reference
-    metadata: text("metadata"), // JSON for additional bank-specific data
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ...timestampColumns,
     ...auditColumns,
   },
@@ -484,12 +528,16 @@ export const paymentDistributions = hrSchema.table(
     foreignKey({ columns: [table.currencyId], foreignColumns: [currencies.currencyId] }),
     check("payment_distributions_amount_positive", sql`${table.amount} > 0`),
     check(
-      "payment_distributions_status_valid",
-      sql`${table.status} IN ('pending', 'processing', 'completed', 'failed', 'returned')`
-    ),
-    check(
       "payment_distributions_date_consistency",
       sql`(${table.processedAt} IS NULL AND ${table.settledAt} IS NULL) OR (${table.processedAt} IS NOT NULL AND ${table.settledAt} IS NULL OR ${table.settledAt} >= ${table.processedAt})`
+    ),
+    check(
+      "payment_distributions_completed_requires_settled_at",
+      sql`${table.status} <> 'completed'::hr.payment_distribution_status OR ${table.settledAt} IS NOT NULL`
+    ),
+    check(
+      "payment_distributions_retry_count_non_negative",
+      sql`${table.retryCount} >= 0`
     ),
     index("payment_distributions_tenant_idx").on(table.tenantId),
     index("payment_distributions_entry_idx").on(table.tenantId, table.payrollEntryId),
@@ -511,17 +559,7 @@ export const insertSalaryComponentSchema = z.object({
   componentCode: z.string().min(2).max(50),
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
-  componentType: z.enum([
-    "allowance",
-    "deduction",
-    "benefit",
-    "tax",
-    "contribution",
-    "overtime",
-    "bonus",
-    "commission",
-    "other",
-  ]),
+  componentType: ComponentTypeSchema,
   isRecurring: z.boolean().default(true),
   isTaxable: z.boolean().default(true),
   isStatutory: z.boolean().default(false),
@@ -530,53 +568,73 @@ export const insertSalaryComponentSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const insertEmployeeSalarySchema = z.object({
-  id: EmployeeSalaryIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  employeeId: EmployeeIdSchema,
-  salaryComponentId: SalaryComponentIdSchema,
-  amount: z.number().positive(),
-  currencyId: z.number().int().positive(),
-  effectiveDate: z.string().date(),
-  endDate: z.string().date().optional(),
-  notes: z.string().max(1000).optional(),
-});
+export const insertEmployeeSalarySchema = z
+  .object({
+    id: EmployeeSalaryIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
+    salaryComponentId: SalaryComponentIdSchema,
+    amount: z.number().positive(),
+    currencyId: z.number().int().positive(),
+    effectiveDate: z.iso.date(),
+    endDate: z.iso.date().optional(),
+    notes: z.string().max(1000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.endDate != null && data.endDate < data.effectiveDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "endDate must be on or after effectiveDate",
+        path: ["endDate"],
+      });
+    }
+  });
 
 export const insertPayrollPeriodSchema = z.object({
   id: PayrollPeriodIdSchema.optional(),
   tenantId: hrTenantIdSchema,
   periodCode: z.string().min(2).max(50),
   name: z.string().min(2).max(100),
-  startDate: z.string().date(),
-  endDate: z.string().date(),
-  paymentDate: z.string().date(),
-  payrollStatus: z.enum(["draft", "computed", "approved", "paid", "cancelled"]).default("draft"),
+  startDate: z.iso.date(),
+  endDate: z.iso.date(),
+  paymentDate: z.iso.date(),
+  payrollStatus: PayrollStatusSchema.default("draft"),
+  closedAt: z.iso.datetime().optional(),
   notes: z.string().max(1000).optional(),
 });
 
-export const insertPayrollEntrySchema = z.object({
-  id: PayrollEntryIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  payrollPeriodId: PayrollPeriodIdSchema,
-  employeeId: EmployeeIdSchema,
-  grossPay: z.number().nonnegative().default(0),
-  totalDeductions: z.number().nonnegative().default(0),
-  netPay: z.number().nonnegative().default(0),
-  currencyId: z.number().int().positive(),
-  paymentMethod: z
-    .enum(["bank_transfer", "cash", "check", "payroll_card"])
-    .default("bank_transfer"),
-  paymentReference: z.string().max(100).optional(),
-  paymentDate: z.string().date().optional(),
-  notes: z.string().max(1000).optional(),
-});
+export const insertPayrollEntrySchema = z
+  .object({
+    id: PayrollEntryIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    payrollPeriodId: PayrollPeriodIdSchema,
+    employeeId: EmployeeIdSchema,
+    grossPay: z.number().nonnegative().default(0),
+    totalDeductions: z.number().nonnegative().default(0),
+    netPay: z.number().nonnegative().default(0),
+    currencyId: z.number().int().positive(),
+    paymentMethod: PaymentMethodSchema.default("bank_transfer"),
+    paymentReference: z.string().max(100).optional(),
+    paymentDate: z.iso.date().optional(),
+    notes: z.string().max(1000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const expected = data.grossPay - data.totalDeductions;
+    if (Math.abs(data.netPay - expected) > 1e-6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "netPay must equal grossPay minus totalDeductions",
+        path: ["netPay"],
+      });
+    }
+  });
 
 export const insertPayrollLineSchema = z.object({
   id: PayrollLineIdSchema.optional(),
   tenantId: hrTenantIdSchema,
   payrollEntryId: PayrollEntryIdSchema,
   salaryComponentId: SalaryComponentIdSchema,
-  amount: z.number(),
+  amount: z.number().nonnegative(),
   quantity: z.number().positive().default(1),
   notes: z.string().max(500).optional(),
 });
@@ -586,35 +644,10 @@ export const insertTaxBracketSchema = z
   .object({
     id: TaxBracketIdSchema.optional(),
     tenantId: hrTenantIdSchema,
-    country: z.enum([
-      "US",
-      "SG",
-      "MY",
-      "ID",
-      "GB",
-      "AU",
-      "CA",
-      "IN",
-      "PH",
-      "TH",
-      "VN",
-      "HK",
-      "TW",
-      "JP",
-      "KR",
-      "NZ",
-    ]),
-    taxType: z.enum([
-      "income_tax",
-      "social_security",
-      "medicare",
-      "provincial_tax",
-      "local_tax",
-      "disability_insurance",
-      "unemployment_insurance",
-    ]),
-    effectiveFrom: z.string().date(),
-    effectiveTo: z.string().date().optional(),
+    country: CountrySchema,
+    taxType: TaxTypeSchema,
+    effectiveFrom: z.iso.date(),
+    effectiveTo: z.iso.date().optional(),
     minIncome: z.number().nonnegative(),
     maxIncome: z.number().positive().optional(),
     rate: z.number().min(0).max(1),
@@ -631,48 +664,10 @@ export const insertStatutoryDeductionSchema = z
   .object({
     id: StatutoryDeductionIdSchema.optional(),
     tenantId: hrTenantIdSchema,
-    country: z.enum([
-      "US",
-      "SG",
-      "MY",
-      "ID",
-      "GB",
-      "AU",
-      "CA",
-      "IN",
-      "PH",
-      "TH",
-      "VN",
-      "HK",
-      "TW",
-      "JP",
-      "KR",
-      "NZ",
-    ]),
-    deductionType: z.enum([
-      "cpf",
-      "epf",
-      "socso",
-      "eis",
-      "pcb",
-      "cpf_cpf",
-      "cpf_medisave",
-      "cpf_oa",
-      "cpf_sa",
-      "ssn",
-      "medicare",
-      "futa",
-      "suta",
-      "national_insurance",
-      "pension",
-      "superannuation",
-      "provident_fund",
-      "esi",
-      "pf",
-      "professional_tax",
-    ]),
-    effectiveFrom: z.string().date(),
-    effectiveTo: z.string().date().optional(),
+    country: CountrySchema,
+    deductionType: StatutoryDeductionTypeSchema,
+    effectiveFrom: z.iso.date(),
+    effectiveTo: z.iso.date().optional(),
     employeeRate: z.number().min(0).max(1),
     employerRate: z.number().min(0).max(1),
     maxMonthlySalary: z.number().positive().optional(),
@@ -696,59 +691,92 @@ export const insertPayrollAdjustmentSchema = z
     tenantId: hrTenantIdSchema,
     payrollEntryId: PayrollEntryIdSchema,
     adjustmentType: PayrollAdjustmentTypeSchema,
+    workflowStatus: PayrollAdjustmentWorkflowStatusSchema.default("draft"),
     amount: z.number(),
     reason: z.string().min(5).max(500),
     approvedBy: EmployeeIdSchema.optional(),
-    approvedAt: z.string().date().optional(),
+    approvedAt: z.iso.date().optional(),
     isTaxable: z.boolean().default(true),
     isRecurring: z.boolean().default(false),
-    appliesToPeriod: z.string().date().optional(),
+    appliesToPeriod: z.iso.date().optional(),
     notes: z.string().max(1000).optional(),
   })
-  .refine(
-    (data) => {
-      if (data.approvedBy && !data.approvedAt) return false;
-      if (!data.approvedBy && data.approvedAt) return false;
-      return true;
-    },
-    {
-      message: "Both approvedBy and approvedAt must be provided together",
-      path: ["approvedAt"],
-    }
+  .superRefine(
+    refineApprovedRequiresActor({
+      statusField: "workflowStatus",
+      approvedValue: "approved",
+      actorField: "approvedBy",
+      atField: "approvedAt",
+      messages: {
+        actor: "approvedBy is required when workflowStatus is approved",
+        at: "approvedAt is required when workflowStatus is approved",
+      },
+    })
+  )
+  .superRefine(
+    refineApprovalFieldsAbsentUnlessApproved({
+      statusField: "workflowStatus",
+      approvedValue: "approved",
+      actorField: "approvedBy",
+      atField: "approvedAt",
+    })
   );
 
-export const insertPayslipSchema = z.object({
-  id: PayslipIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  payrollEntryId: PayrollEntryIdSchema,
-  payslipNumber: z.string().min(5).max(50),
-  payslipPeriod: z.string().min(3).max(50),
-  payDate: z.string().date(),
-  documentUrl: z.string().url().optional(),
-  documentHash: z.string().max(128).optional(),
-  isAccessible: z.boolean().default(true),
-  accessCode: z.string().min(8).max(50).optional(),
-  emailedAt: z.string().date().optional(),
-  viewedAt: z.string().date().optional(),
-});
+export const insertPayslipSchema = z
+  .object({
+    id: PayslipIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    payrollEntryId: PayrollEntryIdSchema,
+    payslipNumber: z.string().min(5).max(50),
+    payslipPeriod: z.string().min(3).max(50),
+    payDate: z.iso.date(),
+    documentUrl: z.string().url().optional(),
+    documentHash: z.string().max(128).optional(),
+    isAccessible: z.boolean().default(true),
+    accessCode: z.string().min(8).max(50).optional(),
+    emailedAt: z.iso.date().optional(),
+    deliveredAt: z.iso.datetime().optional(),
+    viewedAt: z.iso.date().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isAccessible === true && data.accessCode == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "accessCode is required when isAccessible is true",
+        path: ["accessCode"],
+      });
+    }
+  });
 
-export const insertPaymentDistributionSchema = z.object({
-  id: PaymentDistributionIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  payrollEntryId: PayrollEntryIdSchema,
-  batchId: z.string().min(3).max(50),
-  transactionId: z.string().max(100).optional(),
-  paymentMethod: z.enum(["bank_transfer", "cash", "check", "payroll_card"]),
-  bankName: z.string().max(100).optional(),
-  bankCode: z.string().max(20).optional(),
-  accountNumber: z.string().max(50).optional(),
-  accountName: z.string().max(100).optional(),
-  amount: z.number().positive(),
-  currencyId: z.number().int().positive(),
-  status: z.enum(["pending", "processing", "completed", "failed", "returned"]).default("pending"),
-  processedAt: z.string().date().optional(),
-  settledAt: z.string().date().optional(),
-  failureReason: z.string().max(500).optional(),
-  reference: z.string().max(100).optional(),
-  metadata: z.string().optional(), // JSON string
-});
+export const insertPaymentDistributionSchema = z
+  .object({
+    id: PaymentDistributionIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    payrollEntryId: PayrollEntryIdSchema,
+    batchId: z.string().min(3).max(50),
+    transactionId: z.string().max(100).optional(),
+    paymentMethod: PaymentMethodSchema,
+    bankName: z.string().max(100).optional(),
+    bankCode: z.string().max(20).optional(),
+    accountNumber: z.string().max(50).optional(),
+    accountName: z.string().max(100).optional(),
+    amount: z.number().positive(),
+    currencyId: z.number().int().positive(),
+    status: PaymentDistributionStatusSchema.default("pending"),
+    processedAt: z.iso.date().optional(),
+    settledAt: z.iso.date().optional(),
+    retryCount: z.number().int().nonnegative().optional().default(0),
+    lastErrorAt: z.iso.datetime().optional(),
+    failureReason: z.string().max(500).optional(),
+    reference: z.string().max(100).optional(),
+    metadata: metadataSchema.nullish(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "completed" && data.settledAt == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "settledAt is required when status is completed",
+        path: ["settledAt"],
+      });
+    }
+  });

@@ -43,7 +43,7 @@ const auditPayloadSchema = z.object({
   entityId: z.string().min(1).max(255),
   message: z.string().max(1000).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.iso.datetime().optional(),
 });
 
 router.post("/audit-log", (req: Request, res: Response) => {

@@ -30,7 +30,6 @@
   "dependencies": {
     "@afenda/db": "workspace:*",
     "@afenda/meta-types": "workspace:*",
-    "@aws-sdk/client-s3": "^3.1016.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "decimal.js": "^10.6.0",

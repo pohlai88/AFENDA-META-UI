@@ -15,10 +15,45 @@ import {
   date,
   uuid,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 import { hrSchema } from "./_schema.js";
+import {
+  courseLevelEnum,
+  courseDeliveryMethodEnum,
+  courseCatalogStatusEnum,
+  learningPathStatusEnum,
+  courseSessionStatusEnum,
+  courseEnrollmentStatusEnum,
+  learningPathEnrollmentStatusEnum,
+  learningProgressStatusEnum,
+  assessmentTypeEnum,
+  questionTypeEnum,
+  assessmentAttemptWorkflowStatusEnum,
+  trainingCostCategoryEnum,
+  trainingCertificateStatusEnum,
+  courseMaterialTypeEnum,
+  courseModuleTypeEnum,
+  courseEnrollmentSourceEnum,
+  CourseLevelSchema,
+  CourseDeliveryMethodSchema,
+  CourseCatalogStatusSchema,
+  CourseSessionStatusSchema,
+  CourseEnrollmentStatusSchema,
+  LearningPathEnrollmentStatusSchema,
+  LearningProgressStatusSchema,
+  AssessmentTypeSchema,
+  QuestionTypeSchema,
+  AssessmentAttemptWorkflowStatusSchema,
+  TrainingCostCategorySchema,
+  TrainingCertificateStatusSchema,
+  CourseMaterialTypeSchema,
+  CourseModuleTypeSchema,
+  CourseEnrollmentSourceSchema,
+  LearningPathStatusSchema,
+} from "./_enums.js";
 import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
 import {
   auditColumns,
@@ -48,11 +83,10 @@ import {
   CourseMaterialIdSchema,
   EmployeeIdSchema,
   personNameSchema,
-  statusSchema,
   boundedPercentageSchema,
-  currencyAmountSchema,
-  trainingEnrollmentWorkflow,
   hrTenantIdSchema,
+  addIssueIfSerializedJsonExceeds,
+  HR_JSONB_DEFAULT_MAX_BYTES,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -68,8 +102,8 @@ export const courses = hrSchema.table(
     ...nameColumn,
     description: text("description"),
     duration: integer("duration").notNull(), // in minutes
-    level: text("level").notNull().default("beginner"), // beginner, intermediate, advanced
-    deliveryMethod: text("delivery_method").notNull().default("blended"), // online, in_person, blended
+    level: courseLevelEnum("level").notNull().default("beginner"),
+    deliveryMethod: courseDeliveryMethodEnum("delivery_method").notNull().default("blended"),
     categoryId: integer("category_id"), // Link to departments or course categories
     instructorId: uuid("instructor_id"), // Default instructor for the course
     cost: numeric("cost", { precision: 12, scale: 2 }), // Course cost
@@ -79,7 +113,9 @@ export const courses = hrSchema.table(
     learningObjectives: text("learning_objectives"), // Course learning objectives
     targetAudience: text("target_audience"), // Target audience description
     maxCapacity: integer("max_capacity"), // Maximum enrollment capacity
-    status: text("status").notNull().default("active"),
+    status: courseCatalogStatusEnum("status").notNull().default("active"),
+    /** Semantic version for evolving catalog definitions (e.g. 1.0, 2024-Q1). */
+    courseVersion: text("course_version").notNull().default("1.0"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -99,13 +135,12 @@ export const courses = hrSchema.table(
       .on(table.tenantId, table.courseCode)
       .where(sql`${table.deletedAt} IS NULL`),
     check("duration_positive", sql`${table.duration} > 0`),
-    check("level_valid", sql`${table.level} IN ('beginner', 'intermediate', 'advanced')`),
-    check(
-      "delivery_method_valid",
-      sql`${table.deliveryMethod} IN ('online', 'in_person', 'blended')`
-    ),
     check("cost_positive", sql`${table.cost} IS NULL OR ${table.cost} >= 0`),
     check("max_capacity_positive", sql`${table.maxCapacity} IS NULL OR ${table.maxCapacity} > 0`),
+    check(
+      "courses_course_version_max_len",
+      sql`char_length(${table.courseVersion}) >= 1 AND char_length(${table.courseVersion}) <= 32`
+    ),
     index("courses_tenant_idx").on(table.tenantId),
     index("courses_level_idx").on(table.level),
     index("courses_delivery_method_idx").on(table.deliveryMethod),
@@ -130,6 +165,7 @@ export const courseModules = hrSchema.table(
     description: text("description"),
     moduleOrder: integer("module_order").notNull(),
     duration: integer("duration").notNull(), // in minutes
+    moduleType: courseModuleTypeEnum("module_type").notNull().default("lecture"),
     prerequisiteModuleId: uuid("prerequisite_module_id"), // Self-referential FK
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
@@ -149,6 +185,7 @@ export const courseModules = hrSchema.table(
     check("order_positive", sql`${table.moduleOrder} > 0`),
     index("course_modules_tenant_idx").on(table.tenantId),
     index("course_modules_course_id_idx").on(table.courseId),
+    index("course_modules_module_type_idx").on(table.tenantId, table.moduleType),
     ...tenantIsolationPolicies("course_modules"),
     serviceBypassPolicy("course_modules"),
   ]
@@ -167,7 +204,7 @@ export const learningPaths = hrSchema.table(
     description: text("description"),
     targetRole: text("target_role"), // role/position this path prepares for
     estimatedDuration: integer("estimated_duration"), // in days
-    status: text("status").notNull().default("active"),
+    status: learningPathStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -227,10 +264,11 @@ export const assessments = hrSchema.table(
     courseModuleId: uuid("course_module_id").notNull(),
     ...nameColumn,
     description: text("description"),
-    assessmentType: text("assessment_type").notNull(), // quiz, exam, assignment
+    assessmentType: assessmentTypeEnum("assessment_type").notNull(),
     passingScore: numeric("passing_score", { precision: 5, scale: 2 }).notNull(), // 0-100
     timeLimit: integer("time_limit"), // in minutes
     maxAttempts: integer("max_attempts").default(3),
+    randomizeQuestions: boolean("randomize_questions").notNull().default(false),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -260,7 +298,7 @@ export const assessmentQuestions = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     assessmentId: uuid("assessment_id").notNull(),
     questionText: text("question_text").notNull(),
-    questionType: text("question_type").notNull(), // multiple_choice, short_answer, essay
+    questionType: questionTypeEnum("question_type").notNull(),
     correctAnswer: text("correct_answer").notNull(),
     points: numeric("points", { precision: 5, scale: 2 }).notNull().default("1"),
     questionOrder: integer("question_order").notNull(),
@@ -298,8 +336,8 @@ export const assessmentAttempts = hrSchema.table(
     score: numeric("score", { precision: 5, scale: 2 }),
     maxScore: numeric("max_score", { precision: 5, scale: 2 }).notNull(),
     percentage: numeric("percentage", { precision: 5, scale: 2 }),
-    status: text("status").notNull().default("in_progress"), // in_progress, completed, failed, expired
-    answers: text("answers"), // JSON string of answers
+    status: assessmentAttemptWorkflowStatusEnum("status").notNull().default("in_progress"),
+    answers: jsonb("answers").$type<Record<string, unknown>>(),
     feedback: text("feedback"),
     timeSpentMinutes: integer("time_spent_minutes"),
     ...timestampColumns,
@@ -321,6 +359,7 @@ export const assessmentAttempts = hrSchema.table(
       table.attemptNumber
     ),
     check("attempt_number_positive", sql`${table.attemptNumber} > 0`),
+    check("assessment_attempts_max_score_positive", sql`${table.maxScore} > 0`),
     check(
       "score_valid",
       sql`${table.score} IS NULL OR (${table.score} >= 0 AND ${table.score} <= ${table.maxScore})`
@@ -330,12 +369,16 @@ export const assessmentAttempts = hrSchema.table(
       sql`${table.percentage} IS NULL OR (${table.percentage} >= 0 AND ${table.percentage} <= 100)`
     ),
     check(
-      "status_valid",
-      sql`${table.status} IN ('in_progress', 'completed', 'failed', 'expired')`
+      "assessment_attempts_percentage_matches_score",
+      sql`${table.percentage} IS NULL OR (${table.score} IS NOT NULL AND round((${table.score} * 100) / ${table.maxScore}, 2) = ${table.percentage})`
     ),
     check(
       "time_spent_positive",
       sql`${table.timeSpentMinutes} IS NULL OR ${table.timeSpentMinutes} >= 0`
+    ),
+    check(
+      "assessment_attempts_feedback_max_len",
+      sql`${table.feedback} IS NULL OR char_length(${table.feedback}) <= 2000`
     ),
     index("assessment_attempts_tenant_idx").on(table.tenantId),
     index("assessment_attempts_assessment_id_idx").on(table.assessmentId),
@@ -362,7 +405,7 @@ export const courseSessions = hrSchema.table(
     maxCapacity: integer("max_capacity").notNull(),
     instructorId: uuid("instructor_id"), // Usually employee ID
     location: text("location"),
-    status: text("status").notNull().default("scheduled"),
+    status: courseSessionStatusEnum("status").notNull().default("scheduled"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -399,7 +442,8 @@ export const courseEnrollments = hrSchema.table(
     courseSessionId: uuid("course_session_id").notNull(),
     enrollmentDate: date("enrollment_date", { mode: "string" }).notNull(),
     completionDate: date("completion_date", { mode: "string" }),
-    status: text("status").notNull().default("registered"),
+    status: courseEnrollmentStatusEnum("status").notNull().default("registered"),
+    enrollmentSource: courseEnrollmentSourceEnum("enrollment_source").notNull().default("self_enrolled"),
     progressPercentage: numeric("progress_percentage", { precision: 5, scale: 2 }).default("0"),
     finalScore: numeric("final_score", { precision: 5, scale: 2 }),
     ...timestampColumns,
@@ -423,9 +467,14 @@ export const courseEnrollments = hrSchema.table(
       "score_valid",
       sql`${table.finalScore} IS NULL OR (${table.finalScore} >= 0 AND ${table.finalScore} <= 100)`
     ),
+    check(
+      "course_enrollments_completed_has_completion_date",
+      sql`${table.status}::text != 'completed' OR ${table.completionDate} IS NOT NULL`
+    ),
     index("course_enrollments_tenant_idx").on(table.tenantId),
     index("course_enrollments_employee_id_idx").on(table.employeeId),
     index("course_enrollments_status_idx").on(table.status),
+    index("course_enrollments_enrollment_source_idx").on(table.tenantId, table.enrollmentSource),
     ...tenantIsolationPolicies("course_enrollments"),
     serviceBypassPolicy("course_enrollments"),
   ]
@@ -444,7 +493,7 @@ export const learningProgress = hrSchema.table(
     courseModuleId: uuid("course_module_id").notNull(),
     startedAt: date("started_at", { mode: "string" }).notNull(),
     completedAt: date("completed_at", { mode: "string" }),
-    status: text("status").notNull().default("in_progress"),
+    status: learningProgressStatusEnum("status").notNull().default("in_progress"),
     scorePercentage: numeric("score_percentage", { precision: 5, scale: 2 }),
     ...timestampColumns,
   },
@@ -501,6 +550,10 @@ export const trainingFeedback = hrSchema.table(
       "instructor_rating_valid",
       sql`${table.instructorRating} IS NULL OR (${table.instructorRating} >= 1 AND ${table.instructorRating} <= 5)`
     ),
+    check(
+      "training_feedback_comments_max_len",
+      sql`${table.comments} IS NULL OR char_length(${table.comments}) <= 5000`
+    ),
     index("training_feedback_tenant_idx").on(table.tenantId),
     index("training_feedback_course_enrollment_id_idx").on(table.courseEnrollmentId),
     ...tenantIsolationPolicies("training_feedback"),
@@ -518,9 +571,9 @@ export const trainingCosts = hrSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: integer("tenant_id").notNull(),
     courseSessionId: uuid("course_session_id").notNull(),
-    costCategory: text("cost_category").notNull(), // instructor, materials, venue, other
+    costCategory: trainingCostCategoryEnum("cost_category").notNull(),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-    currency: text("currency").notNull().default("USD"),
+    currencyId: integer("currency_id").notNull(),
     description: text("description"),
     ...timestampColumns,
     ...softDeleteColumns,
@@ -531,8 +584,13 @@ export const trainingCosts = hrSchema.table(
       columns: [table.tenantId, table.courseSessionId],
       foreignColumns: [courseSessions.tenantId, courseSessions.id],
     }),
+    foreignKey({
+      columns: [table.currencyId],
+      foreignColumns: [currencies.currencyId],
+    }),
     check("amount_positive", sql`${table.amount} > 0`),
     index("training_costs_tenant_idx").on(table.tenantId),
+    index("training_costs_currency_id_idx").on(table.currencyId),
     index("training_costs_course_session_id_idx").on(table.courseSessionId),
     ...tenantIsolationPolicies("training_costs"),
     serviceBypassPolicy("training_costs"),
@@ -553,7 +611,7 @@ export const learningPathEnrollments = hrSchema.table(
     enrollmentDate: date("enrollment_date", { mode: "string" }).notNull(),
     targetCompletionDate: date("target_completion_date", { mode: "string" }),
     completionDate: date("completion_date", { mode: "string" }),
-    status: text("status").notNull().default("active"),
+    status: learningPathEnrollmentStatusEnum("status").notNull().default("active"),
     progressPercentage: numeric("progress_percentage", { precision: 5, scale: 2 }).default("0"),
     ...timestampColumns,
     ...softDeleteColumns,
@@ -571,6 +629,10 @@ export const learningPathEnrollments = hrSchema.table(
     check(
       "progress_valid",
       sql`${table.progressPercentage} >= 0 AND ${table.progressPercentage} <= 100`
+    ),
+    check(
+      "learning_path_enrollments_completed_has_completion_date",
+      sql`${table.status}::text != 'completed' OR ${table.completionDate} IS NOT NULL`
     ),
     index("learning_path_enrollments_tenant_idx").on(table.tenantId),
     index("learning_path_enrollments_employee_id_idx").on(table.employeeId),
@@ -598,10 +660,12 @@ export const certificates = hrSchema.table(
     certificateUrl: text("certificate_url"), // URL to PDF certificate
     verificationCode: text("verification_code").unique(),
     grade: text("grade"), // A, B, C, Pass, etc.
-    status: text("status").notNull().default("active"), // active, expired, revoked
+    status: trainingCertificateStatusEnum("status").notNull().default("active"),
     issuer: text("issuer").notNull(), // Who issued the certificate
     signatory: text("signatory"), // Signatory name
     signatoryTitle: text("signatory_title"),
+    revokedDate: date("revoked_date", { mode: "string" }),
+    revocationReason: text("revocation_reason"),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -623,10 +687,21 @@ export const certificates = hrSchema.table(
       .on(table.tenantId, table.certificateNumber)
       .where(sql`${table.deletedAt} IS NULL`),
     uniqueIndex("certificates_verification_code_unique").on(table.verificationCode),
-    check("status_valid", sql`${table.status} IN ('active', 'expired', 'revoked')`),
     check(
       "date_order",
       sql`${table.expiryDate} IS NULL OR ${table.expiryDate} >= ${table.issuedDate}`
+    ),
+    check(
+      "certificates_active_expiry_current_or_open",
+      sql`${table.status}::text != 'active' OR ${table.expiryDate} IS NULL OR ${table.expiryDate} >= CURRENT_DATE`
+    ),
+    check(
+      "certificates_revoked_has_revoked_date",
+      sql`${table.status}::text != 'revoked' OR ${table.revokedDate} IS NOT NULL`
+    ),
+    check(
+      "certificates_revocation_reason_max_len",
+      sql`${table.revocationReason} IS NULL OR char_length(${table.revocationReason}) <= 2000`
     ),
     index("certificates_tenant_idx").on(table.tenantId),
     index("certificates_course_enrollment_id_idx").on(table.courseEnrollmentId),
@@ -691,7 +766,7 @@ export const courseMaterials = hrSchema.table(
     courseModuleId: uuid("course_module_id"), // Optional: link to specific module
     title: text("title").notNull(),
     description: text("description"),
-    materialType: text("material_type").notNull(), // document, video, link, quiz, assignment
+    materialType: courseMaterialTypeEnum("material_type").notNull(),
     fileUrl: text("file_url"), // URL to stored file
     fileName: text("file_name"),
     fileSize: integer("file_size"), // in bytes
@@ -700,7 +775,7 @@ export const courseMaterials = hrSchema.table(
     order: integer("order").notNull().default(0),
     isRequired: boolean("is_required").notNull().default(false),
     isDownloadable: boolean("is_downloadable").notNull().default(true),
-    metadata: text("metadata"), // JSON for additional metadata
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ...timestampColumns,
     ...softDeleteColumns,
     ...auditColumns,
@@ -714,10 +789,6 @@ export const courseMaterials = hrSchema.table(
       columns: [table.tenantId, table.courseModuleId],
       foreignColumns: [courseModules.tenantId, courseModules.id],
     }),
-    check(
-      "material_type_valid",
-      sql`${table.materialType} IN ('document', 'video', 'link', 'quiz', 'assignment', 'presentation', 'ebook')`
-    ),
     check("order_positive", sql`${table.order} >= 0`),
     check("file_size_positive", sql`${table.fileSize} IS NULL OR ${table.fileSize} > 0`),
     check("duration_positive", sql`${table.duration} IS NULL OR ${table.duration} > 0`),
@@ -726,6 +797,7 @@ export const courseMaterials = hrSchema.table(
     index("course_materials_course_module_id_idx").on(table.courseModuleId),
     index("course_materials_material_type_idx").on(table.materialType),
     index("course_materials_course_id_order_idx").on(table.courseId, table.order),
+    index("course_materials_metadata_gin").using("gin", table.metadata),
     ...tenantIsolationPolicies("course_materials"),
     serviceBypassPolicy("course_materials"),
   ]
@@ -742,8 +814,8 @@ export const insertCourseSchema = z.object({
   name: personNameSchema,
   description: z.string().max(2000).optional(),
   duration: z.number().int().positive("Duration must be positive minutes"),
-  level: z.enum(["beginner", "intermediate", "advanced"]).default("beginner"),
-  deliveryMethod: z.enum(["online", "in_person", "blended"]).default("blended"),
+  level: CourseLevelSchema.default("beginner"),
+  deliveryMethod: CourseDeliveryMethodSchema.default("blended"),
   categoryId: z.number().int().positive().optional(),
   instructorId: EmployeeIdSchema.optional(),
   cost: z.number().positive().optional(),
@@ -753,7 +825,40 @@ export const insertCourseSchema = z.object({
   learningObjectives: z.string().max(2000).optional(),
   targetAudience: z.string().max(1000).optional(),
   maxCapacity: z.number().int().positive().optional(),
-  status: z.enum(["active", "inactive"]).default("active"),
+  status: CourseCatalogStatusSchema.default("active"),
+  courseVersion: z.string().min(1).max(32).default("1.0"),
+});
+
+export const insertCourseModuleSchema = z.object({
+  id: CourseModuleIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  courseId: CourseIdSchema,
+  name: personNameSchema,
+  description: z.string().max(2000).optional(),
+  moduleOrder: z.number().int().positive(),
+  duration: z.number().int().positive("Duration must be positive minutes"),
+  moduleType: CourseModuleTypeSchema.default("lecture"),
+  prerequisiteModuleId: CourseModuleIdSchema.optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const insertLearningPathSchema = z.object({
+  id: LearningPathIdSchema.optional(),
+  tenantId: hrTenantIdSchema,
+  name: personNameSchema,
+  description: z.string().max(2000).optional(),
+  targetRole: z.string().max(200).optional(),
+  estimatedDuration: z.number().int().positive().optional(),
+  status: LearningPathStatusSchema.default("active"),
+});
+
+export const insertLearningPathCourseSchema = z.object({
+  id: z.uuid().optional(),
+  tenantId: hrTenantIdSchema,
+  learningPathId: LearningPathIdSchema,
+  courseId: CourseIdSchema,
+  courseOrder: z.number().int().positive(),
+  isRequired: z.boolean().default(true),
 });
 
 export const insertCourseSessionSchema = z
@@ -762,43 +867,62 @@ export const insertCourseSessionSchema = z
     tenantId: hrTenantIdSchema,
     courseId: CourseIdSchema,
     name: personNameSchema,
-    startDate: z.string().date(),
-    endDate: z.string().date(),
+    startDate: z.iso.date(),
+    endDate: z.iso.date(),
     maxCapacity: z.number().int().positive(),
     instructorId: EmployeeIdSchema.optional(),
     location: z.string().max(200).optional(),
-    status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]).default("scheduled"),
+    status: CourseSessionStatusSchema.default("scheduled"),
   })
   .refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
     message: "End date must be after start date",
     path: ["endDate"],
   });
 
-export const insertCourseEnrollmentSchema = z.object({
-  id: CourseEnrollmentIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  employeeId: EmployeeIdSchema,
-  courseSessionId: CourseSessionIdSchema,
-  enrollmentDate: z.string().date(),
-  completionDate: z.string().date().optional(),
-  status: z
-    .enum(["registered", "in_progress", "completed", "cancelled", "failed"])
-    .default("registered"),
-  progressPercentage: boundedPercentageSchema.optional(),
-  finalScore: boundedPercentageSchema.optional(),
-});
+export const insertCourseEnrollmentSchema = z
+  .object({
+    id: CourseEnrollmentIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
+    courseSessionId: CourseSessionIdSchema,
+    enrollmentDate: z.iso.date(),
+    completionDate: z.iso.date().optional(),
+    status: CourseEnrollmentStatusSchema.default("registered"),
+    enrollmentSource: CourseEnrollmentSourceSchema.default("self_enrolled"),
+    progressPercentage: boundedPercentageSchema.optional(),
+    finalScore: boundedPercentageSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "completed" && !data.completionDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Completed enrollments must have a completion date",
+        path: ["completionDate"],
+      });
+    }
+  });
 
-export const insertLearningPathEnrollmentSchema = z.object({
-  id: LearningPathEnrollmentIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  employeeId: EmployeeIdSchema,
-  learningPathId: LearningPathIdSchema,
-  enrollmentDate: z.string().date(),
-  targetCompletionDate: z.string().date().optional(),
-  completionDate: z.string().date().optional(),
-  status: z.enum(["active", "completed", "cancelled"]).default("active"),
-  progressPercentage: boundedPercentageSchema.optional(),
-});
+export const insertLearningPathEnrollmentSchema = z
+  .object({
+    id: LearningPathEnrollmentIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    employeeId: EmployeeIdSchema,
+    learningPathId: LearningPathIdSchema,
+    enrollmentDate: z.iso.date(),
+    targetCompletionDate: z.iso.date().optional(),
+    completionDate: z.iso.date().optional(),
+    status: LearningPathEnrollmentStatusSchema.default("active"),
+    progressPercentage: boundedPercentageSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "completed" && !data.completionDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Completed path enrollments must have a completion date",
+        path: ["completionDate"],
+      });
+    }
+  });
 
 export const insertAssessmentSchema = z.object({
   id: AssessmentIdSchema.optional(),
@@ -806,10 +930,11 @@ export const insertAssessmentSchema = z.object({
   courseModuleId: CourseModuleIdSchema,
   name: personNameSchema,
   description: z.string().max(1000).optional(),
-  assessmentType: z.enum(["quiz", "exam", "assignment"]),
+  assessmentType: AssessmentTypeSchema,
   passingScore: boundedPercentageSchema,
   timeLimit: z.number().int().positive().optional(),
   maxAttempts: z.number().int().positive().default(3),
+  randomizeQuestions: z.boolean().default(false),
 });
 
 export const insertAssessmentQuestionSchema = z.object({
@@ -817,7 +942,7 @@ export const insertAssessmentQuestionSchema = z.object({
   tenantId: hrTenantIdSchema,
   assessmentId: AssessmentIdSchema,
   questionText: z.string().min(10).max(1000),
-  questionType: z.enum(["multiple_choice", "short_answer", "essay"]),
+  questionType: QuestionTypeSchema,
   correctAnswer: z.string().min(1),
   points: z.number().positive().default(1),
   questionOrder: z.number().int().positive(),
@@ -830,15 +955,15 @@ export const insertTrainingFeedbackSchema = z.object({
   courseRating: z.number().min(1).max(5),
   instructorRating: z.number().min(1).max(5).optional(),
   relevance: z.number().min(1).max(5).optional(),
-  comments: z.string().max(2000).optional(),
-  feedbackDate: z.string().date(),
+  comments: z.string().max(5000).optional(),
+  feedbackDate: z.iso.date(),
 });
 
 export const insertTrainingCostSchema = z.object({
   id: TrainingCostIdSchema.optional(),
   tenantId: hrTenantIdSchema,
   courseSessionId: CourseSessionIdSchema,
-  costCategory: z.enum(["instructor", "materials", "venue", "other"]),
+  costCategory: TrainingCostCategorySchema,
   amount: z.number().positive(),
   currency: z.string().length(3).default("USD"),
   description: z.string().max(500).optional(),
@@ -849,46 +974,93 @@ export const insertLearningProgressSchema = z.object({
   tenantId: hrTenantIdSchema,
   courseEnrollmentId: CourseEnrollmentIdSchema,
   courseModuleId: CourseModuleIdSchema,
-  startedAt: z.string().date(),
-  completedAt: z.string().date().optional(),
-  status: z.enum(["in_progress", "completed", "failed"]).default("in_progress"),
+  startedAt: z.iso.date(),
+  completedAt: z.iso.date().optional(),
+  status: LearningProgressStatusSchema.default("in_progress"),
   scorePercentage: boundedPercentageSchema.optional(),
 });
 
-export const insertAssessmentAttemptSchema = z.object({
-  id: AssessmentAttemptIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  assessmentId: AssessmentIdSchema,
-  courseEnrollmentId: CourseEnrollmentIdSchema,
-  attemptNumber: z.number().int().positive(),
-  startedAt: z.string().date(),
-  completedAt: z.string().date().optional(),
-  score: z.number().min(0).optional(),
-  maxScore: z.number().positive(),
-  percentage: boundedPercentageSchema.optional(),
-  status: z.enum(["in_progress", "completed", "failed", "expired"]).default("in_progress"),
-  answers: z.string().optional(), // JSON string
-  feedback: z.string().max(2000).optional(),
-  timeSpentMinutes: z.number().int().nonnegative().optional(),
-});
+function roundedAttemptPercentage(score: number, maxScore: number): number {
+  return Math.round((score * 100) / maxScore * 100) / 100;
+}
 
-export const insertCertificateSchema = z.object({
-  id: CertificateIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  certificateNumber: z.string().min(5).max(50),
-  courseEnrollmentId: CourseEnrollmentIdSchema,
-  employeeId: EmployeeIdSchema,
-  courseId: CourseIdSchema,
-  issuedDate: z.string().date(),
-  expiryDate: z.string().date().optional(),
-  certificateUrl: z.string().url().optional(),
-  verificationCode: z.string().min(8).max(50).optional(),
-  grade: z.string().max(10).optional(),
-  status: z.enum(["active", "expired", "revoked"]).default("active"),
-  issuer: z.string().min(2).max(100),
-  signatory: z.string().max(100).optional(),
-  signatoryTitle: z.string().max(100).optional(),
-});
+export const insertAssessmentAttemptSchema = z
+  .object({
+    id: AssessmentAttemptIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    assessmentId: AssessmentIdSchema,
+    courseEnrollmentId: CourseEnrollmentIdSchema,
+    attemptNumber: z.number().int().positive(),
+    startedAt: z.iso.date(),
+    completedAt: z.iso.date().optional(),
+    score: z.number().min(0).optional(),
+    maxScore: z.number().positive(),
+    percentage: boundedPercentageSchema.optional(),
+    status: AssessmentAttemptWorkflowStatusSchema.default("in_progress"),
+    answers: z.record(z.string(), z.json()).optional(),
+    feedback: z.string().max(2000).optional(),
+    timeSpentMinutes: z.number().int().nonnegative().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.percentage != null && data.score != null) {
+      const expected = roundedAttemptPercentage(data.score, data.maxScore);
+      if (Math.abs(expected - data.percentage) > 0.005) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Percentage must equal score ÷ max score × 100 (rounded to 2 decimals)",
+          path: ["percentage"],
+        });
+      }
+    }
+    addIssueIfSerializedJsonExceeds(
+      data.answers,
+      ctx,
+      HR_JSONB_DEFAULT_MAX_BYTES.assessmentAnswers,
+      ["answers"]
+    );
+  });
+
+export const insertCertificateSchema = z
+  .object({
+    id: CertificateIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    certificateNumber: z.string().min(5).max(50),
+    courseEnrollmentId: CourseEnrollmentIdSchema,
+    employeeId: EmployeeIdSchema,
+    courseId: CourseIdSchema,
+    issuedDate: z.iso.date(),
+    expiryDate: z.iso.date().optional(),
+    certificateUrl: z.string().url().optional(),
+    verificationCode: z.string().min(8).max(50).optional(),
+    grade: z.string().max(10).optional(),
+    status: TrainingCertificateStatusSchema.default("active"),
+    issuer: z.string().min(2).max(100),
+    signatory: z.string().max(100).optional(),
+    signatoryTitle: z.string().max(100).optional(),
+    revokedDate: z.iso.date().optional(),
+    revocationReason: z.string().max(2000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (
+      data.status === "active" &&
+      data.expiryDate &&
+      data.expiryDate < today
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Active certificates cannot have an expiry date in the past",
+        path: ["expiryDate"],
+      });
+    }
+    if (data.status === "revoked" && !data.revokedDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Revoked certificates must include revoked date",
+        path: ["revokedDate"],
+      });
+    }
+  });
 
 export const insertCoursePrerequisiteSchema = z
   .object({
@@ -912,15 +1084,7 @@ export const insertCourseMaterialSchema = z.object({
   courseModuleId: CourseModuleIdSchema.optional(),
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
-  materialType: z.enum([
-    "document",
-    "video",
-    "link",
-    "quiz",
-    "assignment",
-    "presentation",
-    "ebook",
-  ]),
+  materialType: CourseMaterialTypeSchema,
   fileUrl: z.string().url().optional(),
   fileName: z.string().max(255).optional(),
   fileSize: z.number().int().positive().optional(),
@@ -929,5 +1093,5 @@ export const insertCourseMaterialSchema = z.object({
   order: z.number().int().nonnegative().default(0),
   isRequired: z.boolean().default(false),
   isDownloadable: z.boolean().default(true),
-  metadata: z.string().optional(), // JSON string
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });

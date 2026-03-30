@@ -1,6 +1,22 @@
 // ============================================================================
 // HR Relations Catalog
-// Maintains an in-code registry of symbolic relationships between HR tables (for docs/reverse engineering).
+//
+// Registry of HR→HR (and self) edges that mirror Drizzle `foreignKey()` for docs, onboarding, and CI.
+//
+// **RELATIONS_DRIFT:** `pnpm ci:gate:schema-quality` maps each entry to a physical child.col → parent.col edge
+// (see `tools/ci-gate/drizzle-schema-quality/relations-catalog.mjs`). Duplicate `kind` inverses describing the
+// same FK dedupe to one edge — both may be kept for readability (parent-centric vs child-centric).
+//
+// **Key naming (soft convention):** Prefer `childToParent` + `many-to-one` when the child table holds the FK
+// (`employment_contracts` → `employees`); prefer `parentToChild` + `one-to-many` for the same join read from
+// the parent side (`employees` → `employment_contracts`). Workflow actors (`approved_by`, `reviewed_by`) use
+// `…Approver` / `…Reviewer` / `…Actor` style keys.
+//
+// **Scope:** Only edges where both tables live in `packages/db/src/schema/hr/*.ts` are validated. FKs to
+// `core.tenants`, `reference.currencies`, etc. are real in SQL but omitted here (extractor skips non-HR targets).
+//
+// **Human semantics:** `one-to-many` = many rows on `to` point to one row on `from` via (`to`.`toField` → `from`.`fromField`).
+// `many-to-one` = one row on `from` points to one row on `to` via (`from`.`fromField` → `to`.`toField`).
 // ============================================================================
 export type HRRelationDefinition = {
   from: string;
@@ -285,6 +301,20 @@ export const hrRelations = {
     fromField: "approver_id",
     toField: "id",
   },
+  employeeToCashAdvances: {
+    from: "employees",
+    to: "cash_advances",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "employee_id",
+  },
+  cashAdvanceSettlementReport: {
+    from: "cash_advances",
+    to: "expense_reports",
+    kind: "many-to-one",
+    fromField: "settlement_report_id",
+    toField: "id",
+  },
   employeeToDisciplinaryActions: {
     from: "employees",
     to: "disciplinary_actions",
@@ -432,6 +462,20 @@ export const hrRelations = {
     fromField: "approved_by",
     toField: "id",
   },
+  leaveRequestToStatusHistory: {
+    from: "leave_requests",
+    to: "leave_request_status_history",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "leave_request_id",
+  },
+  leaveRequestStatusHistoryActor: {
+    from: "leave_request_status_history",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "changed_by",
+    toField: "id",
+  },
 
   // Leave enhancements (leaveEnhancements.ts)
   compensatoryLeaveRequestToEmployee: {
@@ -527,6 +571,13 @@ export const hrRelations = {
     to: "employees",
     kind: "many-to-one",
     fromField: "approved_by",
+    toField: "id",
+  },
+  timeSheetSubmitter: {
+    from: "time_sheets",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "submitted_by",
     toField: "id",
   },
 
@@ -639,6 +690,13 @@ export const hrRelations = {
     fromField: "kra_id",
     toField: "id",
   },
+  employeeKraEvaluator: {
+    from: "employee_kras",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "evaluated_by",
+    toField: "id",
+  },
 
   // Goal relationships
   goalToEmployee: {
@@ -704,6 +762,41 @@ export const hrRelations = {
     to: "resume_line_types",
     kind: "many-to-one",
     fromField: "resume_line_type_id",
+    toField: "id",
+  },
+  skillTypeToSkills: {
+    from: "skill_types",
+    to: "skills",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "skill_type_id",
+  },
+  skillToDefaultLevel: {
+    from: "skills",
+    to: "skill_levels",
+    kind: "many-to-one",
+    fromField: "default_level_id",
+    toField: "id",
+  },
+  employeeResumeLineToAchievements: {
+    from: "employee_resume_lines",
+    to: "employee_resume_line_achievements",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "resume_line_id",
+  },
+  employeeResumeLineToSkillEntries: {
+    from: "employee_resume_lines",
+    to: "employee_resume_line_skill_entries",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "resume_line_id",
+  },
+  resumeLineSkillEntryToSkill: {
+    from: "employee_resume_line_skill_entries",
+    to: "skills",
+    kind: "many-to-one",
+    fromField: "skill_id",
     toField: "id",
   },
 
@@ -1184,12 +1277,26 @@ export const hrRelations = {
   },
 
   // People analytics (peopleAnalytics.ts)
+  hrMetricToOwner: {
+    from: "hr_metrics",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "owner_id",
+    toField: "id",
+  },
   analyticsDashboardToOwner: {
     from: "analytics_dashboards",
     to: "employees",
     kind: "many-to-one",
     fromField: "owner_id",
     toField: "id",
+  },
+  reportSubscriptionToRecipients: {
+    from: "report_subscriptions",
+    to: "report_subscription_recipients",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "subscription_id",
   },
   dataExportRequestedBy: {
     from: "data_exports",
@@ -1390,6 +1497,20 @@ export const hrRelations = {
     fromField: "approved_by",
     toField: "id",
   },
+  travelRequestToExpenseClaim: {
+    from: "travel_requests",
+    to: "expense_claims",
+    kind: "many-to-one",
+    fromField: "expense_claim_id",
+    toField: "id",
+  },
+  travelRequestToStaffingPlan: {
+    from: "travel_requests",
+    to: "staffing_plans",
+    kind: "many-to-one",
+    fromField: "staffing_plan_id",
+    toField: "id",
+  },
   travelItineraryToRequest: {
     from: "travel_itineraries",
     to: "travel_requests",
@@ -1418,6 +1539,13 @@ export const hrRelations = {
     fromField: "employee_id",
     toField: "id",
   },
+  vehicleLogToExpenseClaim: {
+    from: "vehicle_logs",
+    to: "expense_claims",
+    kind: "many-to-one",
+    fromField: "expense_claim_id",
+    toField: "id",
+  },
 
   // Workforce planning (workforcePlanning.ts)
   staffingPlanToDepartment: {
@@ -1434,6 +1562,13 @@ export const hrRelations = {
     fromField: "approved_by",
     toField: "id",
   },
+  staffingPlanSupersedes: {
+    from: "staffing_plans",
+    to: "staffing_plans",
+    kind: "self-reference",
+    fromField: "supersedes_plan_id",
+    toField: "id",
+  },
   staffingPlanDetailToPlan: {
     from: "staffing_plan_details",
     to: "staffing_plans",
@@ -1446,6 +1581,13 @@ export const hrRelations = {
     to: "job_positions",
     kind: "many-to-one",
     fromField: "job_position_id",
+    toField: "id",
+  },
+  staffingPlanDetailToSuccessionPlan: {
+    from: "staffing_plan_details",
+    to: "succession_plans",
+    kind: "many-to-one",
+    fromField: "succession_plan_id",
     toField: "id",
   },
 
@@ -1527,6 +1669,34 @@ export const hrRelations = {
     fromField: "target_path_id",
     toField: "id",
   },
+  careerPathStepSkillToStep: {
+    from: "career_path_step_skills",
+    to: "career_path_steps",
+    kind: "many-to-one",
+    fromField: "step_id",
+    toField: "id",
+  },
+  careerPathStepSkillToSkill: {
+    from: "career_path_step_skills",
+    to: "skills",
+    kind: "many-to-one",
+    fromField: "skill_id",
+    toField: "id",
+  },
+  careerAspirationSkillGapToAspiration: {
+    from: "career_aspiration_skill_gaps",
+    to: "career_aspirations",
+    kind: "many-to-one",
+    fromField: "aspiration_id",
+    toField: "id",
+  },
+  careerAspirationSkillGapToSkill: {
+    from: "career_aspiration_skill_gaps",
+    to: "skills",
+    kind: "many-to-one",
+    fromField: "skill_id",
+    toField: "id",
+  },
 
   // Loan Management (SWOT)
   loanTypeToEmployeeLoans: {
@@ -1549,6 +1719,13 @@ export const hrRelations = {
     kind: "many-to-one",
     fromField: "approved_by",
     toField: "id",
+  },
+  employeeLoanToInstallments: {
+    from: "employee_loans",
+    to: "employee_loan_installments",
+    kind: "one-to-many",
+    fromField: "id",
+    toField: "employee_loan_id",
   },
 
   // Policy acknowledgments (upgrade guide)
@@ -1633,6 +1810,20 @@ export const hrRelations = {
     fromField: "approved_by",
     toField: "id",
   },
+  employeeRequestHistoryToRequest: {
+    from: "employee_request_history",
+    to: "employee_requests",
+    kind: "many-to-one",
+    fromField: "employee_request_id",
+    toField: "id",
+  },
+  employeeRequestHistoryActor: {
+    from: "employee_request_history",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "actor_employee_id",
+    toField: "id",
+  },
   employeeNotificationToEmployee: {
     from: "employee_notifications",
     to: "employees",
@@ -1647,6 +1838,13 @@ export const hrRelations = {
     fromField: "employee_id",
     toField: "id",
   },
+  employeePreferenceLastUpdatedBy: {
+    from: "employee_preferences",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "last_updated_by_employee_id",
+    toField: "id",
+  },
   surveyResponseToSurvey: {
     from: "survey_responses",
     to: "employee_surveys",
@@ -1656,6 +1854,111 @@ export const hrRelations = {
   },
   surveyResponseToEmployee: {
     from: "survey_responses",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "employee_id",
+    toField: "id",
+  },
+  employeeRequestToEscalationPolicy: {
+    from: "employee_requests",
+    to: "ess_escalation_policies",
+    kind: "many-to-one",
+    fromField: "escalation_policy_id",
+    toField: "id",
+  },
+  employeeRequestRelatedGrievance: {
+    from: "employee_requests",
+    to: "employee_grievances",
+    kind: "many-to-one",
+    fromField: "related_grievance_id",
+    toField: "id",
+  },
+  employeeRequestApprovalTaskToRequest: {
+    from: "employee_request_approval_tasks",
+    to: "employee_requests",
+    kind: "many-to-one",
+    fromField: "employee_request_id",
+    toField: "id",
+  },
+  employeeRequestApprovalTaskAssignee: {
+    from: "employee_request_approval_tasks",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "assignee_employee_id",
+    toField: "id",
+  },
+  employeeRequestApprovalTaskDelegatedFrom: {
+    from: "employee_request_approval_tasks",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "delegated_from_employee_id",
+    toField: "id",
+  },
+  employeeRequestApprovalTaskDecidedBy: {
+    from: "employee_request_approval_tasks",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "decided_by",
+    toField: "id",
+  },
+  surveyResponseToQuestionnaireVersion: {
+    from: "survey_responses",
+    to: "employee_survey_questionnaire_versions",
+    kind: "many-to-one",
+    fromField: "questionnaire_version_id",
+    toField: "id",
+  },
+  employeeSurveyQuestionnaireVersionToSurvey: {
+    from: "employee_survey_questionnaire_versions",
+    to: "employee_surveys",
+    kind: "many-to-one",
+    fromField: "survey_id",
+    toField: "id",
+  },
+  essDomainEventToEventType: {
+    from: "ess_domain_events",
+    to: "ess_event_types",
+    kind: "many-to-one",
+    fromField: "event_type_id",
+    toField: "id",
+  },
+  essDomainEventActor: {
+    from: "ess_domain_events",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "actor_employee_id",
+    toField: "id",
+  },
+  essOutboxToDomainEvent: {
+    from: "ess_outbox",
+    to: "ess_domain_events",
+    kind: "many-to-one",
+    fromField: "domain_event_id",
+    toField: "id",
+  },
+  essWorkflowStepToDefinition: {
+    from: "ess_workflow_steps",
+    to: "ess_workflow_definitions",
+    kind: "many-to-one",
+    fromField: "workflow_definition_id",
+    toField: "id",
+  },
+  surveyInvitationToSurvey: {
+    from: "survey_invitations",
+    to: "employee_surveys",
+    kind: "many-to-one",
+    fromField: "survey_id",
+    toField: "id",
+  },
+  surveyInvitationToEmployee: {
+    from: "survey_invitations",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "employee_id",
+    toField: "id",
+  },
+  employeePushEndpointToEmployee: {
+    from: "employee_push_endpoints",
     to: "employees",
     kind: "many-to-one",
     fromField: "employee_id",
@@ -1775,6 +2078,41 @@ export const hrRelations = {
     to: "bonus_point_rules",
     kind: "many-to-one",
     fromField: "rule_id",
+    toField: "id",
+  },
+  bonusPointRedemptionRequestToRewardCatalog: {
+    from: "bonus_point_redemption_requests",
+    to: "bonus_point_reward_catalog",
+    kind: "many-to-one",
+    fromField: "reward_catalog_id",
+    toField: "id",
+  },
+  bonusPointRedemptionRequestToBalance: {
+    from: "bonus_point_redemption_requests",
+    to: "employee_bonus_points",
+    kind: "many-to-one",
+    fromField: "employee_bonus_point_id",
+    toField: "id",
+  },
+  bonusPointRedemptionRequestToCatalogBenefit: {
+    from: "bonus_point_redemption_requests",
+    to: "benefit_plan_benefits",
+    kind: "many-to-one",
+    fromField: "benefit_plan_benefit_id",
+    toField: "id",
+  },
+  bonusPointRedemptionRequestApprover: {
+    from: "bonus_point_redemption_requests",
+    to: "employees",
+    kind: "many-to-one",
+    fromField: "approved_by",
+    toField: "id",
+  },
+  bonusPointRedemptionRequestToLedger: {
+    from: "bonus_point_redemption_requests",
+    to: "bonus_point_transactions",
+    kind: "many-to-one",
+    fromField: "bonus_point_transaction_id",
     toField: "id",
   },
 } as const satisfies Record<string, HRRelationDefinition>;

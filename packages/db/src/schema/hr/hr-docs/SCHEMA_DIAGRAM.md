@@ -1,8 +1,8 @@
 # HR Schema Diagrams
 
-**Date:** 2026-03-29
-**Version:** 2.0
-**Domains:** 6 (People, Benefits, Learning, Payroll, Recruitment, Attendance)
+**Date:** 2026-03-30
+**Version:** 2.3
+**Domains:** Core six (People, Benefits, Learning, Payroll, Recruitment, Attendance) plus operational modules documented in `HR_SCHEMA_UPGRADE_GUIDE.md` (ESS, expenses, skills, analytics, workforce strategy, global workforce, grievances, loans, policies, engagement, tax, travel, and others).
 
 **Note:** This diagram set mirrors the domain-oriented organization described in `../README.md`. Each ERD groups tables by business domain even if the underlying SQL creation order differs. Naming conventions (`hr.` prefix, lower_snake_case tables/columns, tenant-scoped UUID PKs) are consistently applied, so new diagrams or modules should follow the same pattern. **Machine-checked edges:** the in-code relation catalog (`_relations.ts`) is diffed against Drizzle `foreignKey()` by `pnpm ci:gate:schema-quality` — see **Relations catalog & drift gate** (section below).
 
@@ -37,8 +37,10 @@ erDiagram
     EMPLOYEES ||--o{ EMPLOYEE_DEPENDENTS : "has"
     EMPLOYEES ||--o{ EMPLOYEE_EMERGENCY_CONTACTS : "has"
     EMPLOYEES ||--o{ EMPLOYEE_ADDRESSES : "resides at"
-    EMPLOYEES ||--o{ SALARY_COMPONENTS : "defines"
+    TENANTS ||--o{ SALARY_COMPONENTS : "component catalog"
+    SALARY_COMPONENTS ||--o{ EMPLOYEE_SALARIES : "pay lines"
     EMPLOYEES ||--o{ EMPLOYEE_SALARIES : "receives"
+    CURRENCIES ||--o{ EMPLOYEE_SALARIES : "amount currency (reference.*)"
 
     TENANTS {
         int tenant_id PK
@@ -128,6 +130,10 @@ erDiagram
         string calculation_formula
     }
 
+    CURRENCIES {
+        int currency_id PK
+    }
+
     EMPLOYEE_SALARIES {
         uuid id PK
         int tenant_id FK
@@ -144,81 +150,67 @@ erDiagram
 
 ## Benefits Domain ERD
 
+Provider-centric model from `benefits.ts` (distinct from **legacy** `employment.benefit_plans` / `employee_benefits` — see `HR_SCHEMA_UPGRADE_GUIDE.md`).
+
 ```mermaid
 erDiagram
-    BENEFIT_PROVIDERS ||--o{ BENEFIT_PLANS : "provides"
-    BENEFIT_PLANS ||--o{ BENEFIT_ENROLLMENTS : "covers"
-    EMPLOYEES ||--o{ BENEFIT_ENROLLMENTS : "enrolls"
-    BENEFIT_ENROLLMENTS ||--o{ BENEFIT_DEPENDENT_COVERAGES : "covers"
-    BENEFIT_ENROLLMENTS ||--o{ BENEFIT_CLAIMS : "generates"
-    EMPLOYEES ||--o{ BENEFIT_CLAIMS : "files"
+    BENEFIT_PROVIDERS ||--o{ BENEFIT_ENROLLMENTS : "enrolls under"
+    EMPLOYEES ||--o{ BENEFIT_ENROLLMENTS : "holds"
+    BENEFIT_ENROLLMENTS ||--o{ BENEFIT_DEPENDENT_COVERAGE : "covers dependents"
+    BENEFIT_ENROLLMENTS ||--o{ BENEFIT_CLAIMS : "submits"
+    BENEFIT_PROVIDERS ||--o{ BENEFIT_PLAN_BENEFITS : "catalog rows"
+    BENEFIT_CLAIMS }o--|| EMPLOYEES : "reviewed_by"
+    CURRENCIES ||--o{ BENEFIT_PLAN_BENEFITS : "premium currency (reference.*)"
 
     BENEFIT_PROVIDERS {
         uuid id PK
         int tenant_id FK
-        string provider_code UK
-        string provider_name
-        enum provider_type
-        string contact_email
-        string contact_phone
-        string website
-        jsonb provider_details
-    }
-
-    BENEFIT_PLANS {
-        uuid id PK
-        int tenant_id FK
-        uuid provider_id FK
-        string plan_code UK
-        string plan_name
-        enum plan_type
-        enum coverage_level
-        decimal monthly_cost
-        decimal employer_contribution
-        decimal employee_contribution
-        jsonb plan_details
-        boolean is_active
+        text provider_code UK
+        text name
+        enum status
     }
 
     BENEFIT_ENROLLMENTS {
         uuid id PK
         int tenant_id FK
         uuid employee_id FK
-        uuid benefit_plan_id FK
+        uuid benefit_provider_id FK
+        text plan_name
         date enrollment_date
-        date effective_date
-        date end_date
-        enum enrollment_status
-        enum coverage_level
-        decimal monthly_premium
-        jsonb enrollment_data
+        date expiry_date
+        enum status
     }
 
-    BENEFIT_DEPENDENT_COVERAGES {
+    BENEFIT_DEPENDENT_COVERAGE {
         uuid id PK
         int tenant_id FK
-        uuid enrollment_id FK
-        string dependent_name
+        uuid benefit_enrollment_id FK
+        text name
         enum relationship
         date date_of_birth
-        enum coverage_level
-        decimal additional_premium
+        enum status
     }
 
     BENEFIT_CLAIMS {
         uuid id PK
         int tenant_id FK
-        string claim_number UK
-        uuid enrollment_id FK
-        uuid employee_id FK
+        uuid benefit_enrollment_id FK
         date claim_date
+        numeric claim_amount
+        numeric approved_amount
         enum claim_status
-        enum claim_type
-        decimal claim_amount
-        decimal approved_amount
-        date service_date
-        string description
-        jsonb claim_details
+        uuid reviewed_by FK
+    }
+
+    BENEFIT_PLAN_BENEFITS {
+        uuid id PK
+        int tenant_id FK
+        uuid benefit_provider_id FK
+        text plan_name
+        enum coverage_type
+        numeric monthly_premium
+        int currency_id FK
+        enum status
     }
 ```
 
@@ -248,7 +240,7 @@ erDiagram
         string delivery_method
         int duration_hours
         decimal cost
-        string currency
+        int currency_id FK "optional; reference.currencies"
         uuid instructor_id FK
         boolean is_active
         jsonb course_metadata
@@ -707,6 +699,8 @@ erDiagram
 
 ## Cross-Domain Relationships
 
+Sketch only — many more edges exist; canonical graph is Drizzle `foreignKey()` + `hrRelations` (HR→HR) via `pnpm ci:gate:schema-quality`.
+
 ```mermaid
 erDiagram
     TENANTS ||--o{ ALL_TABLES : "owns"
@@ -715,26 +709,29 @@ erDiagram
     EMPLOYEES ||--o{ PAYROLL_ENTRIES : "paid"
     EMPLOYEES ||--o{ ATTENDANCE_RECORDS : "attends"
     EMPLOYEES ||--o{ LEAVE_REQUESTS : "requests"
-    EMPLOYEES ||--o{ JOB_APPLICATIONS : "applies"
     EMPLOYEES ||--o{ INTERVIEWS : "interviews"
     EMPLOYEES ||--o{ CERTIFICATES : "earned"
-    CURRENCIES ||--o{ SALARY_COMPONENTS : "uses"
-    CURRENCIES ||--o{ COURSES : "priced in"
+    CURRENCIES ||--o{ EMPLOYEE_SALARIES : "denominated in"
+    CURRENCIES ||--o{ COURSES : "optional cost currency"
     CURRENCIES ||--o{ PAYROLL_ENTRIES : "paid in"
+    CURRENCIES ||--o{ TRAINING_COSTS : "cost rows"
+
+    TRAINING_COSTS {
+        uuid id PK
+        int currency_id FK
+    }
 ```
 
 ---
 
 ## Legend
 
-| Symbol | Meaning     |
-| ------ | ----------- | ---- | ----------- | --- | ---------- |
-| PK     | Primary Key |
-| FK     | Foreign Key |
-| UK     | Unique Key  |
-|        |             | --o{ | One to Many |
-|        |             | --   |             |     | One to One |
-| }o--   |             |      | Many to One |
+| Symbol / pattern | Meaning |
+| ---------------- | ------- |
+| PK / FK / UK | Primary / foreign / unique key (in entity boxes) |
+| `A \|\|--o{ B` | One `A` row to many `B` rows |
+| `A \|\|--\|\| B` | One-to-one |
+| `B }o--\|\| A` | Many `B` rows reference one `A` (typical FK direction) |
 
 ---
 
@@ -1019,6 +1016,46 @@ erDiagram
     }
 ```
 
+## Employee self-service (ESS) ERD
+
+`employeeExperience.ts` (17 tables). Behavior and migrations: [ADR-007](./ADR-007-ess-workflow-and-events.md). HR→HR edges are listed under `// Employee experience` in `_relations.ts` (aggregate `amended_from_request_id` is a **composite** self-FK in SQL — not expanded in the drift gate; see `LIMITATIONS.md`).
+
+```mermaid
+erDiagram
+    EMPLOYEES ||--o| EMPLOYEE_SELF_SERVICE_PROFILES : "profile"
+    EMPLOYEES ||--o{ EMPLOYEE_REQUESTS : "submitter"
+    EMPLOYEES ||--o{ EMPLOYEE_REQUESTS : "final approver"
+    ESS_ESCALATION_POLICIES ||--o{ EMPLOYEE_REQUESTS : "SLA policy"
+    EMPLOYEE_GRIEVANCES ||--o{ EMPLOYEE_REQUESTS : "optional link"
+    EMPLOYEE_REQUESTS ||--o{ EMPLOYEE_REQUEST_HISTORY : "history rows"
+    EMPLOYEE_REQUESTS ||--o{ EMPLOYEE_REQUEST_APPROVAL_TASKS : "approval steps"
+    EMPLOYEES ||--o{ EMPLOYEE_REQUEST_HISTORY : "actor"
+    EMPLOYEES ||--o{ EMPLOYEE_REQUEST_APPROVAL_TASKS : "assignee"
+    EMPLOYEES ||--o{ EMPLOYEE_REQUEST_APPROVAL_TASKS : "decided_by"
+    ESS_EVENT_TYPES ||--o{ ESS_DOMAIN_EVENTS : "catalog"
+    EMPLOYEES ||--o{ ESS_DOMAIN_EVENTS : "actor"
+    ESS_DOMAIN_EVENTS ||--o{ ESS_OUTBOX : "delivery"
+    ESS_WORKFLOW_DEFINITIONS ||--o{ ESS_WORKFLOW_STEPS : "template"
+    EMPLOYEES ||--o{ EMPLOYEE_NOTIFICATIONS : "inbox"
+    EMPLOYEES ||--o{ EMPLOYEE_PREFERENCES : "preferences"
+    EMPLOYEE_SURVEYS ||--o{ EMPLOYEE_SURVEY_QUESTIONNAIRE_VERSIONS : "snapshots"
+    EMPLOYEE_SURVEYS ||--o{ SURVEY_INVITATIONS : "campaign"
+    EMPLOYEES ||--o{ SURVEY_INVITATIONS : "invited"
+    EMPLOYEE_SURVEYS ||--o{ SURVEY_RESPONSES : "instrument"
+    EMPLOYEES ||--o{ SURVEY_RESPONSES : "respondent"
+    EMPLOYEES ||--o{ EMPLOYEE_PUSH_ENDPOINTS : "push device"
+
+    EMPLOYEE_REQUESTS {
+        uuid id PK
+        int tenant_id FK
+        uuid employee_id FK
+        uuid approved_by FK
+        uuid escalation_policy_id FK
+        uuid related_grievance_id FK
+        int aggregate_version
+    }
+```
+
 ## Shift swap requests ERD
 
 ```mermaid
@@ -1110,6 +1147,6 @@ stateDiagram-v2
 
 ## Generated On
 
-**Date:** 2026-03-29
-**Tool:** Manual generation based on schema definitions
-**Version:** HR Schema v2.2 (P0 guide closure: policies, shift swap, onboarding enum wiring, GIN indexes)
+**Date:** 2026-03-30
+**Tool:** Manual diagrams aligned to `packages/db/src/schema/hr/*.ts` and `hrRelations`
+**Version:** HR Schema v2.3 (docs + diagram refresh; see `HR_SCHEMA_UPGRADE_GUIDE.md`)

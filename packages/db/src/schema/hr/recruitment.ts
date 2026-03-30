@@ -1,6 +1,8 @@
 // ============================================================================
 // HR DOMAIN: RECRUITMENT PIPELINE (Phase 5)
 // Full hiring funnel, documents, feedback, offer letters, pipeline stages, analytics, parsed resumes (10 tables).
+// Applications: E.164 phone + email CHECK; `application_source`; offers: valid-until vs offer date; offer letters: status↔timestamps;
+// analytics `source_breakdown` jsonb + GIN; resume parse status + jsonb extracted sections + GIN.
 // Tables: job_openings, job_applications, interviews, job_offers, applicant_documents,
 //         interview_feedback, offer_letters, recruitment_pipeline_stages, recruitment_analytics, resume_parsed_data
 // ============================================================================
@@ -9,6 +11,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   text,
   date,
@@ -37,6 +40,21 @@ import {
   offerStatusEnum,
   documentTypeEnum,
   feedbackCriteriaEnum,
+  interviewFeedbackRecommendationEnum,
+  recruitmentPipelineStageStatusEnum,
+  jobApplicationSourceEnum,
+  resumeParseStatusEnum,
+  RecruitmentStatusSchema,
+  ApplicationStatusSchema,
+  InterviewStageSchema,
+  InterviewResultSchema,
+  OfferStatusSchema,
+  DocumentTypeSchema,
+  FeedbackCriteriaSchema,
+  InterviewFeedbackRecommendationSchema,
+  RecruitmentPipelineStageStatusSchema,
+  JobApplicationSourceSchema,
+  ResumeParseStatusSchema,
 } from "./_enums.js";
 import { departments, employees, jobPositions } from "./people.js";
 import {
@@ -53,7 +71,10 @@ import {
   JobPositionIdSchema,
   DepartmentIdSchema,
   EmployeeIdSchema,
+  businessEmailSchema,
+  internationalPhoneSchema,
   hrTenantIdSchema,
+  recruitmentAutoAdvanceCriteriaSchema,
 } from "./_zodShared.js";
 import { z } from "zod/v4";
 
@@ -120,6 +141,7 @@ export const jobApplications = hrSchema.table(
     applicantName: text("applicant_name").notNull(),
     applicantEmail: text("applicant_email").notNull(),
     applicantPhone: text("applicant_phone"),
+    applicationSource: jobApplicationSourceEnum("application_source").notNull().default("other"),
     resumeUrl: text("resume_url"),
     coverLetter: text("cover_letter"),
     applicationDate: date("application_date", { mode: "string" }).notNull(),
@@ -144,6 +166,15 @@ export const jobApplications = hrSchema.table(
     index("job_applications_tenant_idx").on(table.tenantId),
     index("job_applications_opening_idx").on(table.tenantId, table.jobOpeningId),
     index("job_applications_status_idx").on(table.tenantId, table.applicationStatus),
+    index("job_applications_source_idx").on(table.tenantId, table.applicationSource),
+    check(
+      "job_applications_email_format",
+      sql`${table.applicantEmail} ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'`
+    ),
+    check(
+      "job_applications_phone_e164",
+      sql`${table.applicantPhone} IS NULL OR ${table.applicantPhone} ~ '^\\+[1-9][0-9]{1,14}$'`
+    ),
     ...tenantIsolationPolicies("job_applications"),
     serviceBypassPolicy("job_applications"),
   ]
@@ -230,6 +261,10 @@ export const jobOffers = hrSchema.table(
       .where(sql`${table.deletedAt} IS NULL`),
     index("job_offers_tenant_idx").on(table.tenantId),
     index("job_offers_application_idx").on(table.tenantId, table.applicationId),
+    check(
+      "job_offers_valid_until_on_or_after_offer_date",
+      sql`${table.offerValidUntil} IS NULL OR ${table.offerValidUntil} >= ${table.offerDate}`
+    ),
     ...tenantIsolationPolicies("job_offers"),
     serviceBypassPolicy("job_offers"),
   ]
@@ -311,7 +346,7 @@ export const interviewFeedback = hrSchema.table(
     comments: text("comments"),
     strengths: text("strengths"),
     weaknesses: text("weaknesses"),
-    recommendation: text("recommendation"), // hire/no_hire/maybe
+    recommendation: interviewFeedbackRecommendationEnum("recommendation"),
     isCompleted: boolean("is_completed").notNull().default(false),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     ...timestampColumns,
@@ -363,7 +398,7 @@ export const offerLetters = hrSchema.table(
     generatedBy: uuid("generated_by").notNull(),
     documentUrl: text("document_url"), // URL to generated PDF
     documentHash: text("document_hash"), // For integrity verification
-    status: text("status").notNull().default("draft"), // draft, sent, accepted, rejected, expired, withdrawn
+    status: offerStatusEnum("status").notNull().default("draft"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     sentBy: uuid("sent_by"),
     viewedAt: timestamp("viewed_at", { withTimezone: true }),
@@ -391,14 +426,34 @@ export const offerLetters = hrSchema.table(
       columns: [table.tenantId, table.sentBy],
       foreignColumns: [employees.tenantId, employees.id],
     }),
-    check(
-      "offer_letters_status_valid",
-      sql`${table.status} IN ('draft', 'sent', 'accepted', 'rejected', 'expired', 'withdrawn')`
-    ),
     check("offer_letters_version_positive", sql`${table.version} > 0`),
     check(
       "offer_letters_date_consistency",
       sql`(${table.sentAt} IS NULL OR ${table.generatedAt} IS NULL OR ${table.sentAt} >= ${table.generatedAt})`
+    ),
+    check(
+      "offer_letters_sent_pairing",
+      sql`(${table.sentAt} IS NULL AND ${table.sentBy} IS NULL) OR (${table.sentAt} IS NOT NULL AND ${table.sentBy} IS NOT NULL)`
+    ),
+    check(
+      "offer_letters_status_sent_requires_timestamps",
+      sql`${table.status} <> 'sent'::hr.offer_status OR (${table.sentAt} IS NOT NULL AND ${table.sentBy} IS NOT NULL)`
+    ),
+    check(
+      "offer_letters_status_accepted_requires_at",
+      sql`${table.status} <> 'accepted'::hr.offer_status OR ${table.acceptedAt} IS NOT NULL`
+    ),
+    check(
+      "offer_letters_status_rejected_requires_at",
+      sql`${table.status} <> 'rejected'::hr.offer_status OR ${table.rejectedAt} IS NOT NULL`
+    ),
+    check(
+      "offer_letters_accepted_no_rejected_at",
+      sql`${table.status} <> 'accepted'::hr.offer_status OR ${table.rejectedAt} IS NULL`
+    ),
+    check(
+      "offer_letters_rejected_no_accepted_at",
+      sql`${table.status} <> 'rejected'::hr.offer_status OR ${table.acceptedAt} IS NULL`
     ),
     uniqueIndex("offer_letters_tenant_number_unique")
       .on(table.tenantId, table.offerLetterNumber)
@@ -425,11 +480,9 @@ export const insertJobOpeningSchema = z.object({
   jobPositionId: JobPositionIdSchema,
   departmentId: DepartmentIdSchema,
   numberOfOpenings: z.number().int().positive().default(1),
-  recruitmentStatus: z
-    .enum(["draft", "open", "in_progress", "on_hold", "filled", "cancelled"])
-    .default("open"),
-  postedDate: z.string().date().optional(),
-  closingDate: z.string().date().optional(),
+  recruitmentStatus: RecruitmentStatusSchema.default("open"),
+  postedDate: z.iso.date().optional(),
+  closingDate: z.iso.date().optional(),
   hiringManagerId: EmployeeIdSchema.optional(),
   requirements: z.string().max(2000).optional(),
   responsibilities: z.string().max(2000).optional(),
@@ -441,25 +494,13 @@ export const insertJobApplicationSchema = z.object({
   applicationNumber: z.string().min(5).max(50),
   jobOpeningId: JobOpeningIdSchema,
   applicantName: z.string().min(2).max(100),
-  applicantEmail: z.string().email(),
-  applicantPhone: z.string().max(20).optional(),
+  applicantEmail: businessEmailSchema,
+  applicantPhone: internationalPhoneSchema.optional(),
+  applicationSource: JobApplicationSourceSchema.optional().default("other"),
   resumeUrl: z.string().url().optional(),
   coverLetter: z.string().max(2000).optional(),
-  applicationDate: z.string().date(),
-  applicationStatus: z
-    .enum([
-      "received",
-      "screening",
-      "shortlisted",
-      "interview_scheduled",
-      "interviewed",
-      "offer_extended",
-      "offer_accepted",
-      "offer_rejected",
-      "rejected",
-      "withdrawn",
-    ])
-    .default("received"),
+  applicationDate: z.iso.date(),
+  applicationStatus: ApplicationStatusSchema.default("received"),
   currentCTC: z.number().positive().optional(),
   expectedCTC: z.number().positive().optional(),
   noticePeriodDays: z.number().int().positive().optional(),
@@ -470,45 +511,44 @@ export const insertInterviewSchema = z.object({
   id: InterviewIdSchema.optional(),
   tenantId: hrTenantIdSchema,
   applicationId: JobApplicationIdSchema,
-  interviewStage: z.enum([
-    "phone_screen",
-    "technical_test",
-    "first_interview",
-    "second_interview",
-    "panel_interview",
-    "final_interview",
-  ]),
-  interviewDate: z.string().datetime(),
+  interviewStage: InterviewStageSchema,
+  interviewDate: z.iso.datetime(),
   interviewerId: EmployeeIdSchema.optional(),
   location: z.string().max(200).optional(),
   meetingLink: z.string().url().optional(),
-  interviewResult: z
-    .enum(["pending", "strong_hire", "hire", "maybe_hire", "no_hire", "strong_no_hire"])
-    .optional(),
+  interviewResult: InterviewResultSchema.optional(),
   feedback: z.string().max(2000).optional(),
   rating: z.number().int().min(1).max(5).optional(),
   notes: z.string().max(1000).optional(),
 });
 
-export const insertJobOfferSchema = z.object({
-  id: JobOfferIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  offerNumber: z.string().min(5).max(50),
-  applicationId: JobApplicationIdSchema,
-  jobPositionId: JobPositionIdSchema,
-  offerDate: z.string().date(),
-  offerStatus: z
-    .enum(["draft", "sent", "accepted", "rejected", "expired", "withdrawn"])
-    .default("draft"),
-  offerSalary: z.number().positive(),
-  currencyId: z.number().int().positive(),
-  joiningDate: z.string().date().optional(),
-  offerValidUntil: z.string().date().optional(),
-  offerLetterUrl: z.string().url().optional(),
-  acceptedDate: z.string().date().optional(),
-  rejectedDate: z.string().date().optional(),
-  notes: z.string().max(1000).optional(),
-});
+export const insertJobOfferSchema = z
+  .object({
+    id: JobOfferIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    offerNumber: z.string().min(5).max(50),
+    applicationId: JobApplicationIdSchema,
+    jobPositionId: JobPositionIdSchema,
+    offerDate: z.iso.date(),
+    offerStatus: OfferStatusSchema.default("draft"),
+    offerSalary: z.number().positive(),
+    currencyId: z.number().int().positive(),
+    joiningDate: z.iso.date().optional(),
+    offerValidUntil: z.iso.date().optional(),
+    offerLetterUrl: z.string().url().optional(),
+    acceptedDate: z.iso.date().optional(),
+    rejectedDate: z.iso.date().optional(),
+    notes: z.string().max(1000).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.offerValidUntil && data.offerValidUntil < data.offerDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "offerValidUntil must be on or after offerDate",
+        path: ["offerValidUntil"],
+      });
+    }
+  });
 
 // Phase 4 Schemas
 export const insertApplicantDocumentSchema = z
@@ -516,25 +556,14 @@ export const insertApplicantDocumentSchema = z
     id: ApplicantDocumentIdSchema.optional(),
     tenantId: hrTenantIdSchema,
     applicationId: JobApplicationIdSchema,
-    documentType: z.enum([
-      "resume",
-      "cover_letter",
-      "portfolio",
-      "certification",
-      "transcript",
-      "id_document",
-      "work_sample",
-      "reference_letter",
-      "photo",
-      "other",
-    ]),
+    documentType: DocumentTypeSchema,
     documentName: z.string().min(1).max(255),
     documentUrl: z.string().url(),
     documentSize: z.number().int().positive().optional(),
     mimeType: z.string().max(100).optional(),
     uploadedBy: EmployeeIdSchema.optional(),
     isVerified: z.boolean().default(false),
-    verifiedAt: z.string().datetime().optional(),
+    verifiedAt: z.iso.datetime().optional(),
     verifiedBy: EmployeeIdSchema.optional(),
     notes: z.string().max(500).optional(),
   })
@@ -556,25 +585,14 @@ export const insertInterviewFeedbackSchema = z
     tenantId: hrTenantIdSchema,
     interviewId: InterviewIdSchema,
     interviewerId: EmployeeIdSchema,
-    feedbackCriteria: z.enum([
-      "technical_skills",
-      "communication",
-      "problem_solving",
-      "leadership",
-      "teamwork",
-      "cultural_fit",
-      "experience",
-      "education",
-      "attitude",
-      "potential",
-    ]),
+    feedbackCriteria: FeedbackCriteriaSchema,
     rating: z.number().int().min(1).max(5),
     comments: z.string().max(1000).optional(),
     strengths: z.string().max(1000).optional(),
     weaknesses: z.string().max(1000).optional(),
-    recommendation: z.string().max(100).optional(),
+    recommendation: InterviewFeedbackRecommendationSchema.optional(),
     isCompleted: z.boolean().default(false),
-    submittedAt: z.string().datetime().optional(),
+    submittedAt: z.iso.datetime().optional(),
   })
   .refine(
     (data) => {
@@ -598,16 +616,14 @@ export const insertOfferLetterSchema = z
     generatedBy: EmployeeIdSchema,
     documentUrl: z.string().url().optional(),
     documentHash: z.string().max(128).optional(),
-    status: z
-      .enum(["draft", "sent", "accepted", "rejected", "expired", "withdrawn"])
-      .default("draft"),
-    sentAt: z.string().datetime().optional(),
+    status: OfferStatusSchema.default("draft"),
+    sentAt: z.iso.datetime().optional(),
     sentBy: EmployeeIdSchema.optional(),
-    viewedAt: z.string().datetime().optional(),
-    acceptedAt: z.string().datetime().optional(),
-    rejectedAt: z.string().datetime().optional(),
+    viewedAt: z.iso.datetime().optional(),
+    acceptedAt: z.iso.datetime().optional(),
+    rejectedAt: z.iso.datetime().optional(),
     rejectionReason: z.string().max(500).optional(),
-    expiresAt: z.string().datetime().optional(),
+    expiresAt: z.iso.datetime().optional(),
     version: z.number().int().positive().default(1),
     notes: z.string().max(1000).optional(),
   })
@@ -618,6 +634,8 @@ export const insertOfferLetterSchema = z
       if (data.status === "rejected" && !data.rejectedAt) return false;
       if (data.sentBy && !data.sentAt) return false;
       if (!data.sentBy && data.sentAt) return false;
+      if (data.status === "accepted" && data.rejectedAt) return false;
+      if (data.status === "rejected" && data.acceptedAt) return false;
       return true;
     },
     {
@@ -640,8 +658,11 @@ export const recruitmentPipelineStages = hrSchema.table(
     name: text("name").notNull(),
     description: text("description"),
     stageOrder: integer("stage_order").notNull(),
+    configurationStatus: recruitmentPipelineStageStatusEnum("configuration_status")
+      .notNull()
+      .default("active"),
     isDefault: boolean("is_default").notNull().default(false),
-    autoAdvanceCriteria: text("auto_advance_criteria"), // JSON rules
+    autoAdvanceCriteria: jsonb("auto_advance_criteria").$type<unknown>(),
     notificationTemplate: text("notification_template"),
     ...timestampColumns,
     ...auditColumns,
@@ -658,6 +679,7 @@ export const recruitmentPipelineStages = hrSchema.table(
       .where(sql`${table.deletedAt} IS NULL`),
     index("recruitment_pipeline_stages_tenant_idx").on(table.tenantId),
     index("recruitment_pipeline_stages_opening_idx").on(table.tenantId, table.jobOpeningId),
+    index("recruitment_pipeline_stages_config_status_idx").on(table.tenantId, table.configurationStatus),
     sql`CONSTRAINT recruitment_pipeline_stages_order_positive CHECK (stage_order > 0)`,
     ...tenantIsolationPolicies("recruitment_pipeline_stages"),
     serviceBypassPolicy("recruitment_pipeline_stages"),
@@ -683,7 +705,7 @@ export const recruitmentAnalytics = hrSchema.table(
     offersAccepted: integer("offers_accepted").notNull().default(0),
     avgTimeToHire: numeric("avg_time_to_hire", { precision: 10, scale: 2 }), // Days
     avgTimeToOffer: numeric("avg_time_to_offer", { precision: 10, scale: 2 }), // Days
-    sourceBreakdown: text("source_breakdown"), // JSON: {source: count}
+    sourceBreakdown: jsonb("source_breakdown").$type<Record<string, number>>(),
     costPerHire: numeric("cost_per_hire", { precision: 15, scale: 2 }),
     currencyId: integer("currency_id"),
     ...timestampColumns,
@@ -712,6 +734,7 @@ export const recruitmentAnalytics = hrSchema.table(
       table.periodStart,
       table.periodEnd
     ),
+    index("recruitment_analytics_source_breakdown_gin").using("gin", table.sourceBreakdown),
     sql`CONSTRAINT recruitment_analytics_period_valid CHECK (period_end >= period_start)`,
     sql`CONSTRAINT recruitment_analytics_counts_non_negative CHECK (
       total_applications >= 0 AND
@@ -735,16 +758,18 @@ export const resumeParsedData = hrSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: integer("tenant_id").notNull(),
     applicationId: uuid("application_id").notNull(),
-    parsedAt: timestamp("parsed_at").notNull().defaultNow(),
+    parsedAt: timestamp("parsed_at", { withTimezone: true }).notNull().defaultNow(),
+    parseStatus: resumeParseStatusEnum("parse_status").notNull().default("success"),
+    parseErrorMessage: text("parse_error_message"),
     parserVersion: text("parser_version").notNull(),
     extractedName: text("extracted_name"),
     extractedEmail: text("extracted_email"),
     extractedPhone: text("extracted_phone"),
-    extractedSkills: text("extracted_skills"), // JSON array
-    extractedExperience: text("extracted_experience"), // JSON array
-    extractedEducation: text("extracted_education"), // JSON array
+    extractedSkills: jsonb("extracted_skills").$type<unknown>(),
+    extractedExperience: jsonb("extracted_experience").$type<unknown>(),
+    extractedEducation: jsonb("extracted_education").$type<unknown>(),
     matchScore: numeric("match_score", { precision: 5, scale: 2 }), // 0-100
-    rawParseOutput: text("raw_parse_output"), // Full parser response
+    rawParseOutput: jsonb("raw_parse_output").$type<unknown>(),
     ...timestampColumns,
     ...auditColumns,
   },
@@ -761,7 +786,15 @@ export const resumeParsedData = hrSchema.table(
     index("resume_parsed_data_tenant_idx").on(table.tenantId),
     index("resume_parsed_data_application_idx").on(table.tenantId, table.applicationId),
     index("resume_parsed_data_match_score_idx").on(table.tenantId, table.matchScore),
+    index("resume_parsed_data_parse_status_idx").on(table.tenantId, table.parseStatus),
     sql`CONSTRAINT resume_parsed_data_match_score_valid CHECK (match_score IS NULL OR (match_score >= 0 AND match_score <= 100))`,
+    check(
+      "resume_parsed_data_error_message_when_failed",
+      sql`${table.parseErrorMessage} IS NULL OR ${table.parseStatus} = 'failed'::hr.resume_parse_status`
+    ),
+    index("resume_parsed_data_skills_gin").using("gin", table.extractedSkills),
+    index("resume_parsed_data_experience_gin").using("gin", table.extractedExperience),
+    index("resume_parsed_data_education_gin").using("gin", table.extractedEducation),
     ...tenantIsolationPolicies("resume_parsed_data"),
     serviceBypassPolicy("resume_parsed_data"),
   ]
@@ -779,8 +812,9 @@ export const insertRecruitmentPipelineStageSchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
   stageOrder: z.number().int().positive(),
+  configurationStatus: RecruitmentPipelineStageStatusSchema.optional().default("active"),
   isDefault: z.boolean().default(false),
-  autoAdvanceCriteria: z.string().optional(),
+  autoAdvanceCriteria: recruitmentAutoAdvanceCriteriaSchema,
   notificationTemplate: z.string().optional(),
 });
 
@@ -789,8 +823,8 @@ export const insertRecruitmentAnalyticsSchema = z
     id: RecruitmentAnalyticsIdSchema.optional(),
     tenantId: hrTenantIdSchema,
     jobOpeningId: JobOpeningIdSchema,
-    periodStart: z.string().date(),
-    periodEnd: z.string().date(),
+    periodStart: z.iso.date(),
+    periodEnd: z.iso.date(),
     totalApplications: z.number().int().min(0).default(0),
     shortlisted: z.number().int().min(0).default(0),
     interviewed: z.number().int().min(0).default(0),
@@ -804,7 +838,7 @@ export const insertRecruitmentAnalyticsSchema = z
       .string()
       .regex(/^\d+(\.\d{1,2})?$/)
       .optional(),
-    sourceBreakdown: z.string().optional(),
+    sourceBreakdown: z.record(z.string(), z.number()).optional(),
     costPerHire: z
       .string()
       .regex(/^\d+(\.\d{1,2})?$/)
@@ -821,25 +855,37 @@ export const insertRecruitmentAnalyticsSchema = z
     }
   });
 
-export const insertResumeParsedDataSchema = z.object({
-  id: ResumeParsedDataIdSchema.optional(),
-  tenantId: hrTenantIdSchema,
-  applicationId: JobApplicationIdSchema,
-  parsedAt: z.date().optional(),
-  parserVersion: z.string().min(1).max(50),
-  extractedName: z.string().max(200).optional(),
-  extractedEmail: z.string().email().optional(),
-  extractedPhone: z.string().max(50).optional(),
-  extractedSkills: z.string().optional(),
-  extractedExperience: z.string().optional(),
-  extractedEducation: z.string().optional(),
-  matchScore: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/)
-    .refine((val) => {
-      const num = parseFloat(val);
-      return num >= 0 && num <= 100;
-    }, "Match score must be between 0 and 100")
-    .optional(),
-  rawParseOutput: z.string().optional(),
-});
+export const insertResumeParsedDataSchema = z
+  .object({
+    id: ResumeParsedDataIdSchema.optional(),
+    tenantId: hrTenantIdSchema,
+    applicationId: JobApplicationIdSchema,
+    parsedAt: z.iso.datetime().optional(),
+    parseStatus: ResumeParseStatusSchema.optional().default("success"),
+    parseErrorMessage: z.string().max(2000).optional(),
+    parserVersion: z.string().min(1).max(50),
+    extractedName: z.string().max(200).optional(),
+    extractedEmail: z.string().email().optional(),
+    extractedPhone: z.string().max(50).optional(),
+    extractedSkills: z.json().optional(),
+    extractedExperience: z.json().optional(),
+    extractedEducation: z.json().optional(),
+    matchScore: z
+      .string()
+      .regex(/^\d+(\.\d{1,2})?$/)
+      .refine((val) => {
+        const num = parseFloat(val);
+        return num >= 0 && num <= 100;
+      }, "Match score must be between 0 and 100")
+      .optional(),
+    rawParseOutput: z.json().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.parseStatus === "success" && data.parseErrorMessage != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "parseErrorMessage must be omitted when parseStatus is success",
+        path: ["parseErrorMessage"],
+      });
+    }
+  });

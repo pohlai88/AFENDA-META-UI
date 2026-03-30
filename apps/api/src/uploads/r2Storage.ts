@@ -1,25 +1,14 @@
 import {
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client,
-} from "@aws-sdk/client-s3";
+  applicationStorageKeySchema,
+  createR2ObjectRepo,
+  loadR2RepoCredentialsFromEnv,
+  resolveFullObjectKey,
+} from "@afenda/db/r2";
 
 interface R2Config {
-  accountId: string;
   bucketName: string;
-  accessKeyId: string;
-  secretAccessKey: string;
   keyPrefix: string;
   publicBaseUrl?: string;
-}
-
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value || !value.trim()) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value.trim();
 }
 
 function normalizePrefix(prefix: string | undefined): string {
@@ -31,41 +20,24 @@ function normalizePrefix(prefix: string | undefined): string {
 }
 
 function getR2Config(): R2Config {
+  const creds = loadR2RepoCredentialsFromEnv(process.env);
   return {
-    accountId: getRequiredEnv("R2_ACCOUNT_ID"),
-    bucketName: getRequiredEnv("R2_BUCKET_NAME"),
-    accessKeyId: getRequiredEnv("R2_ACCESS_KEY_ID"),
-    secretAccessKey: getRequiredEnv("R2_SECRET_ACCESS_KEY"),
-    keyPrefix: normalizePrefix(process.env.R2_KEY_PREFIX),
+    bucketName: creds.bucketName,
+    keyPrefix: normalizePrefix(creds.keyPrefix),
     publicBaseUrl: process.env.R2_PUBLIC_BASE_URL?.trim(),
   };
 }
 
-let r2Client: S3Client | null = null;
+let r2Repo: ReturnType<typeof createR2ObjectRepo> | null = null;
 let cachedAccountId: string | null = null;
 
-function getR2Client(config: R2Config): S3Client {
-  if (!r2Client || cachedAccountId !== config.accountId) {
-    r2Client = new S3Client({
-      region: "auto",
-      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-    });
-    cachedAccountId = config.accountId;
+function getR2Repo(): ReturnType<typeof createR2ObjectRepo> {
+  const creds = loadR2RepoCredentialsFromEnv(process.env);
+  if (!r2Repo || cachedAccountId !== creds.accountId) {
+    r2Repo = createR2ObjectRepo(creds);
+    cachedAccountId = creds.accountId;
   }
-
-  return r2Client;
-}
-
-function joinKey(prefix: string, fileName: string): string {
-  if (!prefix) {
-    return fileName;
-  }
-
-  return `${prefix}/${fileName}`;
+  return r2Repo;
 }
 
 function encodeObjectPath(key: string): string {
@@ -76,8 +48,8 @@ function encodeObjectPath(key: string): string {
     .join("/");
 }
 
-function resolveR2ObjectUrl(config: R2Config, key: string): string {
-  const encodedKey = encodeObjectPath(key);
+export function resolveR2ObjectUrl(config: R2Config, fullObjectKey: string): string {
+  const encodedKey = encodeObjectPath(fullObjectKey);
 
   if (config.publicBaseUrl && config.publicBaseUrl.length > 0) {
     const base = config.publicBaseUrl.replace(/\/+$/, "");
@@ -87,73 +59,64 @@ function resolveR2ObjectUrl(config: R2Config, key: string): string {
   return `https://${config.bucketName}.r2.dev/${encodedKey}`;
 }
 
+/** Public URL for a logical application key (`tenant/...`); applies configured repo prefix. */
+export function buildR2PublicUrlForLogicalKey(logicalKey: string): string {
+  applicationStorageKeySchema.parse(logicalKey);
+  const config = getR2Config();
+  const fullKey = resolveFullObjectKey(config.keyPrefix || undefined, logicalKey);
+  return resolveR2ObjectUrl(config, fullKey);
+}
+
 export async function uploadBufferToR2(params: {
   key: string;
   buffer: Buffer;
   mimeType: string;
 }): Promise<string> {
+  applicationStorageKeySchema.parse(params.key);
   const config = getR2Config();
-  const key = joinKey(config.keyPrefix, params.key);
-  const client = getR2Client(config);
+  const repo = getR2Repo();
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: config.bucketName,
-      Key: key,
-      Body: params.buffer,
-      ContentType: params.mimeType,
-    })
-  );
+  await repo.putObject({
+    key: params.key,
+    body: params.buffer,
+    contentType: params.mimeType,
+  });
 
-  return resolveR2ObjectUrl(config, key);
+  const fullKey = resolveFullObjectKey(config.keyPrefix || undefined, params.key);
+  return resolveR2ObjectUrl(config, fullKey);
 }
 
 export async function pruneR2UploadsOlderThan(olderThanMs: number): Promise<number> {
-  const config = getR2Config();
-  const client = getR2Client(config);
+  const repo = getR2Repo();
   const cutoffMs = Date.now() - olderThanMs;
 
   const staleKeys: string[] = [];
   let continuationToken: string | undefined;
 
   do {
-    const listResponse = await client.send(
-      new ListObjectsV2Command({
-        Bucket: config.bucketName,
-        Prefix: config.keyPrefix || undefined,
-        ContinuationToken: continuationToken,
-      })
-    );
+    const listResponse = await repo.listObjectsByPrefix({
+      prefix: "",
+      maxKeys: 1000,
+      continuationToken,
+    });
 
-    for (const object of listResponse.Contents ?? []) {
-      if (!object.Key || !object.LastModified) {
+    for (const object of listResponse.objects) {
+      if (!object.key || !object.lastModified) {
         continue;
       }
 
-      if (object.LastModified.getTime() <= cutoffMs) {
-        staleKeys.push(object.Key);
+      if (object.lastModified.getTime() <= cutoffMs) {
+        staleKeys.push(object.key);
       }
     }
 
-    continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
+    continuationToken = listResponse.isTruncated ? listResponse.nextContinuationToken : undefined;
   } while (continuationToken);
 
   if (staleKeys.length === 0) {
     return 0;
   }
 
-  for (let i = 0; i < staleKeys.length; i += 1000) {
-    const batch = staleKeys.slice(i, i + 1000);
-
-    await client.send(
-      new DeleteObjectsCommand({
-        Bucket: config.bucketName,
-        Delete: {
-          Objects: batch.map((Key) => ({ Key })),
-        },
-      })
-    );
-  }
-
+  await repo.deleteObjects(staleKeys);
   return staleKeys.length;
 }

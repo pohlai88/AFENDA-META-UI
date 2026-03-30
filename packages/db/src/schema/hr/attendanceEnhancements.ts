@@ -16,6 +16,7 @@ import {
   uniqueIndex,
   numeric,
   timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls/index.js";
@@ -33,11 +34,15 @@ import {
   biometricDeviceTypeEnum,
   leaveStatusEnum,
   shiftSwapStatusEnum,
+  overtimeRuleApplicableToEnum,
+  biometricPunchTypeEnum,
   AttendanceRequestTypeSchema,
   LeaveStatusSchema,
   OvertimeRuleTypeSchema,
   BiometricDeviceTypeSchema,
   ShiftSwapStatusSchema,
+  OvertimeRuleApplicableToSchema,
+  BiometricPunchTypeSchema,
 } from "./_enums.js";
 import { employees } from "./people.js";
 import { attendanceRecords, shiftAssignments } from "./attendance.js";
@@ -53,6 +58,9 @@ import {
   ShiftAssignmentIdSchema,
   ShiftSwapRequestIdSchema,
   hrTenantIdSchema,
+  biometricLogRawDataSchema,
+  refineApprovedRequiresActor,
+  refineApprovalFieldsAbsentUnlessApproved,
 } from "./_zodShared.js";
 
 // ============================================================================
@@ -96,6 +104,14 @@ export const attendanceRequests = hrSchema.table(
     index("attendance_requests_employee_idx").on(table.tenantId, table.employeeId),
     index("attendance_requests_status_idx").on(table.tenantId, table.status),
     index("attendance_requests_date_idx").on(table.tenantId, table.attendanceDate),
+    check(
+      "attendance_requests_approval_matches_status",
+      sql`(
+        (${table.status} = 'approved' AND ${table.approvedBy} IS NOT NULL AND ${table.approvedDate} IS NOT NULL)
+        OR
+        (${table.status} <> 'approved' AND ${table.approvedBy} IS NULL AND ${table.approvedDate} IS NULL)
+      )`
+    ),
     ...tenantIsolationPolicies("attendance_requests"),
     serviceBypassPolicy("attendance_requests"),
   ]
@@ -114,8 +130,8 @@ export const overtimeRules = hrSchema.table(
     ...nameColumn,
     description: text("description"),
     ruleType: overtimeRuleTypeEnum("rule_type").notNull(),
-    applicableTo: text("applicable_to").notNull(), // 'all' | 'department' | 'shift' | 'position'
-    applicableIds: text("applicable_ids"), // JSON array of IDs
+    applicableTo: overtimeRuleApplicableToEnum("applicable_to").notNull(),
+    applicableIds: jsonb("applicable_ids").$type<string[]>(),
     thresholdHours: numeric("threshold_hours", { precision: 5, scale: 2 }).notNull(), // Daily hours before OT
     multiplier: numeric("multiplier", { precision: 5, scale: 2 }).notNull(), // 1.5x, 2x, etc.
     maxDailyOvertimeHours: numeric("max_daily_overtime_hours", { precision: 5, scale: 2 }),
@@ -135,11 +151,13 @@ export const overtimeRules = hrSchema.table(
     index("overtime_rules_tenant_idx").on(table.tenantId),
     index("overtime_rules_type_idx").on(table.tenantId, table.ruleType),
     index("overtime_rules_applicable_idx").on(table.tenantId, table.applicableTo),
-    index("overtime_rules_applicable_ids_gin")
-      .using("gin", sql`(${table.applicableIds}::jsonb)`)
-      .where(sql`${table.applicableIds} IS NOT NULL AND ${table.applicableIds} <> ''`),
+    index("overtime_rules_applicable_ids_gin").using("gin", table.applicableIds),
     sql`CONSTRAINT overtime_rules_threshold_positive CHECK (threshold_hours > 0)`,
     sql`CONSTRAINT overtime_rules_multiplier_positive CHECK (multiplier > 0)`,
+    check(
+      "overtime_rules_effective_range",
+      sql`${table.effectiveTo} IS NULL OR ${table.effectiveTo} >= ${table.effectiveFrom}`
+    ),
     ...tenantIsolationPolicies("overtime_rules"),
     serviceBypassPolicy("overtime_rules"),
   ]
@@ -195,8 +213,12 @@ export const biometricLogs = hrSchema.table(
     deviceId: uuid("device_id").notNull(),
     employeeId: uuid("employee_id").notNull(),
     punchTime: timestamp("punch_time").notNull(),
-    punchType: text("punch_type").notNull(), // 'in' | 'out'
-    rawData: text("raw_data"), // Device-specific payload (JSON)
+    punchType: biometricPunchTypeEnum("punch_type").notNull(),
+    rawData: jsonb("raw_data").$type<
+      | { deviceEvent?: string; payload?: unknown; [key: string]: unknown }
+      | unknown[]
+      | null
+    >(),
     processedToAttendance: boolean("processed_to_attendance").notNull().default(false),
     attendanceRecordId: uuid("attendance_record_id"),
     ...timestampColumns,
@@ -223,8 +245,8 @@ export const biometricLogs = hrSchema.table(
     index("biometric_logs_punch_time_idx").on(table.tenantId, table.punchTime),
     index("biometric_logs_processed_idx").on(table.tenantId, table.processedToAttendance),
     index("biometric_logs_raw_data_gin")
-      .using("gin", sql`(${table.rawData}::jsonb)`)
-      .where(sql`${table.rawData} IS NOT NULL AND ${table.rawData} <> ''`),
+      .using("gin", table.rawData)
+      .where(sql`${table.rawData} IS NOT NULL`),
     ...tenantIsolationPolicies("biometric_logs"),
     serviceBypassPolicy("biometric_logs"),
   ]
@@ -292,6 +314,10 @@ export const shiftSwapRequests = hrSchema.table(
       "shift_swap_completed_implies_executed",
       sql`${table.status} <> 'completed' OR ${table.executedAt} IS NOT NULL`
     ),
+    check(
+      "shift_swap_requests_approved_requires_manager",
+      sql`${table.status} <> 'approved' OR (${table.managerApprovedBy} IS NOT NULL AND ${table.managerApprovedAt} IS NOT NULL)`
+    ),
     uniqueIndex("shift_swap_requests_tenant_number_unique")
       .on(table.tenantId, table.requestNumber)
       .where(sql`${table.deletedAt} IS NULL`),
@@ -314,7 +340,7 @@ export const insertAttendanceRequestSchema = z
     requestNumber: z.string().min(1).max(50),
     employeeId: EmployeeIdSchema,
     requestType: AttendanceRequestTypeSchema,
-    attendanceDate: z.string().date(),
+    attendanceDate: z.iso.date(),
     requestedCheckIn: z.date().optional(),
     requestedCheckOut: z.date().optional(),
     reason: z.string().min(10).max(1000),
@@ -335,7 +361,30 @@ export const insertAttendanceRequestSchema = z
         path: ["requestedCheckIn"],
       });
     }
-  });
+    if (Boolean(data.approvedBy) !== Boolean(data.approvedDate)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "approvedBy and approvedDate must both be set or both omitted",
+        path: ["approvedDate"],
+      });
+    }
+  })
+  .superRefine(
+    refineApprovedRequiresActor({
+      statusField: "status",
+      approvedValue: "approved",
+      actorField: "approvedBy",
+      atField: "approvedDate",
+    })
+  )
+  .superRefine(
+    refineApprovalFieldsAbsentUnlessApproved({
+      statusField: "status",
+      approvedValue: "approved",
+      actorField: "approvedBy",
+      atField: "approvedDate",
+    })
+  );
 
 export const insertOvertimeRuleSchema = z
   .object({
@@ -345,8 +394,8 @@ export const insertOvertimeRuleSchema = z
     name: z.string().min(2).max(100),
     description: z.string().max(500).optional(),
     ruleType: OvertimeRuleTypeSchema,
-    applicableTo: z.enum(["all", "department", "shift", "position"]),
-    applicableIds: z.string().optional(),
+    applicableTo: OvertimeRuleApplicableToSchema,
+    applicableIds: z.array(z.string().uuid()).optional(),
     thresholdHours: z
       .string()
       .regex(/^\d+(\.\d{1,2})?$/)
@@ -360,8 +409,8 @@ export const insertOvertimeRuleSchema = z
       .regex(/^\d+(\.\d{1,2})?$/)
       .optional(),
     requiresPreApproval: z.boolean().default(false),
-    effectiveFrom: z.string().date(),
-    effectiveTo: z.string().date().optional(),
+    effectiveFrom: z.iso.date(),
+    effectiveTo: z.iso.date().optional(),
     isActive: z.boolean().default(true),
   })
   .superRefine((data, ctx) => {
@@ -397,8 +446,8 @@ export const insertBiometricLogSchema = z.object({
   deviceId: BiometricDeviceIdSchema,
   employeeId: EmployeeIdSchema,
   punchTime: z.date(),
-  punchType: z.enum(["in", "out"]),
-  rawData: z.string().optional(),
+  punchType: BiometricPunchTypeSchema,
+  rawData: biometricLogRawDataSchema,
   processedToAttendance: z.boolean().default(false),
   attendanceRecordId: AttendanceRecordIdSchema.optional(),
 });
@@ -448,4 +497,16 @@ export const insertShiftSwapRequestSchema = z
         path: ["executedAt"],
       });
     }
-  });
+  })
+  .superRefine(
+    refineApprovedRequiresActor({
+      statusField: "status",
+      approvedValue: "approved",
+      actorField: "managerApprovedBy",
+      atField: "managerApprovedAt",
+      messages: {
+        actor: "managerApprovedBy is required when status is approved",
+        at: "managerApprovedAt is required when status is approved",
+      },
+    })
+  );
