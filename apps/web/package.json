@@ -63,7 +63,7 @@
     "@reduxjs/toolkit": "catalog:",
     "@rjsf/core": "^5.19.4",
     "@rjsf/utils": "^5.19.4",
-    "@rjsf/validator-ajv8": "^5.19.4",
+    "@rjsf/validator-ajv8": "^6.4.2",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-devtools": "^5.95.2",
     "@tanstack/react-table": "catalog:",
