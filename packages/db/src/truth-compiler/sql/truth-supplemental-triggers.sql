@@ -1,0 +1,519 @@
+-- =============================================================================
+-- SUPPLEMENTAL SALES TRIGGERS (not yet in truth-compiler manifest)
+-- =============================================================================
+-- Commission + return-order FSM, line↔header aggregate checks, and event
+-- emission for those entities. Consolidated from former src/triggers/.
+
+-- ---------------------------------------------------------------------------
+-- COMMISSION ENTRIES — draft → approved → paid
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION sales.enforce_commission_status_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  allowed text[];
+BEGIN
+  IF OLD.status = NEW.status THEN
+    RETURN NEW;
+  END IF;
+
+  CASE OLD.status
+    WHEN 'draft'    THEN allowed := ARRAY['approved'];
+    WHEN 'approved' THEN allowed := ARRAY['paid'];
+    WHEN 'paid'     THEN allowed := ARRAY[]::text[];
+    ELSE                 allowed := ARRAY[]::text[];
+  END CASE;
+
+  IF NOT (NEW.status = ANY(allowed)) THEN
+    RAISE EXCEPTION
+      'Invalid commission entry status transition: % → % (allowed: %)',
+      OLD.status, NEW.status, allowed
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_commission_status ON sales.commission_entries;
+CREATE TRIGGER trg_enforce_commission_status
+  BEFORE UPDATE OF status ON sales.commission_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.enforce_commission_status_transition();
+
+-- ---------------------------------------------------------------------------
+-- RETURN ORDERS
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION sales.enforce_return_order_status_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  allowed text[];
+BEGIN
+  IF OLD.status = NEW.status THEN
+    RETURN NEW;
+  END IF;
+
+  CASE OLD.status
+    WHEN 'draft'     THEN allowed := ARRAY['approved', 'cancelled'];
+    WHEN 'approved'  THEN allowed := ARRAY['received', 'cancelled'];
+    WHEN 'received'  THEN allowed := ARRAY['inspected', 'cancelled'];
+    WHEN 'inspected' THEN allowed := ARRAY['credited', 'cancelled'];
+    WHEN 'credited'  THEN allowed := ARRAY[]::text[];
+    WHEN 'cancelled' THEN allowed := ARRAY[]::text[];
+    ELSE                  allowed := ARRAY[]::text[];
+  END CASE;
+
+  IF NOT (NEW.status = ANY(allowed)) THEN
+    RAISE EXCEPTION
+      'Invalid return-order status transition: % → % (allowed: %)',
+      OLD.status, NEW.status, allowed
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_return_order_status ON sales.return_orders;
+CREATE TRIGGER trg_enforce_return_order_status
+  BEFORE UPDATE OF status ON sales.return_orders
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.enforce_return_order_status_transition();
+
+-- ---------------------------------------------------------------------------
+-- AGGREGATE CONSISTENCY — SALES ORDER HEADER VS LINES
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION sales.validate_sales_order_aggregate_consistency(
+  p_order_id uuid,
+  p_tenant_id integer
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  order_record record;
+  line_totals record;
+BEGIN
+  IF p_order_id IS NULL OR p_tenant_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT
+    o.id,
+    o.tenant_id,
+    o.amount_untaxed,
+    o.amount_cost,
+    o.amount_profit,
+    o.amount_tax,
+    o.amount_total
+  INTO order_record
+  FROM sales.sales_orders AS o
+  WHERE o.id = p_order_id
+    AND o.tenant_id = p_tenant_id;
+
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  SELECT
+    COALESCE(SUM(l.price_subtotal), 0)::numeric(14, 2) AS amount_untaxed,
+    COALESCE(SUM(l.cost_subtotal), 0)::numeric(14, 2) AS amount_cost,
+    COALESCE(SUM(l.profit_amount), 0)::numeric(14, 2) AS amount_profit,
+    COALESCE(SUM(l.price_tax), 0)::numeric(14, 2) AS amount_tax,
+    COALESCE(SUM(l.price_total), 0)::numeric(14, 2) AS amount_total
+  INTO line_totals
+  FROM sales.sales_order_lines AS l
+  WHERE l.order_id = p_order_id
+    AND l.tenant_id = p_tenant_id
+    AND l.deleted_at IS NULL;
+
+  IF order_record.amount_untaxed IS DISTINCT FROM line_totals.amount_untaxed
+     OR order_record.amount_cost IS DISTINCT FROM line_totals.amount_cost
+     OR order_record.amount_profit IS DISTINCT FROM line_totals.amount_profit
+     OR order_record.amount_tax IS DISTINCT FROM line_totals.amount_tax
+     OR order_record.amount_total IS DISTINCT FROM line_totals.amount_total THEN
+    RAISE EXCEPTION
+      'Sales order aggregate mismatch for order %',
+      p_order_id
+      USING ERRCODE = 'check_violation',
+            DETAIL = format(
+              'expected[untaxed=%s cost=%s profit=%s tax=%s total=%s] actual[untaxed=%s cost=%s profit=%s tax=%s total=%s]',
+              line_totals.amount_untaxed,
+              line_totals.amount_cost,
+              line_totals.amount_profit,
+              line_totals.amount_tax,
+              line_totals.amount_total,
+              order_record.amount_untaxed,
+              order_record.amount_cost,
+              order_record.amount_profit,
+              order_record.amount_tax,
+              order_record.amount_total
+            );
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION sales.defer_validate_sales_order_consistency()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM sales.validate_sales_order_aggregate_consistency(OLD.order_id, OLD.tenant_id);
+    RETURN OLD;
+  END IF;
+
+  PERFORM sales.validate_sales_order_aggregate_consistency(NEW.order_id, NEW.tenant_id);
+
+  IF TG_OP = 'UPDATE'
+     AND (OLD.order_id IS DISTINCT FROM NEW.order_id
+       OR OLD.tenant_id IS DISTINCT FROM NEW.tenant_id) THEN
+    PERFORM sales.validate_sales_order_aggregate_consistency(OLD.order_id, OLD.tenant_id);
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_defer_validate_sales_order_consistency ON sales.sales_order_lines;
+CREATE CONSTRAINT TRIGGER trg_defer_validate_sales_order_consistency
+  AFTER INSERT OR UPDATE OR DELETE ON sales.sales_order_lines
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.defer_validate_sales_order_consistency();
+
+-- ---------------------------------------------------------------------------
+-- AGGREGATE CONSISTENCY — SUBSCRIPTION HEADER VS LINES
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION sales.validate_subscription_aggregate_consistency(
+  p_subscription_id uuid,
+  p_tenant_id integer
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  subscription_record record;
+  line_totals record;
+  expected_mrr numeric(14, 2);
+  expected_arr numeric(14, 2);
+BEGIN
+  IF p_subscription_id IS NULL OR p_tenant_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT
+    s.id,
+    s.tenant_id,
+    s.recurring_total,
+    s.mrr,
+    s.arr,
+    t.billing_period
+  INTO subscription_record
+  FROM sales.subscriptions AS s
+  INNER JOIN sales.subscription_templates AS t
+    ON t.id = s.template_id
+   AND t.tenant_id = s.tenant_id
+  WHERE s.id = p_subscription_id
+    AND s.tenant_id = p_tenant_id;
+
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  SELECT
+    COALESCE(SUM(l.subtotal), 0)::numeric(14, 2) AS recurring_total
+  INTO line_totals
+  FROM sales.subscription_lines AS l
+  WHERE l.subscription_id = p_subscription_id
+    AND l.tenant_id = p_tenant_id;
+
+  expected_mrr := ROUND(
+    line_totals.recurring_total *
+    CASE subscription_record.billing_period
+      WHEN 'weekly' THEN 52.0 / 12.0
+      WHEN 'monthly' THEN 1.0
+      WHEN 'quarterly' THEN 1.0 / 3.0
+      WHEN 'yearly' THEN 1.0 / 12.0
+      ELSE 1.0
+    END,
+    2
+  )::numeric(14, 2);
+  expected_arr := ROUND(expected_mrr * 12.0, 2)::numeric(14, 2);
+
+  IF subscription_record.recurring_total IS DISTINCT FROM line_totals.recurring_total
+     OR subscription_record.mrr IS DISTINCT FROM expected_mrr
+     OR subscription_record.arr IS DISTINCT FROM expected_arr THEN
+    RAISE EXCEPTION
+      'Subscription aggregate mismatch for subscription %',
+      p_subscription_id
+      USING ERRCODE = 'check_violation',
+            DETAIL = format(
+              'expected[recurring_total=%s mrr=%s arr=%s billing_period=%s] actual[recurring_total=%s mrr=%s arr=%s]',
+              line_totals.recurring_total,
+              expected_mrr,
+              expected_arr,
+              subscription_record.billing_period,
+              subscription_record.recurring_total,
+              subscription_record.mrr,
+              subscription_record.arr
+            );
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION sales.defer_validate_subscription_consistency()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM sales.validate_subscription_aggregate_consistency(
+      OLD.subscription_id,
+      OLD.tenant_id
+    );
+    RETURN OLD;
+  END IF;
+
+  PERFORM sales.validate_subscription_aggregate_consistency(
+    NEW.subscription_id,
+    NEW.tenant_id
+  );
+
+  IF TG_OP = 'UPDATE'
+     AND (OLD.subscription_id IS DISTINCT FROM NEW.subscription_id
+       OR OLD.tenant_id IS DISTINCT FROM NEW.tenant_id) THEN
+    PERFORM sales.validate_subscription_aggregate_consistency(
+      OLD.subscription_id,
+      OLD.tenant_id
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_defer_validate_subscription_consistency ON sales.subscription_lines;
+CREATE CONSTRAINT TRIGGER trg_defer_validate_subscription_consistency
+  AFTER INSERT OR UPDATE OR DELETE ON sales.subscription_lines
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.defer_validate_subscription_consistency();
+
+-- ---------------------------------------------------------------------------
+-- EVENT EMISSION — COMMISSION ENTRIES & RETURN ORDERS
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION sales.emit_commission_entry_event()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  actor_id integer;
+BEGIN
+  actor_id := sales.current_actor_id();
+
+  IF TG_OP = 'DELETE' THEN
+    PERFORM sales.emit_domain_event(
+      'COMMISSION_ENTRY_DELETED',
+      'commission_entry',
+      OLD.tenant_id,
+      OLD.id,
+      jsonb_build_object('operation', TG_OP, 'status', OLD.status),
+      actor_id
+    );
+    RETURN OLD;
+  END IF;
+
+  PERFORM sales.emit_domain_event(
+    'COMMISSION_ENTRY_MUTATED',
+    'commission_entry',
+    NEW.tenant_id,
+    NEW.id,
+    jsonb_build_object('operation', TG_OP, 'status', NEW.status),
+    actor_id
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_emit_commission_entry_event ON sales.commission_entries;
+CREATE TRIGGER trg_emit_commission_entry_event
+  AFTER INSERT OR UPDATE OR DELETE ON sales.commission_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.emit_commission_entry_event();
+
+CREATE OR REPLACE FUNCTION sales.emit_return_order_event()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  actor_id integer;
+BEGIN
+  actor_id := sales.current_actor_id();
+
+  IF TG_OP = 'DELETE' THEN
+    PERFORM sales.emit_domain_event(
+      'RETURN_ORDER_DELETED',
+      'return_order',
+      OLD.tenant_id,
+      OLD.id,
+      jsonb_build_object('operation', TG_OP, 'status', OLD.status),
+      actor_id
+    );
+    RETURN OLD;
+  END IF;
+
+  PERFORM sales.emit_domain_event(
+    'RETURN_ORDER_MUTATED',
+    'return_order',
+    NEW.tenant_id,
+    NEW.id,
+    jsonb_build_object('operation', TG_OP, 'status', NEW.status),
+    actor_id
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_emit_return_order_event ON sales.return_orders;
+CREATE TRIGGER trg_emit_return_order_event
+  AFTER INSERT OR UPDATE OR DELETE ON sales.return_orders
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.emit_return_order_event();
+
+-- ---------------------------------------------------------------------------
+-- SUBSCRIPTIONS — exclude overlapping billing periods (active / past_due / paused)
+-- ---------------------------------------------------------------------------
+-- Uses generated column `billing_overlap_period` (empty tstzrange when ineligible).
+-- Requires btree_gist for integer/uuid equality operators used with GiST.
+
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+ALTER TABLE sales.subscriptions
+  DROP CONSTRAINT IF EXISTS sales_subscriptions_billing_overlap_excl;
+
+ALTER TABLE sales.subscriptions
+  ADD CONSTRAINT sales_subscriptions_billing_overlap_excl
+  EXCLUDE USING gist (
+    tenant_id WITH =,
+    partner_id WITH =,
+    template_id WITH =,
+    billing_overlap_period WITH &&
+  );
+
+-- ---------------------------------------------------------------------------
+-- SUBSCRIPTIONS — pricing lock guard (mrr/arr/recurring_total)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION sales.prevent_subscription_financial_mutate_when_pricing_locked()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP <> 'UPDATE' THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.pricing_locked_at IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.pricing_locked_at IS DISTINCT FROM NEW.pricing_locked_at THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.status IN ('cancelled', 'expired') THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.mrr IS DISTINCT FROM OLD.mrr
+     OR NEW.arr IS DISTINCT FROM OLD.arr
+     OR NEW.recurring_total IS DISTINCT FROM OLD.recurring_total THEN
+    RAISE EXCEPTION
+      'subscription financial fields are immutable while pricing_locked_at is unchanged (re-lock with a new pricing_locked_at or cancel)'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sales_subscriptions_pricing_lock_guard ON sales.subscriptions;
+CREATE TRIGGER trg_sales_subscriptions_pricing_lock_guard
+  BEFORE UPDATE ON sales.subscriptions
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.prevent_subscription_financial_mutate_when_pricing_locked();
+
+-- ---------------------------------------------------------------------------
+-- DOCUMENT_TRUTH_BINDINGS — immutable financial payload after lock
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION sales.prevent_document_truth_bindings_mutate_locked_payload()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP <> 'UPDATE' THEN
+    RETURN NEW;
+  END IF;
+
+  IF OLD.voided_at IS NOT NULL THEN
+    RAISE EXCEPTION
+      'document_truth_bindings: voided rows are immutable'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF OLD.locked_at IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF
+    NEW.id IS DISTINCT FROM OLD.id
+    OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+    OR NEW.document_type IS DISTINCT FROM OLD.document_type
+    OR NEW.document_id IS DISTINCT FROM OLD.document_id
+    OR NEW.document_status_at_commit IS DISTINCT FROM OLD.document_status_at_commit
+    OR NEW.committed_at IS DISTINCT FROM OLD.committed_at
+    OR NEW.locked_at IS DISTINCT FROM OLD.locked_at
+    OR NEW.committed_by IS DISTINCT FROM OLD.committed_by
+    OR NEW.price_truth_link_id IS DISTINCT FROM OLD.price_truth_link_id
+    OR NEW.currency_id IS DISTINCT FROM OLD.currency_id
+    OR NEW.total_amount IS DISTINCT FROM OLD.total_amount
+    OR NEW.subtotal_amount IS DISTINCT FROM OLD.subtotal_amount
+    OR NEW.tax_amount IS DISTINCT FROM OLD.tax_amount
+    OR NEW.header_snapshot IS DISTINCT FROM OLD.header_snapshot
+    OR NEW.line_snapshot IS DISTINCT FROM OLD.line_snapshot
+    OR NEW.tax_snapshot IS DISTINCT FROM OLD.tax_snapshot
+    OR NEW.commission_snapshot_id IS DISTINCT FROM OLD.commission_snapshot_id
+    OR NEW.supersedes_binding_id IS DISTINCT FROM OLD.supersedes_binding_id
+    OR NEW.binding_version IS DISTINCT FROM OLD.binding_version
+    OR NEW.snapshot_hash IS DISTINCT FROM OLD.snapshot_hash
+    OR NEW.fx_rate IS DISTINCT FROM OLD.fx_rate
+    OR NEW.fx_as_of IS DISTINCT FROM OLD.fx_as_of
+    OR NEW.base_currency_id IS DISTINCT FROM OLD.base_currency_id
+    OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+    OR NEW.created_at IS DISTINCT FROM OLD.created_at
+    OR NEW.created_by IS DISTINCT FROM OLD.created_by
+  THEN
+    RAISE EXCEPTION
+      'document_truth_bindings: financial payload is immutable after lock (void or phase transition only)'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sales_document_truth_bindings_immutable_payload
+  ON sales.document_truth_bindings;
+
+CREATE TRIGGER trg_sales_document_truth_bindings_immutable_payload
+  BEFORE UPDATE ON sales.document_truth_bindings
+  FOR EACH ROW
+  EXECUTE FUNCTION sales.prevent_document_truth_bindings_mutate_locked_payload();

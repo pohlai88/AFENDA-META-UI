@@ -28,7 +28,13 @@ import compression from "compression";
 
 // Config
 import config, { validateConfig } from "./config/index.js";
-import { checkDatabaseConnection, getPoolStats, pool } from "./db/index.js";
+import {
+  checkDatabaseConnection,
+  closeDatabase,
+  getEffectiveSessionTimeouts,
+  getPoolStats,
+  pool,
+} from "./db/index.js";
 
 // Middleware
 import { authMiddleware } from "./middleware/auth.js";
@@ -351,6 +357,11 @@ async function startServer() {
     await checkDatabaseConnection();
     logger.info("[Startup] Database connectivity check passed");
 
+    if (process.env.DB_POOL_VERIFY_TIMEOUTS === "true") {
+      const timeouts = await getEffectiveSessionTimeouts(pool);
+      logger.info({ timeouts }, "[Startup] PostgreSQL session timeouts (SHOW — compare to pool config / Neon)");
+    }
+
     // Enable DB persistence now that connectivity is confirmed
     enableTenantPersistence();
     enableAuditPersistence();
@@ -405,7 +416,7 @@ function handleGracefulShutdown(signal: "SIGTERM" | "SIGINT") {
   void (async () => {
     try {
       await flushAndStopAuditPersistence();
-      await pool.end();
+      await closeDatabase();
     } finally {
       logger.flush();
       process.exit(0);

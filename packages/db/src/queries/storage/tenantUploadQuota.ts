@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import { parseTenantStyleObjectKey } from "../../r2/objectKey.js";
 import {
   documentAttachments,

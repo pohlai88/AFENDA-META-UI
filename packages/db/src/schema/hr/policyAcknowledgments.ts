@@ -21,13 +21,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -70,7 +71,7 @@ export const hrPolicyDocuments = hrSchema.table(
     requiresAcknowledgment: boolean("requires_acknowledgment").notNull().default(true),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -156,7 +157,8 @@ export const employeePolicyAcknowledgments = hrSchema.table(
     /** When attestation was invalidated (e.g. policy superseded or withdrawn). */
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

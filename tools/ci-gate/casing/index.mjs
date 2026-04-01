@@ -22,7 +22,7 @@ const repoRoot = resolve(__dirname, "..", "..", "..");
 const files = {
   auditColumns: resolve(repoRoot, "packages/db/src/_shared/auditColumns.ts"),
   timestamps: resolve(repoRoot, "packages/db/src/_shared/timestamps.ts"),
-  triggers: resolve(repoRoot, "packages/db/src/triggers/status-transitions.sql"),
+  triggers: resolve(repoRoot, "packages/db/migrations/generated/truth-v1.sql"),
 };
 
 function fail(message, fixes = []) {
@@ -79,7 +79,7 @@ function checkTriggerSql(source) {
 
   if (found.length > 0) {
     return fail(
-      `packages/db/src/triggers/status-transitions.sql contains camelCase physical column tokens: ${found.join(", ")}`,
+      `packages/db/migrations/generated/truth-v1.sql contains camelCase physical column tokens: ${found.join(", ")}`,
       [
         "Replace createdBy/updatedBy with created_by/updated_by in raw SQL",
         "Replace deletedAt with deleted_at in raw SQL",

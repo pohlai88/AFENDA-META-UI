@@ -95,7 +95,7 @@ Use the right Postgres type for the kind of data you are storing. This keeps wor
 Use shared column helpers — never define `created_at`, `updated_at`, `deleted_at`, `name`, or audit fields manually:
 
 - `...timestampColumns` — created_at, updated_at
-- `...auditColumns` — created_by, updated_by
+- `...auditColumns(() => users.userId)` — created_by, updated_by (FK to `security.users`)
 - `...softDeleteColumns` — deleted_at, deleted_by
 - `...nameColumn` — name (text, not null)
 

@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import {
   documentAttachments,
   documentPreDecisionBlocks,

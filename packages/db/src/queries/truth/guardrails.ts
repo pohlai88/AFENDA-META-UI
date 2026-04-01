@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import { documentAttachments, documentGuardrailEvents, documentPreDecisionBlocks } from "../../schema/reference/tables.js";
 
 type GuardrailAction = "PAYMENT" | "CONTRACT_EXECUTION" | "DELETE" | "WORKFLOW_ADVANCE";

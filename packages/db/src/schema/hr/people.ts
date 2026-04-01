@@ -17,13 +17,13 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
 import { tenants } from "../core/tenants.js";
 import { countries, currencies, states } from "../reference/index.js";
 import { users, UserIdSchema } from "../security/index.js";
@@ -83,7 +83,7 @@ export const departments = hrSchema.table(
     treeDepth: integer("tree_depth"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -118,7 +118,7 @@ export const jobTitles = hrSchema.table(
     currencyId: integer("currency_id"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -162,7 +162,7 @@ export const jobPositions = hrSchema.table(
     maxHeadcount: integer("max_headcount").notNull().default(1),
     currentHeadcount: integer("current_headcount").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -256,7 +256,7 @@ export const employees = hrSchema.table(
     notes: text("notes"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -312,7 +312,7 @@ export const costCenters = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     closedDate: date("closed_date", { mode: "string" }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

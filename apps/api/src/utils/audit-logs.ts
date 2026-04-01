@@ -16,6 +16,8 @@ export interface RecordInvariantCheckParams {
   entityId: string;
   status: InvariantStatus;
   severity: InvariantSeverity;
+  /** When true, truth pipeline and similar gates must stop on failure (default: error→true, else false). */
+  blocking?: boolean;
   expectedValue?: string;
   actualValue?: string;
   context?: Record<string, unknown>;
@@ -30,6 +32,8 @@ export interface RecordDomainEventParams {
   entityId: string;
   payload?: Record<string, unknown>;
   triggeredBy?: number;
+  causedByEventId?: string | null;
+  correlationId?: string | null;
   actorId: number;
 }
 
@@ -55,6 +59,9 @@ export interface RecordDomainEventParams {
  * ```
  */
 export async function recordInvariantCheck(params: RecordInvariantCheckParams): Promise<void> {
+  const blocking =
+    params.blocking ??
+    (params.severity === "error" && params.status === "fail");
   await db.insert(domainInvariantLogs).values({
     tenantId: params.tenantId,
     invariantCode: params.invariantCode,
@@ -62,6 +69,7 @@ export async function recordInvariantCheck(params: RecordInvariantCheckParams): 
     entityId: params.entityId,
     status: params.status,
     severity: params.severity,
+    blocking,
     expectedValue: params.expectedValue ?? null,
     actualValue: params.actualValue ?? null,
     context: params.context ? JSON.stringify(params.context) : null,
@@ -121,8 +129,10 @@ export async function recordDomainEvent(params: RecordDomainEventParams): Promis
     eventType: params.eventType as DomainEventType,
     entityType: params.entityType,
     entityId: params.entityId,
-    payload: params.payload ? JSON.stringify(params.payload) : null,
+    payload: params.payload ?? {},
     triggeredBy: params.triggeredBy ?? null,
+    causedByEventId: params.causedByEventId ?? null,
+    correlationId: params.correlationId ?? null,
     createdBy: params.actorId,
     updatedBy: params.actorId,
   });

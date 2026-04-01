@@ -1,0 +1,6 @@
+# One Squawk rule name per line (passed as --exclude=<name>).
+# Lines starting with # are ignored.
+# See https://github.com/sbdchd/squawk/blob/master/docs/rules.md
+#
+# Example (uncomment to suppress):
+# prefer-robust-stmts

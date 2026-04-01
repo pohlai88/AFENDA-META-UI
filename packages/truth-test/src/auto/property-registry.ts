@@ -12,7 +12,7 @@ import { domainArbitraries } from "./generate-property-tests.js";
 import { Decimal } from "decimal.js";
 
 import * as SalesOrderEngine from "../../../../apps/api/src/modules/sales/logic/sales-order-engine.js";
-import * as MoneySeedFns from "../../../../packages/db/src/infra-utils/seeds/money.js";
+import * as MoneySeedFns from "../../../../packages/db/src/seeds/money.js";
 import * as ConsignmentEngine from "../../../../apps/api/src/modules/sales/logic/consignment-engine.js";
 import * as SubscriptionEngine from "../../../../apps/api/src/modules/sales/logic/subscription-engine.js";
 

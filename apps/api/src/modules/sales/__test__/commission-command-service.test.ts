@@ -150,6 +150,11 @@ describe("commission command service", () => {
       expect.objectContaining({
         actor: "99",
         source: "api.sales.commissions.approve.single",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "approve.single",
+          startTable: "commission_entries",
+        }),
       })
     );
   });
@@ -174,6 +179,19 @@ describe("commission command service", () => {
     expect(result.updatedCount).toBe(1);
     expect(result.mutationPolicy).toBe("event-only");
     expect(result.event?.eventType).toBe("commission_entry.paid");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "commission_entry",
+      "entry-1",
+      "commission_entry.paid",
+      expect.any(Object),
+      expect.objectContaining({
+        actor: "44",
+        truthImpact: expect.objectContaining({
+          operation: "pay.single",
+          startTable: "commission_entries",
+        }),
+      })
+    );
   });
 
   it("runs single-entry delete under event-only policy and appends a deleted event", async () => {
@@ -196,6 +214,18 @@ describe("commission command service", () => {
     expect(result.deletedCount).toBe(1);
     expect(result.mutationPolicy).toBe("event-only");
     expect(result.event?.eventType).toBe("commission_entry.deleted");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "commission_entry",
+      "entry-1",
+      "commission_entry.deleted",
+      expect.any(Object),
+      expect.objectContaining({
+        truthImpact: expect.objectContaining({
+          operation: "delete",
+          startTable: "commission_entries",
+        }),
+      })
+    );
     expect(removeCommissionEntryMock).toHaveBeenCalledWith({
       tenantId: 7,
       actorId: 77,
@@ -368,6 +398,20 @@ describe("commission command service", () => {
     expect(result.persistence).toBe("created");
     expect(result.mutationPolicy).toBe("dual-write");
     expect(result.event?.eventType).toBe("commission_entry.generated");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "commission_entry",
+      "entry-2",
+      "commission_entry.generated",
+      expect.any(Object),
+      expect.objectContaining({
+        actor: "21",
+        source: "api.sales.commissions.generate",
+        truthImpact: expect.objectContaining({
+          operation: "generate.create",
+          startTable: "commission_entries",
+        }),
+      })
+    );
   });
 
   it("runs commission regeneration under dual-write and appends a recalculated event", async () => {
@@ -408,5 +452,17 @@ describe("commission command service", () => {
     expect(result.persistence).toBe("updated");
     expect(result.mutationPolicy).toBe("dual-write");
     expect(result.event?.eventType).toBe("commission_entry.recalculated");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "commission_entry",
+      "entry-2",
+      "commission_entry.recalculated",
+      expect.any(Object),
+      expect.objectContaining({
+        truthImpact: expect.objectContaining({
+          operation: "generate.update",
+          startTable: "commission_entries",
+        }),
+      })
+    );
   });
 });

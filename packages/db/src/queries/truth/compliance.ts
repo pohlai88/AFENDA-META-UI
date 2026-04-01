@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import { documentAttachments, documentPreDecisionBlocks } from "../../schema/reference/tables.js";
 
 import { hasActivePreDecisionBlock } from "./persistence.js";

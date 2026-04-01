@@ -14,7 +14,12 @@
  * - Test fixtures for authentication and state management
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { defineConfig, devices } from "@playwright/test";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Read environment variables from file.
@@ -30,7 +35,8 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   // ========================================
   // TEST DIRECTORY & PATTERNS
-  // ========================================testDir: './e2e',
+  // ========================================
+  testDir: "./e2e",
   testMatch: "**/*.e2e.{ts,tsx}",
 
   // ========================================
@@ -144,8 +150,7 @@ export default defineConfig({
   // GLOBAL SETUP & TEARDOWN
   // ========================================
 
-  // globalSetup: require.resolve('./e2e/global-setup'),
-  // globalTeardown: require.resolve('./e2e/global-teardown'),
+  globalSetup: path.join(__dirname, "e2e/playwright-global-setup.ts"),
 
   // ========================================
   // PROJECTS: Multi-Browser Testing

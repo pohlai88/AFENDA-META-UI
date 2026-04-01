@@ -21,13 +21,14 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -79,7 +80,7 @@ export const skillTypes = hrSchema.table(
     groupingKey: text("grouping_key"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -136,7 +137,7 @@ export const hrSkillLevels = hrSchema.table(
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -189,7 +190,7 @@ export const skills = hrSchema.table(
     defaultLevelId: uuid("default_level_id"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -249,7 +250,7 @@ export const employeeSkills = hrSchema.table(
     verifiedBy: uuid("verified_by"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -296,7 +297,7 @@ export const jobPositionSkills = hrSchema.table(
     importance: integer("importance").notNull().default(5), // 1-10 scale
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -349,7 +350,7 @@ export const hrResumeLineTypes = hrSchema.table(
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -406,7 +407,7 @@ export const employeeResumeLines = hrSchema.table(
     documentUrl: text("document_url"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -477,7 +478,7 @@ export const employeeResumeLineAchievements = hrSchema.table(
     achievementText: text("achievement_text").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -520,7 +521,7 @@ export const employeeResumeLineSkillEntries = hrSchema.table(
     skillLabel: text("skill_label"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

@@ -3,7 +3,8 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from "driz
 import { boolean, foreignKey, index, integer, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { auditColumns, softDeleteColumns, timestampColumns } from "../../infra-utils/columns/index.js";
+import { auditColumns, softDeleteColumns, timestampColumns } from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { coreSchema, tenants } from "./tenants.js";
 
 export const appModules = coreSchema.table(
@@ -21,7 +22,7 @@ export const appModules = coreSchema.table(
     isEnabled: boolean().notNull().default(true),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_app_modules_tenant").on(table.tenantId),

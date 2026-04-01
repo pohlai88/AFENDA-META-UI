@@ -8,6 +8,9 @@ on:
     branches: [main, master, develop]
     paths:
       - "packages/db/src/graph-validation/**"
+      - "packages/db/src/queries/_shared/**"
+      - "tools/ci-gate/db-access-layer/**"
+      - "tools/ci-gate/graph-validation/**"
       - "packages/db/package.json"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -16,6 +19,9 @@ on:
     branches: [main, master, develop]
     paths:
       - "packages/db/src/graph-validation/**"
+      - "packages/db/src/queries/_shared/**"
+      - "tools/ci-gate/db-access-layer/**"
+      - "tools/ci-gate/graph-validation/**"
       - "packages/db/package.json"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -78,6 +84,9 @@ jobs:
 
       - name: Run graph validation tests
         run: pnpm run db:test:graph-validation
+
+      - name: Run graph guardrail tests
+        run: pnpm --filter @afenda/db test:graph-guard
 
       - name: Run graph validation coverage
         run: pnpm run db:test:graph-validation:coverage | tee .reports-graph-validation-coverage.txt
@@ -200,80 +209,59 @@ jobs:
 
       - name: Generate detailed validation report
         if: env.DATABASE_URL != ''
+        env:
+          GRAPH_VALIDATION_SCHEMA_MANIFEST_DIR: ${{ github.workspace }}/.reports/graph-validation
         run: |
-          pnpm --filter @afenda/db graph-validation report --format=json > .reports/graph-validation/validation-report.json
+          pnpm --filter @afenda/db graph-validation report --format=json --adjuncts --repo-root="${GITHUB_WORKSPACE}" > .reports/graph-validation/validation-report.json
 
-      - name: Validate P0 (Critical) relationships
+      - name: Strict v1 contract (validate-artifact)
         if: env.DATABASE_URL != ''
-        continue-on-error: true
-        run: |
-          pnpm --filter @afenda/db graph-validation validate --tier=P0 | tee .reports/graph-validation/p0-validation.txt
+        run: pnpm --filter @afenda/db graph-validation:validate-artifact .reports/graph-validation/validation-report.json
 
-      - name: Security audit - Check tenant isolation
+      - name: Enforce adjunct policy (optional strict)
         if: env.DATABASE_URL != ''
-        continue-on-error: true
+        env:
+          CI_GRAPH_ADJUNCTS_STRICT: ${{ vars.CI_GRAPH_ADJUNCTS_STRICT }}
+        run: node tools/ci-gate/graph-validation/check-adjuncts.mjs .reports/graph-validation/validation-report.json
+
+      - name: Assert production truth (v1 JSON, fail-closed)
+        if: env.DATABASE_URL != ''
+        shell: bash
+        env:
+          MIN_HEALTH_SCORE: ${{ env.MIN_HEALTH_SCORE }}
         run: |
-          pnpm --filter @afenda/db graph-validation tenants | tee .reports/graph-validation/tenant-isolation-audit.txt
+          set -euo pipefail
+          R=".reports/graph-validation/validation-report.json"
+          jq -e '.policy.isSecurityBlocking == false' "$R"
+          jq -e --argjson min "$MIN_HEALTH_SCORE" '.healthScore.overall >= ($min | tonumber)' "$R"
+          jq -e '.tenantLeaks.isSecure == true' "$R"
+          jq -e '(.orphans.byPriority.P0 == 0) and (.orphans.byPriority.P1 == 0)' "$R"
 
       - name: Export FK relationship catalog
         if: env.DATABASE_URL != ''
         run: |
           pnpm --filter @afenda/db graph-validation export-catalog --output=.reports/graph-validation/fk-catalog.json
 
-      - name: Parse health score
+      - name: Export summary env from validation report (jq)
         if: env.DATABASE_URL != ''
         shell: bash
+        env:
+          ALERT_HEALTH_SCORE: ${{ env.ALERT_HEALTH_SCORE }}
+          MIN_HEALTH_SCORE: ${{ env.MIN_HEALTH_SCORE }}
         run: |
           set -euo pipefail
-
-          # Extract health score from report (looking for "Overall Health Score: X/100")
-          HEALTH_LINE=$(grep -E 'Overall Health Score:|Grade:' .reports/graph-validation/health-check.txt | head -n 1 || true)
-
-          if [ -z "$HEALTH_LINE" ]; then
-            echo "⚠️ Unable to parse health score from report"
-            echo "HEALTH_SCORE=0" >> $GITHUB_ENV
-            echo "HEALTH_STATUS=UNKNOWN" >> $GITHUB_ENV
+          R=".reports/graph-validation/validation-report.json"
+          HEALTH_SCORE=$(jq -r '.healthScore.overall' "$R")
+          echo "HEALTH_SCORE=$HEALTH_SCORE" >> "$GITHUB_ENV"
+          if [ "$HEALTH_SCORE" -lt "$MIN_HEALTH_SCORE" ]; then
+            echo "HEALTH_STATUS=CRITICAL" >> "$GITHUB_ENV"
+          elif [ "$HEALTH_SCORE" -lt "$ALERT_HEALTH_SCORE" ]; then
+            echo "HEALTH_STATUS=WARNING" >> "$GITHUB_ENV"
           else
-            # Extract numeric health score (e.g., "92" from "Overall Health Score: 92/100")
-            HEALTH_SCORE=$(echo "$HEALTH_LINE" | grep -oE '[0-9]+' | head -n 1 || echo "0")
-
-            if [ "$HEALTH_SCORE" -lt "$MIN_HEALTH_SCORE" ]; then
-              HEALTH_STATUS="CRITICAL"
-            elif [ "$HEALTH_SCORE" -lt "$ALERT_HEALTH_SCORE" ]; then
-              HEALTH_STATUS="WARNING"
-            else
-              HEALTH_STATUS="HEALTHY"
-            fi
-
-            echo "HEALTH_SCORE=$HEALTH_SCORE" >> $GITHUB_ENV
-            echo "HEALTH_STATUS=$HEALTH_STATUS" >> $GITHUB_ENV
+            echo "HEALTH_STATUS=HEALTHY" >> "$GITHUB_ENV"
           fi
-
-      - name: Check for P0 violations
-        if: env.DATABASE_URL != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Check if P0 validation detected any violations
-          if grep -q "P0 violations: 0" .reports/graph-validation/p0-validation.txt; then
-            echo "P0_STATUS=PASS" >> $GITHUB_ENV
-          else
-            echo "P0_STATUS=FAIL" >> $GITHUB_ENV
-          fi
-
-      - name: Check tenant isolation security
-        if: env.DATABASE_URL != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Check if tenant isolation is secure
-          if grep -q "SECURE" .reports/graph-validation/tenant-isolation-audit.txt; then
-            echo "TENANT_STATUS=SECURE" >> $GITHUB_ENV
-          else
-            echo "TENANT_STATUS=BREACH" >> $GITHUB_ENV
-          fi
+          echo "P0_STATUS=PASS" >> "$GITHUB_ENV"
+          echo "TENANT_STATUS=SECURE" >> "$GITHUB_ENV"
 
       - name: Upload validation reports
         if: env.DATABASE_URL != ''
@@ -294,10 +282,8 @@ jobs:
           echo "- Tenant Isolation: **$TENANT_STATUS**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Generated Reports" >> $GITHUB_STEP_SUMMARY
-          echo "- 📋 Health Check Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- 📊 Detailed Validation Report (JSON)" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔍 P0 Critical Relationship Validation" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔒 Tenant Isolation Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 Health Check Summary (text)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 validation-report.json — **source of truth** (policy, healthScore, orphans, tenantLeaks)" >> $GITHUB_STEP_SUMMARY
           echo "- 📁 FK Catalog Export" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Thresholds" >> $GITHUB_STEP_SUMMARY
@@ -306,27 +292,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- Download: graph-validation-reports" >> $GITHUB_STEP_SUMMARY
-
-      - name: Fail on critical health score
-        if: env.DATABASE_URL != '' && env.HEALTH_STATUS == 'CRITICAL'
-        run: |
-          echo "❌ Graph validation health is CRITICAL (score: $HEALTH_SCORE < $MIN_HEALTH_SCORE)"
-          echo "Action required: Investigate orphaned records, missing indexes, or tenant leaks"
-          echo "See reports artifact: graph-validation-reports"
-          exit 1
-
-      - name: Fail on P0 violations
-        if: env.DATABASE_URL != '' && env.P0_STATUS == 'FAIL'
-        run: |
-          echo "❌ P0 (Critical) relationship violations detected"
-          echo "Action required: Immediate remediation of critical FK violations"
-          echo "See reports artifact: graph-validation-reports"
-          exit 1
-
-      - name: Fail on tenant isolation breach
-        if: env.DATABASE_URL != '' && env.TENANT_STATUS == 'BREACH'
-        run: |
-          echo "🚨 SECURITY INCIDENT: Tenant isolation breach detected"
-          echo "Action required: Immediate security response - escalate to security team"
-          echo "See reports artifact: graph-validation-reports"
-          exit 1

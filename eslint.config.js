@@ -307,6 +307,26 @@ export default [
   },
 
   // =============================================================================
+  // @afenda/db — graph-validation CLI (stdout progress; not library code)
+  // =============================================================================
+  {
+    files: ["packages/db/src/graph-validation/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+
+  // =============================================================================
+  // @afenda/db — seeds (CLI progress; Truth Initialization Engine orchestration)
+  // =============================================================================
+  {
+    files: ["packages/db/src/seeds/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+
+  // =============================================================================
   // DEMO/EXAMPLE FILES (documentation code)
   // =============================================================================
   {

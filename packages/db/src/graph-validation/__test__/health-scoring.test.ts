@@ -12,12 +12,13 @@ import {
   type ValidationInputs,
   type GraphHealthScore,
 } from "../health-scoring.js";
-import type { OrphanDetectionResults } from "../orphan-detection.js";
+import type { OrphanDetectionResults, OrphanQueryResult } from "../orphan-detection.js";
 import type { TenantIsolationResults } from "../tenant-isolation.js";
 import type { FkValidationCatalog } from "../fk-catalog.js";
 
 // Test fixtures
 const createMockCatalog = (totalRelationships = 279): FkValidationCatalog => ({
+  schemasCovered: ["sales"],
   relationships: Array(totalRelationships)
     .fill(null)
     .map((_, i) => ({
@@ -44,40 +45,30 @@ const createMockCatalog = (totalRelationships = 279): FkValidationCatalog => ({
   },
 });
 
+const mockOrphanRow = (overrides?: Partial<OrphanQueryResult>): OrphanQueryResult => ({
+  childTableSchema: "sales",
+  childTableName: "test_child",
+  parentTableSchema: "sales",
+  parentTableName: "test_parent",
+  childTable: "sales.test_child",
+  parentTable: "sales.test_parent",
+  fkColumn: "parent_id",
+  parentColumn: "id",
+  orphanCount: 1,
+  sampleIds: [],
+  ...overrides,
+});
+
 const createMockOrphans = (
   p0Count = 0,
   p1Count = 0,
   p2Count = 0,
   p3Count = 0
 ): OrphanDetectionResults => {
-  const p0 = Array.from({ length: p0Count }, () => ({
-    childTable: "test_child",
-    parentTable: "test_parent",
-    fkColumn: "id",
-    orphanCount: 1,
-    sampleIds: [],
-  }));
-  const p1 = Array.from({ length: p1Count }, () => ({
-    childTable: "test_child",
-    parentTable: "test_parent",
-    fkColumn: "id",
-    orphanCount: 1,
-    sampleIds: [],
-  }));
-  const p2 = Array.from({ length: p2Count }, () => ({
-    childTable: "test_child",
-    parentTable: "test_parent",
-    fkColumn: "id",
-    orphanCount: 1,
-    sampleIds: [],
-  }));
-  const p3 = Array.from({ length: p3Count }, () => ({
-    childTable: "test_child",
-    parentTable: "test_parent",
-    fkColumn: "id",
-    orphanCount: 1,
-    sampleIds: [],
-  }));
+  const p0 = Array.from({ length: p0Count }, () => mockOrphanRow());
+  const p1 = Array.from({ length: p1Count }, () => mockOrphanRow());
+  const p2 = Array.from({ length: p2Count }, () => mockOrphanRow());
+  const p3 = Array.from({ length: p3Count }, () => mockOrphanRow());
 
   return {
     total: p0Count + p1Count + p2Count + p3Count,

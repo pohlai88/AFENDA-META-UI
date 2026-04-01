@@ -19,6 +19,7 @@ import {
   computeOrderTaxes,
   mapTax,
   detectFiscalPosition,
+  pickAutoApplyFiscalPosition,
   type TaxEngineContext,
   type TaxRate,
   type FiscalPosition,
@@ -44,6 +45,7 @@ describe("Tax Engine", () => {
       amountType: "percent",
       amount: "10",
       priceInclude: false,
+      computationMethod: "flat",
       sequence: 10,
     };
 
@@ -55,6 +57,7 @@ describe("Tax Engine", () => {
       amountType: "percent",
       amount: "20",
       priceInclude: true,
+      computationMethod: "included",
       sequence: 10,
     };
 
@@ -66,6 +69,7 @@ describe("Tax Engine", () => {
       amountType: "percent",
       amount: "5",
       priceInclude: false,
+      computationMethod: "flat",
       sequence: 20,
     };
 
@@ -77,6 +81,7 @@ describe("Tax Engine", () => {
       amountType: "percent",
       amount: "9",
       priceInclude: false,
+      computationMethod: "flat",
       sequence: 10,
     };
 
@@ -88,6 +93,7 @@ describe("Tax Engine", () => {
       amountType: "percent",
       amount: "9",
       priceInclude: false,
+      computationMethod: "flat",
       sequence: 20,
     };
 
@@ -99,6 +105,7 @@ describe("Tax Engine", () => {
       amountType: "group",
       amount: "18",
       priceInclude: false,
+      computationMethod: "group",
       sequence: 10,
       children: [cgstTax, sgstTax],
     };
@@ -401,7 +408,7 @@ describe("Tax Engine", () => {
         id: "fp-california",
         name: "California",
         countryId: 1, // US
-        stateIds: "5", // CA state ID
+        allowedStateIds: [5], // CA state ID in `reference.states`
         autoApply: true,
         vatRequired: false,
       };
@@ -493,6 +500,88 @@ describe("Tax Engine", () => {
       const result = detectFiscalPosition(context, partner);
 
       expect(result).toBeUndefined();
+    });
+
+    it("breaks ties with lower sequence when specificity matches", () => {
+      const fpLate: FiscalPosition = {
+        id: "fp-late-seq",
+        name: "Later sequence",
+        countryId: 1,
+        autoApply: true,
+        vatRequired: false,
+        sequence: 20,
+      };
+      const fpEarly: FiscalPosition = {
+        id: "fp-early-seq",
+        name: "Earlier sequence",
+        countryId: 1,
+        autoApply: true,
+        vatRequired: false,
+        sequence: 5,
+      };
+      context.fiscalPositions = new Map([
+        [fpLate.id, fpLate],
+        [fpEarly.id, fpEarly],
+      ]);
+      const partner: Partner = { id: "partner-1", countryId: 1 };
+      expect(detectFiscalPosition(context, partner)?.id).toBe(fpEarly.id);
+    });
+
+    it("flags ambiguous when specificity, sequence, and effectiveFrom tie (UUID tie-break)", () => {
+      const fpB: FiscalPosition = {
+        id: "fp-b",
+        name: "B",
+        countryId: 1,
+        allowedStateIds: [5],
+        autoApply: true,
+        vatRequired: false,
+        sequence: 10,
+        effectiveFrom: new Date("2020-01-01T00:00:00Z"),
+      };
+      const fpA: FiscalPosition = {
+        id: "fp-a",
+        name: "A",
+        countryId: 1,
+        allowedStateIds: [5],
+        autoApply: true,
+        vatRequired: false,
+        sequence: 10,
+        effectiveFrom: new Date("2020-01-01T00:00:00Z"),
+      };
+      context.fiscalPositions = new Map([
+        [fpB.id, fpB],
+        [fpA.id, fpA],
+      ]);
+      const partner: Partner = { id: "partner-1", countryId: 1, stateId: 5 };
+      const pick = pickAutoApplyFiscalPosition(context, partner);
+      expect(pick.ambiguous).toBe(true);
+      expect(pick.position?.id).toBe("fp-a");
+    });
+
+    it("ignores fiscal positions outside effective window at asOf", () => {
+      const asOf = new Date("2025-06-01T12:00:00Z");
+      const expired: FiscalPosition = {
+        id: "fp-expired",
+        name: "Expired",
+        countryId: 1,
+        autoApply: true,
+        vatRequired: false,
+        effectiveTo: new Date("2024-12-31T23:59:59Z"),
+      };
+      const active: FiscalPosition = {
+        id: "fp-active",
+        name: "Active",
+        countryId: 1,
+        autoApply: true,
+        vatRequired: false,
+        effectiveFrom: new Date("2025-01-01T00:00:00Z"),
+      };
+      context.fiscalPositions = new Map([
+        [expired.id, expired],
+        [active.id, active],
+      ]);
+      const partner: Partner = { id: "partner-1", countryId: 1 };
+      expect(detectFiscalPosition(context, partner, { asOf })?.id).toBe(active.id);
     });
   });
 

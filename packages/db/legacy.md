@@ -10,13 +10,13 @@ The prior analysis stated we're "missing" infrastructure layers. **That's wrong.
 
 | Layer | Current AFENDA-META-UI | Legacy afenda-hybrid | Verdict |
 |-------|----------------------|---------------------|---------|
-| **Wire Format Schemas** | infra-utils/columns/wire/zodWire.ts — `nullableOptional()`, `dateStringSchema`, `timestamptzWireSchema`, `isoDateWireString()`, `parseUnknownToEpochMs()` | `_shared/zodWire.ts` — Same patterns | **Parity** — Current already has this |
-| **Session Management** | infra-utils/session/setSessionContext.ts — **8 GUC params** (`tenant_id`, `user_id`, `actor_type`, `correlation_id`, `request_id`, `session_id`, `ip_address`, `user_agent`) | `_session/` — 2 params (`tenant_id`, `user_id`) | **Current is SUPERIOR** |
-| **RLS Policies** | infra-utils/rls/tenant-policies.ts — `appUserRole` + `serviceRole` with per-operation policies + service bypass | `_rls/` — Similar pattern | **Parity** |
-| **Seed Data** | infra-utils/seeds/ — 12 domain subdirectories + factories + scenarios + snapshot testing | `_seeds/` — Bootstrap data | **Current is SUPERIOR** |
+| **Wire Format Schemas** | wire/temporal.ts — `nullableOptional()`, `dateStringSchema`, `timestamptzWireSchema`, `isoDateWireString()`, `parseUnknownToEpochMs()` | `_shared/zodWire.ts` — Same patterns | **Parity** — Current already has this |
+| **Session Management** | pg-session/set-session-context.ts — **8 GUC params** (`tenant_id`, `user_id`, `actor_type`, `correlation_id`, `request_id`, `session_id`, `ip_address`, `user_agent`) | `_session/` — 2 params (`tenant_id`, `user_id`) | **Current is SUPERIOR** |
+| **RLS Policies** | rls-policies/tenant-policies.ts — `appUserRole` + `serviceRole` with per-operation policies + service bypass | `_rls/` — Similar pattern | **Parity** |
+| **Seed Data** | seeds/ — 12 domain subdirectories + factories + scenarios + snapshot testing | `_seeds/` — Bootstrap data | **Current is SUPERIOR** |
 | **Graph Validation** | graph-validation/ — FK catalog, health scoring, orphan detection, tenant isolation, index remediation | Not present | **Current only** |
-| **Triggers** | triggers/ — `status-transitions.sql` | Custom SQL in migrations | **Parity** |
-| **Maintenance** | maintenance/ — Partitioning, retention plans, status triggers | Not present | **Current only** |
+| **Triggers** | truth-v1.sql + truth-compiler/sql primitives & supplement | Custom SQL in migrations | **Parity** |
+| **Day 2 ops scripts** | data-lifecycle/ (partition, retention, audit); generated truth SQL bundle | Not present | **Current only** |
 | **Archival** | archival/ — R2 integration for long-term storage | Not present | **Current only** |
 | **Truth Compiler** | truth-compiler/ — Business truth validation | Not present | **Current only** |
 | **Meta-Types** | meta-types — 14 domain directories: schema, rbac, compiler, policy, audit, events, graph, mesh, workflow, platform | Not mentioned | **Current only** |
@@ -97,7 +97,7 @@ This supports requirements that the legacy can't:
 
 ### Advantage C: Operational Maturity
 
-`graph-validation/`, `maintenance/`, `archival/` — these represent **Day 2 operations** readiness. The legacy has none of this. In enterprise deployments, Day 2 ops (monitoring, data lifecycle, archival) matter more than Day 1 schema design.
+`graph-validation/`, `data-lifecycle/`, generated truth SQL (`migrations/generated/truth-v1.sql`), `archival/` — these represent **Day 2 operations** readiness. The legacy has none of this. In enterprise deployments, Day 2 ops (monitoring, data lifecycle, archival) matter more than Day 1 schema design.
 
 ---
 
@@ -195,7 +195,7 @@ Grounded in **impact × effort** and enterprise architecture maturity models:
 | **Schema Modularity** | ⭐⭐ (9 domains but monolithic files within) | ⭐⭐⭐⭐⭐ (6 HRM subdomains with subdirectories) | DDD Bounded Contexts → separate schemas |
 | **Type Safety** | ⭐⭐⭐⭐⭐ (Drizzle + branded IDs + Zod + meta-types) | ⭐⭐⭐⭐⭐ (Drizzle + branded IDs + Zod) | TypeScript-first with branded types |
 | **Defense in Depth** | ⭐⭐ (Zod at API, no CHECK constraints) | ⭐⭐⭐⭐ (Zod + CHECK + composite FKs) | Zod + CHECK + composite FKs + RLS |
-| **Day 2 Ops** | ⭐⭐⭐⭐⭐ (graph-validation, maintenance, archival) | ⭐ (tests only) | Monitoring + archival + retention + health scoring |
+| **Day 2 Ops** | ⭐⭐⭐⭐⭐ (graph-validation, data-lifecycle, triggers SQL, archival) | ⭐ (tests only) | Monitoring + archival + retention + health scoring |
 | **Metadata Architecture** | ⭐⭐⭐⭐⭐ (Truth Graph, Event Mesh, Workflow Engine) | ⭐ (standard schema-first) | Declarative metadata-driven |
 | **Governance Docs** | ⭐ (none) | ⭐⭐⭐⭐ (lockdown, circular FKs, ADRs) | Living docs co-located with code |
 | **Query Reuse** | ⭐⭐ (inline queries) | ⭐⭐⭐⭐ (_queries/ layer) | Repository pattern for shared queries |

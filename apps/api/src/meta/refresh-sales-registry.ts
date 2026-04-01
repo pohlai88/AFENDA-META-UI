@@ -21,6 +21,7 @@ import {
   subscriptionLines,
   subscriptions,
   territories,
+  territoryResolutions,
   territoryRules,
 } from "../db/schema/index.js";
 import { upsertSchema } from "./registry.js";
@@ -36,6 +37,7 @@ const SALES_MODELS: Record<string, unknown> = {
   sales_team_member: salesTeamMembers,
   territory: territories,
   territory_rule: territoryRules,
+  territory_resolution: territoryResolutions,
   return_reason_code: returnReasonCodes,
   return_order: returnOrders,
   return_order_line: returnOrderLines,

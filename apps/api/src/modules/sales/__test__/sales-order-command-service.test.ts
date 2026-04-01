@@ -10,6 +10,7 @@ const {
   upsertProjectionCheckpointMock,
   queueSelect,
   setUpdateResult,
+  runOrderConfirmationPipelineMock,
 } = vi.hoisted(() => {
   process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/afenda_test";
 
@@ -57,10 +58,22 @@ const {
     setUpdateResult: (rows: unknown[]) => {
       updateResult = rows;
     },
+    runOrderConfirmationPipelineMock: vi.fn(async () => ({
+      status: "confirmed" as const,
+      stagesExecuted: ["precheck", "truth_confirm", "post_confirm"] as const,
+    })),
   };
 });
 
 void ensureTestEnv;
+
+vi.mock("@afenda/db/queries/sales", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("@afenda/db/queries/sales")>();
+  return {
+    ...orig,
+    runOrderConfirmationPipeline: runOrderConfirmationPipelineMock,
+  };
+});
 
 vi.mock("../../../db/index.js", () => ({
   db: {
@@ -164,11 +177,22 @@ beforeEach(() => {
   setUpdateResult([]);
   getProjectionCheckpointMock.mockReturnValue(null);
   dbGetAggregateEventsMock.mockResolvedValue([]);
+  runOrderConfirmationPipelineMock.mockResolvedValue({
+    status: "confirmed",
+    stagesExecuted: ["precheck", "truth_confirm", "post_confirm"],
+  });
 });
 
 describe("sales-order command service", () => {
   it("confirms a sales order through event-only append and projection persistence", async () => {
-    queueSelect([baseOrder], [baseLine], [basePartner], [baseOrder]);
+    const orderAfterPipeline = { ...baseOrder, status: "sale" as const };
+    queueSelect(
+      [baseOrder],
+      [baseLine],
+      [basePartner],
+      [orderAfterPipeline],
+      [orderAfterPipeline]
+    );
     setUpdateResult([
       {
         ...baseOrder,
@@ -188,6 +212,17 @@ describe("sales-order command service", () => {
     expect(result.mutationPolicy).toBe("event-only");
     expect(result.event?.eventType).toBe("sales_order.confirmed");
     expect(result.creditCheck.approved).toBe(true);
+    expect(runOrderConfirmationPipelineMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenantId: 7,
+        orderId: "order-1",
+        actorUserId: 99,
+        truthOverrides: expect.objectContaining({
+          creditCommitSnapshot: expect.objectContaining({ checkPassed: true }),
+        }),
+      })
+    );
     expect(dbAppendEventMock).toHaveBeenCalledWith(
       "sales_order",
       "order-1",
@@ -199,6 +234,11 @@ describe("sales-order command service", () => {
       expect.objectContaining({
         actor: "99",
         source: "api.sales.orders.confirm",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "confirm",
+          startTable: "sales_orders",
+        }),
       })
     );
     expect(updateMock).toHaveBeenCalledTimes(1);
@@ -214,6 +254,7 @@ describe("sales-order command service", () => {
         actorId: 99,
       })
     ).rejects.toBeInstanceOf(ConflictError);
+    expect(runOrderConfirmationPipelineMock).not.toHaveBeenCalled();
     expect(dbAppendEventMock).not.toHaveBeenCalled();
   });
 
@@ -237,6 +278,21 @@ describe("sales-order command service", () => {
     expect(result.order.status).toBe("cancel");
     expect(result.event?.eventType).toBe("sales_order.cancelled");
     expect(result.mutationPolicy).toBe("event-only");
+    expect(dbAppendEventMock).toHaveBeenCalledWith(
+      "sales_order",
+      "order-1",
+      "sales_order.cancelled",
+      expect.any(Object),
+      expect.objectContaining({
+        actor: "33",
+        source: "api.sales.orders.cancel",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "cancel",
+          startTable: "sales_orders",
+        }),
+      })
+    );
     expect(updateMock).toHaveBeenCalledTimes(1);
   });
 

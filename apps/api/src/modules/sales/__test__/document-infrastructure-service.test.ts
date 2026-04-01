@@ -262,15 +262,20 @@ describe("document infrastructure service", () => {
   });
 
   it("posts and reverses accounting entries", async () => {
+    queueSelect([]);
     queueInsert([
       {
         id: "posting-1",
         tenantId: 7,
+        truthBindingId: "00000000-0000-4000-8000-000000000201",
+        postingEntryType: "general",
         sourceDocumentType: "sales_order",
         sourceDocumentId: "00000000-0000-4000-8000-000000000106",
         amount: "1200.00",
         currencyCode: "USD",
         postingStatus: "posted",
+        debitAccountCode: "4000",
+        creditAccountCode: "1100",
       },
     ]);
 
@@ -279,6 +284,9 @@ describe("document infrastructure service", () => {
       actorId: 88,
       sourceDocumentType: "sales_order",
       sourceDocumentId: "00000000-0000-4000-8000-000000000106",
+      truthBindingId: "00000000-0000-4000-8000-000000000201",
+      debitAccountCode: "4000",
+      creditAccountCode: "1100",
       amount: "1200.00",
       currencyCode: "USD",
     });
@@ -289,6 +297,8 @@ describe("document infrastructure service", () => {
       {
         id: "posting-1",
         tenantId: 7,
+        truthBindingId: "00000000-0000-4000-8000-000000000201",
+        postingEntryType: "general",
         sourceDocumentType: "sales_order",
         sourceDocumentId: "00000000-0000-4000-8000-000000000106",
         amount: "1200.00",
@@ -304,11 +314,15 @@ describe("document infrastructure service", () => {
       {
         id: "posting-rev-1",
         tenantId: 7,
+        truthBindingId: "00000000-0000-4000-8000-000000000201",
+        postingEntryType: "general_reversal",
         sourceDocumentType: "sales_order",
         sourceDocumentId: "00000000-0000-4000-8000-000000000106",
         amount: "1200.00",
         currencyCode: "USD",
         postingStatus: "posted",
+        debitAccountCode: "1100",
+        creditAccountCode: "4000",
       },
     ]);
     setUpdateResult([

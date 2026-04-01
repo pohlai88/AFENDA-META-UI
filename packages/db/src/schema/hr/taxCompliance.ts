@@ -23,13 +23,14 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -75,7 +76,7 @@ export const taxExemptionCategories = hrSchema.table(
     requiresProof: boolean("requires_proof").notNull().default(true),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -115,7 +116,7 @@ export const taxExemptionSubCategories = hrSchema.table(
     maxExemption: numeric("max_exemption", { precision: 15, scale: 2 }),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -169,7 +170,7 @@ export const employeeTaxDeclarations = hrSchema.table(
     verifiedDate: timestamp("verified_date", { withTimezone: true }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -256,7 +257,7 @@ export const taxDeclarationItems = hrSchema.table(
     proofDocumentUrl: text("proof_document_url"),
     verificationNotes: text("verification_notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -310,7 +311,7 @@ export const taxExemptionProofs = hrSchema.table(
     verifiedDate: timestamp("verified_date", { withTimezone: true }),
     verificationNotes: text("verification_notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

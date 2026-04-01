@@ -1,4 +1,5 @@
 import { requireMutationPolicyById } from "@afenda/db";
+import { formatDateOnlyUtc } from "@afenda/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
@@ -25,6 +26,10 @@ import {
   type PayCommissionEntriesResult,
   type RemoveCommissionEntryResult,
 } from "./commission-service.js";
+import {
+  buildSalesTruthImpactEventMetadata,
+  type SalesTruthImpactEventMetadata,
+} from "./logic/truth-graph-engine.js";
 
 type CommissionEntryRecord = typeof commissionEntries.$inferSelect;
 type CommissionEntryEvent = NonNullable<
@@ -142,6 +147,10 @@ export async function generateCommissionForOrderCommand(
     recordId: prepared.persistence === "updated" ? prepared.existingEntry?.id : undefined,
     actorId: String(input.actorId),
     source: input.source ?? "api.sales.commissions.generate",
+    eventMetadata: buildSalesTruthImpactEventMetadata(
+      "commission_entries",
+      operation === "create" ? "generate.create" : "generate.update"
+    ),
     policies: [COMMISSION_ENTRY_GENERATION_POLICY],
     mutate: async () => {
       serviceResult = await persistPreparedCommissionGeneration(prepared);
@@ -180,6 +189,7 @@ export async function approveCommissionEntryCommand(
     entryId: input.entryId,
     actorId: input.actorId,
     source: input.source ?? "api.sales.commissions.approve.single",
+    truthOperation: "approve.single",
     nextEntry: {
       ...existing,
       status: "approved",
@@ -227,16 +237,18 @@ export async function payCommissionEntryCommand(
   }
 
   const paidDate = input.paidDate ?? new Date();
+  const paidDateStr = formatDateOnlyUtc(paidDate);
   let serviceResult: PayCommissionEntriesResult | undefined;
   const commandResult = await executeCommissionEntryCommand({
     tenantId: input.tenantId,
     entryId: input.entryId,
     actorId: input.actorId,
     source: input.source ?? "api.sales.commissions.pay.single",
+    truthOperation: "pay.single",
     nextEntry: {
       ...existing,
       status: "paid",
-      paidDate,
+      paidDate: paidDateStr,
       updatedBy: input.actorId,
     },
     persistProjection: async () => {
@@ -272,6 +284,7 @@ export async function removeCommissionEntryCommand(
     recordId: input.entryId,
     actorId: String(input.actorId),
     source: input.source ?? "api.sales.commissions.delete.single",
+    eventMetadata: buildSalesTruthImpactEventMetadata("commission_entries", "delete"),
     policies: [COMMISSION_ENTRY_EVENT_ONLY_POLICY],
     mutate: async () => null,
     loadProjectionState: async () =>
@@ -335,6 +348,7 @@ export async function approveCommissionEntriesCommand(
       entryId: entry.id,
       actorId: input.actorId,
       source: input.source ?? "api.sales.commissions.approve.bulk",
+      truthOperation: "approve.bulk",
       nextEntry: {
         ...entry,
         status: "approved",
@@ -391,6 +405,7 @@ export async function payCommissionEntriesCommand(
   }
 
   const paidDate = input.paidDate ?? new Date();
+  const paidDateStr = formatDateOnlyUtc(paidDate);
   const updatedEntries: CommissionEntryRecord[] = [];
   const events: CommissionEntryEvent[] = [];
   let unchangedCount = 0;
@@ -407,10 +422,11 @@ export async function payCommissionEntriesCommand(
       entryId: entry.id,
       actorId: input.actorId,
       source: input.source ?? "api.sales.commissions.pay.bulk",
+      truthOperation: "pay.bulk",
       nextEntry: {
         ...entry,
         status: "paid",
-        paidDate,
+        paidDate: paidDateStr,
         updatedBy: input.actorId,
       },
       persistProjection: async () => {
@@ -448,8 +464,10 @@ async function executeCommissionEntryCommand(input: {
   entryId: string;
   actorId: number;
   source: string;
+  truthOperation: string;
   nextEntry: CommissionEntryRecord;
   persistProjection: () => Promise<void>;
+  eventMetadata?: SalesTruthImpactEventMetadata;
 }): Promise<ExecuteMutationCommandResult<CommissionEntryRecord>> {
   return executeCommandRuntime({
     model: "commission_entry",
@@ -457,6 +475,9 @@ async function executeCommissionEntryCommand(input: {
     recordId: input.entryId,
     actorId: String(input.actorId),
     source: input.source,
+    eventMetadata:
+      input.eventMetadata ??
+      buildSalesTruthImpactEventMetadata("commission_entries", input.truthOperation),
     policies: [COMMISSION_ENTRY_EVENT_ONLY_POLICY],
     nextRecord: input.nextEntry,
     mutate: async () => input.nextEntry,

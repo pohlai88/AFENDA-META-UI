@@ -6,7 +6,7 @@
  */
 
 import { sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { GraphValidationDb } from "./db-types.js";
 import type { FkRelationship } from "./fk-catalog.js";
 
 export interface MissingIndexResult {
@@ -30,10 +30,6 @@ export interface MissingIndexDetectionResults {
   allResults: MissingIndexResult[];
 }
 
-function qualifyTableName(tableName: string): string {
-  return tableName.includes(".") ? tableName : `sales.${tableName}`;
-}
-
 function generateIndexName(tableName: string, columnName: string): string {
   // Convention: idx_{tablename}_{columnname}
   const baseTableName = tableName.includes(".") ? tableName.split(".")[1] : tableName;
@@ -44,7 +40,7 @@ function generateIndexName(tableName: string, columnName: string): string {
  * Check if a column already has an index
  */
 async function columnHasIndex(
-  db: PostgresJsDatabase<any>,
+  db: GraphValidationDb,
   schema: string,
   table: string,
   column: string
@@ -67,7 +63,7 @@ async function columnHasIndex(
  * Detect missing indexes on FK columns
  */
 export async function detectMissingFkIndexes(
-  db: PostgresJsDatabase<any>,
+  db: GraphValidationDb,
   relationships: FkRelationship[],
   tier?: "P0" | "P1" | "P2" | "P3"
 ): Promise<MissingIndexDetectionResults> {
@@ -130,7 +126,7 @@ export function generateCreateIndexSQL(result: MissingIndexResult): string {
 /**
  * Generate complete remediation SQL script with all suggested indexes
  */
-export function generateRemediationScript(results: MissingIndexResult[], dryRun = true): string {
+export function generateRemediationScript(results: MissingIndexResult[], _dryRun = true): string {
   const missingIndexes = results.filter((r) => !r.hasIndex);
 
   if (missingIndexes.length === 0) {

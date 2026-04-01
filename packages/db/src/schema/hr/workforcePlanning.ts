@@ -22,13 +22,14 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -83,7 +84,7 @@ export const staffingPlans = hrSchema.table(
     approvedDate: timestamp("approved_date", { withTimezone: true }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -179,7 +180,7 @@ export const staffingPlanDetails = hrSchema.table(
     justification: text("justification"),
     priority: integer("priority").notNull().default(5),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

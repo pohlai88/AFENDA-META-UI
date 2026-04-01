@@ -42,6 +42,16 @@ export async function get${S}ByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as get${S}ByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function get${S}ByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+  id: (typeof ${symbol}.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return get${S}ByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function list${S}Active(
   db: Database,
@@ -53,12 +63,28 @@ export async function list${S}Active(
     .where(and(eq(${symbol}.tenantId, tenantId), isNull(${symbol}.deletedAt)));
 }
 
+export async function list${S}ActiveGuarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return list${S}Active(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function list${S}All(
   db: Database,
   tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(${symbol}).where(eq(${symbol}.tenantId, tenantId));
+}
+
+export async function list${S}AllGuarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return list${S}All(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -71,6 +97,15 @@ export async function archive${S}(
     .update(${symbol})
     .set({ deletedAt: new Date() })
     .where(and(eq(${symbol}.tenantId, tenantId), eq(${symbol}.id, id)));
+}
+
+export async function archive${S}Guarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+  id: (typeof ${symbol}.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archive${S}(db, tenantId, id);
 }
 `);
   } else if (hasTenant && hasId) {
@@ -89,12 +124,29 @@ export async function get${S}ById(
   return rows[0] ?? null;
 }
 
+export async function get${S}ByIdGuarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+  id: (typeof ${symbol}.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return get${S}ById(db, tenantId, id);
+}
+
 /** List rows for tenant. */
 export async function list${S}(
   db: Database,
   tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(${symbol}).where(eq(${symbol}.tenantId, tenantId));
+}
+
+export async function list${S}Guarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return list${S}(db, tenantId);
 }
 `);
   } else if (hasTenant) {
@@ -105,6 +157,14 @@ export async function list${S}(
   tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(${symbol}).where(eq(${symbol}.tenantId, tenantId));
+}
+
+export async function list${S}Guarded(
+  db: Database,
+  tenantId: (typeof ${symbol}.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return list${S}(db, tenantId);
 }
 `);
   }
@@ -151,9 +211,11 @@ export {};
   return `// @generated
 // Full access scaffold — tools/ci-gate/db-access-layer (emit-full).
 // Human-owned reporting: use separate modules (not *.access.ts).
+// Drizzle: prefer db.select here; use relational Queries API (db.query) only in app/report modules — see queries/ARCHITECTURE.md.
 
 import { and, eq, isNull } from "drizzle-orm";
-import type { Database } from "../../db.js";
+import type { Database } from "../../drizzle/db.js";
+import { assertGraphGuardrailAllowsRead } from "../_shared/graph-guardrail.js";
 import {
   ${importList},
 } from "../../schema/${mod.domain}/${mod.basename}.js";

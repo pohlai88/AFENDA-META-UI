@@ -94,10 +94,12 @@ function compileConditionExpression(expr: ConditionExpression): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Compiles entity-scoped invariants into idempotent DROP + ADD CONSTRAINT segments.
+ * Compiles invariants into idempotent SQL segments.
  *
- * Non-entity-scoped invariants are stubbed as SQL comments pointing to Phase 3.7
- * cross-entity enforcement work.
+ * - **entity** scope → `ALTER TABLE … CHECK` (row-local).
+ * - **aggregate** / **cross_aggregate** / **global** → `CREATE OR REPLACE FUNCTION` +
+ *   `CREATE CONSTRAINT TRIGGER … DEFERRABLE INITIALLY DEFERRED` (statement-boundary).
+ *   Global scope adds an explicit note about cross-transaction limits in emitted SQL.
  */
 export function compileInvariants(model: NormalizedTruthModel): SqlSegment[] {
   const segments: SqlSegment[] = [];

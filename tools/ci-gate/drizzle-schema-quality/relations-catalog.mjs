@@ -1,5 +1,5 @@
 /**
- * Parse packages/db/src/schema/hr/_relations.ts hrRelations entries into physical FK edges.
+ * Parse *_relations.ts entries (`from`, `to`, `kind`, `fromField`, `toField`) into physical FK edges.
  */
 
 /**
@@ -36,8 +36,9 @@ export function parseHrRelationsCatalog(content, hrTableSqlSet) {
   /** @type {CatalogEdge[]} */
   const out = [];
 
+  // Optional trailing onDelete/onUpdate (security _relations parity with Drizzle); ignored for edge keys.
   const entryRe =
-    /\bfrom:\s*"([^"]+)"\s*,\s*to:\s*"([^"]+)"\s*,\s*kind:\s*"([^"]+)"\s*,\s*fromField:\s*"([^"]+)"\s*,\s*toField:\s*"([^"]+)"/g;
+    /\bfrom:\s*"([^"]+)"\s*,\s*to:\s*"([^"]+)"\s*,\s*kind:\s*"([^"]+)"\s*,\s*fromField:\s*"([^"]+)"\s*,\s*toField:\s*"([^"]+)"(?:\s*,\s*onDelete:\s*"([^"]+)")?(?:\s*,\s*onUpdate:\s*"([^"]+)")?/g;
 
   const seen = new Set();
   let m;

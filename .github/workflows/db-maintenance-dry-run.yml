@@ -6,7 +6,8 @@ on:
     - cron: "0 3 * * 1"
   pull_request:
     paths:
-      - "packages/db/src/_maintenance/**"
+      - "packages/db/src/data-lifecycle/**"
+      - "packages/db/migrations/**"
       - "packages/db/package.json"
       - "pnpm-lock.yaml"
 
@@ -39,13 +40,13 @@ jobs:
       - name: Prepare pnpm
         run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
 
-      - name: Get pnpm store directory
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: Configure pnpm store
+        run: pnpm config set store-dir ~/.pnpm-store
 
       - name: Cache pnpm store
         uses: actions/cache@v5
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
@@ -56,11 +57,19 @@ jobs:
       - name: Generate retention dry-run plan
         run: |
           mkdir -p .reports/db-maintenance
-          pnpm --filter @afenda/db ops:retention:plan | tee .reports/db-maintenance/retention-plan.txt
+          pnpm --filter @afenda/db data:lifecycle:retention:plan -- --tenant=1 --actor=1 | tee .reports/db-maintenance/retention-plan.txt
 
       - name: Generate partition dry-run plan
         run: |
-          pnpm --filter @afenda/db ops:partition:plan -- --years-ahead=3 | tee .reports/db-maintenance/partition-plan.txt
+          pnpm --filter @afenda/db data:lifecycle:partition:plan -- --years-ahead=3 | tee .reports/db-maintenance/partition-plan.txt
+
+      - name: Generate governance audit artifact
+        run: |
+          pnpm --filter @afenda/db data:lifecycle:audit:json -- --policy-id=sales-default --persist-audit=false > .reports/db-maintenance/data-lifecycle-audit.json
+
+      - name: Verify governance audit artifact gate
+        run: |
+          pnpm --filter @afenda/db data:lifecycle:audit:verify -- --artifact-path=.reports/db-maintenance/data-lifecycle-audit.json --min-score=85 --reject-legacy-contract --max-artifact-age-days=30
 
       - name: Upload maintenance plan artifacts
         uses: actions/upload-artifact@v4
@@ -76,5 +85,6 @@ jobs:
           echo "Generated plans:" >> $GITHUB_STEP_SUMMARY
           echo "- Retention plan" >> $GITHUB_STEP_SUMMARY
           echo "- Partition plan (3 years ahead)" >> $GITHUB_STEP_SUMMARY
+          echo "- Governance audit artifact + quality gate" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See artifact: db-maintenance-plans" >> $GITHUB_STEP_SUMMARY

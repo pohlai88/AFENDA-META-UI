@@ -1,4 +1,13 @@
-import { and, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import type { SalesTruthDocumentType } from "@afenda/db/schema/sales";
+import {
+  assertAccountingPostingAllowed,
+  resolveAccountingPostingTruth,
+  TruthPipelineBlockedError,
+} from "@afenda/db/queries/sales";
+
+/** Must match {@link ORDER_CONFIRMATION_POSTING_ENTRY_TYPE} in `@afenda/db` (confirmation pipeline stub). */
+const ORDER_CONFIRMATION_ACCRUAL_ENTRY_TYPE = "order_confirmation_accrual";
+import { and, desc, eq, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
 import {
@@ -14,7 +23,7 @@ import { recordDomainEvent } from "../../utils/audit-logs.js";
 export interface RecordDocumentStatusHistoryInput {
   tenantId: number;
   actorId: number;
-  documentType: string;
+  documentType: SalesTruthDocumentType;
   documentId: string;
   toStatus: string;
   fromStatus?: string | null;
@@ -30,7 +39,7 @@ export interface RecordDocumentStatusHistoryResult {
 export interface CreateDocumentApprovalRequestInput {
   tenantId: number;
   actorId: number;
-  documentType: string;
+  documentType: SalesTruthDocumentType;
   documentId: string;
   approvalLevel: number;
   approverUserId: number;
@@ -57,7 +66,7 @@ export interface ProcessDocumentApprovalResult {
 export interface RegisterDocumentAttachmentInput {
   tenantId: number;
   actorId: number;
-  documentType: string;
+  documentType: SalesTruthDocumentType;
   documentId: string;
   fileName: string;
   fileSize: number;
@@ -77,11 +86,18 @@ export interface RegisterDocumentAttachmentResult {
 export interface PostAccountingEntryInput {
   tenantId: number;
   actorId: number;
-  sourceDocumentType: string;
+  sourceDocumentType: SalesTruthDocumentType;
   sourceDocumentId: string;
+  /** Required for `posted` rows — enforced in DB and by the posting truth gate. */
+  truthBindingId: string;
+  /**
+   * Idempotency key with `truthBindingId` (partial unique index). Defaults to `general`.
+   * Retries with the same binding + type return the existing **posted** row.
+   */
+  postingEntryType?: string;
   postingDate?: Date;
-  debitAccountCode?: string;
-  creditAccountCode?: string;
+  debitAccountCode: string;
+  creditAccountCode: string;
   amount: string;
   currencyCode: string;
   journalEntryId?: string;
@@ -89,6 +105,8 @@ export interface PostAccountingEntryInput {
 
 export interface PostAccountingEntryResult {
   posting: typeof accountingPostings.$inferSelect;
+  /** True when a prior posted row was returned instead of inserting. */
+  idempotentReplay?: boolean;
 }
 
 export interface ReverseAccountingPostingInput {
@@ -214,6 +232,26 @@ export async function approveDocument(
 
   if (approval.status !== "pending") {
     throw new ValidationError("Only pending approval requests can be approved.");
+  }
+
+  const [blockedByLower] = await db
+    .select({ id: documentApprovals.id })
+    .from(documentApprovals)
+    .where(
+      and(
+        eq(documentApprovals.tenantId, input.tenantId),
+        eq(documentApprovals.documentType, approval.documentType),
+        eq(documentApprovals.documentId, approval.documentId),
+        lt(documentApprovals.approvalLevel, approval.approvalLevel),
+        ne(documentApprovals.status, "approved")
+      )
+    )
+    .limit(1);
+
+  if (blockedByLower) {
+    throw new ValidationError(
+      "Lower approval levels must be approved before this level can be approved."
+    );
   }
 
   const [updatedApproval] = await db
@@ -361,17 +399,53 @@ export async function postAccountingEntry(
   input: PostAccountingEntryInput
 ): Promise<PostAccountingEntryResult> {
   const postedAt = input.postingDate ?? new Date();
+  const postingEntryType = input.postingEntryType ?? "general";
+
+  try {
+    assertAccountingPostingAllowed(
+      resolveAccountingPostingTruth({
+        postingStatus: "posted",
+        truthBindingId: input.truthBindingId,
+        debitAccountCode: input.debitAccountCode,
+        creditAccountCode: input.creditAccountCode,
+      })
+    );
+  } catch (e) {
+    if (e instanceof TruthPipelineBlockedError) {
+      throw new ValidationError(e.message);
+    }
+    throw e;
+  }
+
+  const [existingPosted] = await db
+    .select()
+    .from(accountingPostings)
+    .where(
+      and(
+        eq(accountingPostings.tenantId, input.tenantId),
+        eq(accountingPostings.truthBindingId, input.truthBindingId),
+        eq(accountingPostings.postingEntryType, postingEntryType),
+        eq(accountingPostings.postingStatus, "posted")
+      )
+    )
+    .limit(1);
+
+  if (existingPosted) {
+    return { posting: existingPosted, idempotentReplay: true };
+  }
 
   const [posting] = await db
     .insert(accountingPostings)
     .values({
       tenantId: input.tenantId,
+      truthBindingId: input.truthBindingId,
+      postingEntryType,
       sourceDocumentType: input.sourceDocumentType,
       sourceDocumentId: input.sourceDocumentId,
       journalEntryId: input.journalEntryId ?? null,
       postingDate: postedAt,
-      debitAccountCode: input.debitAccountCode ?? null,
-      creditAccountCode: input.creditAccountCode ?? null,
+      debitAccountCode: input.debitAccountCode,
+      creditAccountCode: input.creditAccountCode,
       amount: input.amount,
       currencyCode: input.currencyCode,
       postingStatus: "posted",
@@ -419,10 +493,22 @@ export async function reverseAccountingPosting(
 
   const reversalAt = input.reversalDate ?? new Date();
 
+  if (posting.truthBindingId == null) {
+    throw new ValidationError("Cannot reverse a posting that is not anchored to a truth binding.");
+  }
+
+  const baseEntryType = posting.postingEntryType ?? "general";
+  const reversalEntryType =
+    baseEntryType === ORDER_CONFIRMATION_ACCRUAL_ENTRY_TYPE
+      ? `${ORDER_CONFIRMATION_ACCRUAL_ENTRY_TYPE}_reversal`
+      : `${baseEntryType}_reversal`;
+
   const [reversalPosting] = await db
     .insert(accountingPostings)
     .values({
       tenantId: input.tenantId,
+      truthBindingId: posting.truthBindingId,
+      postingEntryType: reversalEntryType,
       sourceDocumentType: posting.sourceDocumentType,
       sourceDocumentId: posting.sourceDocumentId,
       journalEntryId: posting.journalEntryId,

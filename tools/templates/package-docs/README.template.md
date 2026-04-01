@@ -42,6 +42,20 @@ Full barrel: `{{BARREL_PATH}}`.
 
 ---
 
+## Table inventory (schema modules)
+
+{{TABLE_INVENTORY_SUMMARY}}
+
+{{SCHEMA_BASIS_BREAKDOWN_TABLE}}
+
+**Legacy/new planning policy:** {{LEGACY_AND_NEW_TABLE_POLICY}}
+
+**Table change policy:**
+
+{{TABLE_CHANGE_POLICY_BULLETS}}
+
+---
+
 ## Feature guides
 
 {{FEATURE_SECTIONS}}

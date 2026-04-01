@@ -1,3 +1,8 @@
+import {
+  dateOnlyWireAsDateOptional,
+  instantWireAsDateOptional,
+} from "@afenda/db/wire";
+import { SalesTruthDocumentTypeSchema } from "@afenda/db/schema/sales";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 
@@ -61,8 +66,8 @@ const generateCommissionSchema = z.object({
   status: z.enum(["draft", "approved"]).optional(),
   notes: z.string().max(4000).nullable().optional(),
   replaceExisting: z.boolean().optional(),
-  periodStart: z.coerce.date().optional(),
-  periodEnd: z.coerce.date().optional(),
+  periodStart: dateOnlyWireAsDateOptional,
+  periodEnd: dateOnlyWireAsDateOptional,
   metricsOverrides: z
     .object({
       revenue: decimalLikeSchema.optional(),
@@ -78,20 +83,20 @@ const commissionEntryOperationSchema = z.object({
   entryId: z.uuid().optional(),
   id: z.uuid().optional(),
   salespersonId: z.int().positive().optional(),
-  periodStart: z.coerce.date().optional(),
-  periodEnd: z.coerce.date().optional(),
+  periodStart: dateOnlyWireAsDateOptional,
+  periodEnd: dateOnlyWireAsDateOptional,
 });
 
 const payCommissionEntriesSchema = commissionEntryOperationSchema.extend({
-  paidDate: z.coerce.date().optional(),
+  paidDate: dateOnlyWireAsDateOptional,
 });
 
 const commissionReportSchema = z.object({
   tenantId: z.int().positive().optional(),
   salespersonId: z.int().positive().optional(),
   status: z.enum(["draft", "approved", "paid"]).optional(),
-  periodStart: z.coerce.date().optional(),
-  periodEnd: z.coerce.date().optional(),
+  periodStart: dateOnlyWireAsDateOptional,
+  periodEnd: dateOnlyWireAsDateOptional,
   limit: z.int().positive().max(500).optional(),
   offset: z.int().nonnegative().optional(),
 });
@@ -118,7 +123,7 @@ const expireAgreementSchema = z.object({
   actorId: z.int().positive().optional(),
   agreementId: z.uuid().optional(),
   id: z.uuid().optional(),
-  evaluatedAt: z.coerce.date().optional(),
+  evaluatedAt: instantWireAsDateOptional,
 });
 
 const returnOperationSchema = z.object({
@@ -133,7 +138,7 @@ const approveReturnSchema = z.object({
   returnOrderId: z.uuid().optional(),
   id: z.uuid().optional(),
   actorId: z.int().positive().optional(),
-  approvedDate: z.coerce.date().optional(),
+  approvedDate: dateOnlyWireAsDateOptional,
 });
 
 const inspectReturnSchema = z.object({
@@ -158,7 +163,7 @@ const subscriptionOperationSchema = z.object({
 });
 
 const activateSubscriptionSchema = subscriptionOperationSchema.extend({
-  activationDate: z.coerce.date().optional(),
+  activationDate: dateOnlyWireAsDateOptional,
 });
 
 const pauseSubscriptionSchema = subscriptionOperationSchema.extend({
@@ -166,31 +171,31 @@ const pauseSubscriptionSchema = subscriptionOperationSchema.extend({
 });
 
 const resumeSubscriptionSchema = subscriptionOperationSchema.extend({
-  resumeDate: z.coerce.date().optional(),
+  resumeDate: dateOnlyWireAsDateOptional,
   paymentResolved: z.boolean().optional(),
   reason: z.string().max(2000).optional(),
 });
 
 const cancelSubscriptionSchema = subscriptionOperationSchema.extend({
   closeReasonId: z.uuid(),
-  cancelledAt: z.coerce.date().optional(),
+  cancelledAt: instantWireAsDateOptional,
   reason: z.string().max(2000).optional(),
 });
 
 const renewSubscriptionSchema = subscriptionOperationSchema.extend({
-  renewalDate: z.coerce.date().optional(),
+  renewalDate: dateOnlyWireAsDateOptional,
   reason: z.string().max(2000).optional(),
 });
 
 const documentStatusHistorySchema = z.object({
   tenantId: z.int().positive().optional(),
   actorId: z.int().positive().optional(),
-  documentType: z.string().min(1).max(100),
+  documentType: SalesTruthDocumentTypeSchema,
   documentId: z.uuid().optional(),
   id: z.uuid().optional(),
   fromStatus: z.string().max(100).nullable().optional(),
   toStatus: z.string().min(1).max(100),
-  transitionedAt: z.coerce.date().optional(),
+  transitionedAt: instantWireAsDateOptional,
   reason: z.string().max(2000).optional(),
   notes: z.string().max(4000).optional(),
 });
@@ -198,7 +203,7 @@ const documentStatusHistorySchema = z.object({
 const documentApprovalRequestSchema = z.object({
   tenantId: z.int().positive().optional(),
   actorId: z.int().positive().optional(),
-  documentType: z.string().min(1).max(100),
+  documentType: SalesTruthDocumentTypeSchema,
   documentId: z.uuid().optional(),
   id: z.uuid().optional(),
   approvalLevel: z.int().positive(),
@@ -219,7 +224,7 @@ const documentApprovalProcessSchema = z.object({
 const documentAttachmentSchema = z.object({
   tenantId: z.int().positive().optional(),
   actorId: z.int().positive().optional(),
-  documentType: z.string().min(1).max(100),
+  documentType: SalesTruthDocumentTypeSchema,
   documentId: z.uuid().optional(),
   id: z.uuid().optional(),
   fileName: z.string().min(1).max(260),
@@ -236,12 +241,13 @@ const documentAttachmentSchema = z.object({
 const postAccountingSchema = z.object({
   tenantId: z.int().positive().optional(),
   actorId: z.int().positive().optional(),
-  sourceDocumentType: z.string().min(1).max(100),
+  sourceDocumentType: SalesTruthDocumentTypeSchema,
   sourceDocumentId: z.uuid().optional(),
   id: z.uuid().optional(),
-  postingDate: z.coerce.date().optional(),
-  debitAccountCode: z.string().max(80).optional(),
-  creditAccountCode: z.string().max(80).optional(),
+  truthBindingId: z.uuid(),
+  postingDate: dateOnlyWireAsDateOptional,
+  debitAccountCode: z.string().min(1).max(80),
+  creditAccountCode: z.string().min(1).max(80),
   amount: decimalLikeSchema,
   currencyCode: z.string().length(3),
   journalEntryId: z.uuid().optional(),
@@ -252,7 +258,7 @@ const reversePostingSchema = z.object({
   actorId: z.int().positive().optional(),
   postingId: z.uuid().optional(),
   id: z.uuid().optional(),
-  reversalDate: z.coerce.date().optional(),
+  reversalDate: dateOnlyWireAsDateOptional,
   reversalReason: z.string().max(2000).optional(),
 });
 
@@ -261,7 +267,7 @@ const resolveRoundingPolicySchema = z.object({
   policyKey: z.string().min(1).max(120),
   appliesTo: z.string().min(1).max(120),
   currencyCode: z.string().length(3).optional(),
-  effectiveAt: z.coerce.date().optional(),
+  effectiveAt: instantWireAsDateOptional,
 });
 
 router.post(
@@ -2391,6 +2397,7 @@ router.post(
       actorId,
       sourceDocumentType: parsed.data.sourceDocumentType,
       sourceDocumentId,
+      truthBindingId: parsed.data.truthBindingId,
       postingDate: parsed.data.postingDate,
       debitAccountCode: parsed.data.debitAccountCode,
       creditAccountCode: parsed.data.creditAccountCode,
@@ -2439,6 +2446,7 @@ router.post(
       actorId,
       sourceDocumentType: parsed.data.sourceDocumentType,
       sourceDocumentId,
+      truthBindingId: parsed.data.truthBindingId,
       postingDate: parsed.data.postingDate,
       debitAccountCode: parsed.data.debitAccountCode,
       creditAccountCode: parsed.data.creditAccountCode,

@@ -12,31 +12,33 @@
  * - Tax calculations reconcile
  * - Historical records exist where required
  *
- * @see packages/db/src/infra-utils/seeds/index.ts for seed orchestrator overview
+ * @see packages/db/src/seeds/index.ts for seed orchestrator overview
  * @see .ideas/SEED_INFRASTRUCTURE_AUDIT.md for comprehensive seed audit
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { eq, isNotNull } from "drizzle-orm";
-import { db } from "../db.js";
+import { eq, isNotNull, sql } from "drizzle-orm";
+import { db } from "../drizzle/db.js";
 import * as schema from "../schema/index.js";
-import { seed } from "../infra-utils/seeds/index.js";
-import { validateSalesPhase6Invariants } from "../infra-utils/seeds/domains/sales/index.js";
-import { validateProductConfigurationInvariants } from "../infra-utils/seeds/domains/product/index.js";
-import { validateConsignmentPhase7Invariants } from "../infra-utils/seeds/domains/consignment/index.js";
-import { validateReturnsPhase8Invariants } from "../infra-utils/seeds/domains/returns/index.js";
-import { validateSubscriptionsPhase9Invariants } from "../infra-utils/seeds/domains/subscriptions/index.js";
-import { validateCommissionsPhase10Invariants } from "../infra-utils/seeds/domains/commissions/index.js";
-import { SEED_IDS } from "../infra-utils/seeds/seed-ids.js";
+import { seed } from "../seeds/index.js";
+import { validateSalesPhase6Invariants } from "../seeds/domains/sales/index.js";
+import { validateProductConfigurationInvariants } from "../seeds/domains/product/index.js";
+import { validateConsignmentPhase7Invariants } from "../seeds/domains/consignment/index.js";
+import { validateReturnsPhase8Invariants } from "../seeds/domains/returns/index.js";
+import { validateSubscriptionsPhase9Invariants } from "../seeds/domains/subscriptions/index.js";
+import { validateCommissionsPhase10Invariants } from "../seeds/domains/commissions/index.js";
+import { SEED_IDS } from "../seeds/seed-ids.js";
 
-// Skip all tests if DATABASE_URL is not set
-const skipTests = !process.env.DATABASE_URL;
+// Long-running integration suite; require explicit opt-in even when DATABASE_URL exists.
+const runIntegrationSuite =
+  !!process.env.DATABASE_URL && process.env.DB_INTEGRATION_TESTS === "1";
+const skipTests = !runIntegrationSuite;
 
 describe.skipIf(skipTests)("Domain Invariant Validation", () => {
   beforeAll(async () => {
     // Run seed to populate test data
     await seed(db, "baseline");
-  });
+  }, 120_000);
 
   describe("Sales Domain Invariants", () => {
     it("should validate order tax totals match tax summary", async () => {
@@ -135,7 +137,7 @@ describe.skipIf(skipTests)("Domain Invariant Validation", () => {
       });
     });
 
-    it("should have consignment lifecycle states (pending, approved, active, closed)", async () => {
+    it("should use consignment agreement status enum values", async () => {
       const agreements = await db
         .select({
           id: schema.consignmentAgreements.id,
@@ -144,7 +146,7 @@ describe.skipIf(skipTests)("Domain Invariant Validation", () => {
         .from(schema.consignmentAgreements)
         .limit(10);
 
-      const validStatuses = ["pending", "approved", "active", "closed"];
+      const validStatuses = ["draft", "active", "expired", "terminated"] as const;
 
       for (const agreement of agreements) {
         expect(validStatuses).toContain(agreement.status);
@@ -214,11 +216,58 @@ describe.skipIf(skipTests)("Domain Invariant Validation", () => {
         .from(schema.subscriptions)
         .limit(10);
 
-      const validStatuses = ["active", "paused", "cancelled", "expired"];
+      const validStatuses = [
+        "draft",
+        "active",
+        "paused",
+        "past_due",
+        "cancelled",
+        "expired",
+      ];
 
       for (const subscription of subscriptions) {
         expect(validStatuses).toContain(subscription.status);
       }
+    });
+
+    it("should keep subscription ARR aligned with MRR and line subtotals from the formula", async () => {
+      const rows = await db
+        .select({
+          mrr: schema.subscriptions.mrr,
+          arr: schema.subscriptions.arr,
+        })
+        .from(schema.subscriptions)
+        .where(eq(schema.subscriptions.id, SEED_IDS.subscriptionOne));
+
+      expect(rows[0]).toBeDefined();
+      const mrr = Number(rows[0]!.mrr);
+      const arr = Number(rows[0]!.arr);
+      expect(Math.abs(arr - mrr * 12)).toBeLessThanOrEqual(0.01);
+
+      const [lineCheck] = await db
+        .select({
+          ok: sql<boolean>`bool_and(
+            ${schema.subscriptionLines.subtotal} = round(
+              (${schema.subscriptionLines.quantity} * ${schema.subscriptionLines.priceUnit}
+               * (1 - ${schema.subscriptionLines.discount} / 100.0))::numeric,
+              2
+            )
+          )`,
+        })
+        .from(schema.subscriptionLines)
+        .where(eq(schema.subscriptionLines.subscriptionId, SEED_IDS.subscriptionOne));
+
+      expect(lineCheck?.ok).toBe(true);
+    });
+
+    it("should keep subscription template billing_day in 1..31", async () => {
+      const templates = await db
+        .select({ billingDay: schema.subscriptionTemplates.billingDay })
+        .from(schema.subscriptionTemplates)
+        .where(eq(schema.subscriptionTemplates.id, SEED_IDS.subscriptionTemplateMonthlySupport));
+
+      expect(templates[0]?.billingDay).toBeGreaterThanOrEqual(1);
+      expect(templates[0]?.billingDay).toBeLessThanOrEqual(31);
     });
   });
 

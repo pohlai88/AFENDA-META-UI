@@ -40,6 +40,29 @@ const createMockRelationship = (overrides?: Partial<FkRelationship>): FkRelation
   ...overrides,
 });
 
+/** Simulates a row returned by `generateOrphanQuery` against Postgres. */
+function orphanDbRow(opts: {
+  childSchema?: string;
+  parentSchema?: string;
+  childTable: string;
+  parentTable: string;
+  fkColumn: string;
+  parentColumn?: string;
+  orphanCount: number;
+  sampleIds?: (string | number)[] | null;
+}) {
+  return {
+    child_table_schema: opts.childSchema ?? "sales",
+    parent_table_schema: opts.parentSchema ?? "sales",
+    child_table: opts.childTable,
+    parent_table: opts.parentTable,
+    fk_column: opts.fkColumn,
+    parent_column: opts.parentColumn ?? "id",
+    orphan_count: opts.orphanCount,
+    sample_ids: opts.sampleIds == null ? null : opts.sampleIds.map(String),
+  };
+}
+
 describe("Orphan Detection", () => {
   let mockDb: ReturnType<typeof createMockDb>;
 
@@ -70,24 +93,24 @@ describe("Orphan Detection", () => {
       mockDb._executeMock
         .mockResolvedValueOnce({
           rows: [
-            {
-              child_table: "sales_order_lines",
-              parent_table: "sales_orders",
-              fk_column: "order_id",
-              orphan_count: 150,
-              sample_ids: [1, 2, 3],
-            },
+            orphanDbRow({
+              childTable: "sales_order_lines",
+              parentTable: "sales_orders",
+              fkColumn: "order_id",
+              orphanCount: 150,
+              sampleIds: [1, 2, 3],
+            }),
           ],
         })
         .mockResolvedValueOnce({
           rows: [
-            {
-              child_table: "partners",
-              parent_table: "countries",
-              fk_column: "country_id",
-              orphan_count: 45,
-              sample_ids: [10, 11],
-            },
+            orphanDbRow({
+              childTable: "partners",
+              parentTable: "countries",
+              fkColumn: "country_id",
+              orphanCount: 45,
+              sampleIds: [10, 11],
+            }),
           ],
         })
         .mockResolvedValueOnce({ rows: [] });
@@ -110,13 +133,13 @@ describe("Orphan Detection", () => {
 
       mockDb._executeMock.mockResolvedValueOnce({
         rows: [
-          {
-            child_table: "sales_order_lines",
-            parent_table: "sales_orders",
-            fk_column: "order_id",
-            orphan_count: 10,
-            sample_ids: [1],
-          },
+          orphanDbRow({
+            childTable: "sales_order_lines",
+            parentTable: "sales_orders",
+            fkColumn: "order_id",
+            orphanCount: 10,
+            sampleIds: [1],
+          }),
         ],
       });
 
@@ -128,42 +151,12 @@ describe("Orphan Detection", () => {
       expect(result.byPriority.P1).toHaveLength(0);
     });
 
-    it("continues processing when one query errors", async () => {
-      const relationships: FkRelationship[] = [
-        createMockRelationship({ constraintName: "fk_1" }),
-        createMockRelationship({ constraintName: "fk_2" }),
-        createMockRelationship({ constraintName: "fk_3" }),
-      ];
+    it("fails when a query errors (fail-closed; no silent skip)", async () => {
+      const relationships: FkRelationship[] = [createMockRelationship({ constraintName: "fk_1" })];
+      mockDb._executeMock.mockRejectedValueOnce(new Error("Query timeout"));
 
-      mockDb._executeMock
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              child_table: "sales_order_lines",
-              parent_table: "sales_orders",
-              fk_column: "order_id",
-              orphan_count: 10,
-              sample_ids: [],
-            },
-          ],
-        })
-        .mockRejectedValueOnce(new Error("Query timeout"))
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              child_table: "sales_order_lines",
-              parent_table: "sales_orders",
-              fk_column: "order_id",
-              orphan_count: 20,
-              sample_ids: [],
-            },
-          ],
-        });
-
-      const result = await detectAllOrphans(mockDb, relationships);
-
-      expect(result.total).toBe(30);
-      expect(mockDb._executeMock).toHaveBeenCalledTimes(3);
+      await expect(detectAllOrphans(mockDb, relationships)).rejects.toThrow(/Orphan detection failed/);
+      expect(mockDb._executeMock).toHaveBeenCalledTimes(1);
     });
 
     it("defaults sampleIds to empty array when database returns null sample_ids", async () => {
@@ -171,13 +164,13 @@ describe("Orphan Detection", () => {
 
       mockDb._executeMock.mockResolvedValueOnce({
         rows: [
-          {
-            child_table: "sales_order_lines",
-            parent_table: "sales_orders",
-            fk_column: "order_id",
-            orphan_count: 5,
-            sample_ids: null,
-          },
+          orphanDbRow({
+            childTable: "sales_order_lines",
+            parentTable: "sales_orders",
+            fkColumn: "order_id",
+            orphanCount: 5,
+            sampleIds: null,
+          }),
         ],
       });
 
@@ -195,13 +188,14 @@ describe("Orphan Detection", () => {
 
       mockDb._executeMock.mockResolvedValueOnce({
         rows: [
-          {
-            child_table: "unmapped_child",
-            parent_table: "unmapped_parent",
-            fk_column: "unmapped_fk",
-            orphan_count: 7,
-            sample_ids: [1],
-          },
+          orphanDbRow({
+            childTable: "unmapped_child",
+            parentTable: "unmapped_parent",
+            fkColumn: "unmapped_fk",
+            parentColumn: "id",
+            orphanCount: 7,
+            sampleIds: [1],
+          }),
         ],
       });
 
@@ -253,46 +247,47 @@ describe("Orphan Detection", () => {
       mockDb._executeMock
         .mockResolvedValueOnce({
           rows: [
-            {
-              child_table: "sales_order_lines",
-              parent_table: "sales_orders",
-              fk_column: "order_id",
-              orphan_count: 14,
-              sample_ids: [1, 2],
-            },
+            orphanDbRow({
+              childTable: "sales_order_lines",
+              parentTable: "sales_orders",
+              fkColumn: "order_id",
+              orphanCount: 14,
+              sampleIds: [1, 2],
+            }),
           ],
         })
         .mockResolvedValueOnce({
           rows: [
-            {
-              child_table: "partners_history",
-              parent_table: "partners",
-              fk_column: "partner_id",
-              orphan_count: 50,
-              sample_ids: [10, 11],
-            },
+            orphanDbRow({
+              childTable: "partners_history",
+              parentTable: "partners",
+              fkColumn: "partner_id",
+              orphanCount: 50,
+              sampleIds: [10, 11],
+            }),
           ],
         })
         .mockResolvedValueOnce({
           rows: [
-            {
-              child_table: "tax_assignments",
-              parent_table: "tax_codes",
-              fk_column: "tax_code",
-              orphan_count: 1200,
-              sample_ids: [100, 101],
-            },
+            orphanDbRow({
+              childTable: "tax_assignments",
+              parentTable: "tax_codes",
+              fkColumn: "tax_code",
+              orphanCount: 1200,
+              sampleIds: [100, 101],
+            }),
           ],
         })
         .mockResolvedValueOnce({
           rows: [
-            {
-              child_table: "currency_rates",
-              parent_table: "currencies",
-              fk_column: "currency_code",
-              orphan_count: 500,
-              sample_ids: [200, 201],
-            },
+            orphanDbRow({
+              childTable: "currency_rates",
+              parentTable: "currencies",
+              fkColumn: "currency_code",
+              parentColumn: "code",
+              orphanCount: 500,
+              sampleIds: [200, 201],
+            }),
           ],
         });
 
@@ -308,86 +303,105 @@ describe("Orphan Detection", () => {
   });
 
   describe("generateCleanupSQL", () => {
+    const salesOrderLineOrphan = (): OrphanQueryResult => ({
+      childTableSchema: "sales",
+      childTableName: "sales_order_lines",
+      parentTableSchema: "sales",
+      parentTableName: "sales_orders",
+      childTable: "sales.sales_order_lines",
+      parentTable: "sales.sales_orders",
+      fkColumn: "order_id",
+      parentColumn: "id",
+      orphanCount: 150,
+      sampleIds: ["1001", "1002", "1003"],
+    });
+
     it("generates apply SQL for cleanup", () => {
-      const orphanResult: OrphanQueryResult = {
-        childTable: "sales_order_lines",
-        parentTable: "sales_orders",
-        fkColumn: "order_id",
-        orphanCount: 150,
-        sampleIds: ["1001", "1002", "1003"],
-      };
+      const orphanResult = salesOrderLineOrphan();
 
       const sql = generateCleanupSQL(orphanResult, false);
 
-      expect(sql).toContain("-- CLEANUP: Delete orphaned records from sales_order_lines");
-      expect(sql).toContain("DELETE FROM sales.sales_order_lines");
-      expect(sql).toContain("WHERE order_id NOT IN");
-      expect(sql).toContain("SELECT id FROM sales.sales_orders");
+      expect(sql).toContain("-- CLEANUP: Delete orphaned records from sales.sales_order_lines");
+      expect(sql).toContain("DELETE FROM sales.sales_order_lines c");
+      expect(sql).toContain("NOT EXISTS");
+      expect(sql).toContain("p.id = c.order_id");
       expect(sql).toContain("Expected to delete: 150 records");
     });
 
-    it("generates dry-run SQL with sample IDs", () => {
-      const orphanResult: OrphanQueryResult = {
-        childTable: "sales_order_lines",
-        parentTable: "sales_orders",
-        fkColumn: "order_id",
-        orphanCount: 150,
-        sampleIds: ["1001", "1002", "1003"],
-      };
+    it("generates dry-run SQL with sample FK values", () => {
+      const orphanResult = salesOrderLineOrphan();
 
       const sql = generateCleanupSQL(orphanResult, true);
 
-      expect(sql).toContain("-- DRY RUN: Orphaned records in sales_order_lines (150 total)");
-      expect(sql).toContain("-- Sample IDs: 1001, 1002, 1003");
-      expect(sql).toContain("-- DELETE FROM sales.sales_order_lines");
-      expect(sql).toContain("--   SELECT id FROM sales.sales_orders");
+      expect(sql).toContain("-- DRY RUN: Orphaned records in sales.sales_order_lines (150 total)");
+      expect(sql).toContain("-- Sample FK values: 1001, 1002, 1003");
+      expect(sql).toContain("-- DELETE FROM sales.sales_order_lines c");
+      expect(sql).toContain("NOT EXISTS");
     });
 
-    it("supports schema-qualified table names", () => {
+    it("supports non-id parent keys", () => {
       const orphanResult: OrphanQueryResult = {
-        childTable: "sales.sales_order_lines",
-        parentTable: "sales.sales_orders",
-        fkColumn: "order_id",
+        childTableSchema: "sales",
+        childTableName: "currency_rates",
+        parentTableSchema: "sales",
+        parentTableName: "currencies",
+        childTable: "sales.currency_rates",
+        parentTable: "sales.currencies",
+        fkColumn: "currency_code",
+        parentColumn: "code",
         orphanCount: 10,
         sampleIds: [],
       };
 
       const sql = generateCleanupSQL(orphanResult, false);
 
-      expect(sql).toContain("DELETE FROM sales.sales_order_lines");
-      expect(sql).toContain("SELECT id FROM sales.sales_orders");
+      expect(sql).toContain("DELETE FROM sales.currency_rates c");
+      expect(sql).toContain("p.code = c.currency_code");
     });
   });
 
   describe("generateDeleteSQL", () => {
-    it("adds sales schema when table names are unqualified", () => {
+    it("uses NOT EXISTS with explicit schemas and parent key column", () => {
       const orphanResult: OrphanQueryResult = {
-        childTable: "sales_order_lines",
-        parentTable: "sales_orders",
-        fkColumn: "order_id",
-        orphanCount: 5,
-        sampleIds: [],
-      };
-
-      const sql = generateDeleteSQL(orphanResult);
-
-      expect(sql).toContain("DELETE FROM sales.sales_order_lines");
-      expect(sql).toContain("SELECT id FROM sales.sales_orders");
-    });
-
-    it("preserves schema-qualified table names", () => {
-      const orphanResult: OrphanQueryResult = {
+        childTableSchema: "sales",
+        childTableName: "sales_order_lines",
+        parentTableSchema: "sales",
+        parentTableName: "sales_orders",
         childTable: "sales.sales_order_lines",
         parentTable: "sales.sales_orders",
         fkColumn: "order_id",
+        parentColumn: "id",
         orphanCount: 5,
         sampleIds: [],
       };
 
       const sql = generateDeleteSQL(orphanResult);
 
-      expect(sql).toContain("DELETE FROM sales.sales_order_lines");
-      expect(sql).toContain("SELECT id FROM sales.sales_orders");
+      expect(sql).toContain("DELETE FROM sales.sales_order_lines c");
+      expect(sql).toContain("FROM sales.sales_orders p");
+      expect(sql).toContain("NOT EXISTS");
+      expect(sql).toContain("p.id = c.order_id");
+    });
+
+    it("supports cross-schema FK cleanup SQL", () => {
+      const orphanResult: OrphanQueryResult = {
+        childTableSchema: "hr",
+        childTableName: "employees",
+        parentTableSchema: "core",
+        parentTableName: "tenants",
+        childTable: "hr.employees",
+        parentTable: "core.tenants",
+        fkColumn: "tenant_id",
+        parentColumn: "id",
+        orphanCount: 5,
+        sampleIds: [],
+      };
+
+      const sql = generateDeleteSQL(orphanResult);
+
+      expect(sql).toContain("DELETE FROM hr.employees c");
+      expect(sql).toContain("FROM core.tenants p");
+      expect(sql).toContain("p.id = c.tenant_id");
     });
   });
 });

@@ -27,7 +27,7 @@
     },
     "RELATIONS_DRIFT": {
       "severity": "error",
-      "description": "HR hrRelations catalog vs extracted HR foreignKey edges"
+      "description": "Domain relations catalog vs extracted foreignKey edges (HR, Sales, Security)"
     },
     "ZOD_PARITY": {
       "severity": "warn",

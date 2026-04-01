@@ -19,13 +19,14 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -84,7 +85,7 @@ export const hrExpenseCategories = hrSchema.table(
     accountCode: text("account_code"), // GL integration
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -126,7 +127,7 @@ export const expensePolicies = hrSchema.table(
     policyVersion: text("policy_version").notNull().default("1.0"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -175,7 +176,7 @@ export const expenseClaims = hrSchema.table(
     rejectionReason: text("rejection_reason"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -246,7 +247,7 @@ export const expenseReports = hrSchema.table(
     paymentReference: text("payment_reference"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -313,7 +314,7 @@ export const cashAdvances = hrSchema.table(
     settlementReportId: uuid("settlement_report_id"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -377,7 +378,7 @@ export const hrExpenseLines = hrSchema.table(
     accountingMap: jsonb("accounting_map").$type<Record<string, unknown>>(),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -439,7 +440,7 @@ export const expenseApprovals = hrSchema.table(
     comments: text("comments"),
     actionDate: timestamp("action_date"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

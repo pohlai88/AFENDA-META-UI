@@ -17,3 +17,4 @@ export * from "./schema-compiler.js";
 export * from "./types.js";
 export * from "./mutation-policy-runtime.js";
 export * from "./graph-constants.js";
+export { buildOrderedSqlSegments } from "./compile-pipeline.js";

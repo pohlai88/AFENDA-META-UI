@@ -17,16 +17,17 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   appendOnlyTimestampColumns,
   auditColumns,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { dateOnlyWire } from "../../wire/temporal.js";
 import { applicationStorageKeySchema } from "../../r2/objectKey.js";
 import { tenants } from "../core/tenants.js";
-import { users } from "../security/users.js";
+import { users } from "../security/index.js";
 
 export const referenceSchema = pgSchema("reference");
 
@@ -173,7 +174,7 @@ export const countries = referenceSchema.table(
     vatLabel: text("vat_label"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_countries_name").on(table.name),
@@ -192,7 +193,7 @@ export const states = referenceSchema.table(
     name: text("name").notNull(),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_states_country").on(table.countryId, table.name),
@@ -221,7 +222,7 @@ export const currencies = referenceSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_currencies_active").on(table.isActive, table.code),
@@ -246,7 +247,7 @@ export const currencyRates = referenceSchema.table(
     effectiveDate: text("effective_date").notNull(),
     source: text("source"),
     ...appendOnlyTimestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_currency_rates_date").on(table.currencyId, table.effectiveDate),
@@ -275,7 +276,7 @@ export const banks = referenceSchema.table(
     countryId: integer("country_id"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_banks_country").on(table.countryId, table.name),
@@ -306,7 +307,7 @@ export const sequences = referenceSchema.table(
     resetPeriod: sequenceResetPeriodEnum("reset_period").notNull().default("never"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_sequences_tenant").on(table.tenantId, table.code),
@@ -335,7 +336,7 @@ export const uomCategories = referenceSchema.table(
     name: text("name").notNull(),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     uniqueIndex("uq_reference_uom_categories_name")
@@ -355,7 +356,7 @@ export const unitsOfMeasure = referenceSchema.table(
     rounding: numeric("rounding", { precision: 14, scale: 6 }).notNull().default("0.0001"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("idx_reference_uoms_category").on(table.categoryId, table.name),
@@ -942,7 +943,7 @@ export const currencyRateInsertSchema = createInsertSchema(currencyRates, {
   currencyId: z.number().int().positive(),
   rate: z.string().regex(/^\d+(\.\d+)?$/),
   inverseRate: z.string().regex(/^\d+(\.\d+)?$/),
-  effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  effectiveDate: dateOnlyWire,
   source: z.string().max(120).optional().nullable(),
   createdBy: z.number().int().positive(),
   updatedBy: z.number().int().positive(),

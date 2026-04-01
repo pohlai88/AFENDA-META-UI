@@ -1,0 +1,6 @@
+{
+  "description": "Custom SQL entries that live outside Drizzle-generated migrations",
+  "version": 1,
+  "instructions": "When generating next migration, append SQL from entries with status 'pending' to the migration file, then update each entry to status 'applied' and record the migration filename.",
+  "entries": []
+}

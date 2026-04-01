@@ -488,14 +488,15 @@ export const userUpdateSchema = createUpdateSchema(users, {
 
 ### Tenant Context Pattern
 
-Use `withTenantContext` for automatic tenant filtering:
+Use `withTenantContext` for automatic tenant filtering (explicit `db`; sets Postgres GUCs then runs your callback in a transaction):
 
 ```typescript
-import { withTenantContext } from "@afenda/db/session";
+import { withTenantContext } from "@afenda/db/request-context";
+import { db } from "@afenda/db";
 
-// Tenant-aware query (automatic tenantId filter)
-const partners = await withTenantContext(ctx, (db) =>
-  db.select().from(partnersTable).where(eq(partnersTable.active, true))
+// Tenant-aware query (RLS applies inside the transaction)
+const partners = await withTenantContext(db, ctx, (tx) =>
+  tx.select().from(partnersTable).where(eq(partnersTable.active, true))
 );
 
 // Service bypass (no tenant filter)

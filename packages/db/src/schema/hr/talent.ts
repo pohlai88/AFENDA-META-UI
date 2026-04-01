@@ -20,13 +20,14 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -72,7 +73,7 @@ export const performanceReviewCycles = hrSchema.table(
     reviewDeadline: date("review_deadline", { mode: "string" }).notNull(),
     cycleStatus: performanceReviewCycleStatusEnum("cycle_status").notNull().default("draft"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -127,7 +128,7 @@ export const performanceReviews = hrSchema.table(
       .notNull()
       .default("not_started"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -198,7 +199,7 @@ export const goals = hrSchema.table(
     goalProgressUpdatedAt: timestamp("goal_progress_updated_at", { withTimezone: true }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -263,7 +264,7 @@ export const certifications = hrSchema.table(
     validityPeriodMonths: integer("validity_period_months"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -315,7 +316,7 @@ export const employeeCertifications = hrSchema.table(
     documentUrl: text("document_url"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

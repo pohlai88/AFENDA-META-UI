@@ -19,12 +19,13 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -94,7 +95,7 @@ export const employeePromotions = hrSchema.table(
     approvedDate: timestamp("approved_date"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -180,7 +181,7 @@ export const employeeTransfers = hrSchema.table(
     returnDate: date("return_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -253,7 +254,7 @@ export const hrExitInterviews = hrSchema.table(
     suggestions: text("suggestions"),
     confidentialNotes: text("confidential_notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -321,7 +322,7 @@ export const fullFinalSettlements = hrSchema.table(
     paymentReference: text("payment_reference"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

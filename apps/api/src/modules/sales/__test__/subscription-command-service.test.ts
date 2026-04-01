@@ -12,7 +12,9 @@ const {
   pauseSubscriptionMock,
   renewSubscriptionMock,
   resumeSubscriptionMock,
+  resolveSubscriptionCurrencyIdMock,
   queueSelect,
+  queueClear,
 } = vi.hoisted(() => {
   process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/afenda_test";
 
@@ -21,6 +23,7 @@ const {
   const createSelectChain = (rows: unknown[]) => {
     const chain = {
       from: vi.fn(() => chain),
+      leftJoin: vi.fn(() => chain),
       where: vi.fn(() => chain),
       orderBy: vi.fn(() => chain),
       limit: vi.fn(async () => rows),
@@ -62,8 +65,12 @@ const {
     pauseSubscriptionMock: vi.fn(),
     renewSubscriptionMock: vi.fn(),
     resumeSubscriptionMock: vi.fn(),
+    resolveSubscriptionCurrencyIdMock: vi.fn(async () => 1),
     queueSelect: (...rows: unknown[][]) => {
       selectQueue.push(...rows);
+    },
+    queueClear: () => {
+      selectQueue.length = 0;
     },
   };
 });
@@ -87,6 +94,7 @@ vi.mock("../../../events/projectionCheckpointStore.js", () => ({
 }));
 
 vi.mock("../subscription-service.js", () => ({
+  resolveSubscriptionCurrencyId: resolveSubscriptionCurrencyIdMock,
   activateSubscription: activateSubscriptionMock,
   cancelSubscription: cancelSubscriptionMock,
   pauseSubscription: pauseSubscriptionMock,
@@ -103,7 +111,12 @@ vi.mock("../../../db/schema/index.js", () => ({
   subscriptionTemplates: {
     tenantId: "subscriptionTemplates.tenantId",
     id: "subscriptionTemplates.id",
+    pricelistId: "subscriptionTemplates.pricelistId",
     deletedAt: "subscriptionTemplates.deletedAt",
+  },
+  pricelists: {
+    id: "pricelists.id",
+    currencyId: "pricelists.currencyId",
   },
   subscriptionLines: {
     tenantId: "subscriptionLines.tenantId",
@@ -131,12 +144,17 @@ const baseSubscription = {
   status: "draft",
   templateId: "tpl-1",
   dateStart: new Date("2026-01-01T00:00:00.000Z"),
+  billingAnchorDate: new Date("2026-01-01T00:00:00.000Z"),
   nextInvoiceDate: new Date("2026-01-15T00:00:00.000Z"),
   lastInvoicedAt: null,
   dateEnd: null,
   recurringTotal: "100.00",
   mrr: "100.00",
   arr: "1200.00",
+  truthRevision: 1,
+  pricingLockedAt: null,
+  pricingSnapshot: {},
+  currencyId: null as number | null,
   closeReasonId: null,
   updatedBy: 1,
   deletedAt: null,
@@ -184,6 +202,7 @@ function queueRenewReads(subscription: typeof baseSubscription): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  queueClear();
   getProjectionCheckpointMock.mockReturnValue(null);
   dbGetAggregateEventsMock.mockResolvedValue([]);
 });
@@ -214,6 +233,11 @@ describe("subscription command service", () => {
       expect.objectContaining({
         actor: "42",
         source: "api.sales.subscriptions.activate",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "activate",
+          startTable: "subscriptions",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -251,6 +275,11 @@ describe("subscription command service", () => {
       expect.objectContaining({
         actor: "51",
         source: "api.sales.subscriptions.cancel",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "cancel",
+          startTable: "subscriptions",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -288,6 +317,11 @@ describe("subscription command service", () => {
       expect.objectContaining({
         actor: "53",
         source: "api.sales.subscriptions.pause",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "pause",
+          startTable: "subscriptions",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -363,6 +397,11 @@ describe("subscription command service", () => {
       expect.objectContaining({
         actor: "55",
         source: "api.sales.subscriptions.renew",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "renew",
+          startTable: "subscriptions",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -510,6 +549,16 @@ describe("subscription command service", () => {
     for (const scenario of scenarios) {
       const result = await scenario.arrange();
       const checkpoint = upsertProjectionCheckpointMock.mock.calls.at(-1)?.[0];
+      const appendMeta = dbAppendEventMock.mock.calls.at(-1)?.[4];
+      expect(appendMeta, `${scenario.name} should attach truth impact metadata`).toEqual(
+        expect.objectContaining({
+          truthImpact: expect.objectContaining({
+            graphLayer: "truth",
+            startTable: "subscriptions",
+            operation: scenario.name,
+          }),
+        })
+      );
 
       expect(
         result.mutationPolicy,

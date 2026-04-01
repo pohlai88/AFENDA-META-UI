@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -15,28 +18,32 @@
       "types": "./dist/truth-compiler/index.d.ts"
     },
     "./client": {
-      "import": "./dist/client/index.js",
-      "types": "./dist/client/index.d.ts"
-    },
-    "./shared": {
-      "import": "./dist/infra-utils/columns/index.js",
-      "types": "./dist/infra-utils/columns/index.d.ts"
+      "import": "./dist/drizzle/client/index.js",
+      "types": "./dist/drizzle/client/index.d.ts"
     },
     "./columns": {
-      "import": "./dist/infra-utils/columns/index.js",
-      "types": "./dist/infra-utils/columns/index.d.ts"
+      "import": "./dist/column-kit/index.js",
+      "types": "./dist/column-kit/index.d.ts"
     },
-    "./session": {
-      "import": "./dist/infra-utils/session/index.js",
-      "types": "./dist/infra-utils/session/index.d.ts"
+    "./wire": {
+      "import": "./dist/wire/index.js",
+      "types": "./dist/wire/index.d.ts"
+    },
+    "./pg-session": {
+      "import": "./dist/pg-session/index.js",
+      "types": "./dist/pg-session/index.d.ts"
+    },
+    "./request-context": {
+      "import": "./dist/request-context/index.js",
+      "types": "./dist/request-context/index.d.ts"
     },
     "./rls": {
-      "import": "./dist/infra-utils/rls/index.js",
-      "types": "./dist/infra-utils/rls/index.d.ts"
+      "import": "./dist/rls-policies/index.js",
+      "types": "./dist/rls-policies/index.d.ts"
     },
     "./relations": {
-      "import": "./dist/relations.js",
-      "types": "./dist/relations.d.ts"
+      "import": "./dist/drizzle/relations.js",
+      "types": "./dist/drizzle/relations.d.ts"
     },
     "./schema": {
       "import": "./dist/schema/index.js",
@@ -49,6 +56,10 @@
     "./schema/security": {
       "import": "./dist/schema/security/index.js",
       "types": "./dist/schema/security/index.d.ts"
+    },
+    "./schema/security/wire": {
+      "import": "./dist/schema/security/wire.js",
+      "types": "./dist/schema/security/wire.d.ts"
     },
     "./schema/reference": {
       "import": "./dist/schema/reference/index.js",
@@ -86,6 +97,14 @@
       "import": "./dist/queries/sales/index.js",
       "types": "./dist/queries/sales/index.d.ts"
     },
+    "./pricing": {
+      "import": "./dist/pricing/index.js",
+      "types": "./dist/pricing/index.d.ts"
+    },
+    "./queries/security": {
+      "import": "./dist/queries/security/index.js",
+      "types": "./dist/queries/security/index.d.ts"
+    },
     "./r2": {
       "import": "./dist/r2/index.js",
       "types": "./dist/r2/index.d.ts"
@@ -97,6 +116,14 @@
     "./queries/truth": {
       "import": "./dist/queries/truth/index.js",
       "types": "./dist/queries/truth/index.d.ts"
+    },
+    "./commissions": {
+      "import": "./dist/commissions/index.js",
+      "types": "./dist/commissions/index.d.ts"
+    },
+    "./graph-validation": {
+      "import": "./dist/graph-validation/index.js",
+      "types": "./dist/graph-validation/index.d.ts"
     },
     "./schema-meta": {
       "import": "./dist/schema/meta/index.js",
@@ -118,24 +145,36 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:trigger:apply": "tsx src/maintenance/apply-status-triggers.ts",
-    "db:trigger:dry": "tsx src/maintenance/apply-status-triggers.ts --dry-run",
-    "ops:retention:plan": "tsx src/maintenance/run-sales-retention.ts --dry-run",
-    "ops:retention:apply": "tsx src/maintenance/run-sales-retention.ts --apply",
-    "ops:partition:plan": "tsx src/maintenance/run-sales-partition-plan.ts --dry-run",
-    "ops:partition:apply": "tsx src/maintenance/run-sales-partition-plan.ts --apply",
+    "data:lifecycle": "tsx src/data-lifecycle/runner.ts",
+    "data:lifecycle:partition:plan": "tsx src/data-lifecycle/runner.ts partition-plan --dry-run",
+    "data:lifecycle:partition:apply": "tsx src/data-lifecycle/runner.ts partition-plan --apply",
+    "data:lifecycle:retention:plan": "tsx src/data-lifecycle/runner.ts retention-plan --dry-run",
+    "data:lifecycle:retention:apply": "tsx src/data-lifecycle/runner.ts retention-plan --apply",
+    "data:lifecycle:audit:json": "tsx src/data-lifecycle/runner.ts audit-policy --json",
+    "data:lifecycle:audit:verify": "tsx src/data-lifecycle/runner.ts verify-artifact",
+    "data:lifecycle:audit:baseline": "tsx src/data-lifecycle/runner.ts verify-baseline",
+    "data:lifecycle:audit:render": "tsx src/data-lifecycle/runner.ts render-artifact",
     "test:db": "vitest run --passWithNoTests",
+    "test:truth-compiler": "vitest run --passWithNoTests src/truth-compiler/__test__",
     "test:graph-validation": "vitest run --passWithNoTests src/graph-validation/__test__",
     "test:graph-validation:coverage": "vitest run --coverage --passWithNoTests src/graph-validation/__test__",
     "check:all": "pnpm run typecheck && pnpm run truth:check && pnpm run test:db",
     "gate:early": "pnpm run check:all",
-    "seed": "tsx src/infra-utils/seeds/index.ts",
-    "archival": "tsx src/archival/runner.ts",
+    "db:seed": "tsx src/seeds/index.ts",
+    "seed": "tsx src/seeds/index.ts",
+    "seed:synthetic": "tsx src/seeds/synthetic-seed.ts",
+    "seed:assert-contract": "tsx src/seeds/assert-contract-cli.ts",
+    "verify:clear-plan": "tsx src/seeds/verify-clear-plan.ts",
+    "generate:hr-clear-order": "node scripts/generate-hr-clear-order.mjs",
     "graph-validation": "tsx src/graph-validation/runner.ts",
+    "graph-validation:validate-artifact": "tsx src/graph-validation/validate-artifact.ts",
     "truth:generate": "tsx src/truth-compiler/generate-truth-sql.ts",
     "truth:check": "tsx src/truth-compiler/generate-truth-sql.ts --check",
     "truth:schema:compare": "tsx src/truth-compiler/compare-truth-schema.ts",
-    "r2:health": "tsx src/r2/healthcheck.ts"
+    "truth:schema:compare:warn": "tsx src/truth-compiler/compare-truth-schema.ts --warn-only",
+    "r2:health": "tsx src/r2/healthcheck.ts",
+    "test:graph-guard": "vitest run --passWithNoTests src/queries/_shared/__test__",
+    "test:graph-validation:all": "pnpm run test:graph-validation && pnpm run test:graph-guard"
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
@@ -144,14 +183,15 @@
     "@aws-sdk/s3-request-presigner": "^3.1019.0",
     "@neondatabase/serverless": "^1.0.2",
     "decimal.js": "^10.6.0",
+    "dotenv": "^17.3.1",
     "drizzle-orm": "catalog:",
+    "drizzle-seed": "^0.3.1",
     "pg": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "dotenv": "^17.3.1",
     "drizzle-kit": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

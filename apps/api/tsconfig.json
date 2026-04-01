@@ -13,7 +13,7 @@
       "@afenda/db/r2": ["../../packages/db/dist/r2/index.d.ts"],
       "@afenda/db/schema/core": ["../../packages/db/dist/schema/core/index.d.ts"],
       "@afenda/db/queries/storage": ["../../packages/db/dist/queries/storage/index.d.ts"],
-      "@afenda/db/client": ["../../packages/db/dist/client/index.d.ts"],
+      "@afenda/db/client": ["../../packages/db/dist/drizzle/client/index.d.ts"],
       "@afenda/db/truth-compiler": ["../../packages/db/dist/truth-compiler/index.d.ts"],
       "@afenda/db/schema/meta": ["../../packages/db/dist/schema/meta/index.d.ts"],
       "@afenda/db/schema/sales": ["../../packages/db/dist/schema/sales/index.d.ts"],

@@ -4,9 +4,15 @@ import { toRepoRelative, isRlsOptionalPath } from "../config.mjs";
 const TABLE_RE =
   /(?:\w+Schema\.table|pgTable)\(\s*["']([^"']+)["']/g;
 
+/** Optional second arg, e.g. `tenantIsolationPolicies("users", securityTenantSqlColumn)`. */
 const TENANT_POLICIES_RE =
-  /tenantIsolationPolicies\(\s*["']([^"']+)["']\s*\)/g;
+  /tenantIsolationPolicies\(\s*["']([^"']+)["']\s*(?:,\s*[^)]+)?\)/g;
 const BYPASS_RE = /serviceBypassPolicy\(\s*["']([^"']+)["']\s*\)/g;
+
+/** Files where some tables use catalog/append-only RLS instead of `tenantIsolationPolicies`. */
+const TENANT_PACK_SHORTFILE = new Map([
+  ["packages/db/src/schema/sales/subscription.ts", 2],
+]);
 
 /**
  * @param {string} content
@@ -38,7 +44,9 @@ export function run(content, absolutePath) {
     ];
   }
 
-  if (rlsTenant.length === n && rlsBypass.length === n) return [];
+  const short = TENANT_PACK_SHORTFILE.get(file) ?? 0;
+  const tenantExpected = n - short;
+  if (rlsTenant.length === tenantExpected && rlsBypass.length === n) return [];
 
   /**
    * Under RLS_OPTIONAL_PATH_PREFIXES, global tables (no tenant_id) legitimately omit
@@ -68,7 +76,7 @@ export function run(content, absolutePath) {
       file,
       table: "*",
       message: [
-        `Expected tenantIsolationPolicies + serviceBypassPolicy once per table (${n} tables).`,
+        `Expected tenantIsolationPolicies for ${tenantExpected} of ${n} table(s) and serviceBypassPolicy for each table.`,
         `Got tenantIsolationPolicies=${rlsTenant.length}, serviceBypassPolicy=${rlsBypass.length}.`,
       ].join(" "),
     },

@@ -16,7 +16,7 @@ const CATEGORY_META = {
     title: 'Constraint Existence',
     explanation: 'A named CHECK, FK, UNIQUE, or INDEX constraint expected by the matrix is missing from the schema.',
     fixes: [
-      'Add the missing constraint to the table definition in tables.ts.',
+      'Add the missing constraint to the appropriate schema domain module (e.g. partner.ts, orders.ts).',
       'Ensure the constraint name matches the matrix specification exactly.',
     ],
   },

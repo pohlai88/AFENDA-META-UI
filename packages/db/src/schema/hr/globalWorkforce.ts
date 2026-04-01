@@ -20,13 +20,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -100,7 +101,7 @@ export const internationalAssignments = hrSchema.table(
     notes: text("notes"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -162,7 +163,8 @@ export const assignmentAllowances = hrSchema.table(
     /** Optional RRULE / internal recurrence key for recurring allowances. */
     recurrenceRule: text("recurrence_rule"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -214,7 +216,7 @@ export const workPermits = hrSchema.table(
     notes: text("notes"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -284,7 +286,7 @@ export const complianceTracking = hrSchema.table(
     reviewedBy: uuid("reviewed_by"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -340,7 +342,7 @@ export const relocationServices = hrSchema.table(
     notes: text("notes"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -401,7 +403,7 @@ export const deiMetrics = hrSchema.table(
     notes: text("notes"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

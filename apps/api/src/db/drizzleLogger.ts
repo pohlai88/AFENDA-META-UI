@@ -1,5 +1,6 @@
 import type { Logger as DrizzleLogger } from "drizzle-orm/logger";
 import { createChildLogger } from "../logging/index.js";
+import { sanitizeSqlParamsForLog, truncateSqlForLog } from "./sqlLogSanitize.js";
 
 const log = createChildLogger("drizzle");
 
@@ -19,9 +20,11 @@ export class PinoDrizzleLogger implements DrizzleLogger {
   }
 
   logQuery(query: string, params: unknown[]): void {
-    // Log all queries in development for debugging
     if (process.env.NODE_ENV === "development") {
-      log.debug({ query, params }, "SQL query");
+      log.debug(
+        { query: truncateSqlForLog(query), params: sanitizeSqlParamsForLog(params) },
+        "SQL query"
+      );
     }
   }
 
@@ -31,7 +34,12 @@ export class PinoDrizzleLogger implements DrizzleLogger {
   logSlowQuery(query: string, params: unknown[], durationMs: number): void {
     if (durationMs >= this.slowQueryThresholdMs) {
       log.warn(
-        { query, params, durationMs, thresholdMs: this.slowQueryThresholdMs },
+        {
+          query: truncateSqlForLog(query),
+          params: sanitizeSqlParamsForLog(params),
+          durationMs,
+          thresholdMs: this.slowQueryThresholdMs,
+        },
         "Slow query detected"
       );
     }

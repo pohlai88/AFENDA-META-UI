@@ -3,7 +3,8 @@
 // Human-owned reporting: use separate modules (not *.access.ts).
 
 import { and, eq, isNull } from "drizzle-orm";
-import type { Database } from "../../db.js";
+import type { Database } from "../../drizzle/db.js";
+import { assertGraphGuardrailAllowsRead } from "../_shared/graph-guardrail.js";
 import {
   attendanceRequests,
   biometricDevices,
@@ -32,6 +33,16 @@ export async function getAttendanceRequestsByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getAttendanceRequestsByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getAttendanceRequestsByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof attendanceRequests.$inferSelect)["tenantId"],
+  id: (typeof attendanceRequests.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getAttendanceRequestsByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listAttendanceRequestsActive(
   db: Database,
@@ -43,12 +54,28 @@ export async function listAttendanceRequestsActive(
     .where(and(eq(attendanceRequests.tenantId, tenantId), isNull(attendanceRequests.deletedAt)));
 }
 
+export async function listAttendanceRequestsActiveGuarded(
+  db: Database,
+  tenantId: (typeof attendanceRequests.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listAttendanceRequestsActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listAttendanceRequestsAll(
   db: Database,
   tenantId: (typeof attendanceRequests.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(attendanceRequests).where(eq(attendanceRequests.tenantId, tenantId));
+}
+
+export async function listAttendanceRequestsAllGuarded(
+  db: Database,
+  tenantId: (typeof attendanceRequests.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listAttendanceRequestsAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -61,6 +88,15 @@ export async function archiveAttendanceRequests(
     .update(attendanceRequests)
     .set({ deletedAt: new Date() })
     .where(and(eq(attendanceRequests.tenantId, tenantId), eq(attendanceRequests.id, id)));
+}
+
+export async function archiveAttendanceRequestsGuarded(
+  db: Database,
+  tenantId: (typeof attendanceRequests.$inferSelect)["tenantId"],
+  id: (typeof attendanceRequests.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveAttendanceRequests(db, tenantId, id);
 }
 
 
@@ -84,6 +120,16 @@ export async function getOvertimeRulesByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getOvertimeRulesByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getOvertimeRulesByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof overtimeRules.$inferSelect)["tenantId"],
+  id: (typeof overtimeRules.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getOvertimeRulesByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listOvertimeRulesActive(
   db: Database,
@@ -95,12 +141,28 @@ export async function listOvertimeRulesActive(
     .where(and(eq(overtimeRules.tenantId, tenantId), isNull(overtimeRules.deletedAt)));
 }
 
+export async function listOvertimeRulesActiveGuarded(
+  db: Database,
+  tenantId: (typeof overtimeRules.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listOvertimeRulesActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listOvertimeRulesAll(
   db: Database,
   tenantId: (typeof overtimeRules.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(overtimeRules).where(eq(overtimeRules.tenantId, tenantId));
+}
+
+export async function listOvertimeRulesAllGuarded(
+  db: Database,
+  tenantId: (typeof overtimeRules.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listOvertimeRulesAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -113,6 +175,15 @@ export async function archiveOvertimeRules(
     .update(overtimeRules)
     .set({ deletedAt: new Date() })
     .where(and(eq(overtimeRules.tenantId, tenantId), eq(overtimeRules.id, id)));
+}
+
+export async function archiveOvertimeRulesGuarded(
+  db: Database,
+  tenantId: (typeof overtimeRules.$inferSelect)["tenantId"],
+  id: (typeof overtimeRules.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveOvertimeRules(db, tenantId, id);
 }
 
 
@@ -136,6 +207,16 @@ export async function getBiometricDevicesByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getBiometricDevicesByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getBiometricDevicesByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof biometricDevices.$inferSelect)["tenantId"],
+  id: (typeof biometricDevices.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getBiometricDevicesByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listBiometricDevicesActive(
   db: Database,
@@ -147,12 +228,28 @@ export async function listBiometricDevicesActive(
     .where(and(eq(biometricDevices.tenantId, tenantId), isNull(biometricDevices.deletedAt)));
 }
 
+export async function listBiometricDevicesActiveGuarded(
+  db: Database,
+  tenantId: (typeof biometricDevices.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listBiometricDevicesActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listBiometricDevicesAll(
   db: Database,
   tenantId: (typeof biometricDevices.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(biometricDevices).where(eq(biometricDevices.tenantId, tenantId));
+}
+
+export async function listBiometricDevicesAllGuarded(
+  db: Database,
+  tenantId: (typeof biometricDevices.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listBiometricDevicesAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -165,6 +262,15 @@ export async function archiveBiometricDevices(
     .update(biometricDevices)
     .set({ deletedAt: new Date() })
     .where(and(eq(biometricDevices.tenantId, tenantId), eq(biometricDevices.id, id)));
+}
+
+export async function archiveBiometricDevicesGuarded(
+  db: Database,
+  tenantId: (typeof biometricDevices.$inferSelect)["tenantId"],
+  id: (typeof biometricDevices.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveBiometricDevices(db, tenantId, id);
 }
 
 
@@ -188,6 +294,16 @@ export async function getBiometricLogsByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getBiometricLogsByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getBiometricLogsByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof biometricLogs.$inferSelect)["tenantId"],
+  id: (typeof biometricLogs.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getBiometricLogsByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listBiometricLogsActive(
   db: Database,
@@ -199,12 +315,28 @@ export async function listBiometricLogsActive(
     .where(and(eq(biometricLogs.tenantId, tenantId), isNull(biometricLogs.deletedAt)));
 }
 
+export async function listBiometricLogsActiveGuarded(
+  db: Database,
+  tenantId: (typeof biometricLogs.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listBiometricLogsActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listBiometricLogsAll(
   db: Database,
   tenantId: (typeof biometricLogs.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(biometricLogs).where(eq(biometricLogs.tenantId, tenantId));
+}
+
+export async function listBiometricLogsAllGuarded(
+  db: Database,
+  tenantId: (typeof biometricLogs.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listBiometricLogsAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -217,6 +349,15 @@ export async function archiveBiometricLogs(
     .update(biometricLogs)
     .set({ deletedAt: new Date() })
     .where(and(eq(biometricLogs.tenantId, tenantId), eq(biometricLogs.id, id)));
+}
+
+export async function archiveBiometricLogsGuarded(
+  db: Database,
+  tenantId: (typeof biometricLogs.$inferSelect)["tenantId"],
+  id: (typeof biometricLogs.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveBiometricLogs(db, tenantId, id);
 }
 
 
@@ -240,6 +381,16 @@ export async function getShiftSwapRequestsByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getShiftSwapRequestsByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getShiftSwapRequestsByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof shiftSwapRequests.$inferSelect)["tenantId"],
+  id: (typeof shiftSwapRequests.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getShiftSwapRequestsByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listShiftSwapRequestsActive(
   db: Database,
@@ -251,12 +402,28 @@ export async function listShiftSwapRequestsActive(
     .where(and(eq(shiftSwapRequests.tenantId, tenantId), isNull(shiftSwapRequests.deletedAt)));
 }
 
+export async function listShiftSwapRequestsActiveGuarded(
+  db: Database,
+  tenantId: (typeof shiftSwapRequests.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listShiftSwapRequestsActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listShiftSwapRequestsAll(
   db: Database,
   tenantId: (typeof shiftSwapRequests.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(shiftSwapRequests).where(eq(shiftSwapRequests.tenantId, tenantId));
+}
+
+export async function listShiftSwapRequestsAllGuarded(
+  db: Database,
+  tenantId: (typeof shiftSwapRequests.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listShiftSwapRequestsAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -269,5 +436,14 @@ export async function archiveShiftSwapRequests(
     .update(shiftSwapRequests)
     .set({ deletedAt: new Date() })
     .where(and(eq(shiftSwapRequests.tenantId, tenantId), eq(shiftSwapRequests.id, id)));
+}
+
+export async function archiveShiftSwapRequestsGuarded(
+  db: Database,
+  tenantId: (typeof shiftSwapRequests.$inferSelect)["tenantId"],
+  id: (typeof shiftSwapRequests.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveShiftSwapRequests(db, tenantId, id);
 }
 

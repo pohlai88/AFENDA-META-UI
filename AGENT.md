@@ -6,6 +6,58 @@ Goal: Keep monorepo healthy. Make changes safely. Use CI gates as source of trut
 
 ---
 
+## 0. Implementation Document Control (Non-Negotiable)
+
+Before any code change, the agent MUST identify and declare the implementation source-of-truth document.
+
+### 0.1 Allowed implementation authorities (priority order)
+
+1. User explicit instruction in current chat
+2. `.ideas/architecture/phase-1-implementation-blueprint.md`
+3. `.ideas/architecture/phase-1-engineering-backlog.md`
+4. `AGENT.md` (this file)
+5. Existing code constraints (types, tests, CI contracts)
+
+If authorities conflict, follow the higher-priority authority and explicitly state the conflict.
+
+### 0.2 Mandatory pre-implementation declaration
+
+Before editing files, the agent MUST state:
+
+- Which document/task it is implementing (file + section/task ID when available)
+- Whether implementation mode is `strict` or `incremental`
+- Which acceptance criteria are targeted
+
+### 0.3 No-assumption rule
+
+The agent MUST NOT assume missing requirements.
+If any of these are ambiguous, ask clarification first:
+
+- Target implementation document (blueprint vs backlog vs ad-hoc request)
+- Scope boundary (in-scope/out-of-scope)
+- Contract shape conflicts (competing type contracts)
+- Enforcement level (scaffold vs hard-fail gate)
+
+### 0.4 Clarification gate (hard stop)
+
+The agent MUST pause and ask for clarification before implementation when:
+
+- Request allows multiple architecture-valid interpretations
+- Requested behavior conflicts with blueprint/backlog AC
+- Strict alignment is requested but section/task targets are not explicit
+- Required authority document is not identified for the phase
+
+### 0.5 Strict alignment mode
+
+When asked for strict blueprint/backlog alignment, agents must:
+
+- Treat backlog AC + blueprint sections as normative checklists
+- Mark each relevant AC as `implemented`, `partial`, or `missing`
+- Avoid claiming full alignment if any hard-fail CI requirement is missing
+- Surface module-boundary shortcuts explicitly
+
+---
+
 ## 1. Core Principles
 
 1. **Schema Quality First** — Never downgrade schemas or production code to make tests pass. Instead, improve schemas to match high-quality seed/test data. Tests reveal missing fields or incorrect types; fix the schema definition.
@@ -59,13 +111,48 @@ pnpm syncpack:format
 
 For every non-trivial change:
 
-1. Understand scope (files/packages affected)
-2. Apply minimal edits
-3. Run targeted gate(s) for changed area
-4. Run `pnpm ci:gate`
-5. Report: files changed, commands run, gate results, final status
+1. Identify implementation authority document and target AC/task IDs
+2. Understand scope (files/packages affected)
+3. If ambiguity exists, ask clarification before editing
+4. Apply minimal edits
+5. Run targeted gate(s) for changed area
+6. Run `pnpm ci:gate`
+7. Report: implementation target, files changed, commands run, gate results, AC/task status
 
-**Completion is valid only if `pnpm ci:gate` passes.**
+**Completion is valid only if `pnpm ci:gate` passes and AC/task status is explicit.**
+
+---
+
+## 3.1 Required Clarification Prompts (Templates)
+
+Use these prompts before implementation when ambiguity exists:
+
+1. "Which implementation authority should I follow: blueprint, backlog, or your direct instruction?"
+2. "Should I implement strict blueprint fidelity or incremental scaffolding for this PR?"
+3. "Please confirm explicit in-scope and out-of-scope items before edits."
+
+---
+
+## 3.2 Prohibited Behavior (Architecture Governance)
+
+Agents MUST NOT:
+
+- Start implementation without naming the target implementation document
+- Claim strict alignment while skipping backlog acceptance checks
+- Hide known blueprint/backlog gaps behind green tests
+- Infer policy from examples when formal spec exists
+- Merge conflicting contracts without explicit user choice
+
+---
+
+## 3.3 Required Output Addendum (Architecture Tasks)
+
+For architecture-phase tasks, include in the final report:
+
+1. **Implementation target** — document + section/task IDs
+2. **AC matrix** — implemented / partial / missing
+3. **Open gaps** — blockers vs deferred
+4. **Validation evidence** — commands and CI gates run
 
 ---
 

@@ -172,7 +172,7 @@ pnpm --filter @afenda/db r2:health -- --write
 ## Related documentation
 
 - [ARCHITECTURE.md](./r2-docs/ARCHITECTURE.md) — Full design, boundary, consumers, governance
-- [../archival/README.md](../archival/README.md) — Cold archive CLI (uses this module)
+- [../data-lifecycle/README.md](../data-lifecycle/README.md) — Data lifecycle runner (uses this module)
 - [../../README.md](../../README.md) — `@afenda/db` package overview
 - [../../../meta-types/README.md](../../../meta-types/README.md) — Foundation layer (analogous doc structure)
 - [../../../meta-types/ARCHITECTURE.md](../../../meta-types/ARCHITECTURE.md) — Reference for “how we write package docs”

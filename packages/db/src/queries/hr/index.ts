@@ -6,6 +6,7 @@ export * from "./attendance.access.js";
 export * from "./attendanceEnhancements.access.js";
 export * from "./benefits.access.js";
 export * from "./compensation.access.js";
+export * from "./disposableEmailDomains.access.js";
 export * from "./employeeExperience.access.js";
 export * from "./employment.access.js";
 export * from "./engagement.access.js";

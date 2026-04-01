@@ -18,7 +18,8 @@ const KIND_ORDER: Record<SqlSegmentKind, number> = {
   trigger: 3,
 };
 
-const HEADER = `-- =============================================================================
+/** Full file banner; also composed into `migrations/generated/truth-v1.sql` in generate-truth-sql.ts */
+export const TRUTH_SQL_BUNDLE_HEADER = `-- =============================================================================
 -- TRUTH COMPILER OUTPUT — AFENDA META ENGINE
 -- =============================================================================
 -- DO NOT EDIT MANUALLY.
@@ -48,10 +49,13 @@ function compareSegments(a: SqlSegment, b: SqlSegment): number {
  * (modulo the generated-at timestamp). Pass `generatedAt` explicitly in
  * diff-check mode to pin the timestamp for fair comparison.
  */
-export function emit(segments: SqlSegment[], generatedAt?: Date): string {
+/** Sorted compiler segments only (no file header). Used by generate-truth-sql when composing bundles. */
+export function emitSqlSegments(segments: SqlSegment[]): string {
   const sorted = [...segments].sort(compareSegments);
-  const timestamp = (generatedAt ?? new Date()).toISOString();
-  const blocks = sorted.map((s) => s.sql.trimEnd());
+  return sorted.map((s) => s.sql.trimEnd()).join("\n\n");
+}
 
-  return [HEADER, `-- Generated at: ${timestamp}`, "", ...blocks, ""].join("\n");
+export function emit(segments: SqlSegment[], generatedAt?: Date): string {
+  const timestamp = (generatedAt ?? new Date()).toISOString();
+  return [TRUTH_SQL_BUNDLE_HEADER, `-- Generated at: ${timestamp}`, "", emitSqlSegments(segments), ""].join("\n");
 }

@@ -51,18 +51,25 @@ const THRESHOLDS = {
   chunkCount: 20,
 };
 
-function ensureBuild() {
-  if (!existsSync(DIST_DIR)) {
-    console.log(`${colors.blue}i${colors.reset} Building web app...`);
-    try {
-      execSync("pnpm --filter web build", {
-        cwd: WORKSPACE_ROOT,
-        stdio: "inherit",
-      });
-    } catch {
-      console.error(`${colors.red}x${colors.reset} Build failed`);
-      process.exit(2);
-    }
+function ensureBuild(skipBuild) {
+  if (existsSync(DIST_DIR)) {
+    return;
+  }
+  if (skipBuild) {
+    console.log(
+      `${colors.yellow}i${colors.reset} ${colors.dim}No ${DIST_DIR} — skipping bundle analysis (--skip-build / --mode=fast). Run \`pnpm --filter web build\` for a full bundle gate.${colors.reset}`
+    );
+    process.exit(0);
+  }
+  console.log(`${colors.blue}i${colors.reset} Building web app (this can take several minutes)...`);
+  try {
+    execSync("pnpm --filter web build", {
+      cwd: WORKSPACE_ROOT,
+      stdio: "inherit",
+    });
+  } catch {
+    console.error(`${colors.red}x${colors.reset} Build failed`);
+    process.exit(2);
   }
 }
 
@@ -325,11 +332,13 @@ async function main() {
   const args = process.argv.slice(2);
   const isUpdate = args.includes("--update");
   const isReport = args.includes("--report");
+  const skipBuild =
+    args.includes("--skip-build") || args.includes("--mode=fast");
 
   console.log(`${colors.bright}Bundle CI Gate${colors.reset}`);
   console.log("=".repeat(70));
 
-  ensureBuild();
+  ensureBuild(skipBuild);
   const currentStats = analyzeBundleStats();
   const baseline = loadBaseline();
 

@@ -1,4 +1,4 @@
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import {
   completeTenantAttachmentUploadFailure,
   completeTenantAttachmentUploadSuccess,

@@ -37,7 +37,7 @@ See the table in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Technical conventions
 
-- **Database client type:** `import type { Database } from "../../db.js"` from modules under `queries/<domain>/` (adjust `../` depth if nesting). Do **not** use `NodePgDatabase` for public access APIs here.  
+- **Database client type:** `import type { Database } from "../../drizzle/db.js"` from modules under `queries/<domain>/` (adjust `../` depth if nesting). Do **not** use `NodePgDatabase` for public access APIs here.  
 - **Primary keys in generated code (v2):** `type RowId = typeof someTable.$inferSelect.id` — never hardcode `id: number` vs `id: string` by assumption.  
 - **RLS / session:** Callers should set tenant session context for production paths; see [db README — session](../../README.md).
 
@@ -64,7 +64,7 @@ Add a non-`*.access.ts` module when:
 ```typescript
 // queries/hr/workforceReports.ts
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { Database } from "../../db.js";
+import type { Database } from "../../drizzle/db.js";
 import { employees } from "../../schema/hr/people.js";
 
 export async function activeHeadcount(

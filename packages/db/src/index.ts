@@ -1,12 +1,51 @@
 /**
  * @afenda/db public API
  *
- * Exports: Database (db, pool, Database type), client factory, shared types, session, RLS
+ * Exports: Database (db, pool), client factory, relations, truth-compiler registry exports.
+ * Column mixins, wire schemas, pg-session, request-context, and RLS builders: use `@afenda/db/columns`, `@afenda/db/wire`, `@afenda/db/pg-session`, `@afenda/db/request-context`, `@afenda/db/rls`.
  */
 
-export { db, pool, getPoolStats, checkDatabaseConnection, dbServerless, type Database, type DatabaseOptions, type DrizzleLogger, type PoolStats } from "./db.js";
-export { createDatabase, createServerlessDatabase } from "./client/index.js";
-export { relations } from "./relations.js";
+export {
+  db,
+  pool,
+  getPoolStats,
+  checkDatabaseConnection,
+  closeDatabase,
+  dbServerless,
+  type Database,
+  type DatabaseOptions,
+  type DrizzleLogger,
+  type PoolStats,
+  type ServerlessDatabaseOptions,
+} from "./drizzle/db.js";
+export {
+  createDatabase,
+  createReadReplicaDatabase,
+  createServerlessDatabase,
+  createServerlessWebSocketDatabase,
+  getEffectiveSessionTimeouts,
+  resolvePoolConfigFromEnv,
+  resolveReadReplicaPoolConfigFromEnv,
+  type DatabaseInstance,
+  type ServerlessDatabase,
+  type ServerlessWebSocketDatabaseInstance,
+  type ServerlessWebSocketDatabaseOptions,
+  type SessionTimeoutDiagnostics,
+} from "./drizzle/client/index.js";
+export { relations } from "./drizzle/relations.js";
+export {
+  addCalendarDaysUtc,
+  calculateCommission,
+  CommissionEngineError,
+  formatDateOnlyUtc,
+  projectCommissionLiabilitiesFromPaymentTerm,
+  type CommissionBreakdownLine,
+  type CommissionCalculationInput,
+  type CommissionCalculationResult,
+  type CommissionMetrics,
+  type PaymentTermLineSlice,
+  type ProjectedCommissionLiability,
+} from "./commissions/index.js";
 export {
   getMutationPolicyById,
   requireMutationPolicyById,
@@ -24,7 +63,3 @@ export {
   SALES_STATE_MACHINES,
   SALES_TRUTH_MODEL,
 } from "./truth-compiler/truth-config.js";
-
-export * from "./infra-utils/columns/index.js";
-export * from "./infra-utils/session/index.js";
-export * from "./infra-utils/rls/index.js";

@@ -83,6 +83,8 @@ export interface NextInvoiceDateInput {
   lastInvoiced?: Date;
   billingPeriod: SubscriptionBillingPeriod;
   billingDay: number;
+  /** When set, calendar periods align to this anchor (UTC calendar); omit to keep legacy behavior. */
+  billingAnchorDate?: Date;
 }
 
 export interface SubscriptionExpiryInput {
@@ -478,6 +480,80 @@ export function computeMRR(input: MRRComputationInput): MRRComputationResult {
   };
 }
 
+function monthIndexUtc(d: Date): number {
+  return d.getUTCFullYear() * 12 + d.getUTCMonth();
+}
+
+function utcDateWithBillingDay(
+  year: number,
+  month: number,
+  billingDay: number,
+  timeFrom: Date
+): Date {
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const day = Math.min(billingDay, lastDay);
+  return new Date(
+    Date.UTC(
+      year,
+      month,
+      day,
+      timeFrom.getUTCHours(),
+      timeFrom.getUTCMinutes(),
+      timeFrom.getUTCSeconds(),
+      timeFrom.getUTCMilliseconds()
+    )
+  );
+}
+
+/**
+ * Next invoice on anchor-aligned month grid (monthly / quarterly / yearly), strictly after `base`.
+ */
+function computeNextInvoiceDateAnchoredCalendar(
+  base: Date,
+  anchor: Date,
+  billingPeriod: Exclude<SubscriptionBillingPeriod, "weekly">,
+  billingDay: number
+): Date {
+  const stepMonths: Record<Exclude<SubscriptionBillingPeriod, "weekly">, number> = {
+    monthly: 1,
+    quarterly: 3,
+    yearly: 12,
+  };
+  const step = stepMonths[billingPeriod];
+  const anchorIdx = monthIndexUtc(anchor);
+  let idx = anchorIdx;
+  const maxIterations = 1200;
+  for (let i = 0; i < maxIterations; i += 1) {
+    const y = Math.floor(idx / 12);
+    const m = idx % 12;
+    const candidate = utcDateWithBillingDay(y, m, billingDay, base);
+    if (candidate.getTime() > base.getTime()) {
+      return candidate;
+    }
+    idx += step;
+  }
+  throw new SubscriptionEngineError(
+    "Could not resolve next invoice date on billing anchor grid",
+    "SUB-3"
+  );
+}
+
+function computeNextInvoiceDateAnchoredWeekly(base: Date, anchor: Date): Date {
+  const anchorMs = Date.UTC(
+    anchor.getUTCFullYear(),
+    anchor.getUTCMonth(),
+    anchor.getUTCDate(),
+    base.getUTCHours(),
+    base.getUTCMinutes(),
+    base.getUTCSeconds(),
+    base.getUTCMilliseconds()
+  );
+  const periodMs = 7 * 24 * 60 * 60 * 1000;
+  const baseMs = base.getTime();
+  const n = Math.floor((baseMs - anchorMs) / periodMs) + 1;
+  return new Date(anchorMs + n * periodMs);
+}
+
 /**
  * Computes the next invoice date based on billing period and billing day.
  *
@@ -486,11 +562,27 @@ export function computeMRR(input: MRRComputationInput): MRRComputationResult {
  * 2. Add period interval (week, month, quarter, year)
  * 3. Set to billingDay (with month-end clamping)
  *
+ * When `billingAnchorDate` is set, period boundaries are derived from that anchor (UTC calendar);
+ * otherwise the legacy “advance one period from base” behavior is preserved.
+ *
  * @param input - Current date, last invoiced, billing config
  * @returns Next invoice date
  */
 export function computeNextInvoiceDate(input: NextInvoiceDateInput): Date {
   const baseDate = input.lastInvoiced ? new Date(input.lastInvoiced) : new Date(input.currentDate);
+
+  if (input.billingAnchorDate) {
+    const anchor = new Date(input.billingAnchorDate);
+    if (input.billingPeriod === "weekly") {
+      return computeNextInvoiceDateAnchoredWeekly(baseDate, anchor);
+    }
+    return computeNextInvoiceDateAnchoredCalendar(
+      baseDate,
+      anchor,
+      input.billingPeriod,
+      input.billingDay
+    );
+  }
 
   if (input.billingPeriod === "weekly") {
     const weeklyDate = new Date(baseDate);
@@ -539,7 +631,7 @@ export function detectSubscriptionExpiry(input: SubscriptionExpiryInput): Subscr
   const shouldExpire = !expired && subscription.status === "active" && endDateReached;
 
   return {
-    currentStatus: subscription.status,
+    currentStatus: subscription.status as SubscriptionStatus,
     expired,
     shouldExpire,
     expiryDate: subscription.dateEnd,

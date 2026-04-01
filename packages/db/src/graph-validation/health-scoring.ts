@@ -11,6 +11,7 @@
 import type { OrphanDetectionResults } from "./orphan-detection.js";
 import type { TenantIsolationResults } from "./tenant-isolation.js";
 import type { FkValidationCatalog } from "./fk-catalog.js";
+import type { GraphValidationConfidenceLevel, GraphValidationPolicy, PolicyDecision } from "./types.js";
 
 export interface GraphHealthScore {
   overall: number; // 0-100
@@ -197,10 +198,78 @@ export function calculateHealthScore(inputs: ValidationInputs): GraphHealthScore
 /**
  * Format health score report for console output
  */
+const TTL_P0 = 3600;
+const TTL_DEFAULT = 604800;
+
+function pickDecision(
+  inputs: ValidationInputs,
+  score: GraphHealthScore,
+  isOperationalWarning: boolean
+): PolicyDecision {
+  if (!inputs.tenantLeaks.isSecure) {
+    return { severity: "P0_SECURITY", action: "BLOCK", ttlSeconds: TTL_P0 };
+  }
+  if (inputs.orphans.criticalViolations.length > 0) {
+    return { severity: "P1_DATA_CORRUPTION", action: "WARN", ttlSeconds: TTL_DEFAULT };
+  }
+  if (score.status === "CRITICAL") {
+    return { severity: "P2_INCONSISTENCY", action: "WARN", ttlSeconds: TTL_DEFAULT };
+  }
+  if (isOperationalWarning) {
+    return { severity: "P3_OBSERVABILITY", action: "WARN", ttlSeconds: TTL_DEFAULT };
+  }
+  return { severity: "P3_OBSERVABILITY", action: "ALLOW", ttlSeconds: TTL_DEFAULT };
+}
+
+/**
+ * Derive runtime/CI policy flags from validation inputs and computed health.
+ * Hybrid model: security blocking only on tenant leaks; operational warning on score/orphans/index gaps.
+ * Graded {@link PolicyDecision} is included for telemetry and UX (BLOCK only for P0 security).
+ */
+export function deriveGraphValidationPolicy(
+  inputs: ValidationInputs,
+  score: GraphHealthScore
+): GraphValidationPolicy {
+  if (!inputs.tenantLeaks.isSecure) {
+    const decision: PolicyDecision = pickDecision(inputs, score, true);
+    return {
+      isSecurityBlocking: true,
+      isOperationalWarning: true,
+      confidenceLevel: "high",
+      securityReason: `Cross-tenant FK leaks detected (${inputs.tenantLeaks.totalLeaks} violation rows).`,
+      decision,
+    };
+  }
+
+  let confidenceLevel: GraphValidationConfidenceLevel = "high";
+  if (!inputs.indexCoverage || inputs.indexCoverage.total === 0) {
+    confidenceLevel = "medium";
+  }
+  if (inputs.cascadeErrors === undefined) {
+    confidenceLevel = confidenceLevel === "high" ? "medium" : confidenceLevel;
+  }
+
+  const indexGap =
+    inputs.indexCoverage &&
+    inputs.indexCoverage.total > 0 &&
+    inputs.indexCoverage.covered < inputs.indexCoverage.total;
+  const isOperationalWarning =
+    score.status !== "HEALTHY" ||
+    inputs.orphans.criticalViolations.length > 0 ||
+    Boolean(indexGap);
+
+  const decision = pickDecision(inputs, score, isOperationalWarning);
+
+  return {
+    isSecurityBlocking: false,
+    isOperationalWarning,
+    confidenceLevel,
+    decision,
+  };
+}
+
 export function formatHealthReport(score: GraphHealthScore): string {
   const statusEmoji = score.status === "HEALTHY" ? "✅" : score.status === "WARNING" ? "⚠️" : "❌";
-  const gradeColor =
-    score.grade === "A+" || score.grade === "A" ? "green" : score.grade === "B" ? "yellow" : "red";
 
   let report = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

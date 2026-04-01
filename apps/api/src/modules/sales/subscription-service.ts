@@ -1,23 +1,30 @@
-import { Decimal } from "decimal.js";
-import { and, eq, isNull } from "drizzle-orm";
-
-import { db } from "../../db/index.js";
+import type { SubscriptionStatus } from "@afenda/db/schema/sales";
 import {
+  pricelists,
   subscriptionCloseReasons,
   subscriptionLines,
   subscriptionLogs,
+  subscriptionPricingResolutions,
   subscriptions,
   subscriptionTemplates,
-} from "../../db/schema/index.js";
+} from "@afenda/db/schema/sales";
+import { Decimal } from "decimal.js";
+import { and, eq, isNull, sql } from "drizzle-orm";
+
+import { db } from "../../db/index.js";
 import { NotFoundError, ValidationError } from "../../middleware/errorHandler.js";
 import { recordDomainEvent, recordValidationIssues } from "../../utils/audit-logs.js";
 import {
-  computeMRR,
   computeNextInvoiceDate,
   subscriptionStateMachine,
   validateSubscription as validateSubscriptionInvariants,
   type SubscriptionValidationResult,
 } from "./logic/subscription-engine.js";
+import {
+  buildSubscriptionPricingSnapshotV1,
+  resolveSubscriptionPricingAggregate,
+  type SubscriptionPricingSnapshotV1,
+} from "./logic/subscription-pricing-kernel.js";
 
 export interface ValidateSubscriptionInput {
   tenantId: number;
@@ -94,6 +101,69 @@ export interface RenewSubscriptionResult {
   subscription: typeof subscriptions.$inferSelect;
 }
 
+export async function resolveSubscriptionCurrencyId(
+  tenantId: number,
+  templateId: string
+): Promise<number | null> {
+  const [row] = await db
+    .select({ currencyId: pricelists.currencyId })
+    .from(subscriptionTemplates)
+    .leftJoin(pricelists, eq(subscriptionTemplates.pricelistId, pricelists.id))
+    .where(
+      and(
+        eq(subscriptionTemplates.tenantId, tenantId),
+        eq(subscriptionTemplates.id, templateId),
+        isNull(subscriptionTemplates.deletedAt)
+      )
+    )
+    .limit(1);
+
+  return row?.currencyId ?? null;
+}
+
+async function nextSubscriptionPricingResolutionRevision(
+  tenantId: number,
+  subscriptionId: string
+): Promise<number> {
+  const [row] = await db
+    .select({
+      maxRev: sql<number>`coalesce(max(${subscriptionPricingResolutions.resolutionRevision}), 0)`,
+    })
+    .from(subscriptionPricingResolutions)
+    .where(
+      and(
+        eq(subscriptionPricingResolutions.tenantId, tenantId),
+        eq(subscriptionPricingResolutions.subscriptionId, subscriptionId)
+      )
+    );
+
+  return Number(row?.maxRev ?? 0) + 1;
+}
+
+async function appendSubscriptionPricingResolution(input: {
+  tenantId: number;
+  subscriptionId: string;
+  snapshot: SubscriptionPricingSnapshotV1;
+  recurringTotal: string;
+  mrr: string;
+  arr: string;
+}): Promise<void> {
+  const resolutionRevision = await nextSubscriptionPricingResolutionRevision(
+    input.tenantId,
+    input.subscriptionId
+  );
+
+  await db.insert(subscriptionPricingResolutions).values({
+    tenantId: input.tenantId,
+    subscriptionId: input.subscriptionId,
+    resolutionRevision,
+    snapshot: input.snapshot,
+    recurringTotal: input.recurringTotal,
+    mrr: input.mrr,
+    arr: input.arr,
+  });
+}
+
 export async function validateSubscription(
   input: ValidateSubscriptionInput
 ): Promise<ValidateSubscriptionResult> {
@@ -156,32 +226,54 @@ export async function activateSubscription(
 
   const activationDate = input.activationDate ?? new Date();
 
-  subscriptionStateMachine.assertTransition(context.subscription.status, "active", {
+  subscriptionStateMachine.assertTransition(context.subscription.status as SubscriptionStatus, "active", {
     hasLines: context.lines.length > 0,
     startDateValid:
       !context.subscription.dateEnd ||
       context.subscription.dateStart.getTime() < context.subscription.dateEnd.getTime(),
   });
 
-  const mrrResult = computeMRR({
+  const mrrResult = resolveSubscriptionPricingAggregate({
     lines: context.lines,
     billingPeriod: context.template.billingPeriod,
   });
+  const pricingSnapshot = buildSubscriptionPricingSnapshotV1({
+    template: context.template,
+    lines: context.lines,
+    mrrResult,
+  });
+  const currencyId =
+    (await resolveSubscriptionCurrencyId(input.tenantId, context.subscription.templateId)) ??
+    context.subscription.currencyId;
+
+  const newTruthRevision = context.subscription.truthRevision + 1;
+  const effectiveDateStart =
+    context.subscription.status === "draft" ? activationDate : context.subscription.dateStart;
+  const billingAnchorDate =
+    context.subscription.status === "draft"
+      ? effectiveDateStart
+      : context.subscription.billingAnchorDate;
+  const pricingLockedAt = new Date();
 
   const [updatedSubscription] = await db
     .update(subscriptions)
     .set({
       status: "active",
-      dateStart:
-        context.subscription.status === "draft" ? activationDate : context.subscription.dateStart,
+      dateStart: effectiveDateStart,
       nextInvoiceDate: computeNextInvoiceDate({
         currentDate: activationDate,
         billingPeriod: context.template.billingPeriod,
         billingDay: context.template.billingDay,
+        billingAnchorDate,
       }),
       recurringTotal: mrrResult.lineTotal.toDecimalPlaces(2).toString(),
       mrr: mrrResult.mrr.toString(),
       arr: mrrResult.arr.toString(),
+      truthRevision: newTruthRevision,
+      pricingLockedAt,
+      pricingSnapshot,
+      billingAnchorDate,
+      currencyId,
       closeReasonId: null,
       updatedBy: input.actorId,
     })
@@ -199,6 +291,15 @@ export async function activateSubscription(
       `Subscription ${input.subscriptionId} was not found for tenant ${input.tenantId}.`
     );
   }
+
+  await appendSubscriptionPricingResolution({
+    tenantId: input.tenantId,
+    subscriptionId: updatedSubscription.id,
+    snapshot: pricingSnapshot,
+    recurringTotal: updatedSubscription.recurringTotal,
+    mrr: updatedSubscription.mrr,
+    arr: updatedSubscription.arr,
+  });
 
   await recordSubscriptionLog({
     tenantId: input.tenantId,
@@ -237,12 +338,13 @@ export async function pauseSubscription(
 ): Promise<PauseSubscriptionResult> {
   const subscription = await loadSubscription(input.tenantId, input.subscriptionId);
 
-  subscriptionStateMachine.assertTransition(subscription.status, "paused");
+  subscriptionStateMachine.assertTransition(subscription.status as SubscriptionStatus, "paused");
 
   const [updatedSubscription] = await db
     .update(subscriptions)
     .set({
       status: "paused",
+      truthRevision: subscription.truthRevision + 1,
       updatedBy: input.actorId,
     })
     .where(
@@ -296,11 +398,11 @@ export async function resumeSubscription(
   const template = await loadSubscriptionTemplate(input.tenantId, subscription.templateId);
 
   if (subscription.status === "past_due") {
-    subscriptionStateMachine.assertTransition(subscription.status, "active", {
+    subscriptionStateMachine.assertTransition(subscription.status as SubscriptionStatus, "active", {
       paymentResolved: input.paymentResolved === true,
     });
   } else {
-    subscriptionStateMachine.assertTransition(subscription.status, "active");
+    subscriptionStateMachine.assertTransition(subscription.status as SubscriptionStatus, "active");
   }
 
   const resumeDate = input.resumeDate ?? new Date();
@@ -316,6 +418,7 @@ export async function resumeSubscription(
     .set({
       status: "active",
       nextInvoiceDate,
+      truthRevision: subscription.truthRevision + 1,
       updatedBy: input.actorId,
     })
     .where(
@@ -370,7 +473,7 @@ export async function cancelSubscription(
 
   await ensureCloseReason(input.tenantId, input.closeReasonId);
 
-  subscriptionStateMachine.assertTransition(subscription.status, "cancelled", {
+  subscriptionStateMachine.assertTransition(subscription.status as SubscriptionStatus, "cancelled", {
     hasCloseReason: true,
   });
 
@@ -385,6 +488,7 @@ export async function cancelSubscription(
       closeReasonId: input.closeReasonId,
       mrr: "0.00",
       arr: "0.00",
+      truthRevision: subscription.truthRevision + 1,
       updatedBy: input.actorId,
     })
     .where(
@@ -446,9 +550,15 @@ export async function renewSubscription(
   }
 
   const renewalDate = input.renewalDate ?? new Date();
-  const mrrResult = computeMRR({
+  const mrrResult = resolveSubscriptionPricingAggregate({
     lines,
     billingPeriod: template.billingPeriod,
+  });
+  const pricingSnapshot = buildSubscriptionPricingSnapshotV1({
+    template,
+    lines,
+    mrrResult,
+    computedAt: renewalDate,
   });
   const oldMrr = new Decimal(subscription.mrr);
 
@@ -457,7 +567,11 @@ export async function renewSubscription(
     lastInvoiced: subscription.lastInvoicedAt ?? subscription.nextInvoiceDate,
     billingPeriod: template.billingPeriod,
     billingDay: template.billingDay,
+    billingAnchorDate: subscription.billingAnchorDate,
   });
+
+  const pricingLockedAt = renewalDate;
+  const newTruthRevision = subscription.truthRevision + 1;
 
   const [updatedSubscription] = await db
     .update(subscriptions)
@@ -468,6 +582,9 @@ export async function renewSubscription(
       recurringTotal: mrrResult.lineTotal.toDecimalPlaces(2).toString(),
       mrr: mrrResult.mrr.toString(),
       arr: mrrResult.arr.toString(),
+      truthRevision: newTruthRevision,
+      pricingLockedAt,
+      pricingSnapshot,
       updatedBy: input.actorId,
     })
     .where(
@@ -484,6 +601,15 @@ export async function renewSubscription(
       `Subscription ${input.subscriptionId} was not found for tenant ${input.tenantId}.`
     );
   }
+
+  await appendSubscriptionPricingResolution({
+    tenantId: input.tenantId,
+    subscriptionId: updatedSubscription.id,
+    snapshot: pricingSnapshot,
+    recurringTotal: updatedSubscription.recurringTotal,
+    mrr: updatedSubscription.mrr,
+    arr: updatedSubscription.arr,
+  });
 
   await recordSubscriptionLog({
     tenantId: input.tenantId,

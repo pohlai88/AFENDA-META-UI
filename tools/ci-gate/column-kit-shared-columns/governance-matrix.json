@@ -1,0 +1,1476 @@
+{
+  "_comment": "Declarative column-kit lifecycle governance matrix. Keep schema behavior truth here so CI can enforce mutable vs append-only expectations.",
+  "version": 1,
+  "failOnUnclassified": true,
+  "profiles": {
+    "mutable": {
+      "mandatory": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "recommended": [
+        "deletedAt",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    "appendOnly": {
+      "mandatory": [
+        "createdAt"
+      ],
+      "recommended": [
+        "createdBy"
+      ]
+    },
+    "readModel": {
+      "mandatory": [],
+      "recommended": []
+    },
+    "mutableLean": {
+      "mandatory": [
+        "createdAt",
+        "updatedAt"
+      ],
+      "recommended": [
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    "appendOnlyNoActor": {
+      "mandatory": [
+        "createdAt"
+      ],
+      "recommended": []
+    }
+  },
+  "rules": [
+    {
+      "kind": "table",
+      "table": "hr.employee_request_history",
+      "profile": "appendOnly",
+      "reason": "Immutable request audit trail."
+    },
+    {
+      "kind": "table",
+      "table": "hr.ess_domain_events",
+      "profile": "appendOnly",
+      "reason": "Domain event stream is insert-only."
+    },
+    {
+      "kind": "table",
+      "table": "hr.leave_request_status_history",
+      "profile": "appendOnly",
+      "reason": "Status history is append-only."
+    },
+    {
+      "kind": "table",
+      "table": "sales.domain_event_logs",
+      "profile": "appendOnly",
+      "reason": "Domain event log table is append-only."
+    },
+    {
+      "kind": "table",
+      "table": "sales.domain_invariant_logs",
+      "profile": "appendOnly",
+      "reason": "Invariant log table is append-only."
+    },
+    {
+      "kind": "table",
+      "table": "sales.truth_decision_locks",
+      "profile": "appendOnly",
+      "reason": "Truth decision locks are immutable snapshots on a binding."
+    },
+    {
+      "kind": "table",
+      "table": "sales.accounting_decisions",
+      "profile": "appendOnly",
+      "reason": "Accounting projection decisions are append-only audit artifacts."
+    },
+    {
+      "kind": "table",
+      "table": "sales.price_resolution_events",
+      "profile": "appendOnly",
+      "reason": "Append-only resolution lifecycle log (occurred_at anchors row time)."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_compliance_audit",
+      "profile": "appendOnlyNoActor",
+      "reason": "Append-only compliance trail; no actor column by design."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_pricing_resolutions",
+      "profile": "appendOnlyNoActor",
+      "reason": "Append-only pricing truth rows anchored on locked_at; no actor column by design."
+    },
+    {
+      "kind": "table",
+      "table": "sales.partner_financial_projections",
+      "profile": "readModel",
+      "reason": "Composite-key AR/AP projection without standard tenant lifecycle mixins."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_statuses",
+      "profile": "readModel",
+      "reason": "Global subscription status catalog without tenant-scoped lifecycle columns."
+    },
+    {
+      "kind": "table",
+      "table": "sales.gl_accounts",
+      "profile": "mutableLean",
+      "reason": "Chart of accounts rows are maintained over time (soft-delete via deleted_at)."
+    },
+    {
+      "kind": "table",
+      "table": "hr.analytics_dashboards",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.analytics_dimensions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.analytics_facts",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.applicant_documents",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.appraisal_template_kras",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.appraisal_templates",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.assessment_attempts",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.assessment_questions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.assessments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.assignment_allowances",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.attendance_records",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.attendance_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.benefit_claims",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.benefit_dependent_coverage",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.benefit_enrollments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.benefit_plan_benefits",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.benefit_plans",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.benefit_providers",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.biometric_devices",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.biometric_logs",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.bonus_point_redemption_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.bonus_point_reward_catalog",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.bonus_point_rules",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.bonus_point_transactions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.career_aspiration_skill_gaps",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.career_aspirations",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.career_path_step_skills",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.career_path_steps",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.career_paths",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.cash_advances",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.certificates",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.certifications",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.company_vehicles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.compensation_budgets",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.compensation_cycles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.compensatory_leave_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.compliance_tracking",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.cost_centers",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.course_enrollments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.course_materials",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.course_modules",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.course_prerequisites",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.course_sessions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.courses",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.data_exports",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.dei_metrics",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.departments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.disciplinary_actions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_benefits",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_bonus_points",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_certifications",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_documents",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_grievances",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_kras",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_loan_installments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_loans",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_notifications",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_policy_acknowledgments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_preferences",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_promotions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_push_endpoints",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_request_approval_tasks",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_resume_line_achievements",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_resume_line_skill_entries",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_resume_lines",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_salaries",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_self_service_profiles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_skills",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_survey_questionnaire_versions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_surveys",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_tax_declarations",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employee_transfers",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employees",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.employment_contracts",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.equity_grants",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.ess_escalation_policies",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.ess_event_types",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.ess_outbox",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.ess_workflow_definitions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.ess_workflow_steps",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.exit_interviews",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.expense_approvals",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.expense_categories",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.expense_claims",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.expense_lines",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.expense_policies",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.expense_reports",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.full_final_settlements",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.goals",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.grievance_categories",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.holiday_calendars",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.holidays",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.hr_metrics",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.hr_policy_documents",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.international_assignments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.interview_feedback",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.interviews",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.job_applications",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.job_offers",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.job_openings",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.job_position_skills",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.job_positions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.job_titles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.learning_path_courses",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.learning_path_enrollments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.learning_paths",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.learning_progress",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.leave_allocations",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.leave_encashments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.leave_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.leave_restrictions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.leave_type_configs",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.loan_types",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.market_benchmarks",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.offer_letters",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.onboarding_checklists",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.onboarding_progress",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.onboarding_tasks",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.overtime_rules",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.payment_distributions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.payroll_adjustments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.payroll_entries",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.payroll_lines",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.payroll_periods",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.payslips",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.performance_review_cycles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.performance_reviews",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.recruitment_analytics",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.recruitment_pipeline_stages",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.relocation_services",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.report_subscription_recipients",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.report_subscriptions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.resume_line_types",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.resume_parsed_data",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.salary_components",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.shift_assignments",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.shift_schedules",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.shift_swap_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.skill_levels",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.skill_types",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.skills",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.staffing_plan_details",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.staffing_plans",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.statutory_deductions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.succession_plans",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.survey_invitations",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.survey_responses",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.talent_pool_members",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.talent_pools",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.tax_brackets",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.tax_declaration_items",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.tax_exemption_categories",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.tax_exemption_proofs",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.tax_exemption_sub_categories",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.time_sheet_lines",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.time_sheets",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.training_costs",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.training_feedback",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.travel_itineraries",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.travel_requests",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.vehicle_logs",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.vesting_schedules",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "hr.work_permits",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.accounting_postings",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.commission_entries",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.commission_plan_tiers",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.commission_plans",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.consignment_agreement_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.consignment_agreements",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.consignment_stock_report_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.consignment_stock_reports",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.document_approvals",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.document_attachments",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.fiscal_position_account_maps",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.fiscal_position_tax_maps",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.fiscal_positions",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.line_item_discounts",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.partner_addresses",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.partner_bank_accounts",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.partner_tag_assignments",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.partner_tags",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.partners",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.payment_term_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.payment_terms",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.pricelist_items",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.pricelists",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_attribute_values",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_attributes",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_categories",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_packaging",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_template_attribute_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_template_attribute_values",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_templates",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.product_variants",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.products",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.return_order_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.return_orders",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.return_reason_codes",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.rounding_policies",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sale_order_line_taxes",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sale_order_option_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sale_order_tax_summary",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sales_order_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sales_orders",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sales_team_members",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.sales_teams",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_close_reasons",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_lines",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_logs",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscription_templates",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.subscriptions",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.tax_groups",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.tax_rate_children",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.tax_rates",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.territories",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "sales.territory_rules",
+      "profile": "mutableLean",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "security.permissions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "security.role_permissions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "security.roles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "security.user_permissions",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "security.user_roles",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "table",
+      "table": "security.users",
+      "profile": "mutable",
+      "reason": "Explicit mutable onboarding; review when lifecycle semantics change."
+    },
+    {
+      "kind": "pattern",
+      "match": "\\.(?:.*_history|.*_status_history|.*_domain_events|.*_event_logs|.*_invariant_logs)$",
+      "profile": "appendOnly",
+      "reason": "Naming convention marks immutable event/history tables."
+    },
+    {
+      "kind": "pattern",
+      "match": "^sales\\.",
+      "profile": "mutableLean",
+      "reason": "Sales tables: timestamps + actor audit IDs; soft-delete (deleted_at) is optional per table. appendOnly/readModel overrides appear earlier."
+    }
+  ]
+}

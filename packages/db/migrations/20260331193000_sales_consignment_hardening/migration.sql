@@ -1,0 +1,4 @@
+CREATE INDEX "idx_sales_consignment_agreements_status_end" ON "sales"."consignment_agreements" ("tenant_id","status","end_date");--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_sales_consignment_agreements_one_active_per_partner" ON "sales"."consignment_agreements" ("tenant_id","partner_id") WHERE "status" = 'active' AND "deleted_at" IS NULL;--> statement-breakpoint
+ALTER TABLE "sales"."consignment_agreements" ADD CONSTRAINT "chk_sales_consignment_agreements_active_end_not_in_past" CHECK ("status"::text <> 'active' OR "end_date" IS NULL OR ("end_date" AT TIME ZONE 'UTC')::date >= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date);--> statement-breakpoint
+ALTER TABLE "sales"."consignment_stock_report_lines" ADD CONSTRAINT "chk_sales_consignment_stock_report_lines_line_total_matches_sold" CHECK (round("sold_qty" * "unit_price", 2) = round("line_total", 2));

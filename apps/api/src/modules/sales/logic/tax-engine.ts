@@ -14,12 +14,20 @@
 
 import { Decimal } from "decimal.js";
 
+/**
+ * Persist on `tax_resolutions.tax_engine_version` and line snapshots.
+ * Bump when fiscal auto-pick ordering, group-child ordering, included/excluded staging, or rounding contract changes.
+ */
+export const TAX_ENGINE_VERSION = "v2" as const;
+
 // ───────────────────────────────────────────────────────────────────────────
 // Type Definitions
 // ───────────────────────────────────────────────────────────────────────────
 
 export type TaxTypeUse = "sale" | "purchase" | "none";
 export type TaxAmountType = "percent" | "fixed" | "group" | "code";
+/** Mirrors `sales.tax_computation_method` — drives deterministic math in this engine. */
+export type TaxComputationMethod = "flat" | "compound" | "included" | "group";
 
 export interface TaxRate {
   id: string;
@@ -28,6 +36,8 @@ export interface TaxRate {
   amountType: TaxAmountType;
   amount: string;
   priceInclude: boolean;
+  /** When set, must agree with `price_include` on the DB row (`included` ⇔ true). */
+  computationMethod?: TaxComputationMethod;
   sequence: number;
   taxGroupId?: string | null;
   children?: TaxRate[]; // For compound taxes
@@ -37,11 +47,16 @@ export interface FiscalPosition {
   id: string;
   name: string;
   countryId?: number | null;
-  stateIds?: string | null;
-  zipFrom?: string | null;
-  zipTo?: string | null;
+  /** Subdivision keys (`reference.states.state_id`) allowed for this position; empty/omit = any state. */
+  allowedStateIds?: number[];
+  zipFrom?: number | null;
+  zipTo?: number | null;
   autoApply: boolean;
   vatRequired: boolean;
+  /** Lower value = higher precedence among tied specificity (matches `fiscal_positions.sequence`). */
+  sequence?: number;
+  effectiveFrom?: string | Date | null;
+  effectiveTo?: string | Date | null;
   taxMaps?: Array<{
     taxSrcId: string;
     taxDestId: string | null; // null = exempt
@@ -88,9 +103,34 @@ export interface TaxEngineContext {
   partner?: Partner;
 }
 
+/** Outcome of auto_apply fiscal matching (single winner + audit flags). */
+export interface AutoApplyFiscalPickResult {
+  position: FiscalPosition | undefined;
+  /**
+   * True when ≥2 candidates tied on (specificity, sequence, effective_from) before the UUID tie-break.
+   * Persist as `tax_resolutions.resolution_strategy = 'ambiguous'` when recording.
+   */
+  ambiguous: boolean;
+  /** All matching auto_apply positions after filtering, ordered best → worst (final comparator order). */
+  orderedMatchingIds: string[];
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // Core Functions
 // ───────────────────────────────────────────────────────────────────────────
+
+function sortTaxRatesForEvaluation(a: TaxRate, b: TaxRate): number {
+  if (a.sequence !== b.sequence) return a.sequence - b.sequence;
+  return a.id.localeCompare(b.id);
+}
+
+/** Best-effort numeric bucket for postal codes (leading digit run); aligns with `fiscal_positions.zip_*` ints. */
+function normalizePostalCodeToInt(zip: string): number | undefined {
+  const m = zip.match(/\d+/);
+  if (!m) return undefined;
+  const n = Number.parseInt(m[0], 10);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 /**
  * Compute taxes for a single order line.
@@ -100,9 +140,9 @@ export interface TaxEngineContext {
  * 2. Apply fiscal position tax mapping (if provided)
  * 3. Expand compound taxes into children
  * 4. Separate tax-included vs tax-excluded taxes
- * 5. For tax-included: decompose base from price (reverse calculation)
- * 6. For tax-excluded: apply tax on top of base
- * 7. Handle cascading taxes (tax on tax) via sequence ordering
+ * 5. For tax-included: decompose base from gross using Σ rates (see `decomposeTaxIncluded`)
+ * 6. For tax-excluded: apply on net base after included extraction; `compound` extends base per sequence
+ * 7. Evaluation order: `sequence ASC`, `id ASC` (stable under `TAX_ENGINE_VERSION`)
  *
  * @param context - Tax engine context with tax definitions
  * @param priceUnit - Unit price (before discount)
@@ -145,9 +185,17 @@ export function computeLineTaxes(
     };
   }
 
-  // Separate tax-included vs tax-excluded
-  const includedTaxes = applicableTaxes.filter((t) => t.priceInclude);
-  const excludedTaxes = applicableTaxes.filter((t) => !t.priceInclude);
+  // Separate tax-included vs tax-excluded (prefer explicit computation method; fall back to legacy flag)
+  const includedTaxes = applicableTaxes
+    .filter(
+      (t) => t.computationMethod === "included" || (t.computationMethod === undefined && t.priceInclude)
+    )
+    .sort(sortTaxRatesForEvaluation);
+  const excludedTaxes = applicableTaxes
+    .filter(
+      (t) => !(t.computationMethod === "included" || (t.computationMethod === undefined && t.priceInclude))
+    )
+    .sort(sortTaxRatesForEvaluation);
 
   // Step 1: Decompose tax-included taxes from gross subtotal
   let base = grossSubtotal;
@@ -187,9 +235,9 @@ export function computeLineTaxes(
  *   base = gross / (1 + rate)
  *   tax = gross - base
  *
- * For multiple taxes:
- *   gross = base * (1 + tax1 + tax2 + ...)
- *   base = gross / (1 + sum(rates))
+ * Multiple included percent taxes: gross = base * (1 + Σ rate_i);
+ * base = gross / (1 + Σ rate_i); line amount_i = base * rate_i (line order = evaluation sort).
+ * Excluded taxes run on net base after this step; `compound` only applies in the excluded phase.
  *
  * @param grossAmount - Total amount including taxes
  * @param taxes - Array of included taxes
@@ -236,8 +284,7 @@ function decomposeTaxIncluded(
  * @returns Array of tax lines
  */
 function applyTaxesOnBase(baseAmount: Decimal, taxes: TaxRate[]): TaxLine[] {
-  // Sort by sequence to handle cascading taxes
-  const sortedTaxes = [...taxes].sort((a, b) => a.sequence - b.sequence);
+  const sortedTaxes = [...taxes].sort(sortTaxRatesForEvaluation);
 
   let runningBase = baseAmount;
   const taxLines: TaxLine[] = [];
@@ -254,9 +301,9 @@ function applyTaxesOnBase(baseAmount: Decimal, taxes: TaxRate[]): TaxLine[] {
       amount,
     });
 
-    // For cascading taxes, next tax applies to base + previous taxes
-    // (Uncomment if cascading is required)
-    // runningBase = runningBase.plus(amount);
+    if (tax.computationMethod === "compound") {
+      runningBase = runningBase.plus(amount);
+    }
   }
 
   return taxLines;
@@ -312,9 +359,16 @@ function expandCompoundTaxes(context: TaxEngineContext, taxIds: string[]): TaxRa
     const tax = context.taxes.get(taxId);
     if (!tax) continue;
 
-    if (tax.amountType === "group" && tax.children && tax.children.length > 0) {
-      // Recursively expand children
-      const childIds = tax.children.map((child) => child.id);
+    const children = tax.children;
+    const isGroup =
+      tax.amountType === "group" &&
+      (tax.computationMethod === "group" || tax.computationMethod === undefined) &&
+      children != null &&
+      children.length > 0;
+
+    if (isGroup) {
+      const orderedChildren = [...children].sort(sortTaxRatesForEvaluation);
+      const childIds = orderedChildren.map((child) => child.id);
       expandedTaxes.push(...expandCompoundTaxes(context, childIds));
     } else {
       expandedTaxes.push(tax);
@@ -409,97 +463,147 @@ export function computeOrderTaxes(
   };
 }
 
+function isFiscalPositionEffectiveAt(fp: FiscalPosition, asOf: Date): boolean {
+  if (fp.effectiveFrom != null && fp.effectiveFrom !== "") {
+    const from = new Date(fp.effectiveFrom);
+    if (!Number.isNaN(from.getTime()) && asOf < from) return false;
+  }
+  if (fp.effectiveTo != null && fp.effectiveTo !== "") {
+    const to = new Date(fp.effectiveTo);
+    if (!Number.isNaN(to.getTime()) && asOf > to) return false;
+  }
+  return true;
+}
+
+function fiscalEffectiveFromMs(fp: FiscalPosition): number {
+  if (fp.effectiveFrom == null || fp.effectiveFrom === "") return Number.NEGATIVE_INFINITY;
+  const t = new Date(fp.effectiveFrom).getTime();
+  return Number.isFinite(t) ? t : Number.NEGATIVE_INFINITY;
+}
+
+interface ScoredFiscalPosition {
+  position: FiscalPosition;
+  /** Count of geography dimensions constrained on the row and satisfied (0–3: country, state, zip). */
+  specificity: number;
+}
+
+/** When partner is VAT-registered, prefer `vat_required` positions over generic country matches at the same geography tier. */
+function fiscalVatPreferenceScore(fp: FiscalPosition, partner: Partner): number {
+  if (!partner.vat) return 0;
+  return fp.vatRequired ? 1 : 0;
+}
+
+function compareAutoApplyFiscalCandidates(
+  a: ScoredFiscalPosition,
+  b: ScoredFiscalPosition,
+  partner: Partner
+): number {
+  if (b.specificity !== a.specificity) return b.specificity - a.specificity;
+  const seqA = a.position.sequence ?? 10;
+  const seqB = b.position.sequence ?? 10;
+  if (seqA !== seqB) return seqA - seqB;
+  const tA = fiscalEffectiveFromMs(a.position);
+  const tB = fiscalEffectiveFromMs(b.position);
+  if (tA !== tB) return tB - tA;
+  const vA = fiscalVatPreferenceScore(a.position, partner);
+  const vB = fiscalVatPreferenceScore(b.position, partner);
+  if (vB !== vA) return vB - vA;
+  return a.position.id.localeCompare(b.position.id);
+}
+
+/**
+ * Auto_apply fiscal positions only. Deterministic ordering:
+ * `specificity DESC`, `sequence ASC`, `effective_from DESC`,
+ * VAT preference (when partner.vat set: `vat_required` rows before others), `id ASC`.
+ * Set `ambiguous` when ≥2 rows tie on all keys before UUID.
+ */
+export function pickAutoApplyFiscalPosition(
+  context: TaxEngineContext,
+  partner: Partner,
+  options?: { asOf?: Date }
+): AutoApplyFiscalPickResult {
+  if (!context.fiscalPositions) {
+    return { position: undefined, ambiguous: false, orderedMatchingIds: [] };
+  }
+
+  const asOf = options?.asOf ?? new Date();
+  const autoApplyPositions = Array.from(context.fiscalPositions.values()).filter((fp) => fp.autoApply);
+
+  const matching: ScoredFiscalPosition[] = [];
+
+  for (const fp of autoApplyPositions) {
+    if (!isFiscalPositionEffectiveAt(fp, asOf)) continue;
+
+    let specificity = 0;
+
+    if (fp.countryId != null) {
+      if (fp.countryId !== partner.countryId) continue;
+      specificity += 1;
+    }
+
+    if (fp.allowedStateIds && fp.allowedStateIds.length > 0) {
+      if (partner.stateId === undefined || partner.stateId === null) continue;
+      if (!fp.allowedStateIds.includes(partner.stateId)) continue;
+      specificity += 1;
+    }
+
+    if (fp.zipFrom != null && fp.zipTo != null) {
+      if (!partner.zip) continue;
+      const zipNum = normalizePostalCodeToInt(partner.zip);
+      if (zipNum === undefined || zipNum < fp.zipFrom || zipNum > fp.zipTo) continue;
+      specificity += 1;
+    }
+
+    if (fp.vatRequired && !partner.vat) continue;
+
+    matching.push({ position: fp, specificity });
+  }
+
+  if (matching.length === 0) {
+    return { position: undefined, ambiguous: false, orderedMatchingIds: [] };
+  }
+
+  matching.sort((x, y) => compareAutoApplyFiscalCandidates(x, y, partner));
+  const orderedMatchingIds = matching.map((m) => m.position.id);
+
+  const winner = matching[0]!;
+  const winnerSeq = winner.position.sequence ?? 10;
+  const winnerEff = fiscalEffectiveFromMs(winner.position);
+  const winnerVatPref = fiscalVatPreferenceScore(winner.position, partner);
+  const tiedForKey = matching.filter(
+    (m) =>
+      m.specificity === winner.specificity &&
+      (m.position.sequence ?? 10) === winnerSeq &&
+      fiscalEffectiveFromMs(m.position) === winnerEff &&
+      fiscalVatPreferenceScore(m.position, partner) === winnerVatPref
+  );
+  const ambiguous = tiedForKey.length > 1;
+
+  return {
+    position: winner.position,
+    ambiguous,
+    orderedMatchingIds,
+  };
+}
+
 /**
  * Detect the applicable fiscal position for a partner.
  *
- * Auto-detection rules (in order of priority):
- * 1. Partner has explicit fiscal position set → use it
- * 2. Fiscal position with auto_apply matching partner location → use most specific match
- * 3. No match → no fiscal position (standard taxes apply)
+ * 1. Explicit `defaultFiscalPositionId` wins (no auto_apply pass).
+ * 2. Else `pickAutoApplyFiscalPosition` (see ordering + ambiguity contract).
  *
- * Matching criteria (in order of specificity):
- * - Country matches partner.countryId
- * - State (if specified) is in stateIds CSV
- * - ZIP code (if specified) is in range [zipFrom, zipTo]
- * - VAT requirement: if vatRequired=true, partner must have VAT number
- *
- * Specificity scoring: More constraints = higher priority
- *
- * @param context - Tax engine context
- * @param partner - Partner to detect fiscal position for
- * @returns Detected fiscal position, or undefined
+ * @param options.asOf - Evaluation instant for `effective_from` / `effective_to` on fiscal rows (replay).
  */
 export function detectFiscalPosition(
   context: TaxEngineContext,
-  partner: Partner
+  partner: Partner,
+  options?: { asOf?: Date }
 ): FiscalPosition | undefined {
   if (!context.fiscalPositions) return undefined;
 
-  // Priority 1: Explicit fiscal position
   if (partner.defaultFiscalPositionId) {
-    return context.fiscalPositions.get(partner.defaultFiscalPositionId);
+    return context.fiscalPositions.get(partner.defaultFiscalPositionId) ?? undefined;
   }
 
-  // Priority 2: Auto-detection with specificity scoring
-  const autoApplyPositions = Array.from(context.fiscalPositions.values()).filter(
-    (fp) => fp.autoApply
-  );
-
-  interface ScoredPosition {
-    position: FiscalPosition;
-    score: number;
-  }
-
-  const matchingPositions: ScoredPosition[] = [];
-
-  for (const fp of autoApplyPositions) {
-    let score = 0;
-
-    // Check country match
-    if (fp.countryId) {
-      if (fp.countryId !== partner.countryId) {
-        continue;
-      }
-      score += 1; // Country match adds 1 point
-    }
-
-    // Check state match (if specified)
-    if (fp.stateIds) {
-      if (!partner.stateId) {
-        continue;
-      }
-      const states = fp.stateIds.split(",").map((s) => parseInt(s.trim(), 10));
-      if (!states.includes(partner.stateId)) {
-        continue;
-      }
-      score += 2; // State match adds 2 points (more specific)
-    }
-
-    // Check ZIP range (if specified)
-    if (fp.zipFrom && fp.zipTo) {
-      if (!partner.zip) {
-        continue;
-      }
-      if (partner.zip < fp.zipFrom || partner.zip > fp.zipTo) {
-        continue;
-      }
-      score += 3; // ZIP match adds 3 points (most specific)
-    }
-
-    // Check VAT requirement
-    if (fp.vatRequired && !partner.vat) {
-      continue;
-    }
-    if (fp.vatRequired) {
-      score += 1; // VAT requirement match adds 1 point
-    }
-
-    matchingPositions.push({ position: fp, score });
-  }
-
-  // Return most specific match (highest score)
-  if (matchingPositions.length === 0) return undefined;
-
-  matchingPositions.sort((a, b) => b.score - a.score);
-  return matchingPositions[0].position;
+  return pickAutoApplyFiscalPosition(context, partner, options).position;
 }

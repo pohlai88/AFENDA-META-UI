@@ -77,6 +77,19 @@ registerEventTypeResolver("sales_order", (input) => {
     return "sales_order.confirmed";
   }
 
+  /**
+   * Status → `sale` is applied in the DB confirmation pipeline before the command runtime runs; the remaining patch
+   * is often credit-only. Treat a sale row picking up a passed credit check as confirm completion for event typing.
+   */
+  if (
+    afterStatus === "sale" &&
+    beforeStatus === "sale" &&
+    input.after?.creditCheckPassed === true &&
+    input.before?.creditCheckPassed !== true
+  ) {
+    return "sales_order.confirmed";
+  }
+
   return "sales_order.submitted";
 });
 

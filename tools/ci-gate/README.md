@@ -200,8 +200,20 @@ node tools/ci-gate/index.mjs --gate=casing
 **When to use:**
 
 - After changing shared column helpers in `packages/db/src/_shared`
-- After editing raw SQL trigger files under `packages/db/src/triggers`
+- After regenerating `packages/db/migrations/generated/truth-v1.sql` or editing `packages/db/src/truth-compiler/sql/*.sql`
 - Before shipping migrations that rename column casing
+
+### Truth compiler health (repo scripts)
+
+Truth enforcement spans `@afenda/db/truth-compiler`, generated `truth-v1.sql`, and heuristic **`truth-score`** (gate: `truth-score`). Use these **together**:
+
+| Mode | Command | Behavior |
+| ---- | ------- | -------- |
+| **Strict (pre-merge)** | `pnpm truth:gate` (repo root) | Runs `truth:check` + blocking `truth:schema:compare` + `pnpm ci:gate:truth`. Fails on drift or score failure. |
+| **Advisory (CI / local)** | `pnpm truth:gate:advisory` | Runs `tools/scripts/truth-advisory-gates.mjs`; **always exits 0**; prints warnings / `::warning::` in GitHub Actions. |
+| **Schema drift, non-blocking** | `pnpm --filter @afenda/db truth:schema:compare:warn` | Same as `truth:schema:compare` but exit 0 when status is `drift`. |
+
+GitHub Actions: non-blocking job **`truth_compiler_advisory`** runs `pnpm truth:gate:advisory` on PR and push. Baseline audit: `packages/db/src/truth-compiler/BASELINE_AUDIT_CHECKLIST.md`.
 
 \*\*Do🔧 Actionable Fix Suggestions
 
@@ -911,7 +923,7 @@ Glob-driven convention checks on `packages/db/src/schema/**/*.ts` (Drizzle table
 
 **Severity matrix:** [drizzle-schema-quality/rules-matrix.json](drizzle-schema-quality/rules-matrix.json). **Baseline:** object `baseline.{ "file::table::ruleId": { ruleId, severity, reason } }` — short paths resolve under `packages/db/src/schema/`. See [baseline.example.json](drizzle-schema-quality/baseline.example.json). Committed: `baseline.json` (used by master runner + `pnpm ci:gate:schema-quality`). Console prints `key:` per finding for copy/paste.
 
-**HR relations drift:** `RELATIONS_DRIFT` (severity **error**) compares `packages/db/src/schema/hr/_relations.ts` to extracted `foreignKey()` edges in HR modules. Remediation: [packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md](../packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md). **Phase 3 (remaining):** deeper Zod/doc/table-count drift — TBD.
+**Domain relations drift:** `RELATIONS_DRIFT` (severity **error**) compares relations catalogs to extracted `foreignKey()` edges for `hr`, `sales`, and `security` modules (`*_relations.ts` per domain). Remediation playbook: [packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md](../packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md). **Phase 3 (remaining):** deeper Zod/doc/table-count drift — TBD.
 
 **Commands:**
 

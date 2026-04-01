@@ -5,7 +5,13 @@ import {
 } from "@afenda/db/truth-compiler";
 import type { MutationPolicy } from "@afenda/meta-types/compiler";
 import type { DomainEvent } from "@afenda/meta-types/events";
-import type { MutationOperation, MutationPolicyDefinition } from "@afenda/meta-types/policy";
+import type { EventMetadata } from "@afenda/meta-types/events";
+import type {
+  InvariantRegistry,
+  MutationOperation,
+  MutationPolicyDefinition,
+} from "@afenda/meta-types/policy";
+import { evaluateCondition } from "@afenda/truth-test/auto";
 import { dbAppendEvent } from "../events/dbEventStore.js";
 import { resolveEventType } from "./event-type-registry.js";
 
@@ -25,6 +31,7 @@ export interface ExecuteMutationCommandInput<TRecord extends MutationRecord> {
   recordId?: string;
   actorId?: string;
   source?: string;
+  eventMetadata?: EventMetadata;
   policies?: MutationPolicyDefinition[];
   loadProjectionState?: (input: {
     model: string;
@@ -325,6 +332,7 @@ export async function executeMutationCommand<TRecord extends MutationRecord>(
         result: null,
       }),
       {
+        ...input.eventMetadata,
         actor: input.actorId,
         source: input.source ?? DEFAULT_SOURCE,
       }
@@ -450,6 +458,7 @@ export async function executeMutationCommand<TRecord extends MutationRecord>(
       result,
     }),
     {
+      ...input.eventMetadata,
       actor: input.actorId,
       source: input.source ?? DEFAULT_SOURCE,
     }
@@ -492,38 +501,30 @@ export async function executeMutationCommand<TRecord extends MutationRecord>(
  * });
  * ```
  */
-export function invariantEnforcementMiddleware(
-  registries: Array<{ model: string; invariants: Array<any>; [key: string]: any }>
-) {
+export function invariantEnforcementMiddleware(registries: InvariantRegistry[]) {
   return async (input: {
     model: string;
-    operation: any;
+    operation: MutationOperation;
     aggregateId?: string;
-    record?: any;
+    record?: MutationRecord | null;
   }): Promise<void> => {
     const registry = registries.find((r) => r.model === input.model);
-    if (!registry || !input.record) {
-      // No invariants registered for this model or no record to check — nothing to do
+    if (!registry || input.record == null) {
       return;
     }
 
-    // Evaluate invariants using the application-level evaluator
-    // (mirrors the SQL CHECK constraints at the application tier)
     const violations: Array<{ id: string; description: string }> = [];
 
     for (const invariant of registry.invariants) {
-      // Skip invariants that don't apply to this operation
-      if (invariant.triggerOn && !invariant.triggerOn.includes(input.operation)) {
+      if (invariant.triggerOn.length > 0 && !invariant.triggerOn.includes(input.operation)) {
         continue;
       }
 
-      // Evaluate invariant condition against the record
-      // Note: The actual evaluation logic lives in the evaluateInvariants function
-      // in invariant-enforcer.ts. This is a placeholder that logs the check.
-      // In a full implementation, this would call evaluateCondition() to test the condition.
-      const passed = true; // TODO: Implement condition evaluation
-
-      if (!passed) {
+      const passes = evaluateCondition(
+        invariant.condition,
+        input.record as Record<string, unknown>
+      );
+      if (!passes) {
         violations.push({
           id: invariant.id,
           description: invariant.description,

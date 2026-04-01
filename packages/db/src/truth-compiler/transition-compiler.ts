@@ -9,8 +9,8 @@
  *   - Flat transition graph (no guard SQL — guards are resolved at API layer).
  *   - One PL/pgSQL function + one trigger per entity state machine.
  *
- * Generated pattern mirrors the existing hand-authored triggers in
- * packages/db/src/triggers/status-transitions.sql (see AD-10).
+ * Generated pattern mirrors supplemental / legacy trigger SQL bundled in
+ * migrations/generated/truth-v1.sql (see AD-10).
  *
  * Security (AD-11): all identifiers pass through quoteIdentifier().
  *

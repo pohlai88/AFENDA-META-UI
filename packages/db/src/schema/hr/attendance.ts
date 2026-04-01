@@ -20,14 +20,15 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   appendOnlyTimestampColumns,
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { countries, states } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -96,7 +97,7 @@ export const leaveTypeConfigs = hrSchema.table(
     effectiveTo: date("effective_to", { mode: "string" }),
     carryForwardExpiryDate: date("carry_forward_expiry_date", { mode: "string" }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -137,7 +138,8 @@ export const leaveAllocations = hrSchema.table(
     carriedForward: numeric("carried_forward", { precision: 5, scale: 2 }).notNull().default("0"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -192,7 +194,7 @@ export const leaveRequests = hrSchema.table(
     rejectionReason: text("rejection_reason"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -251,6 +253,7 @@ export const leaveRequestStatusHistory = hrSchema.table(
     toStatus: leaveStatusEnum("to_status").notNull(),
     changedBy: uuid("changed_by"),
     notes: text("notes"),
+    createdBy: integer("created_by").notNull().references(() => users.userId),
     ...appendOnlyTimestampColumns,
   },
   (table) => [
@@ -288,7 +291,7 @@ export const holidayCalendars = hrSchema.table(
     holidayType: holidayCalendarTypeEnum("holiday_type").notNull().default("public"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -320,7 +323,7 @@ export const holidays = hrSchema.table(
     description: text("description"),
     isRecurring: boolean("is_recurring").notNull().default(false),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -359,7 +362,7 @@ export const timeSheets = hrSchema.table(
     approvedDate: date("approved_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -413,7 +416,8 @@ export const timeSheetLines = hrSchema.table(
     description: text("description"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -453,7 +457,8 @@ export const attendanceRecords = hrSchema.table(
     attendanceStatus: attendanceStatusEnum("attendance_status").notNull(),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -493,7 +498,7 @@ export const shiftSchedules = hrSchema.table(
     breakMinutes: integer("break_minutes").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -524,7 +529,8 @@ export const shiftAssignments = hrSchema.table(
     status: shiftAssignmentStatusEnum("status").notNull().default("planned"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

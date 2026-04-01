@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { ensureTestEnv, selectMock, updateMock, insertMock, queueSelect, setUpdateResult } =
+const { ensureTestEnv, selectMock, updateMock, insertMock, queueSelect, queueClear, setUpdateResult } =
   vi.hoisted(() => {
     process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/afenda_test";
 
@@ -10,6 +10,7 @@ const { ensureTestEnv, selectMock, updateMock, insertMock, queueSelect, setUpdat
     const createSelectChain = (rows: unknown[]) => {
       const chain = {
         from: vi.fn(() => chain),
+        leftJoin: vi.fn(() => chain),
         where: vi.fn(() => chain),
         orderBy: vi.fn(() => chain),
         limit: vi.fn(async () => rows),
@@ -37,6 +38,9 @@ const { ensureTestEnv, selectMock, updateMock, insertMock, queueSelect, setUpdat
       })),
       queueSelect: (...rows: unknown[][]) => {
         selectQueue.push(...rows);
+      },
+      queueClear: () => {
+        selectQueue.length = 0;
       },
       setUpdateResult: (rows: unknown[]) => {
         updateResult = rows;
@@ -110,15 +114,10 @@ vi.mock("@afenda/db", () => ({
   sql: vi.fn(),
 }));
 
-vi.mock("@afenda/db/schema/sales", () => ({
-  subscriptionCloseReasons: {},
-  subscriptionLines: {},
-  subscriptionLogs: {},
-  subscriptions: {},
-  subscriptionTemplates: {},
-  domainEventLogs: {},
-  domainInvariantLogs: {},
-}));
+vi.mock("@afenda/db/schema/sales", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@afenda/db/schema/sales")>();
+  return actual;
+});
 
 import { ValidationError } from "../../../middleware/errorHandler.js";
 import {
@@ -136,11 +135,16 @@ const subscription = {
   templateId: "tmpl-1",
   status: "draft" as const,
   dateStart: new Date("2026-01-01T00:00:00.000Z"),
+  billingAnchorDate: new Date("2026-01-01T00:00:00.000Z"),
   dateEnd: null,
   nextInvoiceDate: new Date("2026-01-05T00:00:00.000Z"),
   recurringTotal: "200.00",
   mrr: "200.00",
   arr: "2400.00",
+  truthRevision: 1,
+  pricingLockedAt: null,
+  pricingSnapshot: {},
+  currencyId: null as number | null,
   closeReasonId: null,
   lastInvoicedAt: null,
   deletedAt: null,
@@ -170,6 +174,7 @@ const lines = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  queueClear();
   mockValidationResult = {
     valid: true,
     issues: [],
@@ -193,11 +198,18 @@ describe("subscription service", () => {
   });
 
   it("activates a valid draft subscription", async () => {
-    queueSelect([subscription], [template], [...lines]);
+    queueSelect(
+      [subscription],
+      [template],
+      [...lines],
+      [{ currencyId: 1 }],
+      [{ maxRev: 0 }]
+    );
     setUpdateResult([
       {
         ...subscription,
         status: "active",
+        truthRevision: 2,
       },
     ]);
 
@@ -209,6 +221,7 @@ describe("subscription service", () => {
 
     expect(result.subscription.status).toBe("active");
     expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).toHaveBeenCalledTimes(2);
   });
 
   it("fails activation when validation has errors", async () => {
@@ -245,7 +258,7 @@ describe("subscription service", () => {
 
   it("resumes a paused subscription", async () => {
     queueSelect([{ ...subscription, status: "paused" }], [template]);
-    setUpdateResult([{ ...subscription, status: "active" }]);
+    setUpdateResult([{ ...subscription, status: "active", truthRevision: 2 }]);
 
     const result = await resumeSubscription({
       tenantId: 7,
@@ -278,7 +291,8 @@ describe("subscription service", () => {
     queueSelect(
       [{ ...subscription, status: "active", dateEnd: new Date("2026-12-31T00:00:00.000Z") }],
       [template],
-      [...lines]
+      [...lines],
+      [{ maxRev: 0 }]
     );
     setUpdateResult([
       {
@@ -296,5 +310,6 @@ describe("subscription service", () => {
 
     expect(result.subscription.status).toBe("active");
     expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).toHaveBeenCalledTimes(2);
   });
 });

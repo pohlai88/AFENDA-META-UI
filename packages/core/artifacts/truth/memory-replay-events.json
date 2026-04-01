@@ -1,0 +1,1 @@
+[{"entityId":"SO-1","entityName":"sales_order","eventId":"evt_1","presentState":{"amount":100,"status":"posted"},"supersedesEventId":null}]

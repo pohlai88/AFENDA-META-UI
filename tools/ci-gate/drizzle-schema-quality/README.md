@@ -55,7 +55,7 @@ node tools/ci-gate/drizzle-schema-quality/index.mjs --baseline=tools/ci-gate/dri
 | `INDEX_ANONYMOUS` | warn | `rules-matrix.json` |
 | `UNIQUE_INDEX_ANONYMOUS` | warn | `rules-matrix.json` |
 | `TABLE_PARSE_ERROR` | error | `rules-matrix.json` |
-| `RELATIONS_DRIFT` | error | HR `hrRelations` vs extracted `foreignKey` edges (single-col + composite `[tenantId,id]` second leg) |
+| `RELATIONS_DRIFT` | error | Domain relations catalog (`hr/_relations.ts`, `sales/_relations.ts`) vs extracted `foreignKey` edges |
 | `ZOD_PARITY` | warn | HR `insert*Schema` vs `hrSchema.table` — `tenantId` integer vs `z.uuid()`, uuid `*Id` vs `z.number()` |
 | `ORPHAN_UUID_COLUMN` | warn | Phase 2 (reserved) |
 
@@ -93,9 +93,15 @@ Commit messages should mention baseline edits; prune entries as issues are fixed
 
 `ORPHAN_UUID_COLUMN` and deeper Zod / AST checks remain future work.
 
-### HR relations drift (`RELATIONS_DRIFT`)
+### Domain relations drift (`RELATIONS_DRIFT`)
 
-Project-level: when the scan includes any `packages/db/src/schema/hr/*.ts` data module, the gate loads `hr/_relations.ts`, parses `hrRelations` entries into physical FK edges, and diffs against edges extracted from `foreignKey()` calls. **Catalog `fromField` / `toField` must use the same SQL column names as Drizzle** (e.g. `parent_department_id`, not `parent_id`). Deferred or omitted `foreignKey()` definitions will not produce edges. Composite FKs other than `[ref.tenantId, ref.id]` are not expanded.
+Project-level:
+
+- HR scan includes `packages/db/src/schema/hr/*.ts` data modules -> compare against `hr/_relations.ts`.
+- Sales scan includes `packages/db/src/schema/sales/*.ts` data modules -> compare against `sales/_relations.ts`.
+- Security scan includes `packages/db/src/schema/security/*.ts` data modules -> compare against `security/_relations.ts`.
+
+Catalog `fromField` / `toField` must use the same SQL column names as Drizzle (e.g. `parent_department_id`, not `parent_id`). Deferred or omitted `foreignKey()` definitions will not produce edges.
 
 **Remediation playbook (buckets, checklists, PR batches):** [packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md](../../../packages/db/src/schema/hr/hr-docs/RELATIONS_DRIFT_REMEDIATION.md)
 

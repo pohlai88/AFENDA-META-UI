@@ -19,13 +19,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -71,7 +72,7 @@ export const grievanceCategories = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -143,7 +144,7 @@ export const employeeGrievances = hrSchema.table(
     confidentialNotes: jsonb("confidential_notes").$type<Record<string, unknown>>(),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

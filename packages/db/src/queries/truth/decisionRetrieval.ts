@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import {
   documentAttachments,
   documentGuardrailEvents,

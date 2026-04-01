@@ -3,7 +3,8 @@
 // Human-owned reporting: use separate modules (not *.access.ts).
 
 import { and, eq, isNull } from "drizzle-orm";
-import type { Database } from "../../db.js";
+import type { Database } from "../../drizzle/db.js";
+import { assertGraphGuardrailAllowsRead } from "../_shared/graph-guardrail.js";
 import {
   employeeGrievances,
   grievanceCategories,
@@ -29,6 +30,16 @@ export async function getGrievanceCategoriesByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getGrievanceCategoriesByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getGrievanceCategoriesByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof grievanceCategories.$inferSelect)["tenantId"],
+  id: (typeof grievanceCategories.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getGrievanceCategoriesByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listGrievanceCategoriesActive(
   db: Database,
@@ -40,12 +51,28 @@ export async function listGrievanceCategoriesActive(
     .where(and(eq(grievanceCategories.tenantId, tenantId), isNull(grievanceCategories.deletedAt)));
 }
 
+export async function listGrievanceCategoriesActiveGuarded(
+  db: Database,
+  tenantId: (typeof grievanceCategories.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listGrievanceCategoriesActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listGrievanceCategoriesAll(
   db: Database,
   tenantId: (typeof grievanceCategories.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(grievanceCategories).where(eq(grievanceCategories.tenantId, tenantId));
+}
+
+export async function listGrievanceCategoriesAllGuarded(
+  db: Database,
+  tenantId: (typeof grievanceCategories.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listGrievanceCategoriesAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -58,6 +85,15 @@ export async function archiveGrievanceCategories(
     .update(grievanceCategories)
     .set({ deletedAt: new Date() })
     .where(and(eq(grievanceCategories.tenantId, tenantId), eq(grievanceCategories.id, id)));
+}
+
+export async function archiveGrievanceCategoriesGuarded(
+  db: Database,
+  tenantId: (typeof grievanceCategories.$inferSelect)["tenantId"],
+  id: (typeof grievanceCategories.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveGrievanceCategories(db, tenantId, id);
 }
 
 
@@ -81,6 +117,16 @@ export async function getEmployeeGrievancesByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getEmployeeGrievancesByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getEmployeeGrievancesByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof employeeGrievances.$inferSelect)["tenantId"],
+  id: (typeof employeeGrievances.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getEmployeeGrievancesByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listEmployeeGrievancesActive(
   db: Database,
@@ -92,12 +138,28 @@ export async function listEmployeeGrievancesActive(
     .where(and(eq(employeeGrievances.tenantId, tenantId), isNull(employeeGrievances.deletedAt)));
 }
 
+export async function listEmployeeGrievancesActiveGuarded(
+  db: Database,
+  tenantId: (typeof employeeGrievances.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listEmployeeGrievancesActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listEmployeeGrievancesAll(
   db: Database,
   tenantId: (typeof employeeGrievances.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(employeeGrievances).where(eq(employeeGrievances.tenantId, tenantId));
+}
+
+export async function listEmployeeGrievancesAllGuarded(
+  db: Database,
+  tenantId: (typeof employeeGrievances.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listEmployeeGrievancesAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -110,5 +172,14 @@ export async function archiveEmployeeGrievances(
     .update(employeeGrievances)
     .set({ deletedAt: new Date() })
     .where(and(eq(employeeGrievances.tenantId, tenantId), eq(employeeGrievances.id, id)));
+}
+
+export async function archiveEmployeeGrievancesGuarded(
+  db: Database,
+  tenantId: (typeof employeeGrievances.$inferSelect)["tenantId"],
+  id: (typeof employeeGrievances.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveEmployeeGrievances(db, tenantId, id);
 }
 

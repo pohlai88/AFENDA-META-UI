@@ -79,7 +79,7 @@ ${colors.cyan}OPTIONS:${colors.reset}
   --gate=<name>    Run a specific gate (e.g., --gate=logger)
   --fix            Enable auto-fix mode for all gates
   --concurrency=n  Number of gates to run in parallel (default: 1)
-  --mode=<type>    Gate mode: full (default) or fast
+  --mode=<type>    Gate mode: full (default) or fast (skips bundle web build if no dist; skips audit/outdated)
   --verbose, -v    Show verbose output from all gates
   --help, -h       Show this help message
 
@@ -88,7 +88,7 @@ ${colors.cyan}EXAMPLES:${colors.reset}
   node tools/ci-gate/index.mjs --gate=logger      Run logger gate only
   node tools/ci-gate/index.mjs --fix              Run all gates with auto-fix
   node tools/ci-gate/index.mjs --concurrency=2    Run up to 2 gates in parallel
-  node tools/ci-gate/index.mjs --mode=fast        Skip slower network checks where supported
+  node tools/ci-gate/index.mjs --mode=fast        Skip bundle build if no dist; skip audit/outdated
   node tools/ci-gate/index.mjs --verbose          Run with verbose output
 
 ${colors.cyan}AVAILABLE GATES:${colors.reset}
@@ -139,7 +139,8 @@ function runGate(gate, args = []) {
     
     const child = spawn('node', [gate.path, ...args], {
       cwd: gate.dir,
-      stdio: options.verbose ? 'inherit' : 'pipe',
+      // ignore stdin so a child never blocks waiting for TTY input; pipe stdout/stderr for capture
+      stdio: options.verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
     });
     
     let stdout = '';
@@ -191,6 +192,10 @@ function getModeArgsForGate(gate) {
     return args;
   }
 
+  if (options.mode === 'fast' && gate.name === 'bundle') {
+    return ['--skip-build'];
+  }
+
   if (options.mode !== 'fast') {
     return [];
   }
@@ -201,6 +206,17 @@ function getModeArgsForGate(gate) {
 
   return [];
 }
+
+/** Gates that often look "stuck" but are working (stdout buffered when not --verbose). */
+const SLOW_GATE_HINTS = {
+  bundle:
+    'If not using --mode=fast, may run `pnpm --filter web build` when apps/web/dist is missing (several minutes).',
+  dependencies:
+    'Runs `pnpm audit` and `pnpm outdated` against the registry (network; can be slow).',
+  'drizzle-schema-quality': 'Scans large schema trees; can take 1–3+ minutes.',
+  'column-kit-sales-domain':
+    'Runs Drizzle local-ts column-kit scan for `sales.*` tables (tsx + full schema load).',
+};
 
 /**
  * Run gates with bounded concurrency while preserving result order.
@@ -223,9 +239,15 @@ async function runGates(gates, gateArgs) {
       const modeArgs = getModeArgsForGate(gate);
       const effectiveArgs = [...gateArgs, ...modeArgs];
       console.log(`${colors.bright}Running: ${gate.name}${colors.reset}`);
-      console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}`);
+      console.log(
+        `${colors.dim}${new Date().toISOString()} · ${'─'.repeat(48)}${colors.reset}`
+      );
       if (modeArgs.length > 0) {
         console.log(`${colors.dim}Mode flags: ${modeArgs.join(' ')}${colors.reset}`);
+      }
+      const hint = SLOW_GATE_HINTS[gate.name];
+      if (hint && !options.verbose) {
+        console.log(`${colors.yellow}ℹ${colors.reset} ${colors.dim}${hint}${colors.reset}`);
       }
 
       const result = await runGate(gate, effectiveArgs);

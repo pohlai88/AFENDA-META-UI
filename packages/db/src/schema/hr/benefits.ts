@@ -34,13 +34,14 @@ import {
 } from "./_enums.js";
 import { employees } from "./people.js";
 import { currencies } from "../reference/index.js";
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import {
   BenefitProviderIdSchema,
   BenefitEnrollmentIdSchema,
@@ -74,7 +75,7 @@ export const benefitProviders = hrSchema.table(
     status: benefitCatalogStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("benefit_providers_tenant_idx").on(table.tenantId),
@@ -101,7 +102,7 @@ export const benefitEnrollments = hrSchema.table(
     status: benefitEnrollmentWorkflowStatusEnum("status").notNull().default("pending"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -144,7 +145,7 @@ export const benefitDependentCoverage = hrSchema.table(
     status: dependentCoverageStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -177,7 +178,7 @@ export const benefitClaims = hrSchema.table(
     reviewedBy: uuid("reviewed_by"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -224,7 +225,7 @@ export const benefitPlanBenefits = hrSchema.table(
     status: benefitCatalogStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({

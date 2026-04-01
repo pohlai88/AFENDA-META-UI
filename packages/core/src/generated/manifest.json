@@ -1,0 +1,51 @@
+{
+  "generatedAt": "deterministic",
+  "counts": {
+    "identities": 5,
+    "enums": 4,
+    "relations": 2,
+    "doctrines": 5,
+    "resolutions": 5,
+    "invariants": 5
+  },
+  "keys": {
+    "identities": [
+      "tenant_id",
+      "sales_order_id",
+      "inventory_reservation_id",
+      "journal_entry_id",
+      "memory_event_id"
+    ],
+    "enums": [
+      "authority_status",
+      "invariant_severity",
+      "invariant_timing",
+      "document_flow_stage"
+    ],
+    "relations": [
+      "sales_order_to_inventory_reservation",
+      "inventory_reservation_to_journal_entry"
+    ],
+    "doctrines": [
+      "ias21_fx_conversion",
+      "double_entry_balance",
+      "closed_period_block",
+      "economic_effect_uniqueness",
+      "supersession_required_for_meaning_change"
+    ],
+    "resolutions": [
+      "resolve_missing_fx_rate",
+      "resolve_closed_period_block",
+      "resolve_duplicate_economic_effect",
+      "resolve_journal_imbalance",
+      "resolve_supersession_required_for_meaning_change"
+    ],
+    "invariants": [
+      "fx_conversion_basis_required",
+      "journal_must_balance",
+      "posting_period_must_be_open",
+      "economic_effect_must_be_unique",
+      "supersession_required_for_meaning_change"
+    ]
+  }
+}

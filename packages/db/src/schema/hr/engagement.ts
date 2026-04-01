@@ -17,13 +17,14 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -74,7 +75,7 @@ export const bonusPointRules = hrSchema.table(
     effectiveTo: date("effective_to"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -113,7 +114,7 @@ export const employeeBonusPoints = hrSchema.table(
     lastEarnedDate: timestamp("last_earned_date"),
     lastRedeemedDate: timestamp("last_redeemed_date"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -157,7 +158,7 @@ export const bonusPointTransactions = hrSchema.table(
     notes: text("notes"),
     transactionDate: timestamp("transaction_date").notNull().defaultNow(),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -201,7 +202,7 @@ export const bonusPointRewardCatalog = hrSchema.table(
     effectiveFrom: date("effective_from"),
     effectiveTo: date("effective_to"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -245,7 +246,7 @@ export const bonusPointRedemptionRequests = hrSchema.table(
     /** Ledger row created when the redemption is fulfilled (`transaction_type = redeemed`). */
     bonusPointTransactionId: uuid("bonus_point_transaction_id"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

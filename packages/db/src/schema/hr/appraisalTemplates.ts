@@ -18,13 +18,14 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -69,7 +70,7 @@ export const appraisalTemplates = hrSchema.table(
     effectiveTo: date("effective_to", { mode: "string" }),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -115,7 +116,7 @@ export const appraisalTemplateKras = hrSchema.table(
     category: appraisalKraCategoryEnum("category").notNull().default("operational"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -166,7 +167,7 @@ export const employeeKras = hrSchema.table(
     evaluatedBy: uuid("evaluated_by"),
     comments: text("comments"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

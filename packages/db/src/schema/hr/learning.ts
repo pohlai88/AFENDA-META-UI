@@ -54,13 +54,14 @@ import {
   CourseEnrollmentSourceSchema,
   LearningPathStatusSchema,
 } from "./_enums.js";
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { employees } from "./people.js";
 import { departments } from "./people.js";
 import { currencies } from "../reference/index.js";
@@ -118,7 +119,7 @@ export const courses = hrSchema.table(
     courseVersion: text("course_version").notNull().default("1.0"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -170,7 +171,7 @@ export const courseModules = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -207,7 +208,7 @@ export const learningPaths = hrSchema.table(
     status: learningPathStatusEnum("status").notNull().default("active"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     index("learning_paths_tenant_idx").on(table.tenantId),
@@ -231,6 +232,8 @@ export const learningPathCourses = hrSchema.table(
     courseOrder: integer("course_order").notNull(),
     isRequired: boolean("is_required").notNull().default(true),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({
@@ -271,7 +274,7 @@ export const assessments = hrSchema.table(
     randomizeQuestions: boolean("randomize_questions").notNull().default(false),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -304,7 +307,7 @@ export const assessmentQuestions = hrSchema.table(
     questionOrder: integer("question_order").notNull(),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -341,7 +344,8 @@ export const assessmentAttempts = hrSchema.table(
     feedback: text("feedback"),
     timeSpentMinutes: integer("time_spent_minutes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({
@@ -408,7 +412,7 @@ export const courseSessions = hrSchema.table(
     status: courseSessionStatusEnum("status").notNull().default("scheduled"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -448,7 +452,7 @@ export const courseEnrollments = hrSchema.table(
     finalScore: numeric("final_score", { precision: 5, scale: 2 }),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -496,6 +500,8 @@ export const learningProgress = hrSchema.table(
     status: learningProgressStatusEnum("status").notNull().default("in_progress"),
     scorePercentage: numeric("score_percentage", { precision: 5, scale: 2 }),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({
@@ -538,7 +544,8 @@ export const trainingFeedback = hrSchema.table(
     comments: text("comments"),
     feedbackDate: date("feedback_date", { mode: "string" }).notNull(),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({
@@ -577,7 +584,7 @@ export const trainingCosts = hrSchema.table(
     description: text("description"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -615,7 +622,7 @@ export const learningPathEnrollments = hrSchema.table(
     progressPercentage: numeric("progress_percentage", { precision: 5, scale: 2 }).default("0"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -668,7 +675,7 @@ export const certificates = hrSchema.table(
     revocationReason: text("revocation_reason"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({
@@ -728,7 +735,8 @@ export const coursePrerequisites = hrSchema.table(
     minimumGrade: text("minimum_grade"), // Minimum grade required (e.g., "C", "Pass")
     description: text("description"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({
@@ -778,7 +786,7 @@ export const courseMaterials = hrSchema.table(
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({

@@ -14,6 +14,7 @@ import {
   jsonb,
   numeric,
   text,
+  varchar,
   date,
   timestamp,
   uuid,
@@ -22,13 +23,14 @@ import {
   check,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -100,7 +102,7 @@ export const jobOpenings = hrSchema.table(
     requirements: text("requirements"),
     responsibilities: text("responsibilities"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -151,7 +153,7 @@ export const jobApplications = hrSchema.table(
     noticePeriodDays: integer("notice_period_days"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -200,7 +202,8 @@ export const interviews = hrSchema.table(
     rating: integer("rating"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -208,7 +211,7 @@ export const interviews = hrSchema.table(
       columns: [table.tenantId, table.applicationId],
       foreignColumns: [jobApplications.tenantId, jobApplications.id],
     }),
-    foreignKey({
+   foreignKey({
       columns: [table.tenantId, table.interviewerId],
       foreignColumns: [employees.tenantId, employees.id],
     }),
@@ -242,7 +245,7 @@ export const jobOffers = hrSchema.table(
     rejectedDate: date("rejected_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -296,7 +299,7 @@ export const applicantDocuments = hrSchema.table(
     verifiedBy: uuid("verified_by"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -350,7 +353,8 @@ export const interviewFeedback = hrSchema.table(
     isCompleted: boolean("is_completed").notNull().default(false),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -409,7 +413,7 @@ export const offerLetters = hrSchema.table(
     version: integer("version").notNull().default(1),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -655,7 +659,7 @@ export const recruitmentPipelineStages = hrSchema.table(
     tenantId: integer("tenant_id").notNull(),
     jobOpeningId: uuid("job_opening_id").notNull(),
     stageCode: text("stage_code").notNull(),
-    name: text("name").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     stageOrder: integer("stage_order").notNull(),
     configurationStatus: recruitmentPipelineStageStatusEnum("configuration_status")
@@ -665,7 +669,7 @@ export const recruitmentPipelineStages = hrSchema.table(
     autoAdvanceCriteria: jsonb("auto_advance_criteria").$type<unknown>(),
     notificationTemplate: text("notification_template"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -709,7 +713,8 @@ export const recruitmentAnalytics = hrSchema.table(
     costPerHire: numeric("cost_per_hire", { precision: 15, scale: 2 }),
     currencyId: integer("currency_id"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -771,7 +776,8 @@ export const resumeParsedData = hrSchema.table(
     matchScore: numeric("match_score", { precision: 5, scale: 2 }), // 0-100
     rawParseOutput: jsonb("raw_parse_output").$type<unknown>(),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

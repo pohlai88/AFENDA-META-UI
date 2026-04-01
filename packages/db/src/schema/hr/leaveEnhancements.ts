@@ -19,13 +19,14 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -82,7 +83,7 @@ export const compensatoryLeaveRequests = hrSchema.table(
     usedDate: date("used_date", { mode: "string" }), // When comp-off was used
     statusChangedAt: timestamp("status_changed_at"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -149,7 +150,7 @@ export const leaveRestrictions = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     statusChangedAt: timestamp("status_changed_at"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -208,7 +209,7 @@ export const leaveEncashments = hrSchema.table(
     notes: text("notes"),
     statusChangedAt: timestamp("status_changed_at"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

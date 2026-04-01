@@ -21,12 +21,13 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -89,7 +90,7 @@ export const travelRequests = hrSchema.table(
     cancelledDate: date("cancelled_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -190,7 +191,7 @@ export const travelItineraries = hrSchema.table(
     notes: text("notes"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -254,7 +255,7 @@ export const companyVehicles = hrSchema.table(
     vehicleVersion: integer("vehicle_version").notNull().default(1),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -336,7 +337,7 @@ export const vehicleLogs = hrSchema.table(
     expenseClaimId: uuid("expense_claim_id"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

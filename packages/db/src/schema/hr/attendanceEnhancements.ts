@@ -19,13 +19,14 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -84,7 +85,7 @@ export const attendanceRequests = hrSchema.table(
     approvedDate: timestamp("approved_date"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -140,7 +141,7 @@ export const overtimeRules = hrSchema.table(
     effectiveTo: date("effective_to", { mode: "string" }),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -182,7 +183,7 @@ export const biometricDevices = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     lastSyncDate: timestamp("last_sync_date"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -222,7 +223,7 @@ export const biometricLogs = hrSchema.table(
     processedToAttendance: boolean("processed_to_attendance").notNull().default(false),
     attendanceRecordId: uuid("attendance_record_id"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -273,7 +274,7 @@ export const shiftSwapRequests = hrSchema.table(
     executedAt: timestamp("executed_at", { withTimezone: true }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [

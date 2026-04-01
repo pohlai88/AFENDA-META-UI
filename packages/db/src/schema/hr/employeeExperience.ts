@@ -21,14 +21,15 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   appendOnlyTimestampColumns,
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -125,7 +126,8 @@ export const essEscalationPolicies = hrSchema.table(
     escalationRules: jsonb("escalation_rules").$type<Record<string, unknown>>(),
     rulesSchemaVersion: integer("rules_schema_version").notNull().default(1),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -157,7 +159,8 @@ export const employeeSelfServiceProfiles = hrSchema.table(
     preferredLanguage: text("preferred_language").default("en"),
     timezone: text("timezone").default("UTC"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -209,7 +212,7 @@ export const employeeRequests = hrSchema.table(
     notes: text("notes"),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -307,6 +310,8 @@ export const employeeRequestApprovalTasks = hrSchema.table(
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     decidedBy: uuid("decided_by"),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -394,6 +399,7 @@ export const employeeRequestHistory = hrSchema.table(
       .notNull()
       .default("user"),
     notes: text("notes"),
+    createdBy: integer("created_by").notNull().references(() => users.userId),
     ...appendOnlyTimestampColumns,
   },
   (table) => [
@@ -443,6 +449,8 @@ export const employeeNotifications = hrSchema.table(
     deliveryAttempts: integer("delivery_attempts").notNull().default(0),
     lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -505,7 +513,8 @@ export const employeePreferences = hrSchema.table(
     description: text("description"),
     lastUpdatedByEmployeeId: uuid("last_updated_by_employee_id"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -573,7 +582,7 @@ export const employeeSurveys = hrSchema.table(
     closedAt: timestamp("closed_at", { withTimezone: true }),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -628,7 +637,8 @@ export const employeeSurveyQuestionnaireVersions = hrSchema.table(
     isLocked: boolean("is_locked").notNull().default(true),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -683,6 +693,8 @@ export const surveyResponses = hrSchema.table(
     responseHash: text("response_hash"),
     validatedAt: timestamp("validated_at", { withTimezone: true }),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -742,6 +754,8 @@ export const surveyInvitations = hrSchema.table(
     invitedAt: timestamp("invited_at", { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -785,6 +799,8 @@ export const employeePushEndpoints = hrSchema.table(
       .notNull()
       .defaultNow(),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -816,6 +832,8 @@ export const essEventTypes = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     description: text("description"),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -845,6 +863,7 @@ export const essDomainEvents = hrSchema.table(
     correlationId: uuid("correlation_id"),
     causationId: uuid("causation_id"),
     actorEmployeeId: uuid("actor_employee_id"),
+    createdBy: integer("created_by").notNull().references(() => users.userId),
     ...appendOnlyTimestampColumns,
   },
   (table) => [
@@ -886,6 +905,8 @@ export const essOutbox = hrSchema.table(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastError: text("last_error"),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -920,7 +941,8 @@ export const essWorkflowDefinitions = hrSchema.table(
     version: integer("version").notNull().default(1),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -950,6 +972,8 @@ export const essWorkflowSteps = hrSchema.table(
     parallelGroupId: uuid("parallel_group_id"),
     assigneeRule: jsonb("assignee_rule").$type<Record<string, unknown>>(),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

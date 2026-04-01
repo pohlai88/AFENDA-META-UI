@@ -51,7 +51,7 @@ export function generatePolicyTests(
         test("has required metadata", () => {
           expect(policy.id).toBeTruthy();
           expect(policy.appliesTo.length).toBeGreaterThan(0);
-          expect(["event-only", "dual-write"]).toContain(policy.mutationPolicy);
+          expect(["direct", "event-only", "dual-write"]).toContain(policy.mutationPolicy);
         });
 
         if (policy.requiredEvents) {

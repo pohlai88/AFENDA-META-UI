@@ -112,25 +112,32 @@ packages/db/
 │   │   inventory/                           # pgSchema("inventory")
 │   │   purchasing/                          # pgSchema("purchasing")
 │   │
-│   ├── infra-utils/                         # ── Layer 3a–c: Shared DB infrastructure ──
-│   │   ├── columns/                         # Drizzle mixins, fingerprints, Zod wire
-│   │   │   ├── index.ts                     # Public barrel (re-exported as @afenda/db/columns)
-│   │   │   ├── drizzle-mixins/            # timestampColumns, auditColumns, nameColumn, …
-│   │   │   ├── fingerprints/              # governance string descriptors
-│   │   │   └── wire/                      # zodWire.ts — date/timestamp API wire schemas
-│   │   ├── session/                       # Session context (exported as @afenda/db/session)
-│   │   │   ├── index.ts
-│   │   │   ├── setSessionContext.ts
-│   │   │   └── withTenantContext.ts
-│   │   ├── rls/                           # RLS policies (exported as @afenda/db/rls)
-│   │   │   ├── index.ts
-│   │   │   └── tenant-policies.ts
-│   │   ├── seeds/                         # ── Layer 5b: Data Seeding (CLI; not a package subpath) ──
-│   │   │   ├── index.ts                   # Seed orchestrator
-│   │   │   ├── factories.ts, scenarios.ts, seed-types.ts, …
-│   │   │   ├── domains/                   # Domain-specific seeders
-│   │   │   └── performance/               # Stress / partition validation scripts
-│   │   └── index.ts                       # Optional barrel: columns + session + rls
+│   ├── column-kit/                          # ── Layer 3a: Drizzle column mixins + fingerprints ──
+│   │   ├── index.ts                         # @afenda/db/columns
+│   │   ├── drizzle-mixins/                  # timestampColumns, auditColumns, nameColumn, …
+│   │   ├── fingerprints/                  # structured governance descriptors (timestamp, audit, …)
+│   │   └── __test__/                        # Column-kit tests (shared-columns, …)
+│   ├── wire/                                # ── Layer 3b: Zod date/timestamp wire schemas ──
+│   │   ├── index.ts                         # @afenda/db/wire
+│   │   └── temporal.ts
+│   ├── pg-session/                          # ── Layer 3c: Postgres GUC session (RLS tenant context) ──
+│   │   ├── index.ts                         # @afenda/db/pg-session
+│   │   └── set-session-context.ts
+│   ├── request-context/                     # ── Layer 3d: Request / header adapters ──
+│   │   ├── index.ts                         # @afenda/db/request-context (withTenantContext, headers)
+│   │   ├── header-names.ts                  # TENANT_CONTEXT_HEADERS
+│   │   ├── tenant-headers.ts                # get / require SessionContext from Headers
+│   │   └── with-tenant-context.ts           # db.transaction + setSessionContext
+│   ├── rls-policies/                        # ── Layer 3e: RLS policy builders ──
+│   │   ├── index.ts                         # @afenda/db/rls
+│   │   ├── tenant-policies.ts               # pgPolicy helpers + tenantIsolationCheck
+│   │   ├── README.md, ARCHITECTURE.md
+│   ├── seeds/                               # ── Layer 5b: Operational tooling (CLI; not a package subpath) ──
+│   │   ├── README.md, ARCHITECTURE.md       # Conventions, gaps, modernization checklist
+│   │   ├── index.ts                         # Seed orchestrator + CLI
+│   │   ├── seed-ids.ts, clear.ts, snapshot.ts
+│   │   ├── domains/                         # Domain-specific seeders
+│   │   └── performance/                     # Load / partition helpers + tests
 │   │
 │   ├── relations.ts                         # ── Layer 3d: FK Relations (Drizzle v2) ──
 │   │                                        #    Comprehensive: sales, partners, products, taxes
@@ -171,26 +178,24 @@ packages/db/
 │   │   ├── README.md                        # Graph validation documentation
 │   │   └── __test__/                        # Validation tests
 │   │
-│   ├── maintenance/                         # ── Layer 5c: Database Operations ──
-│   │   ├── apply-status-triggers.ts         # SQL trigger management
-│   │   ├── sales-partition-plan.ts          # Partition strategy definitions
-│   │   ├── run-sales-partition-plan.ts      # Partition execution
-│   │   ├── sales-retention-plan.ts          # Data retention policies
-│   │   ├── run-sales-retention.ts           # Retention execution
-│   │   └── __test__/                        # Maintenance tests
+│   ├── data-lifecycle/                      # ── Layer 5c: Data Lifecycle ──
+│   │   ├── runner.ts                        # Lifecycle CLI runner
+│   │   ├── partition/                       # Partition plan generation
+│   │   ├── retention/                       # Retention plan generation
+│   │   ├── policies/                        # Lifecycle policy contracts/resolution
+│   │   ├── governance/                      # Governance artifact/report contract and verification
+│   │   ├── adapters/                        # Cold-tier adapter implementations
+│   │   ├── __test__/                        # Lifecycle tests
+│   │   ├── README.md                        # Lifecycle usage and governance flow
+│   │   └── ARCHITECTURE.md                  # Lifecycle architecture and contract policy
 │   │
-│   ├── archival/                            # ── Layer 5d: Data Archival ──
-│   │   ├── runner.ts                        # Archival CLI runner
-│   │   ├── r2-integration.ts                # Cloudflare R2 cold storage
-│   │   └── README.md                        # Archival documentation
-│   │
-│   ├── triggers/                            # ── SQL Triggers ──
-│   │   └── status-transitions.sql           # Status change trigger definitions
+│   ├── truth-compiler/sql/                  # ── Bundled with generated truth-v1.sql ──
+│   │   ├── truth-runtime-primitives.sql     # current_actor_id, emit_domain_event
+│   │   └── truth-supplemental-triggers.sql    # Commission/return FSM, aggregates, extra emits
 │   │
 │   └── __test__/                            # ── Integration Tests ──
 │       ├── invariants.test.ts               # Invariant enforcement tests
 │       ├── rls.test.ts                      # RLS policy tests
-│       ├── shared-columns.test.ts           # Column mixin tests
 │       └── truth-enforcement.integration.test.ts  # End-to-end truth tests
 │
 ├── migrations/                              # ── Drizzle Kit Migrations ──
@@ -216,15 +221,18 @@ packages/db/
 
 The client layer provides a **configurable database connection factory** supporting both traditional pool-based and Neon serverless connections.
 
+**Runbook:** [docs/DB_CLIENT_RUNBOOK.md](docs/DB_CLIENT_RUNBOOK.md) (Neon pooled vs direct URLs, `DB_POOL_*` env vars, MCP workflows, PgBouncer + session GUCs).
+
 ```typescript
 import { createDatabase } from "@afenda/db/client";
 
 // Default — pool-based with console logging
-const { db, pool } = createDatabase();
+const { db, pool, close } = createDatabase();
 
-// Custom — pluggable logger, pool tuning
+// Custom — Pino-friendly pool errors, pool tuning
 const { db, pool } = createDatabase({
   logger: new PinoDrizzleLogger(500), // apps/api passes this
+  onPoolError: (err) => log.error({ err }, "pool error"),
   poolConfig: { max: 20 },
   connectionString: process.env.DATABASE_URL,
 });
@@ -232,13 +240,16 @@ const { db, pool } = createDatabase({
 
 **`createDatabase(options?: DatabaseOptions)`**
 
-| Option             | Type            | Default                    | Purpose                     |
-| ------------------ | --------------- | -------------------------- | --------------------------- |
-| `connectionString` | `string`        | `process.env.DATABASE_URL` | PostgreSQL connection URL   |
-| `logger`           | `DrizzleLogger` | Console logger             | Query logging (pluggable)   |
-| `poolConfig`       | `PoolConfig`    | Hardened defaults          | Pool tuning (max, timeouts) |
+| Option             | Type                         | Default                    | Purpose |
+| ------------------ | ---------------------------- | -------------------------- | ------- |
+| `connectionString` | `string`                     | `process.env.DATABASE_URL` | PostgreSQL connection URL |
+| `logger`           | `DrizzleLogger \| boolean`   | Console logger             | Query logging (pluggable) |
+| `poolConfig`       | `Partial<PoolConfig>`        | Env + hardened defaults    | Pool tuning (merged last) |
+| `onPoolError`      | `(err: Error) => void`       | `undefined` (→ `console.error`) | Idle client errors from `pg` |
 
-**Pool defaults (production-hardened):**
+**`DatabaseInstance`** also exposes **`close()`** (`await close()` → `pool.end()`) for graceful shutdown. The root package exports **`closeDatabase`** for the default singleton.
+
+**Pool defaults** are merged with optional **`DB_POOL_*`** environment variables (see runbook). Baseline values:
 
 | Setting                               | Value    |
 | ------------------------------------- | -------- |
@@ -247,13 +258,22 @@ const { db, pool } = createDatabase({
 | `connectionTimeoutMillis`             | `5,000`  |
 | `statement_timeout`                   | `30,000` |
 | `idle_in_transaction_session_timeout` | `60,000` |
+| `lock_timeout`                        | _(unset — server default)_ unless `DB_POOL_LOCK_TIMEOUT_MS` is set |
+
+On Neon, verify effective timeouts with `SHOW statement_timeout` / `SHOW lock_timeout` if behavior differs from config (upstream `pg` + pooler interactions). Use `getEffectiveSessionTimeouts(pool)` or enable `DB_POOL_VERIFY_TIMEOUTS=true` in `apps/api` for one-shot startup logging.
 
 **Dual-mode connections:**
 
-- **Pool** via `createDatabase()` (`drizzle-orm/node-postgres`): Traditional server environments (apps/api)
-- **Serverless** via `createServerlessDatabase()` (`drizzle-orm/neon-http`): Edge functions, migrations, CI
+- **Pool (primary)** via `createDatabase()` (`drizzle-orm/node-postgres`): Long-lived servers (`apps/api`).
+- **Pool (read replica)** via `createReadReplicaDatabase()` — `DATABASE_READ_URL` + optional `DB_READ_POOL_MAX`; same `DatabaseOptions` / RLS patterns as primary.
+- **Serverless HTTP** via `createServerlessDatabase()` (`drizzle-orm/neon-http`): one-shot friendly; optional `logger` / `connectionString` in `ServerlessDatabaseOptions`.
+- **Serverless WebSocket** via `createServerlessWebSocketDatabase()` (`drizzle-orm/neon-serverless` + Neon `Pool`): interactive `transaction()` semantics; exposes `close()` for pool drain.
 
-**Backward compatibility:** The default `db` and `dbServerless` exports remain available from `@afenda/db` root.
+Node **≥20** in package `engines` (meets Neon serverless v1+ **≥19** requirement).
+
+**Choosing a connection method (Neon):** [Connection pooling](https://neon.com/docs/connect/connection-pooling.md), [serverless driver](https://neon.com/docs/serverless/serverless-driver.md), [choose connection](https://neon.com/docs/connect/choose-connection).
+
+**Backward compatibility:** The default `db`, `dbServerless`, and `closeDatabase` exports remain available from `@afenda/db` root.
 
 ---
 
@@ -264,7 +284,7 @@ Schemas are organized by **business domain**, each in its own PostgreSQL namespa
 | Domain        | pgSchema    | Path                | Tables | Description                                                                   |
 | ------------- | ----------- | ------------------- | ------ | ----------------------------------------------------------------------------- |
 | **core**      | `core`      | `schema/core/`      | 2      | Tenants, app modules                                                          |
-| **security**  | `security`  | `schema/security/`  | 4      | Users, roles, permissions, user-roles                                         |
+| **security**  | `security`  | `schema/security/`  | 6      | users, roles, user_roles, permissions, role_permissions, user_permissions       |
 | **reference** | `reference` | `schema/reference/` | 15+    | Currencies, countries, banks, UOM, sequences                                  |
 | **meta**      | —           | `schema/meta/`      | 10+    | Schema registry, metadata, overrides, audit                                   |
 | **sales**     | `sales`     | `schema/sales/`     | 35+    | Partners, products, orders, subscriptions, commissions, consignments, returns |
@@ -304,7 +324,7 @@ schema/{domain}/
 
 Infrastructure modules provide cross-cutting concerns consumed by all schema domains.
 
-#### 3a. Column Mixins (`infra-utils/columns/`)
+#### 3a. Column kit (`column-kit/`)
 
 Reusable column definitions that ensure consistency across all tables:
 
@@ -328,18 +348,27 @@ export const myTable = pgSchema("domain").table("my_table", {
 | `nameColumn`                 | `name`                   | Entities with display names |
 | `appendOnlyTimestampColumns` | `createdAt` only         | Append-only logs            |
 
-**Zod wire schemas** (`infra-utils/columns/wire/zodWire.ts`) provide date/timestamp validation for API serialization:
+#### 3b. Wire schemas (`wire/`)
+
+**Temporal boundary** for Zod v4: ISO **date-only** (`YYYY-MM-DD`) and **instants** (datetime **with** `Z` or numeric offset). Wire shapes are **strings**; use `*AsDate` transforms at API boundaries when services still expect `Date`. Legacy aliases (`dateStringSchema`, `timestamptzWireSchema`, …) remain `@deprecated`.
 
 ```typescript
-import { dateStringSchema, timestamptzWireSchema } from "@afenda/db/columns";
+import {
+  dateOnlyWire,
+  instantWire,
+  dateOnlyWireAsDateOptional,
+  instantWireAsDateOptional,
+} from "@afenda/db/wire";
 ```
 
-#### 3b. Session Context (`infra-utils/session/`)
+See [`src/wire/temporal.ts`](./src/wire/temporal.ts) for the full contract, `emptyToNull`, comparison helpers, and `legacy*` escape hatches. CI: `pnpm ci:gate:temporal-wire` (regex drift + `z.coerce.date` allowlist under `schema/`).
+
+#### 3c. PostgreSQL session GUCs (`pg-session/`)
 
 PostgreSQL session variable management for multi-tenant RLS enforcement:
 
 ```typescript
-import { setSessionContext, clearSessionContext } from "@afenda/db/session";
+import { setSessionContext, clearSessionContext } from "@afenda/db/pg-session";
 
 await setSessionContext(db, {
   tenantId: 42,
@@ -362,9 +391,35 @@ await setSessionContext(db, {
 | `afenda.ip_address`     | `string`                              | Audit logging        |
 | `afenda.user_agent`     | `string`                              | Audit logging        |
 
-#### 3c. Row-Level Security (`infra-utils/rls/`)
+#### 3d. Request context adapters (`request-context/`)
 
-Tenant isolation enforced at the PostgreSQL level:
+Parse tenant context from **trusted** middleware headers and run work inside a transaction with session GUCs set. `withTenantContext` takes an explicit `db` instance (no singleton coupling). Header names are exported as `TENANT_CONTEXT_HEADERS`; tenant id must be a **positive integer** (aligned with `pg-session`).
+
+```typescript
+import {
+  getTenantContextFromHeaders,
+  requireTenantContextFromHeaders,
+  withTenantContext,
+} from "@afenda/db/request-context";
+import { db } from "@afenda/db";
+
+const ctx = getTenantContextFromHeaders(request.headers);
+if (ctx) {
+  await withTenantContext(db, ctx, async (tx) => {
+    /* queries use RLS */
+  });
+}
+
+// Or fail fast when middleware guarantees context:
+const ctx2 = requireTenantContextFromHeaders(request.headers);
+await withTenantContext(db, ctx2, async (tx) => {
+  /* … */
+});
+```
+
+#### 3e. Row-Level Security (`rls-policies/`)
+
+Tenant isolation enforced at the PostgreSQL level. Policy predicates use `current_setting` on the same GUC name as `pg-session` (`AFENDA_SESSION_GUCS.tenantId` from `guc-registry.ts`). Tables must expose a **`tenant_id`** SQL column (`TENANT_SCOPED_COLUMN`).
 
 ```typescript
 import { tenantIsolationPolicies, serviceBypassPolicy } from "@afenda/db/rls";
@@ -398,7 +453,7 @@ export const myTable = salesSchema.table("my_table", { ... }, (table) => [
 - `app_user` — subject to tenant isolation policies
 - `service_role` — bypasses tenant isolation (for cross-tenant operations)
 
-#### 3d. Relations (`relations.ts`)
+#### 3f. Relations (`relations.ts`)
 
 Drizzle Relations v2 providing FK-based relational queries:
 
@@ -489,21 +544,20 @@ pnpm --filter @afenda/db seed -- --scenario stress   # Bulk stress test
 
 **Scenarios:** `baseline` (core + all domains), `demo` (baseline + demo extensions), `stress` (baseline + bulk generator), `load-test-1M` (1M+ orders).
 
-#### 5c. Maintenance
+#### 5c. Truth SQL bundle
 
-Production database operations:
+`pnpm truth:generate` writes `migrations/generated/truth-v1.sql`, prefixed with `truth-compiler/sql/truth-runtime-primitives.sql` and suffixed with `truth-supplemental-triggers.sql` for pieces not yet modeled in the compiler manifest. CI gates (`truth-score`, casing) read the generated bundle.
+
+#### 5d. Data lifecycle
+
+Policy-driven partitioning, retention, and cold-tier integration with Cloudflare R2.
 
 ```bash
-pnpm --filter @afenda/db db:trigger:apply           # Apply status triggers
-pnpm --filter @afenda/db ops:partition:plan          # Preview partition changes
-pnpm --filter @afenda/db ops:partition:apply         # Apply partitioning
-pnpm --filter @afenda/db ops:retention:plan          # Preview data retention
-pnpm --filter @afenda/db ops:retention:apply         # Apply retention policies
+pnpm --filter @afenda/db data:lifecycle:partition:plan      # Preview partition changes
+pnpm --filter @afenda/db data:lifecycle:partition:apply     # Apply partitioning
+pnpm --filter @afenda/db data:lifecycle:retention:plan      # Preview data retention
+pnpm --filter @afenda/db data:lifecycle:retention:apply     # Apply retention policies
 ```
-
-#### 5d. Archival
-
-Cold storage integration with Cloudflare R2 for aged data.
 
 ---
 
@@ -511,17 +565,19 @@ Cold storage integration with Cloudflare R2 for aged data.
 
 | Subpath              | Path                    | Runtime | Purpose                                  | Consumers                         |
 | -------------------- | ----------------------- | ------- | ---------------------------------------- | --------------------------------- |
-| `.`                  | `src/index.ts`          | ✅      | db client + aggregated re-exports        | apps/api, truth-test              |
-| `./client`           | `src/client/`           | ✅      | createDatabase factory, pool, health     | apps/api                          |
+| `.`                  | `src/index.ts`          | ✅      | db client + truth/relation exports (no infra star-exports) | apps/api, truth-test              |
+| `./client`           | `src/drizzle/client/`   | ✅      | createDatabase factory, pool, health     | apps/api                          |
 | `./schema`           | `src/schema/`           | ✅      | All domain tables combined               | apps/api, truth-test              |
 | `./schema/core`      | `src/schema/core/`      | ✅      | Tenants, app modules                     | apps/api, truth-test              |
-| `./schema/security`  | `src/schema/security/`  | ✅      | Users, roles, permissions                | apps/api                          |
+| `./schema/security`  | `src/schema/security/`  | ✅      | RBAC: 6 tables (`README.md`)            | apps/api                          |
 | `./schema/reference` | `src/schema/reference/` | ✅      | Currencies, countries, UOM               | apps/api                          |
 | `./schema/meta`      | `src/schema/meta/`      | ✅      | Schema registry, metadata, overrides     | apps/api                          |
 | `./schema/sales`     | `src/schema/sales/`     | ✅      | Full sales domain (35+ tables)           | apps/api, truth-test              |
-| `./columns`          | `src/infra-utils/columns/` | ✅      | Shared column mixins + Zod wire schemas  | apps/api, truth-test, new domains |
-| `./session`          | `src/infra-utils/session/` | ✅      | Session context management               | apps/api                          |
-| `./rls`              | `src/infra-utils/rls/`     | ✅      | RLS policies + roles                     | schema definitions                |
+| `./columns`          | `src/column-kit/`       | ✅      | Shared column mixins + fingerprints    | schema definitions, new domains   |
+| `./wire`             | `src/wire/`             | ✅      | Zod date/timestamp wire schemas          | API boundary, validation            |
+| `./pg-session`       | `src/pg-session/`       | ✅      | `setSessionContext` / `clearSessionContext` | apps/api, middleware             |
+| `./request-context`  | `src/request-context/`  | ✅      | Header parsing, `withTenantContext(db,…)`  | apps/api                          |
+| `./rls`              | `src/rls-policies/`     | ✅      | RLS policies + roles                     | schema definitions                |
 | `./relations`        | `src/relations.ts`      | ✅      | Drizzle v2 FK relations                  | apps/api, truth-test              |
 | `./truth-compiler`   | `src/truth-compiler/`   | ✅      | Truth engine (invariants, policies, FSM) | apps/api, truth-test              |
 
@@ -529,7 +585,6 @@ Cold storage integration with Cloudflare R2 for aged data.
 
 | Old Subpath         | Redirects To                         |
 | ------------------- | ------------------------------------ |
-| `./shared`          | `./columns`                          |
 | `./schema-meta`     | `./schema/meta`                      |
 | `./schema-domain`   | `./schema/sales`                     |
 | `./schema-platform` | `./schema` (core+security+reference) |
@@ -622,8 +677,8 @@ export const {domain}Schema = pgSchema("{domain}");
 ```typescript
 // src/schema/{domain}/tables.ts
 import { {domain}Schema } from "./_schema.js";
-import { timestampColumns, softDeleteColumns, auditColumns } from "../../infra-utils/columns/index.js";
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { timestampColumns, softDeleteColumns, auditColumns } from "../../column-kit/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 
 export const myEntity = {domain}Schema.table("my_entity", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -664,7 +719,7 @@ Define entity defs, invariants, and state machines in `truth-compiler/truth-conf
 
 ### 8. Add Seed Data
 
-Create `src/infra-utils/seeds/domains/{domain}/` with seed factories.
+Create `src/seeds/domains/{domain}/` with seed + validate functions; extend `seed-ids.ts` and `clear.ts`; wire `index.ts`. See [src/seeds/README.md](./src/seeds/README.md) and [src/seeds/ARCHITECTURE.md](./src/seeds/ARCHITECTURE.md).
 
 ### 9. Generate Migration
 
@@ -832,6 +887,6 @@ A domain is "truth-engine ready" only when all checks pass:
 
 - [README.md](./README.md) — Usage guide and quick reference
 - [graph-validation/README.md](./src/graph-validation/README.md) — FK integrity validation details
-- [archival/README.md](./src/archival/README.md) — Data archival documentation
+- [data-lifecycle/README.md](./src/data-lifecycle/README.md) — Data lifecycle documentation
 - [@afenda/meta-types ARCHITECTURE.md](../meta-types/ARCHITECTURE.md) — Type contract layer
 - [@afenda/truth-test ARCHITECTURE.md](../truth-test/ARCHITECTURE.md) — Truth testing infrastructure

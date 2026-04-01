@@ -152,6 +152,11 @@ describe("return-order command service", () => {
       expect.objectContaining({
         actor: "15",
         source: "api.sales.returns.approve",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "approve",
+          startTable: "return_orders",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -191,6 +196,11 @@ describe("return-order command service", () => {
       expect.objectContaining({
         actor: "16",
         source: "api.sales.returns.receive",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "receive",
+          startTable: "return_orders",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -285,6 +295,11 @@ describe("return-order command service", () => {
       expect.objectContaining({
         actor: "18",
         source: "api.sales.returns.credit_note",
+        truthImpact: expect.objectContaining({
+          graphLayer: "truth",
+          operation: "credit_note",
+          startTable: "return_orders",
+        }),
       })
     );
     expect(upsertProjectionCheckpointMock).toHaveBeenCalledTimes(1);
@@ -413,6 +428,17 @@ describe("return-order command service", () => {
     for (const scenario of scenarios) {
       const result = await scenario.arrange();
       const checkpoint = upsertProjectionCheckpointMock.mock.calls.at(-1)?.[0];
+      const expectedOp = scenario.name === "credit-note" ? "credit_note" : scenario.name;
+      const appendMeta = dbAppendEventMock.mock.calls.at(-1)?.[4];
+      expect(appendMeta, `${scenario.name} should attach truth impact metadata`).toEqual(
+        expect.objectContaining({
+          truthImpact: expect.objectContaining({
+            graphLayer: "truth",
+            startTable: "return_orders",
+            operation: expectedOp,
+          }),
+        })
+      );
 
       expect(
         result.mutationPolicy,

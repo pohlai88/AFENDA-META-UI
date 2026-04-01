@@ -3,7 +3,8 @@
 // Human-owned reporting: use separate modules (not *.access.ts).
 
 import { and, eq, isNull } from "drizzle-orm";
-import type { Database } from "../../db.js";
+import type { Database } from "../../drizzle/db.js";
+import { assertGraphGuardrailAllowsRead } from "../_shared/graph-guardrail.js";
 import {
   benefitPlans,
   employeeBenefits,
@@ -30,6 +31,16 @@ export async function getEmploymentContractsByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getEmploymentContractsByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getEmploymentContractsByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof employmentContracts.$inferSelect)["tenantId"],
+  id: (typeof employmentContracts.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getEmploymentContractsByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listEmploymentContractsActive(
   db: Database,
@@ -41,12 +52,28 @@ export async function listEmploymentContractsActive(
     .where(and(eq(employmentContracts.tenantId, tenantId), isNull(employmentContracts.deletedAt)));
 }
 
+export async function listEmploymentContractsActiveGuarded(
+  db: Database,
+  tenantId: (typeof employmentContracts.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listEmploymentContractsActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listEmploymentContractsAll(
   db: Database,
   tenantId: (typeof employmentContracts.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(employmentContracts).where(eq(employmentContracts.tenantId, tenantId));
+}
+
+export async function listEmploymentContractsAllGuarded(
+  db: Database,
+  tenantId: (typeof employmentContracts.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listEmploymentContractsAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -59,6 +86,15 @@ export async function archiveEmploymentContracts(
     .update(employmentContracts)
     .set({ deletedAt: new Date() })
     .where(and(eq(employmentContracts.tenantId, tenantId), eq(employmentContracts.id, id)));
+}
+
+export async function archiveEmploymentContractsGuarded(
+  db: Database,
+  tenantId: (typeof employmentContracts.$inferSelect)["tenantId"],
+  id: (typeof employmentContracts.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveEmploymentContracts(db, tenantId, id);
 }
 
 
@@ -82,6 +118,16 @@ export async function getBenefitPlansByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getBenefitPlansByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getBenefitPlansByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof benefitPlans.$inferSelect)["tenantId"],
+  id: (typeof benefitPlans.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getBenefitPlansByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listBenefitPlansActive(
   db: Database,
@@ -93,12 +139,28 @@ export async function listBenefitPlansActive(
     .where(and(eq(benefitPlans.tenantId, tenantId), isNull(benefitPlans.deletedAt)));
 }
 
+export async function listBenefitPlansActiveGuarded(
+  db: Database,
+  tenantId: (typeof benefitPlans.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listBenefitPlansActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listBenefitPlansAll(
   db: Database,
   tenantId: (typeof benefitPlans.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(benefitPlans).where(eq(benefitPlans.tenantId, tenantId));
+}
+
+export async function listBenefitPlansAllGuarded(
+  db: Database,
+  tenantId: (typeof benefitPlans.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listBenefitPlansAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -111,6 +173,15 @@ export async function archiveBenefitPlans(
     .update(benefitPlans)
     .set({ deletedAt: new Date() })
     .where(and(eq(benefitPlans.tenantId, tenantId), eq(benefitPlans.id, id)));
+}
+
+export async function archiveBenefitPlansGuarded(
+  db: Database,
+  tenantId: (typeof benefitPlans.$inferSelect)["tenantId"],
+  id: (typeof benefitPlans.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveBenefitPlans(db, tenantId, id);
 }
 
 
@@ -134,6 +205,16 @@ export async function getEmployeeBenefitsByIdSafe(
   return rows[0] ?? null;
 }
 
+/** Same as getEmployeeBenefitsByIdSafe; asserts graph-validation policy when GRAPH_VALIDATION_POLICY_JSON is set. */
+export async function getEmployeeBenefitsByIdSafeGuarded(
+  db: Database,
+  tenantId: (typeof employeeBenefits.$inferSelect)["tenantId"],
+  id: (typeof employeeBenefits.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return getEmployeeBenefitsByIdSafe(db, tenantId, id);
+}
+
 /** List rows for tenant excluding soft-deleted. */
 export async function listEmployeeBenefitsActive(
   db: Database,
@@ -145,12 +226,28 @@ export async function listEmployeeBenefitsActive(
     .where(and(eq(employeeBenefits.tenantId, tenantId), isNull(employeeBenefits.deletedAt)));
 }
 
+export async function listEmployeeBenefitsActiveGuarded(
+  db: Database,
+  tenantId: (typeof employeeBenefits.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listEmployeeBenefitsActive(db, tenantId);
+}
+
 /** List all rows for tenant including soft-deleted. */
 export async function listEmployeeBenefitsAll(
   db: Database,
   tenantId: (typeof employeeBenefits.$inferSelect)["tenantId"],
 ) {
   return await db.select().from(employeeBenefits).where(eq(employeeBenefits.tenantId, tenantId));
+}
+
+export async function listEmployeeBenefitsAllGuarded(
+  db: Database,
+  tenantId: (typeof employeeBenefits.$inferSelect)["tenantId"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return listEmployeeBenefitsAll(db, tenantId);
 }
 
 /** Soft-archive (mechanical delete flag). */
@@ -163,5 +260,14 @@ export async function archiveEmployeeBenefits(
     .update(employeeBenefits)
     .set({ deletedAt: new Date() })
     .where(and(eq(employeeBenefits.tenantId, tenantId), eq(employeeBenefits.id, id)));
+}
+
+export async function archiveEmployeeBenefitsGuarded(
+  db: Database,
+  tenantId: (typeof employeeBenefits.$inferSelect)["tenantId"],
+  id: (typeof employeeBenefits.$inferSelect)["id"],
+) {
+  await assertGraphGuardrailAllowsRead();
+  return archiveEmployeeBenefits(db, tenantId, id);
 }
 

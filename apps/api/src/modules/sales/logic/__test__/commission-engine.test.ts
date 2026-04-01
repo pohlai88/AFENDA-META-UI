@@ -5,6 +5,7 @@ import {
   approveCommissionEntry,
   buildCommissionEntryDraft,
   calculateCommission,
+  formatDateOnlyUtc,
   markCommissionEntryPaid,
   summarizeCommissionEntries,
 } from "../commission-engine.js";
@@ -15,6 +16,7 @@ const activePlan = {
   type: "percentage",
   base: "revenue",
   isActive: true,
+  calculationMode: "tiered_cumulative",
 } as const;
 
 const baseTier = {
@@ -46,6 +48,7 @@ describe("sales commission engine", () => {
       plan: {
         ...activePlan,
         type: "tiered",
+        calculationMode: "tiered_cumulative",
       },
       tiers: [
         {
@@ -95,6 +98,7 @@ describe("sales commission engine", () => {
       plan: {
         ...activePlan,
         type: "flat",
+        calculationMode: "flat",
       },
       tiers: [
         {
@@ -133,6 +137,8 @@ describe("sales commission engine", () => {
       commissionAmount: "90.00",
       status: "draft",
       paidDate: null,
+      periodStart: "2025-01-01",
+      periodEnd: "2025-01-31",
       notes: "January run",
     });
   });
@@ -153,7 +159,7 @@ describe("sales commission engine", () => {
     });
     expect(paid).toEqual({
       status: "paid",
-      paidDate: paidAt,
+      paidDate: formatDateOnlyUtc(paidAt),
       reference: "draft-1",
     });
   });
@@ -213,7 +219,7 @@ describe("sales commission engine", () => {
     expect(() =>
       approveCommissionEntry({
         status: "paid",
-        paidDate: new Date("2025-02-10T10:00:00.000Z"),
+        paidDate: "2025-02-10",
       })
     ).toThrow("Paid commission entries cannot be moved back to approved.");
   });
@@ -246,7 +252,7 @@ describe("sales commission engine", () => {
   it("keeps paid date null when approving a draft", () => {
     const approved = approveCommissionEntry({
       status: "draft",
-      paidDate: new Date("2025-02-10T10:00:00.000Z"),
+      paidDate: "2025-02-10",
       reference: "x",
     });
 
@@ -266,6 +272,6 @@ describe("sales commission engine", () => {
     );
 
     expect(paid.status).toBe("paid");
-    expect(paid.paidDate).toEqual(paidAt);
+    expect(paid.paidDate).toBe(formatDateOnlyUtc(paidAt));
   });
 });

@@ -25,6 +25,10 @@ import {
   type ReceiveReturnInput,
   type ReceiveReturnResult,
 } from "./returns-service.js";
+import {
+  buildSalesTruthImpactEventMetadata,
+  type SalesTruthImpactEventMetadata,
+} from "./logic/truth-graph-engine.js";
 
 type ReturnOrderRecord = typeof returnOrders.$inferSelect;
 
@@ -97,6 +101,7 @@ export async function approveReturnOrderCommand(
       approvedBy: input.actorId,
       approvedDate: input.approvedDate ?? new Date(),
     },
+    eventMetadata: buildSalesTruthImpactEventMetadata("return_orders", "approve"),
     persistProjection: async () => {
       serviceResult = await approveReturn(input);
     },
@@ -128,6 +133,7 @@ export async function receiveReturnOrderCommand(
       ...existing,
       status: "received",
     },
+    eventMetadata: buildSalesTruthImpactEventMetadata("return_orders", "receive"),
     persistProjection: async () => {
       serviceResult = await receiveReturn(input);
     },
@@ -159,6 +165,7 @@ export async function inspectReturnOrderCommand(
       ...existing,
       status: "inspected",
     },
+    eventMetadata: buildSalesTruthImpactEventMetadata("return_orders", "inspect"),
     persistProjection: async () => {
       serviceResult = await inspectReturnOrder(input);
     },
@@ -190,6 +197,7 @@ export async function generateReturnCreditNoteCommand(
       ...existing,
       status: "credited",
     },
+    eventMetadata: buildSalesTruthImpactEventMetadata("return_orders", "credit_note"),
     persistProjection: async () => {
       serviceResult = await generateReturnCreditNote(input);
     },
@@ -235,6 +243,7 @@ async function executeReturnOrderCommand(input: {
   actorId?: number;
   source: string;
   nextReturnOrder: ReturnOrderRecord;
+  eventMetadata?: SalesTruthImpactEventMetadata;
   persistProjection: () => Promise<void>;
 }): Promise<ExecuteMutationCommandResult<ReturnOrderRecord>> {
   return executeCommandRuntime({
@@ -243,6 +252,7 @@ async function executeReturnOrderCommand(input: {
     recordId: input.returnOrderId,
     actorId: typeof input.actorId === "number" ? String(input.actorId) : undefined,
     source: input.source,
+    eventMetadata: input.eventMetadata,
     policies: [RETURN_ORDER_EVENT_ONLY_POLICY],
     nextRecord: input.nextReturnOrder,
     mutate: async () => input.nextReturnOrder,

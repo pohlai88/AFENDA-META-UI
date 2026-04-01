@@ -20,6 +20,7 @@ export {
 
 // Sales domain tables (from shared @afenda/db package)
 export {
+  accountingDecisions,
   accountingPostings,
   commissionEntries,
   commissionPlans,
@@ -29,6 +30,10 @@ export {
   consignmentStockReportLines,
   consignmentStockReports,
   documentApprovals,
+  documentTruthBindings,
+  glAccounts,
+  journalEntries,
+  journalLines,
   documentStatusHistory,
   domainEventLogs,
   domainInvariantLogs,
@@ -37,6 +42,7 @@ export {
   partnerAddresses,
   partnerTypeEnum,
   partners,
+  pricelists,
   productCategories,
   products,
   roundingPolicies,
@@ -51,9 +57,11 @@ export {
   salesOrderLines,
   subscriptionLines,
   subscriptionLogs,
+  subscriptionPricingResolutions,
   subscriptionTemplates,
   subscriptions,
   territories,
+  territoryResolutions,
   territoryRules,
 } from "@afenda/db/schema/sales";
 

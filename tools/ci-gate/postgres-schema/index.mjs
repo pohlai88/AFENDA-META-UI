@@ -27,6 +27,7 @@ import { report } from "./engine/reporter.mjs";
 import { salesRules } from "./config/sales.rules.mjs";
 import { platformRules } from "./config/platform.rules.mjs";
 import { metaRules } from "./config/meta.rules.mjs";
+import { resolveSalesSchemaModulePaths } from "../_shared/sales-schema-modules.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -39,7 +40,7 @@ async function main() {
 
   // Phase 1: Extract truth model from Drizzle source
   const schemaPaths = [
-    resolve(repoRoot, "packages/db/src/schema/sales/tables.ts"),
+    ...resolveSalesSchemaModulePaths(repoRoot),
     resolve(repoRoot, "packages/db/src/schema/core/tenants.ts"),
     resolve(repoRoot, "packages/db/src/schema/core/appModules.ts"),
     resolve(repoRoot, "packages/db/src/schema/security/users.ts"),

@@ -10,13 +10,19 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SALES_SCHEMA_MODULES } from "../_shared/sales-schema-modules.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, "..", "..", "..");
 
-const TABLES_PATH = resolve(repoRoot, "packages/db/src/schema-domain/sales/tables.ts");
-const TRIGGERS_PATH = resolve(repoRoot, "packages/db/src/triggers/status-transitions.sql");
+const salesDir = resolve(repoRoot, "packages/db/src/schema/sales");
+function readSalesTablesSource() {
+  return SALES_SCHEMA_MODULES.map((f) => readFileSync(resolve(salesDir, f), "utf-8")).join(
+    "\n\n"
+  );
+}
+const TRIGGERS_PATH = resolve(repoRoot, "packages/db/migrations/generated/truth-v1.sql");
 
 const HIGH_RISK_TABLES = [
   "sales_orders",
@@ -92,14 +98,18 @@ function tableHasTenantIsolation(source, tableName) {
 }
 
 function tableHasStateMachineTrigger(triggerSql, tableName) {
-  const target = `BEFORE UPDATE OF status ON sales.${tableName}`;
-  return triggerSql.includes(target);
+  const ofStatus = `BEFORE UPDATE OF status ON sales.${tableName}`;
+  const quotedTable = `BEFORE UPDATE ON "sales"."${tableName}"`;
+  return triggerSql.includes(ofStatus) || triggerSql.includes(quotedTable);
 }
 
 function tableHasEventEmissionTrigger(triggerSql, tableName) {
-  const start = `CREATE TRIGGER trg_emit_`;
-  const op = `AFTER INSERT OR UPDATE OR DELETE ON sales.${tableName}`;
-  return triggerSql.includes(start) && triggerSql.includes(op);
+  const unquoted = `AFTER INSERT OR UPDATE OR DELETE ON sales.${tableName}`;
+  const quoted = `AFTER INSERT OR UPDATE OR DELETE ON "sales"."${tableName}"`;
+  const onTable = triggerSql.includes(unquoted) || triggerSql.includes(quoted);
+  const hasEmit =
+    triggerSql.includes("trg_emit_") || triggerSql.includes('"trg_emit');
+  return onTable && hasEmit;
 }
 
 function targetHasAggregateConsistency(triggerSql, target) {
@@ -128,7 +138,7 @@ function printLayerResult(name, score, threshold, misses) {
 }
 
 function main() {
-  const tablesSource = readFileSync(TABLES_PATH, "utf-8");
+  const tablesSource = readSalesTablesSource();
   const triggerSource = readFileSync(TRIGGERS_PATH, "utf-8");
 
   const totals = {

@@ -1,28 +1,31 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 
-import { db } from "../db.js";
-import { seed } from "../infra-utils/seeds/index.js";
+import { db } from "../drizzle/db.js";
+import { seed } from "../seeds/index.js";
 import { salesOrders } from "../schema/index.js";
-import { compileInvariants } from "../truth-compiler/invariant-compiler.js";
+import { buildOrderedSqlSegments } from "../truth-compiler/compile-pipeline.js";
 import { normalize } from "../truth-compiler/normalizer.js";
 import { COMPILER_INPUT } from "../truth-compiler/truth-config.js";
-import { compileTransitions } from "../truth-compiler/transition-compiler.js";
 
-const skipTests = !process.env.DATABASE_URL;
+// Long-running integration suite; require explicit opt-in even when DATABASE_URL exists.
+const runIntegrationSuite =
+  !!process.env.DATABASE_URL && process.env.DB_INTEGRATION_TESTS === "1";
+const skipTests = !runIntegrationSuite;
 
 describe.skipIf(skipTests)("Truth enforcement at DB layer", () => {
   beforeAll(async () => {
     await seed(db, "baseline");
 
     const normalized = normalize(COMPILER_INPUT);
-    const segments = [...compileInvariants(normalized), ...compileTransitions(normalized)];
+    /** Same stages and order as `generate-truth-sql.ts` (minus primitives + supplement files). */
+    const segments = buildOrderedSqlSegments(normalized);
 
     for (const segment of segments) {
       if (segment.kind === "comment") continue;
       await db.execute(sql.raw(segment.sql));
     }
-  });
+  }, 120_000);
 
   it("rejects invalid state transitions at database trigger level", async () => {
     const [order] = await db

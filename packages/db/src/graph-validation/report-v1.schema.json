@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://afenda.local/schemas/graph-validation-report-v1.json",
+  "title": "GraphValidationReportJson",
+  "type": "object",
+  "required": [
+    "reportVersion",
+    "generatedAt",
+    "schemasCovered",
+    "policy",
+    "healthScore",
+    "indexCoverage",
+    "orphans",
+    "tenantLeaks",
+    "catalog"
+  ],
+  "properties": {
+    "reportVersion": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "schemasCovered": { "type": "array", "items": { "type": "string" } },
+    "policy": {
+      "type": "object",
+      "required": ["isSecurityBlocking", "isOperationalWarning", "confidenceLevel"],
+      "properties": {
+        "isSecurityBlocking": { "type": "boolean" },
+        "isOperationalWarning": { "type": "boolean" },
+        "confidenceLevel": { "enum": ["high", "medium", "low"] },
+        "securityReason": { "type": "string" },
+        "policyGeneratedAt": { "type": "string" },
+        "decision": {
+          "type": "object",
+          "required": ["severity", "action"],
+          "properties": {
+            "severity": {
+              "enum": ["P0_SECURITY", "P1_DATA_CORRUPTION", "P2_INCONSISTENCY", "P3_OBSERVABILITY"]
+            },
+            "action": { "enum": ["BLOCK", "WARN", "ALLOW"] },
+            "ttlSeconds": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "healthScore": { "type": "object" },
+    "indexCoverage": {
+      "type": "object",
+      "required": ["covered", "total", "missing"],
+      "properties": {
+        "covered": { "type": "number" },
+        "total": { "type": "number" },
+        "missing": { "type": "number" }
+      }
+    },
+    "orphans": { "type": "object" },
+    "tenantLeaks": { "type": "object" },
+    "catalog": { "type": "object" },
+    "adjuncts": { "type": "object" }
+  }
+}

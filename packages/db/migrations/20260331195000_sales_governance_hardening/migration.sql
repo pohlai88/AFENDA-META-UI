@@ -1,0 +1,8 @@
+CREATE UNIQUE INDEX "uq_sales_document_approvals_document_level" ON "sales"."document_approvals" ("tenant_id","document_type","document_id","approval_level");--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_sales_document_attachments_document_file" ON "sales"."document_attachments" ("tenant_id","document_type","document_id","file_name") WHERE "deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_sales_accounting_postings_currency_date" ON "sales"."accounting_postings" ("tenant_id","currency_code","posting_date");--> statement-breakpoint
+ALTER TABLE "sales"."accounting_postings" ADD CONSTRAINT "chk_sales_accounting_postings_debit_credit_distinct" CHECK ("debit_account_code" IS NULL OR "credit_account_code" IS NULL OR "debit_account_code" <> "credit_account_code");--> statement-breakpoint
+ALTER TABLE "sales"."accounting_postings" ADD CONSTRAINT "chk_sales_accounting_postings_reversal_not_self" CHECK ("reversal_entry_id" IS NULL OR "reversal_entry_id" <> "id");--> statement-breakpoint
+CREATE INDEX "idx_sales_domain_event_logs_triggered_by" ON "sales"."domain_event_logs" ("tenant_id","triggered_by");--> statement-breakpoint
+
+-- Rollback (manual): DROP INDEX sales.idx_sales_domain_event_logs_triggered_by; ALTER TABLE sales.accounting_postings DROP CONSTRAINT chk_sales_accounting_postings_reversal_not_self; ALTER TABLE sales.accounting_postings DROP CONSTRAINT chk_sales_accounting_postings_debit_credit_distinct; DROP INDEX sales.idx_sales_accounting_postings_currency_date; DROP INDEX sales.uq_sales_document_attachments_document_file; DROP INDEX sales.uq_sales_document_approvals_document_level;

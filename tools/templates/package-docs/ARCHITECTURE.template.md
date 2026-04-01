@@ -39,6 +39,26 @@
 
 ---
 
+## Table-first schema analysis
+
+### Inventory snapshot
+
+{{TABLE_INVENTORY_SUMMARY}}
+
+### Schema-basis breakdown
+
+{{SCHEMA_BASIS_BREAKDOWN_TABLE}}
+
+### Legacy + new planning continuity
+
+{{LEGACY_AND_NEW_TABLE_POLICY}}
+
+### Table evolution rules
+
+{{TABLE_CHANGE_POLICY_BULLETS}}
+
+---
+
 ## Core architecture
 
 ### 1. {{PRIMARY_PATTERN_HEADING}}

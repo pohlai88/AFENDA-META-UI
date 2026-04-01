@@ -3,23 +3,27 @@
  * ============================
  * Validates that FK relationships respect tenant boundaries
  * (no cross-tenant data leaks via foreign keys).
+ *
+ * Sample rows use FK/parent key values as text — no assumption of a surrogate `id` column.
  */
 
 import { sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { GraphValidationDb } from "./db-types.js";
 import type { FkRelationship } from "./fk-catalog.js";
+
+export interface TenantLeakSample {
+  childKey: string;
+  childTenantId: number;
+  parentKey: string;
+  parentTenantId: number;
+}
 
 export interface TenantLeakResult {
   childTable: string;
   parentTable: string;
   fkColumn: string;
   leakCount: number;
-  sampleViolations: {
-    childId: string;
-    childTenantId: number;
-    parentId: string;
-    parentTenantId: number;
-  }[];
+  sampleViolations: TenantLeakSample[];
 }
 
 export interface TenantIsolationResults {
@@ -34,7 +38,7 @@ export interface TenantIsolationResults {
  */
 function generateTenantLeakQuery(relationship: FkRelationship): string | null {
   if (!relationship.tenantIsolated) {
-    return null; // Skip relationships where one or both tables don't have tenant_id
+    return null;
   }
 
   const {
@@ -47,25 +51,42 @@ function generateTenantLeakQuery(relationship: FkRelationship): string | null {
   } = relationship;
 
   return `
-    SELECT
-      '${childTableName}' AS child_table,
-      '${parentTableName}' AS parent_table,
-      '${childColumnName}' AS fk_column,
-      COUNT(*) AS leak_count,
-      JSON_AGG(
-        JSON_BUILD_OBJECT(
-          'childId', c.id,
-          'childTenantId', c.tenant_id,
-          'parentId', p.id,
-          'parentTenantId', p.tenant_id
-        ) ORDER BY c.created_at DESC LIMIT 10
-      ) AS sample_violations
-    FROM ${childTableSchema}.${childTableName} c
-    JOIN ${parentTableSchema}.${parentTableName} p
-      ON c.${childColumnName} = p.${parentColumnName}
-    WHERE c.tenant_id != p.tenant_id  -- Cross-tenant violation
-    GROUP BY child_table, parent_table, fk_column
-    HAVING COUNT(*) > 0
+    WITH leaks AS (
+      SELECT
+        c.${childColumnName} AS ck,
+        c.tenant_id AS ct,
+        p.${parentColumnName} AS pk,
+        p.tenant_id AS pt
+      FROM ${childTableSchema}.${childTableName} c
+      JOIN ${parentTableSchema}.${parentTableName} p
+        ON c.${childColumnName} = p.${parentColumnName}
+      WHERE c.tenant_id IS DISTINCT FROM p.tenant_id
+    )
+    SELECT *
+    FROM (
+      SELECT
+        '${childTableName}' AS child_table,
+        '${parentTableName}' AS parent_table,
+        '${childColumnName}' AS fk_column,
+        (SELECT COUNT(*)::bigint FROM leaks) AS leak_count,
+        COALESCE(
+          (
+            SELECT json_agg(x.obj)
+            FROM (
+              SELECT json_build_object(
+                'childKey', l.ck::text,
+                'childTenantId', l.ct,
+                'parentKey', l.pk::text,
+                'parentTenantId', l.pt
+              ) AS obj
+              FROM leaks l
+              LIMIT 10
+            ) x
+          ),
+          '[]'::json
+        ) AS sample_violations
+    ) sub
+    WHERE sub.leak_count > 0
   `.trim();
 }
 
@@ -73,33 +94,49 @@ function generateTenantLeakQuery(relationship: FkRelationship): string | null {
  * Detect tenant isolation violations for a single FK
  */
 async function detectTenantLeaksForFK(
-  db: PostgresJsDatabase<any>,
+  db: GraphValidationDb,
   relationship: FkRelationship
 ): Promise<TenantLeakResult | null> {
   const query = generateTenantLeakQuery(relationship);
 
   if (!query) {
-    return null; // Not applicable (one table doesn't have tenant_id)
+    return null;
   }
 
   try {
     const result = await db.execute(sql.raw(query));
 
     if (result.rows.length === 0) {
-      return null; // No violations found
+      return null;
     }
 
-    const row = result.rows[0] as any;
+    const row = result.rows[0] as Record<string, unknown>;
+    let sampleViolations: TenantLeakSample[] = [];
+    const raw = row.sample_violations;
+    if (Array.isArray(raw)) {
+      sampleViolations = raw as TenantLeakSample[];
+    } else if (raw && typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (Array.isArray(parsed)) {
+          sampleViolations = parsed as TenantLeakSample[];
+        }
+      } catch {
+        sampleViolations = [];
+      }
+    }
+
     return {
-      childTable: row.child_table,
-      parentTable: row.parent_table,
-      fkColumn: row.fk_column,
+      childTable: String(row.child_table),
+      parentTable: String(row.parent_table),
+      fkColumn: String(row.fk_column),
       leakCount: Number(row.leak_count),
-      sampleViolations: row.sample_violations || [],
+      sampleViolations,
     };
   } catch (error) {
-    console.error(`❌ Error detecting tenant leaks for ${relationship.childTableName}.${relationship.childColumnName}:`, error);
-    return null;
+    const ctx = `${relationship.childTableSchema}.${relationship.childTableName}.${relationship.childColumnName} → ${relationship.parentTableSchema}.${relationship.parentTableName}`;
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(`Tenant isolation check failed (FK ${ctx}): ${msg}`, { cause: error });
   }
 }
 
@@ -107,7 +144,7 @@ async function detectTenantLeaksForFK(
  * Detect tenant isolation violations across all tenant-isolated FKs
  */
 export async function detectTenantLeaks(
-  db: PostgresJsDatabase<any>,
+  db: GraphValidationDb,
   relationships: FkRelationship[]
 ): Promise<TenantIsolationResults> {
   console.log(`🔒 Validating tenant isolation...`);
@@ -118,14 +155,11 @@ export async function detectTenantLeaks(
   const results: TenantLeakResult[] = [];
   const byTable = new Map<string, TenantLeakResult[]>();
 
-  // Execute in batches
   const batchSize = 10;
   for (let i = 0; i < tenantIsolatedRels.length; i += batchSize) {
     const batch = tenantIsolatedRels.slice(i, i + batchSize);
 
-    const batchResults = await Promise.all(
-      batch.map((rel) => detectTenantLeaksForFK(db, rel))
-    );
+    const batchResults = await Promise.all(batch.map((rel) => detectTenantLeaksForFK(db, rel)));
 
     for (const result of batchResults) {
       if (result) {
@@ -137,7 +171,9 @@ export async function detectTenantLeaks(
       }
     }
 
-    console.log(`   Progress: ${Math.min(i + batchSize, tenantIsolatedRels.length)}/${tenantIsolatedRels.length}`);
+    console.log(
+      `   Progress: ${Math.min(i + batchSize, tenantIsolatedRels.length)}/${tenantIsolatedRels.length}`
+    );
   }
 
   const totalLeaks = results.reduce((sum, r) => sum + r.leakCount, 0);
@@ -185,7 +221,7 @@ Details:
   Sample Violations:
 `;
     for (const sample of violation.sampleViolations.slice(0, 3)) {
-      report += `    - Child ${sample.childId} (Tenant ${sample.childTenantId}) → Parent ${sample.parentId} (Tenant ${sample.parentTenantId})\n`;
+      report += `    - Child FK ${sample.childKey} (Tenant ${sample.childTenantId}) → Parent ${sample.parentKey} (Tenant ${sample.parentTenantId})\n`;
     }
   }
 

@@ -26,6 +26,9 @@ test-results/
 playwright-report/
 test-output.txt
 
+# Local scratch (gate / introspection JSON dumps — not source of truth)
+.tmp/
+
 # IDE
 .idea/
 .vscode/

@@ -23,13 +23,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -84,6 +85,8 @@ export const analyticsFacts = hrSchema.table(
     metricCount: integer("metric_count"),
     metadata: jsonb("metadata").$type<unknown>(),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -129,7 +132,7 @@ export const hrMetrics = hrSchema.table(
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -174,7 +177,7 @@ export const analyticsDashboards = hrSchema.table(
     sharedWith: jsonb("shared_with").$type<unknown>(),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -224,6 +227,8 @@ export const dataExports = hrSchema.table(
     retryCount: integer("retry_count").notNull().default(0),
     lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -281,7 +286,7 @@ export const reportSubscriptions = hrSchema.table(
     nextRunAt: timestamp("next_run_at", { withTimezone: true }),
     ...timestampColumns,
     ...softDeleteColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -314,7 +319,8 @@ export const reportSubscriptionRecipients = hrSchema.table(
     recipientEmail: text("recipient_email").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -360,6 +366,8 @@ export const analyticsDimensions = hrSchema.table(
     validTo: date("valid_to", { mode: "string" }),
     isCurrent: boolean("is_current").notNull().default(true),
     ...timestampColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

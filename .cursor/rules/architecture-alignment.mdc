@@ -1,0 +1,25 @@
+---
+description: Enforce blueprint/backlog-targeted implementation with mandatory clarification gates
+alwaysApply: true
+---
+
+# Architecture Alignment Guardrails
+
+- **Implementation authority is mandatory** before edits. State exactly which document governs the task:
+  - `user instruction in chat` (highest)
+  - `.ideas/architecture/phase-1-implementation-blueprint.md`
+  - `.ideas/architecture/phase-1-engineering-backlog.md`
+  - `AGENT.md`
+- **No assumption policy**: if target doc, scope, contract shape, or enforcement level is ambiguous, ask clarifying questions before implementation.
+- **Hard clarification gate**: do not edit files when strict alignment is requested but section/task targets are unclear.
+- **Strict mode behavior**: when asked for strict alignment, map work to backlog task IDs/blueprint sections and report status per item as:
+  - `implemented`
+  - `partial`
+  - `missing`
+- **Do not claim full alignment** when any required hard-fail CI gate or required architecture module boundary is still missing.
+- **Conflict handling**: if governing docs conflict, follow authority priority above and explicitly report the conflict and chosen source.
+- **Architecture task report requirements** (in final response):
+  - implementation target (doc + section/task IDs)
+  - acceptance criteria matrix (implemented/partial/missing)
+  - open gaps (blocker/deferred)
+  - validation evidence (commands/gates run)

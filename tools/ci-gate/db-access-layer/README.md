@@ -4,6 +4,10 @@ Ensures each ERP schema module under `packages/db/src/schema/{hr,sales,inventory
 
 `packages/db/src/queries/<domain>/<sameBasename>.access.ts`
 
+Sales exception (intentional and enforced by discovery mapping):
+
+- `packages/db/src/schema/sales/*.ts` -> `packages/db/src/queries/sales/tables.access.ts` (single aggregate scaffold)
+
 **Check mode** (default): fails if any required `.access.ts` is missing or empty.
 
 **Not validated in v1:** function bodies, export names, or AST (dumb file-existence gate).

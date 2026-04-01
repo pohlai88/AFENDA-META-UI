@@ -624,3 +624,4 @@ export * from "./logic/product-configurator.js";
 export * from "./subscription-service.js";
 export * from "./document-infrastructure-service.js";
 export * from "./logic/tax-engine.js";
+export * from "./logic/truth-graph-engine.js";

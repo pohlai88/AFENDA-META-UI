@@ -1,4 +1,8 @@
 import { requireMutationPolicyById } from "@afenda/db";
+import {
+  OrderConfirmationPipelineError,
+  runOrderConfirmationPipeline,
+} from "@afenda/db/queries/sales";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
@@ -20,7 +24,15 @@ import {
   type OrderData,
   type OrderLineData,
 } from "./logic/sales-order-engine.js";
-import type { CreditCheckResult, PartnerContext } from "./logic/partner-engine.js";
+import {
+  buildSalesTruthImpactEventMetadata,
+  type SalesTruthImpactEventMetadata,
+} from "./logic/truth-graph-engine.js";
+import {
+  checkCreditLimit,
+  type CreditCheckResult,
+  type PartnerContext,
+} from "./logic/partner-engine.js";
 
 type SalesOrderRecord = typeof salesOrders.$inferSelect;
 type SalesOrderLineRecord = typeof salesOrderLines.$inferSelect;
@@ -71,6 +83,29 @@ export async function confirmSalesOrder(
   const lines = await loadSalesOrderLines(input.tenantId, input.orderId);
   const partner = await loadPartner(input.tenantId, order.partnerId);
 
+  if (order.status === "sale" || order.status === "done") {
+    try {
+      await runOrderConfirmationPipeline(db, {
+        tenantId: input.tenantId,
+        orderId: input.orderId,
+        actorUserId: input.actorId,
+      });
+    } catch (error) {
+      if (error instanceof OrderConfirmationPipelineError) {
+        throw new ConflictError(error.message);
+      }
+      throw error;
+    }
+
+    const fresh = await loadSalesOrder(input.tenantId, input.orderId);
+    return {
+      order: fresh,
+      mutationPolicy: "event-only",
+      event: undefined,
+      creditCheck: toCreditCheckResult(fresh, partner),
+    };
+  }
+
   const confirmation = confirmOrder({
     order: toOrderData(order),
     lines: lines.map(toOrderLineData),
@@ -84,15 +119,39 @@ export async function confirmSalesOrder(
     );
   }
 
-  const patch = buildConfirmedOrderPatch(order, confirmation, input.actorId);
-  const projectedOrder = applyOrderPatch(order, patch);
+  const now = new Date();
+  const creditCommitSnapshot = {
+    checkPassed: confirmation.creditCheckResult.approved,
+    checkedAtIso: now.toISOString(),
+    limitAtCheck: confirmation.creditCheckResult.creditLimit?.toString() ?? null,
+  };
+
+  try {
+    await runOrderConfirmationPipeline(db, {
+      tenantId: input.tenantId,
+      orderId: input.orderId,
+      actorUserId: input.actorId,
+      truthOverrides: { creditCommitSnapshot },
+    });
+  } catch (error) {
+    if (error instanceof OrderConfirmationPipelineError) {
+      throw new ConflictError(error.message);
+    }
+    throw error;
+  }
+
+  const afterPipeline = await loadSalesOrder(input.tenantId, input.orderId);
+  const persistPatch = buildPostTruthConfirmOrderPatch(order, confirmation, input.actorId);
+  const projectedOrder = applyOrderPatch(afterPipeline, persistPatch);
+
   const commandResult = await executeSalesOrderCommand({
     tenantId: input.tenantId,
     orderId: input.orderId,
     actorId: input.actorId,
     source: input.source ?? "api.sales.orders.confirm",
     nextOrder: projectedOrder,
-    persistPatch: patch,
+    persistPatch,
+    eventMetadata: buildSalesTruthImpactEventMetadata("sales_orders", "confirm"),
   });
 
   return {
@@ -129,6 +188,7 @@ export async function cancelSalesOrder(
     source: input.source ?? "api.sales.orders.cancel",
     nextOrder: projectedOrder,
     persistPatch: patch,
+    eventMetadata: buildSalesTruthImpactEventMetadata("sales_orders", "cancel"),
   });
 
   return {
@@ -145,6 +205,7 @@ async function executeSalesOrderCommand(input: {
   source: string;
   nextOrder: SalesOrderRecord;
   persistPatch: SalesOrderPatch;
+  eventMetadata?: SalesTruthImpactEventMetadata;
 }): Promise<ExecuteMutationCommandResult<SalesOrderRecord>> {
   return executeCommandRuntime({
     model: "sales_order",
@@ -152,6 +213,7 @@ async function executeSalesOrderCommand(input: {
     recordId: input.orderId,
     actorId: String(input.actorId),
     source: input.source,
+    eventMetadata: input.eventMetadata,
     policies: [SALES_ORDER_EVENT_ONLY_POLICY],
     nextRecord: input.nextOrder,
     mutate: async () =>
@@ -221,7 +283,8 @@ async function persistSalesOrderProjectionState(input: {
   );
 }
 
-function buildConfirmedOrderPatch(
+/** Credit + sequence only — status / confirmation / truth are owned by {@link runOrderConfirmationPipeline}. */
+function buildPostTruthConfirmOrderPatch(
   order: SalesOrderRecord,
   confirmation: ConfirmResult,
   actorId: number
@@ -229,17 +292,22 @@ function buildConfirmedOrderPatch(
   const now = new Date();
 
   return {
-    status: "sale",
     sequenceNumber:
       confirmation.sequenceNumber ?? order.sequenceNumber ?? resolveSequenceNumber(order),
-    confirmationDate: now,
-    confirmedBy: actorId,
     creditCheckPassed: confirmation.creditCheckResult.approved,
     creditCheckAt: now,
     creditCheckBy: actorId,
     creditLimitAtCheck: confirmation.creditCheckResult.creditLimit?.toString() ?? null,
     updatedAt: now,
     updatedBy: actorId,
+  };
+}
+
+function toCreditCheckResult(order: SalesOrderRecord, partner: PartnerRecord): CreditCheckResult {
+  const computed = checkCreditLimit(toPartnerContext(partner), order.amountTotal);
+  return {
+    ...computed,
+    approved: Boolean(order.creditCheckPassed),
   };
 }
 

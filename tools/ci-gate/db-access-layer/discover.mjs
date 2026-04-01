@@ -69,5 +69,10 @@ export function discoverEligibleSchemaModules() {
  * @param {string} basename without .ts
  */
 export function accessFilePath(domain, basename) {
+  // Sales currently keeps a single generated aggregate access scaffold.
+  // All sales schema modules map to one file intentionally.
+  if (domain === "sales") {
+    return join(QUERIES_ROOT, domain, "tables.access.ts");
+  }
   return join(QUERIES_ROOT, domain, `${basename}.access.ts`);
 }

@@ -1,0 +1,4 @@
+{
+  "_comment": "baseline.{table::kind::subject} = { reason, severity? }. Keep entries narrow and time-bound.",
+  "baseline": {}
+}

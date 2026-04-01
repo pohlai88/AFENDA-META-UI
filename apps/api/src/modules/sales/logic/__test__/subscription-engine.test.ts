@@ -175,6 +175,39 @@ describe("subscription engine", () => {
 
       expect(date.getUTCDate()).toBe(17);
     });
+
+    it("with billingAnchorDate monthly, picks same-month invoice when anchor phase allows", () => {
+      const date = computeNextInvoiceDate({
+        currentDate: new Date("2026-01-10T00:00:00.000Z"),
+        billingPeriod: "monthly",
+        billingDay: 15,
+        billingAnchorDate: new Date("2026-01-15T00:00:00.000Z"),
+      });
+
+      expect(date.toISOString().startsWith("2026-01-15")).toBe(true);
+    });
+
+    it("with billingAnchorDate quarterly, advances to next grid month after base", () => {
+      const date = computeNextInvoiceDate({
+        currentDate: new Date("2026-01-10T00:00:00.000Z"),
+        billingPeriod: "quarterly",
+        billingDay: 15,
+        billingAnchorDate: new Date("2025-11-15T00:00:00.000Z"),
+      });
+
+      expect(date.toISOString().startsWith("2026-02-15")).toBe(true);
+    });
+
+    it("with billingAnchorDate weekly, steps on UTC 7-day grid from anchor", () => {
+      const date = computeNextInvoiceDate({
+        currentDate: new Date("2026-01-10T12:00:00.000Z"),
+        billingPeriod: "weekly",
+        billingDay: 1,
+        billingAnchorDate: new Date("2026-01-03T12:00:00.000Z"),
+      });
+
+      expect(date.toISOString()).toBe("2026-01-17T12:00:00.000Z");
+    });
   });
 
   describe("detectSubscriptionExpiry", () => {

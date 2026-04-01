@@ -3,7 +3,7 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from "driz
 import { index, integer, jsonb, pgSchema, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { nameColumn, softDeleteColumns, timestampColumns } from "../../infra-utils/columns/index.js";
+import { nameColumn, softDeleteColumns, timestampColumns } from "../../column-kit/index.js";
 
 export const coreSchema = pgSchema("core");
 

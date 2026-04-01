@@ -2,6 +2,9 @@
  * Load Tests: Graph Validation
  * ============================
  * Keeps performance tests deterministic while validating behavior at scale.
+ *
+ * CI: keep `graph-validation` workflow `timeout-minutes` above worst-case orphan scan
+ * for your FK count; prefer scheduled jobs for full prod graphs if needed.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,6 +44,7 @@ const createLargeCatalog = (relationshipCount: number): FkValidationCatalog => {
   const relationships = Array.from({ length: relationshipCount }, (_, i) => createRelationship(i));
 
   return {
+    schemasCovered: ["sales"],
     relationships,
     tables: [],
     byPriority: {
@@ -99,11 +103,14 @@ describe("Load Tests: Graph Validation", () => {
       mockDb._executeMock.mockResolvedValue({
         rows: [
           {
+            child_table_schema: "sales",
+            parent_table_schema: "sales",
             child_table: "child_table_0",
             parent_table: "parent_table_0",
             fk_column: "parent_id",
+            parent_column: "id",
             orphan_count: 50000,
-            sample_ids: Array.from({ length: 10 }, (_, i) => i + 1),
+            sample_ids: Array.from({ length: 10 }, (_, i) => String(i + 1)),
           },
         ],
       });
@@ -124,9 +131,14 @@ describe("Load Tests: Graph Validation", () => {
         byTable: new Map(),
         byPriority: {
           P0: Array.from({ length: 250 }, () => ({
-            childTable: "a",
-            parentTable: "b",
-            fkColumn: "id",
+            childTableSchema: "sales",
+            childTableName: "a",
+            parentTableSchema: "sales",
+            parentTableName: "b",
+            childTable: "sales.a",
+            parentTable: "sales.b",
+            fkColumn: "parent_id",
+            parentColumn: "id",
             orphanCount: 1000,
             sampleIds: [],
           })),
@@ -135,9 +147,14 @@ describe("Load Tests: Graph Validation", () => {
           P3: [],
         },
         criticalViolations: Array.from({ length: 250 }, () => ({
-          childTable: "a",
-          parentTable: "b",
-          fkColumn: "id",
+          childTableSchema: "sales",
+          childTableName: "a",
+          parentTableSchema: "sales",
+          parentTableName: "b",
+          childTable: "sales.a",
+          parentTable: "sales.b",
+          fkColumn: "parent_id",
+          parentColumn: "id",
           orphanCount: 1000,
           sampleIds: [],
         })),

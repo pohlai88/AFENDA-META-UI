@@ -1,5 +1,12 @@
+import {
+  calculateCommission as calculateCommissionCore,
+  CommissionEngineError,
+  formatDateOnlyUtc,
+  type CommissionCalculationInput,
+  type CommissionCalculationResult,
+  type CommissionMetrics,
+} from "@afenda/db";
 import type {
-  CommissionBase,
   CommissionEntry,
   CommissionEntryStatus,
   CommissionPlan,
@@ -7,13 +14,10 @@ import type {
   NewCommissionEntry,
 } from "@afenda/db/schema/sales";
 
-type DecimalLike = number | string;
+export { formatDateOnlyUtc };
 
-export interface CommissionMetrics {
-  revenue?: DecimalLike;
-  profit?: DecimalLike;
-  margin?: DecimalLike;
-}
+export type { CommissionMetrics, CommissionCalculationResult, CommissionCalculationInput };
+export { CommissionEngineError };
 
 export interface CommissionBreakdownLine {
   tierId: CommissionPlanTier["id"];
@@ -24,21 +28,10 @@ export interface CommissionBreakdownLine {
   commissionAmount: string;
 }
 
-export interface CommissionCalculationResult {
-  base: CommissionBase;
-  baseAmount: string;
-  commissionAmount: string;
-  effectiveRate: string | null;
-  matchedTierIds: Array<CommissionPlanTier["id"]>;
-  breakdown: CommissionBreakdownLine[];
-}
-
-export interface CommissionCalculationInput {
-  plan: Pick<CommissionPlan, "id" | "tenantId" | "type" | "base" | "isActive">;
-  tiers: Array<
-    Pick<CommissionPlanTier, "id" | "planId" | "minAmount" | "maxAmount" | "rate" | "sequence">
-  >;
-  metrics: CommissionMetrics;
+export function calculateCommission(
+  input: CommissionCalculationInput
+): CommissionCalculationResult {
+  return calculateCommissionCore(input);
 }
 
 export interface BuildCommissionEntryDraftInput extends CommissionCalculationInput {
@@ -48,10 +41,13 @@ export interface BuildCommissionEntryDraftInput extends CommissionCalculationInp
   salespersonId: NewCommissionEntry["salespersonId"];
   createdBy?: NewCommissionEntry["createdBy"];
   updatedBy?: NewCommissionEntry["updatedBy"];
-  periodStart: NewCommissionEntry["periodStart"];
-  periodEnd: NewCommissionEntry["periodEnd"];
+  periodStart: Date | string;
+  periodEnd: Date | string;
   notes?: NewCommissionEntry["notes"];
   status?: Extract<CommissionEntryStatus, "draft" | "approved">;
+  currencyId?: number | null;
+  entryVersion?: number;
+  priceResolutionId?: NewCommissionEntry["priceResolutionId"];
 }
 
 export interface CommissionSummary {
@@ -61,82 +57,33 @@ export interface CommissionSummary {
   byStatus: Record<CommissionEntryStatus, { count: number; commissionAmountTotal: string }>;
 }
 
-type EngineTier = CommissionCalculationInput["tiers"][number];
-
-export class CommissionEngineError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "CommissionEngineError";
-  }
+function toDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
 }
 
-export function calculateCommission(
-  input: CommissionCalculationInput
-): CommissionCalculationResult {
-  if (!input.plan.isActive) {
-    throw new CommissionEngineError("Commission plan is inactive.");
-  }
-
-  const baseAmount = resolveCommissionBaseAmount(input.plan.base, input.metrics);
-  const tiers = sortTiers(input.tiers, input.plan.id);
-
-  if (input.plan.type === "tiered") {
-    return calculateTieredCommission(input.plan.base, baseAmount, tiers);
-  }
-
-  const matchedTier = findMatchingTier(baseAmount, tiers);
-  if (!matchedTier) {
-    throw new CommissionEngineError("No commission tier matches the calculated base amount.");
-  }
-
-  const rate = parseDecimal(matchedTier.rate, "tier rate");
-  const commissionAmount =
-    input.plan.type === "flat" ? rate : roundCurrency(baseAmount * (rate / 100));
-  const effectiveRate =
-    baseAmount === 0 ? null : roundRate((commissionAmount / baseAmount) * 100).toFixed(4);
-
-  return {
-    base: input.plan.base,
-    baseAmount: formatCurrency(baseAmount),
-    commissionAmount: formatCurrency(commissionAmount),
-    effectiveRate,
-    matchedTierIds: [matchedTier.id],
-    breakdown: [
-      {
-        tierId: matchedTier.id,
-        minAmount: formatCurrency(parseDecimal(matchedTier.minAmount, "tier minimum")),
-        maxAmount:
-          matchedTier.maxAmount === null
-            ? null
-            : formatCurrency(parseDecimal(matchedTier.maxAmount, "tier maximum")),
-        rate: roundRate(rate).toFixed(4),
-        matchedBaseAmount: formatCurrency(baseAmount),
-        commissionAmount: formatCurrency(commissionAmount),
-      },
-    ],
-  };
-}
-
-export function buildCommissionEntryDraft(
-  input: BuildCommissionEntryDraftInput
-): NewCommissionEntry {
-  const calculation = calculateCommission(input);
+export function buildCommissionEntryDraft(input: BuildCommissionEntryDraftInput): NewCommissionEntry {
+  const calculation = calculateCommissionCore(input);
   const actorId = input.createdBy ?? input.updatedBy ?? input.salespersonId;
 
   return {
     id: input.id,
     tenantId: input.tenantId,
+    entryVersion: input.entryVersion ?? 1,
     createdBy: input.createdBy ?? actorId,
     updatedBy: input.updatedBy ?? actorId,
     orderId: input.orderId,
     salespersonId: input.salespersonId,
     planId: input.plan.id,
+    priceResolutionId: input.priceResolutionId ?? null,
+    truthBindingId: null,
+    currencyId: input.currencyId ?? null,
     baseAmount: calculation.baseAmount,
     commissionAmount: calculation.commissionAmount,
     status: input.status ?? "draft",
     paidDate: null,
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
+    periodStart: formatDateOnlyUtc(toDate(input.periodStart)),
+    periodEnd: formatDateOnlyUtc(toDate(input.periodEnd)),
+    lockedAt: null,
     notes: input.notes ?? null,
   };
 }
@@ -160,7 +107,7 @@ export function markCommissionEntryPaid<
 >(
   entry: TEntry,
   paidDate: Date = new Date()
-): Omit<TEntry, "status" | "paidDate"> & { status: "paid"; paidDate: Date } {
+): Omit<TEntry, "status" | "paidDate"> & { status: "paid"; paidDate: string } {
   if (entry.status === "draft") {
     throw new CommissionEngineError("Draft commission entries must be approved before payment.");
   }
@@ -168,7 +115,7 @@ export function markCommissionEntryPaid<
   return {
     ...entry,
     status: "paid",
-    paidDate,
+    paidDate: formatDateOnlyUtc(paidDate),
   };
 }
 
@@ -207,114 +154,7 @@ export function summarizeCommissionEntries(
   };
 }
 
-function calculateTieredCommission(
-  base: CommissionBase,
-  baseAmount: number,
-  tiers: EngineTier[]
-): CommissionCalculationResult {
-  const breakdown: CommissionBreakdownLine[] = [];
-  let commissionAmount = 0;
-
-  for (const tier of tiers) {
-    const minAmount = parseDecimal(tier.minAmount, "tier minimum");
-    const maxAmount =
-      tier.maxAmount === null
-        ? Number.POSITIVE_INFINITY
-        : parseDecimal(tier.maxAmount, "tier maximum");
-
-    if (baseAmount <= minAmount) {
-      continue;
-    }
-
-    const matchedBaseAmount = Math.max(0, Math.min(baseAmount, maxAmount) - minAmount);
-    if (matchedBaseAmount <= 0) {
-      continue;
-    }
-
-    const rate = parseDecimal(tier.rate, "tier rate");
-    const tierCommissionAmount = roundCurrency(matchedBaseAmount * (rate / 100));
-    commissionAmount += tierCommissionAmount;
-
-    breakdown.push({
-      tierId: tier.id,
-      minAmount: formatCurrency(minAmount),
-      maxAmount: Number.isFinite(maxAmount) ? formatCurrency(maxAmount) : null,
-      rate: roundRate(rate).toFixed(4),
-      matchedBaseAmount: formatCurrency(matchedBaseAmount),
-      commissionAmount: formatCurrency(tierCommissionAmount),
-    });
-  }
-
-  if (breakdown.length === 0) {
-    throw new CommissionEngineError(
-      "No commission tiers contribute to the calculated base amount."
-    );
-  }
-
-  return {
-    base,
-    baseAmount: formatCurrency(baseAmount),
-    commissionAmount: formatCurrency(commissionAmount),
-    effectiveRate:
-      baseAmount === 0 ? null : roundRate((commissionAmount / baseAmount) * 100).toFixed(4),
-    matchedTierIds: breakdown.map((line) => line.tierId),
-    breakdown,
-  };
-}
-
-function resolveCommissionBaseAmount(base: CommissionBase, metrics: CommissionMetrics): number {
-  const rawValue = metrics[base];
-
-  if (rawValue === undefined || rawValue === null) {
-    throw new CommissionEngineError(`Missing ${base} metric for commission calculation.`);
-  }
-
-  const amount = parseDecimal(rawValue, `${base} metric`);
-  if (amount < 0) {
-    throw new CommissionEngineError(`Commission base ${base} cannot be negative.`);
-  }
-
-  return amount;
-}
-
-function sortTiers(
-  tiers: CommissionCalculationInput["tiers"],
-  planId: CommissionPlan["id"]
-): EngineTier[] {
-  if (tiers.length === 0) {
-    throw new CommissionEngineError("Commission plan requires at least one tier.");
-  }
-
-  return [...tiers]
-    .map((tier) => {
-      if (tier.planId !== planId) {
-        throw new CommissionEngineError("Commission tier does not belong to the selected plan.");
-      }
-
-      return tier;
-    })
-    .sort((left, right) => {
-      if (left.sequence !== right.sequence) {
-        return left.sequence - right.sequence;
-      }
-
-      return (
-        parseDecimal(left.minAmount, "tier minimum") - parseDecimal(right.minAmount, "tier minimum")
-      );
-    });
-}
-
-function findMatchingTier(baseAmount: number, tiers: EngineTier[]): EngineTier | undefined {
-  return tiers.find((tier) => {
-    const minAmount = parseDecimal(tier.minAmount, "tier minimum");
-    const maxAmount =
-      tier.maxAmount === null
-        ? Number.POSITIVE_INFINITY
-        : parseDecimal(tier.maxAmount, "tier maximum");
-
-    return baseAmount >= minAmount && baseAmount <= maxAmount;
-  });
-}
+type DecimalLike = number | string;
 
 function parseDecimal(value: DecimalLike | null, label: string): number {
   if (value === null) {
@@ -331,10 +171,6 @@ function parseDecimal(value: DecimalLike | null, label: string): number {
 
 function roundCurrency(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function roundRate(value: number): number {
-  return Math.round((value + Number.EPSILON) * 10000) / 10000;
 }
 
 function formatCurrency(value: number): string {

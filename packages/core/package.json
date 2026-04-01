@@ -1,0 +1,25 @@
+{
+  "name": "@afenda/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "generate": "tsx src/generator/index.ts",
+    "check:generate": "pnpm generate && git diff --exit-code -- src/generated",
+    "typecheck": "tsc --noEmit",
+    "build": "pnpm run generate && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:truth": "tsx scripts/verify-truth.ts",
+    "test:truth-guards": "vitest run src/ci/tenantScopedDbAdapters.test.ts",
+    "evidence:catalogs": "tsx scripts/generate-truth-catalog-artifacts.ts",
+    "check:catalogs": "tsx scripts/check-truth-catalogs.ts"
+  },
+  "devDependencies": {
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
+  }
+}

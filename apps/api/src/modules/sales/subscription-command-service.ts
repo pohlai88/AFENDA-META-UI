@@ -1,4 +1,5 @@
 import { requireMutationPolicyById } from "@afenda/db";
+import type { SubscriptionStatus } from "@afenda/db/schema/sales";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
@@ -18,17 +19,25 @@ import {
   type ExecuteMutationCommandResult,
 } from "../../policy/command-runtime-spine.js";
 import {
-  computeMRR,
   computeNextInvoiceDate,
   subscriptionStateMachine,
   validateSubscription as validateSubscriptionInvariants,
   type SubscriptionValidationResult,
 } from "./logic/subscription-engine.js";
 import {
+  buildSalesTruthImpactEventMetadata,
+  type SalesTruthImpactEventMetadata,
+} from "./logic/truth-graph-engine.js";
+import {
+  buildSubscriptionPricingSnapshotV1,
+  resolveSubscriptionPricingAggregate,
+} from "./logic/subscription-pricing-kernel.js";
+import {
   activateSubscription,
   cancelSubscription,
   pauseSubscription,
   renewSubscription,
+  resolveSubscriptionCurrencyId,
   resumeSubscription,
   type ActivateSubscriptionInput,
   type ActivateSubscriptionResult,
@@ -119,28 +128,47 @@ export async function activateSubscriptionCommand(
   }
 
   const activationDate = input.activationDate ?? new Date();
-  subscriptionStateMachine.assertTransition(existing.status, "active", {
+  subscriptionStateMachine.assertTransition(existing.status as SubscriptionStatus, "active", {
     hasLines: lines.length > 0,
     startDateValid: !existing.dateEnd || existing.dateStart.getTime() < existing.dateEnd.getTime(),
   });
 
-  const mrrResult = computeMRR({
+  const mrrResult = resolveSubscriptionPricingAggregate({
     lines,
     billingPeriod: template.billingPeriod,
   });
+  const pricingSnapshot = buildSubscriptionPricingSnapshotV1({
+    template,
+    lines,
+    mrrResult,
+  });
+  const currencyId =
+    (await resolveSubscriptionCurrencyId(input.tenantId, existing.templateId)) ?? existing.currencyId;
+
+  const newTruthRevision = existing.truthRevision + 1;
+  const effectiveDateStart = existing.status === "draft" ? activationDate : existing.dateStart;
+  const billingAnchorDate =
+    existing.status === "draft" ? effectiveDateStart : existing.billingAnchorDate;
+  const pricingLockedAt = new Date();
 
   const nextSubscription: SubscriptionRecord = {
     ...existing,
     status: "active",
-    dateStart: existing.status === "draft" ? activationDate : existing.dateStart,
+    dateStart: effectiveDateStart,
     nextInvoiceDate: computeNextInvoiceDate({
       currentDate: activationDate,
       billingPeriod: template.billingPeriod,
       billingDay: template.billingDay,
+      billingAnchorDate,
     }),
     recurringTotal: mrrResult.lineTotal.toDecimalPlaces(2).toString(),
     mrr: mrrResult.mrr.toString(),
     arr: mrrResult.arr.toString(),
+    truthRevision: newTruthRevision,
+    pricingLockedAt,
+    pricingSnapshot,
+    billingAnchorDate,
+    currencyId,
     closeReasonId: null,
     updatedBy: input.actorId,
   };
@@ -152,6 +180,7 @@ export async function activateSubscriptionCommand(
     actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.activate",
     nextSubscription,
+    eventMetadata: buildSalesTruthImpactEventMetadata("subscriptions", "activate"),
     persistProjection: async () => {
       serviceResult = await activateSubscription(input);
     },
@@ -173,7 +202,7 @@ export async function cancelSubscriptionCommand(
 ): Promise<CancelSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
   await ensureCloseReason(input.tenantId, input.closeReasonId);
-  subscriptionStateMachine.assertTransition(existing.status, "cancelled", {
+  subscriptionStateMachine.assertTransition(existing.status as SubscriptionStatus, "cancelled", {
     hasCloseReason: true,
   });
 
@@ -185,6 +214,7 @@ export async function cancelSubscriptionCommand(
     closeReasonId: input.closeReasonId,
     mrr: "0.00",
     arr: "0.00",
+    truthRevision: existing.truthRevision + 1,
     updatedBy: input.actorId,
   };
 
@@ -195,6 +225,7 @@ export async function cancelSubscriptionCommand(
     actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.cancel",
     nextSubscription,
+    eventMetadata: buildSalesTruthImpactEventMetadata("subscriptions", "cancel"),
     persistProjection: async () => {
       serviceResult = await cancelSubscription(input);
     },
@@ -215,7 +246,7 @@ export async function pauseSubscriptionCommand(
   input: PauseSubscriptionCommandInput
 ): Promise<PauseSubscriptionCommandResult> {
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
-  subscriptionStateMachine.assertTransition(existing.status, "paused");
+  subscriptionStateMachine.assertTransition(existing.status as SubscriptionStatus, "paused");
 
   let serviceResult: PauseSubscriptionResult | undefined;
   const commandResult = await executeSubscriptionCommand({
@@ -226,8 +257,10 @@ export async function pauseSubscriptionCommand(
     nextSubscription: {
       ...existing,
       status: "paused",
+      truthRevision: existing.truthRevision + 1,
       updatedBy: input.actorId,
     },
+    eventMetadata: buildSalesTruthImpactEventMetadata("subscriptions", "pause"),
     persistProjection: async () => {
       serviceResult = await pauseSubscription(input);
     },
@@ -250,11 +283,11 @@ export async function resumeSubscriptionCommand(
   const existing = await loadSubscription(input.tenantId, input.subscriptionId);
   const template = await loadSubscriptionTemplate(input.tenantId, existing.templateId);
   if (existing.status === "past_due") {
-    subscriptionStateMachine.assertTransition(existing.status, "active", {
+    subscriptionStateMachine.assertTransition(existing.status as SubscriptionStatus, "active", {
       paymentResolved: input.paymentResolved === true,
     });
   } else {
-    subscriptionStateMachine.assertTransition(existing.status, "active");
+    subscriptionStateMachine.assertTransition(existing.status as SubscriptionStatus, "active");
   }
 
   const resumeDate = input.resumeDate ?? new Date();
@@ -266,7 +299,9 @@ export async function resumeSubscriptionCommand(
       lastInvoiced: existing.lastInvoicedAt ?? undefined,
       billingPeriod: template.billingPeriod,
       billingDay: template.billingDay,
+      billingAnchorDate: existing.billingAnchorDate,
     }),
+    truthRevision: existing.truthRevision + 1,
     updatedBy: input.actorId,
   };
 
@@ -277,6 +312,7 @@ export async function resumeSubscriptionCommand(
     actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.resume",
     nextSubscription,
+    eventMetadata: buildSalesTruthImpactEventMetadata("subscriptions", "resume"),
     persistProjection: async () => {
       serviceResult = await resumeSubscription(input);
     },
@@ -306,10 +342,17 @@ export async function renewSubscriptionCommand(
   }
 
   const renewalDate = input.renewalDate ?? new Date();
-  const mrrResult = computeMRR({
+  const mrrResult = resolveSubscriptionPricingAggregate({
     lines,
     billingPeriod: template.billingPeriod,
   });
+  const pricingSnapshot = buildSubscriptionPricingSnapshotV1({
+    template,
+    lines,
+    mrrResult,
+    computedAt: renewalDate,
+  });
+  const pricingLockedAt = renewalDate;
 
   const nextSubscription: SubscriptionRecord = {
     ...existing,
@@ -319,11 +362,15 @@ export async function renewSubscriptionCommand(
       lastInvoiced: existing.lastInvoicedAt ?? existing.nextInvoiceDate,
       billingPeriod: template.billingPeriod,
       billingDay: template.billingDay,
+      billingAnchorDate: existing.billingAnchorDate,
     }),
     dateEnd: extendDateEnd(existing.dateEnd, template.billingPeriod, template.renewalPeriod),
     recurringTotal: mrrResult.lineTotal.toDecimalPlaces(2).toString(),
     mrr: mrrResult.mrr.toString(),
     arr: mrrResult.arr.toString(),
+    truthRevision: existing.truthRevision + 1,
+    pricingLockedAt,
+    pricingSnapshot,
     updatedBy: input.actorId,
   };
 
@@ -334,6 +381,7 @@ export async function renewSubscriptionCommand(
     actorId: input.actorId,
     source: input.source ?? "api.sales.subscriptions.renew",
     nextSubscription,
+    eventMetadata: buildSalesTruthImpactEventMetadata("subscriptions", "renew"),
     persistProjection: async () => {
       serviceResult = await renewSubscription(input);
     },
@@ -379,6 +427,7 @@ async function executeSubscriptionCommand(input: {
   actorId: number;
   source: string;
   nextSubscription: SubscriptionRecord;
+  eventMetadata?: SalesTruthImpactEventMetadata;
   persistProjection: () => Promise<void>;
 }): Promise<ExecuteMutationCommandResult<SubscriptionRecord>> {
   return executeCommandRuntime({
@@ -387,6 +436,7 @@ async function executeSubscriptionCommand(input: {
     recordId: input.subscriptionId,
     actorId: String(input.actorId),
     source: input.source,
+    eventMetadata: input.eventMetadata,
     policies: [SUBSCRIPTION_EVENT_ONLY_POLICY],
     nextRecord: input.nextSubscription,
     mutate: async () => input.nextSubscription,

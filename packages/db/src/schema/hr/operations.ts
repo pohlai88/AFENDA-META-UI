@@ -20,13 +20,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { hrSchema } from "./_schema.js";
 import {
@@ -83,7 +84,7 @@ export const employeeDocuments = hrSchema.table(
     documentStatus: documentStatusEnum("document_status").notNull().default("pending"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -132,7 +133,7 @@ export const disciplinaryActions = hrSchema.table(
     issuedDate: date("issued_date", { mode: "string" }).notNull(),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -174,7 +175,7 @@ export const onboardingChecklists = hrSchema.table(
     jobPositionId: uuid("job_position_id"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -221,7 +222,8 @@ export const onboardingTasks = hrSchema.table(
     requiresAcknowledgment: boolean("requires_acknowledgment").notNull().default(false),
     linkedPolicyDocumentId: uuid("linked_policy_document_id"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -269,7 +271,8 @@ export const onboardingProgress = hrSchema.table(
     submittedDocumentUrl: text("submitted_document_url"),
     taskAcknowledgedAt: timestamp("task_acknowledged_at", { withTimezone: true }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

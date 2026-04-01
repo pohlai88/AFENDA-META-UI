@@ -1,0 +1,8 @@
+{
+  "zCoerceDateInSchema": [
+    "packages/db/src/schema/hr/operations.ts",
+    "packages/db/src/schema/hr/attendanceEnhancements.ts",
+    "packages/db/src/schema/security/users.ts",
+    "packages/db/src/schema/security/userRoles.ts"
+  ]
+}

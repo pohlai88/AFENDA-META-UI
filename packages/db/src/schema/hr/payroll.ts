@@ -21,13 +21,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
-import { tenantIsolationPolicies, serviceBypassPolicy } from "../../infra-utils/rls/index.js";
+import { tenantIsolationPolicies, serviceBypassPolicy } from "../../rls-policies/index.js";
 import {
   auditColumns,
   nameColumn,
   softDeleteColumns,
   timestampColumns,
-} from "../../infra-utils/columns/index.js";
+} from "../../column-kit/index.js";
+import { users } from "../security/index.js";
 import { tenants } from "../core/tenants.js";
 import { currencies } from "../reference/index.js";
 import { hrSchema } from "./_schema.js";
@@ -90,7 +91,7 @@ export const salaryComponents = hrSchema.table(
     displayOrder: integer("display_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -121,7 +122,7 @@ export const employeeSalaries = hrSchema.table(
     endDate: date("end_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -167,7 +168,7 @@ export const payrollPeriods = hrSchema.table(
     closedAt: timestamp("closed_at", { withTimezone: true }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -206,7 +207,7 @@ export const payrollEntries = hrSchema.table(
     paymentDate: date("payment_date", { mode: "string" }),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -257,7 +258,8 @@ export const payrollLines = hrSchema.table(
     quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),
@@ -303,7 +305,7 @@ export const taxBrackets = hrSchema.table(
     description: text("description"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -349,7 +351,7 @@ export const statutoryDeductions = hrSchema.table(
     description: text("description"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -410,7 +412,7 @@ export const payrollAdjustments = hrSchema.table(
     appliesToPeriod: date("applies_to_period"), // If recurring, the period it applies to
     notes: text("notes"),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -463,7 +465,7 @@ export const payslips = hrSchema.table(
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     viewedAt: date("viewed_at", { mode: "string" }),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
     ...softDeleteColumns,
   },
   (table) => [
@@ -517,7 +519,8 @@ export const paymentDistributions = hrSchema.table(
     reference: text("reference"), // Payment reference
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     ...timestampColumns,
-    ...auditColumns,
+    ...auditColumns(() => users.userId),
+    ...softDeleteColumns,
   },
   (table) => [
     foreignKey({ columns: [table.tenantId], foreignColumns: [tenants.tenantId] }),

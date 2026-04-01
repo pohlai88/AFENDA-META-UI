@@ -12,18 +12,22 @@
  *   pnpm --filter @afenda/db graph-validation tenants
  */
 
+import "../env/load-repo-root-dotenv.js";
 import { sql as drizzleSql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { buildFkCatalog, exportCatalogToJson } from "./fk-catalog.js";
-import { detectAllOrphans, generateCleanupSQL, generateDeleteSQL } from "./orphan-detection.js";
 import {
-  detectMissingFkIndexes,
-  generateCreateIndexSQL,
-  generateRemediationScript,
-} from "./index-remediation.js";
-import { detectTenantLeaks, generateSecurityIncidentReport } from "./tenant-isolation.js";
-import { calculateHealthScore, formatHealthReport } from "./health-scoring.js";
+  buildFkCatalog,
+  DEFAULT_ERP_SCHEMAS,
+  exportCatalogToJson,
+} from "./fk-catalog.js";
+import { detectAllOrphans, generateCleanupSQL, generateDeleteSQL } from "./orphan-detection.js";
+import { detectTenantLeaks } from "./tenant-isolation.js";
+import { detectMissingFkIndexes, generateCreateIndexSQL } from "./index-remediation.js";
+import { generateSecurityIncidentReport } from "./tenant-isolation.js";
+import { formatHealthReport } from "./health-scoring.js";
+import { buildGraphValidationReport } from "./report-service.js";
+import { stringifyReportDeterministic } from "./report-dto.js";
 import * as schema from "../schema/index.js";
 
 // Environment validation
@@ -50,117 +54,126 @@ async function disconnectDatabase(): Promise<void> {
   console.log("✅ Disconnected from database");
 }
 
+function parseSchemaArgs(args: string[]): string[] {
+  const out: string[] = [];
+  for (const a of args) {
+    if (a.startsWith("--schema=")) {
+      const v = a.slice("--schema=".length).trim();
+      if (v) {
+        out.push(v);
+      }
+    }
+  }
+  return out;
+}
+
+function resolveSchemasFromArgv(args: string[]): string[] {
+  const parsed = parseSchemaArgs(args);
+  return parsed.length > 0 ? parsed : [...DEFAULT_ERP_SCHEMAS];
+}
+
+function resolveRepoRootFromArgs(args: string[]): string | undefined {
+  const p = args.find((a) => a.startsWith("--repo-root="))?.split("=")[1];
+  return p?.trim() || undefined;
+}
+
+function wantsAdjuncts(args: string[]): boolean {
+  return args.includes("--adjuncts");
+}
+
 // Command: health
-async function commandHealth(): Promise<void> {
+async function commandHealth(schemas: string[], args: string[]): Promise<void> {
   console.log("🏥 Starting graph validation health check...\n");
+  console.log(`   Schemas: ${schemas.join(", ")}\n`);
 
-  const catalog = await buildFkCatalog(db, "sales");
-  console.log("");
-
-  const orphans = await detectAllOrphans(db, catalog.relationships);
-  console.log("");
-
-  const tenantLeaks = await detectTenantLeaks(db, catalog.relationships);
-  console.log("");
-
-  const healthScore = calculateHealthScore({
-    orphans,
-    tenantLeaks,
-    catalog,
+  const report = await buildGraphValidationReport(db, {
+    schemas,
+    repoRoot: resolveRepoRootFromArgs(args),
+    includeAdjuncts: wantsAdjuncts(args),
   });
 
-  console.log(formatHealthReport(healthScore));
+  console.log(formatHealthReport(report.healthScore));
 
-  if (healthScore.status === "CRITICAL") {
-    process.exit(1); // Exit with error code for CI/CD
+  if (report.policy.isSecurityBlocking) {
+    console.error("\n🚨 Security policy: BLOCKING (tenant isolation breach or equivalent)");
+    process.exit(1);
+  }
+
+  if (report.healthScore.status === "CRITICAL") {
+    process.exit(1);
   }
 }
 
 // Command: report
-async function commandReport(format: "json" | "text" = "text"): Promise<void> {
+async function commandReport(
+  schemas: string[],
+  format: "json" | "text" = "text",
+  args: string[] = []
+): Promise<void> {
   console.log("📊 Generating detailed validation report...\n");
 
-  const catalog = await buildFkCatalog(db, "sales");
-  console.log("");
-
-  const orphans = await detectAllOrphans(db, catalog.relationships);
-  console.log("");
-
-  const tenantLeaks = await detectTenantLeaks(db, catalog.relationships);
-  console.log("");
-
-  const healthScore = calculateHealthScore({
-    orphans,
-    tenantLeaks,
-    catalog,
+  const report = await buildGraphValidationReport(db, {
+    schemas,
+    repoRoot: resolveRepoRootFromArgs(args),
+    includeAdjuncts: wantsAdjuncts(args),
   });
 
   if (format === "json") {
-    const report = {
-      timestamp: new Date().toISOString(),
-      healthScore,
-      orphans: {
-        total: orphans.total,
-        byPriority: {
-          P0: orphans.byPriority.P0.length,
-          P1: orphans.byPriority.P1.length,
-          P2: orphans.byPriority.P2.length,
-          P3: orphans.byPriority.P3.length,
-        },
-        details: Array.from(orphans.byTable.entries()).map(([table, results]) => ({
-          table,
-          violations: results,
-        })),
-      },
-      tenantLeaks: {
-        total: tenantLeaks.totalLeaks,
-        isSecure: tenantLeaks.isSecure,
-        details: tenantLeaks.allViolations,
-      },
-      catalog: {
-        totalRelationships: catalog.relationships.length,
-        byPriority: {
-          P0: catalog.byPriority.P0.length,
-          P1: catalog.byPriority.P1.length,
-          P2: catalog.byPriority.P2.length,
-          P3: catalog.byPriority.P3.length,
-        },
-      },
-    };
-
-    console.log(JSON.stringify(report, null, 2));
+    console.log(stringifyReportDeterministic(report));
   } else {
-    console.log(formatHealthReport(healthScore));
+    console.log(formatHealthReport(report.healthScore));
     console.log("\n");
 
-    if (orphans.total > 0) {
+    if (report.orphans.total > 0) {
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       console.log("  Orphan Details");
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-      for (const [table, results] of orphans.byTable.entries()) {
-        console.log(`\n● ${table}`);
-        for (const result of results) {
+      for (const block of report.orphans.details) {
+        console.log(`\n● ${block.table}`);
+        for (const result of block.violations) {
           console.log(
             `  - ${result.fkColumn} → ${result.parentTable}: ${result.orphanCount} orphans`
           );
-          console.log(`    Sample IDs: ${result.sampleIds.slice(0, 5).join(", ")}`);
+          console.log(`    Sample FK values: ${result.sampleIds.slice(0, 5).join(", ")}`);
         }
       }
     }
 
-    if (!tenantLeaks.isSecure) {
+    if (!report.tenantLeaks.isSecure) {
       console.log("\n");
-      console.log(generateSecurityIncidentReport(tenantLeaks));
+      console.log(
+        generateSecurityIncidentReport({
+          totalLeaks: report.tenantLeaks.totalLeaks,
+          isSecure: report.tenantLeaks.isSecure,
+          byTable: new Map(),
+          allViolations: report.tenantLeaks.details.map((d) => ({
+            childTable: d.childTable,
+            parentTable: d.parentTable,
+            fkColumn: d.fkColumn,
+            leakCount: d.leakCount,
+            sampleViolations: d.sampleViolations,
+          })),
+        })
+      );
+    }
+
+    if (report.adjuncts) {
+      console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("  Adjunct checks (OSS-inspired)");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+      for (const c of report.adjuncts.checks) {
+        console.log(`  [${c.status}] ${c.id}: ${c.message}`);
+      }
     }
   }
 }
 
 // Command: validate (specific tier)
-async function commandValidate(tier?: "P0" | "P1" | "P2" | "P3"): Promise<void> {
+async function commandValidate(schemas: string[], tier?: "P0" | "P1" | "P2" | "P3"): Promise<void> {
   console.log(`🔍 Validating ${tier || "all"} FK relationships...\n`);
 
-  const catalog = await buildFkCatalog(db, "sales");
+  const catalog = await buildFkCatalog(db, schemas);
   console.log("");
 
   const orphans = await detectAllOrphans(db, catalog.relationships, tier);
@@ -191,10 +204,10 @@ async function commandValidate(tier?: "P0" | "P1" | "P2" | "P3"): Promise<void> 
 }
 
 // Command: tenants (tenant isolation check)
-async function commandTenants(): Promise<void> {
+async function commandTenants(schemas: string[]): Promise<void> {
   console.log("🔒 Checking tenant isolation...\n");
 
-  const catalog = await buildFkCatalog(db, "sales");
+  const catalog = await buildFkCatalog(db, schemas);
   console.log("");
 
   const tenantLeaks = await detectTenantLeaks(db, catalog.relationships);
@@ -209,13 +222,16 @@ async function commandTenants(): Promise<void> {
 }
 
 // Command: cleanup
-async function commandCleanup(options: {
-  tier?: "P0" | "P1" | "P2" | "P3";
-  table?: string;
-  apply: boolean;
-  confirm?: string;
-  limit?: number;
-}): Promise<void> {
+async function commandCleanup(
+  schemas: string[],
+  options: {
+    tier?: "P0" | "P1" | "P2" | "P3";
+    table?: string;
+    apply: boolean;
+    confirm?: string;
+    limit?: number;
+  }
+): Promise<void> {
   if (options.apply && options.confirm !== "DELETE") {
     console.error("❌ Refusing to run destructive cleanup without --confirm=DELETE");
     process.exit(1);
@@ -225,7 +241,7 @@ async function commandCleanup(options: {
   const target = options.table ? `table=${options.table}` : "all tables";
   console.log(`🧹 Starting orphan cleanup (${mode}; ${target})...\n`);
 
-  const catalog = await buildFkCatalog(db, "sales");
+  const catalog = await buildFkCatalog(db, schemas);
   console.log("");
 
   const orphans = await detectAllOrphans(db, catalog.relationships, options.tier);
@@ -233,7 +249,14 @@ async function commandCleanup(options: {
 
   const allResults = Array.from(orphans.byTable.values()).flat();
   const tableFiltered = options.table
-    ? allResults.filter((result) => result.childTable === options.table)
+    ? allResults.filter((result) => {
+        const t = options.table!;
+        return (
+          result.childTableName === t ||
+          result.childTable === t ||
+          result.childTable.endsWith(`.${t}`)
+        );
+      })
     : allResults;
   const sorted = tableFiltered.sort((a, b) => b.orphanCount - a.orphanCount);
   const limited = options.limit ? sorted.slice(0, options.limit) : sorted;
@@ -266,22 +289,26 @@ async function commandCleanup(options: {
 }
 
 // Command: export-catalog
-async function commandExportCatalog(outputPath = "./fk-catalog.json"): Promise<void> {
+async function commandExportCatalog(schemas: string[], outputPath?: string): Promise<void> {
+  const outFile = outputPath ?? "./fk-catalog.json";
   console.log("📁 Exporting FK relationship catalog...\n");
 
-  const catalog = await buildFkCatalog(db, "sales");
-  await exportCatalogToJson(catalog, outputPath);
+  const catalog = await buildFkCatalog(db, schemas);
+  await exportCatalogToJson(catalog, outFile);
 
-  console.log(`\n✅ Catalog exported successfully: ${outputPath}`);
+  console.log(`\n✅ Catalog exported successfully: ${outFile}`);
 }
 
 // Command: add-indexes
-async function commandAddIndexes(options: {
-  tier?: "P0" | "P1" | "P2" | "P3";
-  apply: boolean;
-  confirm?: string;
-  limit?: number;
-}): Promise<void> {
+async function commandAddIndexes(
+  schemas: string[],
+  options: {
+    tier?: "P0" | "P1" | "P2" | "P3";
+    apply: boolean;
+    confirm?: string;
+    limit?: number;
+  }
+): Promise<void> {
   if (options.apply && options.confirm !== "APPLY") {
     console.error("❌ Refusing to apply index creation without --confirm=APPLY");
     process.exit(1);
@@ -290,7 +317,7 @@ async function commandAddIndexes(options: {
   const mode = options.apply ? "APPLY" : "DRY-RUN";
   console.log(`📈 Starting FK column index remediation (${mode})...\n`);
 
-  const catalog = await buildFkCatalog(db, "sales");
+  const catalog = await buildFkCatalog(db, schemas);
   console.log("");
 
   const indexDetection = await detectMissingFkIndexes(db, catalog.relationships, options.tier);
@@ -335,8 +362,9 @@ async function commandAddIndexes(options: {
       console.log(
         `✅ Index created: ${result.indexName} on ${result.childTable}.${result.childColumn}`
       );
-    } catch (error: any) {
-      console.error(`❌ Failed to create index ${result.indexName}: ${error.message}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Failed to create index ${result.indexName}: ${msg}`);
     }
   }
 
@@ -350,18 +378,19 @@ async function main(): Promise<void> {
 
   const command = process.argv[2];
   const args = process.argv.slice(3);
+  const schemas = resolveSchemasFromArgv(args);
 
   try {
     switch (command) {
       case "health":
-        await commandHealth();
+        await commandHealth(schemas, args);
         break;
 
       case "report": {
         const format = args.find((a) => a.startsWith("--format="))?.split("=")[1] as
           | "json"
           | "text";
-        await commandReport(format);
+        await commandReport(schemas, format, args);
         break;
       }
 
@@ -371,12 +400,12 @@ async function main(): Promise<void> {
           | "P1"
           | "P2"
           | "P3";
-        await commandValidate(tier);
+        await commandValidate(schemas, tier);
         break;
       }
 
       case "tenants":
-        await commandTenants();
+        await commandTenants(schemas);
         break;
 
       case "clean":
@@ -394,7 +423,7 @@ async function main(): Promise<void> {
         const limit =
           parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
 
-        await commandCleanup({
+        await commandCleanup(schemas, {
           tier,
           table,
           apply: args.includes("--apply"),
@@ -406,7 +435,7 @@ async function main(): Promise<void> {
 
       case "export-catalog": {
         const output = args.find((a) => a.startsWith("--output="))?.split("=")[1];
-        await commandExportCatalog(output);
+        await commandExportCatalog(schemas, output);
         break;
       }
 
@@ -423,7 +452,7 @@ async function main(): Promise<void> {
         const limit =
           parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
 
-        await commandAddIndexes({
+        await commandAddIndexes(schemas, {
           tier,
           apply: args.includes("--apply"),
           confirm,
@@ -440,6 +469,12 @@ Graph Validation CLI
 Usage:
   pnpm --filter @afenda/db graph-validation <command> [options]
 
+Global options (all commands):
+  --schema=<name>        Repeatable. Limit FK catalog to these Postgres schemas.
+                         Default: core, hr, sales, inventory, accounting, purchasing, reference, security
+  --adjuncts             Run OSS-inspired checks (Squawk migration lint if installed, FK drift if baseline set)
+  --repo-root=<path>     Monorepo root for adjunct paths (default: cwd)
+
 Commands:
   health                 Quick health check (orphans + tenant leaks + score)
   report [--format=json] Detailed validation report (default: text)
@@ -451,7 +486,8 @@ Commands:
 
 Examples:
   pnpm --filter @afenda/db graph-validation health
-  pnpm --filter @afenda/db graph-validation report --format=json > report.json
+  pnpm --filter @afenda/db graph-validation health --schema=sales --schema=hr
+  pnpm --filter @afenda/db graph-validation report --format=json --adjuncts > report.json
   pnpm --filter @afenda/db graph-validation validate --tier=P0
   pnpm --filter @afenda/db graph-validation tenants
   pnpm --filter @afenda/db graph-validation clean --tier=P0 --table=sales_order_lines

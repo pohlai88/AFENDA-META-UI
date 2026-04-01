@@ -796,7 +796,7 @@ describe("/api/sales/commissions/pay route", () => {
 
     const response = await request(createApp({ uid: "42", roles: ["admin"] }))
       .post("/api/sales/commissions/pay/00000000-0000-4000-8000-000000000122")
-      .send({ paidDate: "2026-03-26T00:00:00.000Z" });
+      .send({ paidDate: "2026-03-26" });
 
     expect(response.status).toBe(200);
     expect(payCommissionEntryCommandMock).toHaveBeenCalledWith({
@@ -828,7 +828,7 @@ describe("/api/sales/commissions/pay route", () => {
 
     const response = await request(createApp({ uid: "42", roles: ["admin"] }))
       .post("/api/sales/commissions/pay")
-      .send({ salespersonId: 21, paidDate: "2026-03-26T00:00:00.000Z" });
+      .send({ salespersonId: 21, paidDate: "2026-03-26" });
 
     expect(response.status).toBe(200);
     expect(payCommissionEntriesCommandMock).toHaveBeenCalledWith(
@@ -1087,6 +1087,9 @@ describe("/api/sales/accounting/postings route", () => {
       .send({
         sourceDocumentType: "sales_order",
         sourceDocumentId: "00000000-0000-4000-8000-000000000205",
+        truthBindingId: "00000000-0000-4000-8000-000000000301",
+        debitAccountCode: "4000",
+        creditAccountCode: "1100",
         amount: "350.00",
         currencyCode: "usd",
       });
@@ -1097,6 +1100,9 @@ describe("/api/sales/accounting/postings route", () => {
         tenantId: 7,
         actorId: 9,
         currencyCode: "USD",
+        truthBindingId: "00000000-0000-4000-8000-000000000301",
+        debitAccountCode: "4000",
+        creditAccountCode: "1100",
       })
     );
   });

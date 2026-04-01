@@ -93,6 +93,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Typecheck core
+        run: pnpm --filter @afenda/core typecheck
+
+      - name: Deterministic generation
+        run: pnpm generate && git diff --exit-code
+
       - name: Cache turbo
         uses: actions/cache@v5
         with:
@@ -243,6 +249,18 @@ jobs:
         run: node tools/scripts/setup-test-db.mjs --ci
         continue-on-error: false
 
+      - name: Verify seed clear order vs FK graph
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL_MIGRATIONS }}
+        run: pnpm --filter @afenda/db verify:clear-plan
+        continue-on-error: false
+
+      - name: Canonical seed baseline (snapshot + seed contract)
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL_MIGRATIONS }}
+        run: pnpm --filter @afenda/db db:seed -- --scenario=baseline
+        continue-on-error: false
+
       - name: Run Vitest
         env:
           TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
@@ -353,6 +371,47 @@ jobs:
             apps/web/dist
             apps/api/dist
           retention-days: 5
+
+  truth_compiler_advisory:
+    name: Truth compiler health (advisory)
+    needs: setup
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Truth advisory gates (non-blocking)
+        env:
+          GITHUB_ACTIONS: "true"
+        run: pnpm truth:gate:advisory
 
   r2_preview_smoke:
     name: R2 Preview Smoke (non-blocking)

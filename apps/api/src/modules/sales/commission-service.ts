@@ -1,3 +1,8 @@
+import { formatDateOnlyUtc } from "@afenda/db";
+import {
+  parsePostalCodeToZipNumeric,
+  resolveTerritoryFromRules,
+} from "@afenda/db/queries/sales";
 import { and, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
@@ -57,6 +62,8 @@ export interface PreparedCommissionGeneration {
         status: (typeof commissionEntries.$inferSelect)["status"];
         createdBy: number | null;
         notes: string | null;
+        entryVersion: number;
+        lockedAt: Date | null;
       }
     | undefined;
   draft: typeof commissionEntries.$inferInsert;
@@ -68,7 +75,8 @@ export interface PreparedCommissionGeneration {
 }
 
 export interface CommissionTerritoryMatch {
-  ruleId: string;
+  /** Set when a `territory_rules` row won; null when the tenant default territory (`is_default_fallback`) was used. */
+  ruleId: string | null;
   priority: number;
   territoryId: string;
   territoryCode: string;
@@ -176,6 +184,8 @@ export async function prepareCommissionGeneration(
       status: commissionEntries.status,
       createdBy: commissionEntries.createdBy,
       notes: commissionEntries.notes,
+      entryVersion: commissionEntries.entryVersion,
+      lockedAt: commissionEntries.lockedAt,
     })
     .from(commissionEntries)
     .where(
@@ -187,7 +197,7 @@ export async function prepareCommissionGeneration(
         isNull(commissionEntries.deletedAt)
       )
     )
-    .orderBy(desc(commissionEntries.createdAt))
+    .orderBy(desc(commissionEntries.entryVersion), desc(commissionEntries.createdAt))
     .limit(1);
 
   const [entry] = existingEntry;
@@ -199,6 +209,12 @@ export async function prepareCommissionGeneration(
 
   if (entry?.status === "paid") {
     throw new ConflictError("Paid commission entries cannot be regenerated.");
+  }
+
+  if (entry?.lockedAt) {
+    throw new ConflictError(
+      "Locked commission entries cannot be recomputed; they are financial truth."
+    );
   }
 
   const { periodStart, periodEnd } = resolveCommissionPeriod(
@@ -221,6 +237,8 @@ export async function prepareCommissionGeneration(
     periodEnd,
     notes: input.notes ?? entry?.notes ?? null,
     status: input.status ?? "draft",
+    currencyId: order.currencyId,
+    entryVersion: entry?.entryVersion ?? 1,
   });
 
   return {
@@ -371,6 +389,28 @@ export async function payCommissionEntries(
 export async function removeCommissionEntry(
   input: RemoveCommissionEntryInput
 ): Promise<RemoveCommissionEntryResult> {
+  const [current] = await db
+    .select({ lockedAt: commissionEntries.lockedAt })
+    .from(commissionEntries)
+    .where(
+      and(
+        eq(commissionEntries.tenantId, input.tenantId),
+        eq(commissionEntries.id, input.entryId),
+        isNull(commissionEntries.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!current) {
+    throw new NotFoundError(
+      `Commission entry ${input.entryId} was not found for tenant ${input.tenantId}.`
+    );
+  }
+
+  if (current.lockedAt) {
+    throw new ConflictError("Locked commission entries cannot be removed.");
+  }
+
   const [entry] = await db
     .update(commissionEntries)
     .set({
@@ -416,11 +456,11 @@ export async function getCommissionReport(
   }
 
   if (input.periodStart) {
-    conditions.push(gte(commissionEntries.periodEnd, input.periodStart));
+    conditions.push(gte(commissionEntries.periodEnd, formatDateOnlyUtc(input.periodStart)));
   }
 
   if (input.periodEnd) {
-    conditions.push(lte(commissionEntries.periodStart, input.periodEnd));
+    conditions.push(lte(commissionEntries.periodStart, formatDateOnlyUtc(input.periodEnd)));
   }
 
   // Fetch total count for summary (separate query)
@@ -648,12 +688,13 @@ async function resolveTerritoryMatch(
   }
 
   const geography = await resolveOrderGeography(tenantId, order);
+  const asOf = order.orderDate;
 
-  // Build SQL WHERE conditions for territory rule filtering
   const conditions = [
     eq(territoryRules.tenantId, tenantId),
-    eq(territoryRules.isActive, true),
     isNull(territoryRules.deletedAt),
+    lte(territoryRules.effectiveFrom, asOf),
+    or(isNull(territoryRules.effectiveTo), gte(territoryRules.effectiveTo, asOf))!,
   ];
 
   if (geography.countryId) {
@@ -671,38 +712,49 @@ async function resolveTerritoryMatch(
   const rules = await db
     .select()
     .from(territoryRules)
-    .where(and(...conditions))
-    .orderBy(desc(territoryRules.priority), territoryRules.id);
+    .where(and(...conditions));
 
-  const matchedRules = rules.filter((rule) => {
-    if (rule.countryId !== null && geography.countryId !== rule.countryId) {
-      return false;
-    }
+  const [defaultTerritoryRow] = await db
+    .select({ id: territories.id })
+    .from(territories)
+    .where(
+      and(
+        eq(territories.tenantId, tenantId),
+        eq(territories.isDefaultFallback, true),
+        eq(territories.isActive, true),
+        isNull(territories.deletedAt)
+      )
+    )
+    .limit(1);
 
-    if (rule.stateId !== null && geography.stateId !== rule.stateId) {
-      return false;
-    }
+  const zipNumeric = parsePostalCodeToZipNumeric(geography.zip);
 
-    if (!isZipMatch(geography.zip, rule.zipFrom, rule.zipTo)) {
-      return false;
-    }
-
-    return true;
+  const outcome = resolveTerritoryFromRules({
+    asOf,
+    geo: {
+      countryId: geography.countryId,
+      stateId: geography.stateId,
+      zipNumeric,
+    },
+    rules: rules.map((r) => ({
+      id: r.id,
+      territoryId: r.territoryId,
+      countryId: r.countryId,
+      stateId: r.stateId,
+      zipFrom: r.zipFrom,
+      zipTo: r.zipTo,
+      matchType: r.matchType,
+      priority: r.priority,
+      effectiveFrom: r.effectiveFrom,
+      effectiveTo: r.effectiveTo,
+      createdAt: r.createdAt,
+    })),
+    defaultTerritoryId: defaultTerritoryRow?.id ?? null,
   });
 
-  if (matchedRules.length === 0) {
+  if (outcome.resolutionStrategy === "none" || outcome.resolvedTerritoryId == null) {
     return null;
   }
-
-  const highestPriority = matchedRules[0]!.priority;
-  const topMatches = matchedRules.filter((rule) => rule.priority === highestPriority);
-  if (topMatches.length > 1) {
-    throw new ValidationError(
-      `Multiple territory rules matched with priority ${highestPriority}. Resolve rule overlap before commission generation.`
-    );
-  }
-
-  const selectedRule = topMatches[0]!;
 
   const [territory] = await db
     .select()
@@ -710,7 +762,7 @@ async function resolveTerritoryMatch(
     .where(
       and(
         eq(territories.tenantId, tenantId),
-        eq(territories.id, selectedRule.territoryId),
+        eq(territories.id, outcome.resolvedTerritoryId),
         eq(territories.isActive, true),
         isNull(territories.deletedAt)
       )
@@ -719,13 +771,16 @@ async function resolveTerritoryMatch(
 
   if (!territory) {
     throw new ValidationError(
-      `Territory ${selectedRule.territoryId} is referenced by rule ${selectedRule.id} but not active for tenant ${tenantId}.`
+      `Territory ${outcome.resolvedTerritoryId} resolved for tenant ${tenantId} but is not active or was removed.`
     );
   }
 
   return {
-    ruleId: selectedRule.id,
-    priority: selectedRule.priority,
+    ruleId: outcome.matchedRuleId,
+    priority:
+      outcome.matchedRuleId != null
+        ? (rules.find((r) => r.id === outcome.matchedRuleId)?.priority ?? 0)
+        : 0,
     territoryId: territory.id,
     territoryCode: territory.code,
     teamId: territory.teamId,
@@ -829,56 +884,21 @@ export async function loadCommissionEntriesForMutation(input: {
       return false;
     }
 
-    if (input.periodStart && entry.periodEnd < input.periodStart) {
-      return false;
+    if (input.periodStart) {
+      const ps = formatDateOnlyUtc(input.periodStart);
+      if (entry.periodEnd < ps) {
+        return false;
+      }
     }
 
-    if (input.periodEnd && entry.periodStart > input.periodEnd) {
-      return false;
+    if (input.periodEnd) {
+      const pe = formatDateOnlyUtc(input.periodEnd);
+      if (entry.periodStart > pe) {
+        return false;
+      }
     }
 
     return true;
   });
 }
 
-function isZipMatch(zip: string | null, zipFrom: string | null, zipTo: string | null): boolean {
-  if (zipFrom === null && zipTo === null) {
-    return true;
-  }
-
-  if (!zip) {
-    return false;
-  }
-
-  const value = normalizeZip(zip);
-  if (!value) {
-    return false;
-  }
-
-  const from = zipFrom ? normalizeZip(zipFrom) : null;
-  const to = zipTo ? normalizeZip(zipTo) : null;
-
-  if (from === null && to === null) {
-    return true;
-  }
-
-  const maxLength = Math.max(value.length, from?.length ?? 0, to?.length ?? 0);
-  const normalizedValue = value.padStart(maxLength, "0");
-  const normalizedFrom = from ? from.padStart(maxLength, "0") : null;
-  const normalizedTo = to ? to.padStart(maxLength, "0") : null;
-
-  if (normalizedFrom !== null && normalizedValue < normalizedFrom) {
-    return false;
-  }
-
-  if (normalizedTo !== null && normalizedValue > normalizedTo) {
-    return false;
-  }
-
-  return true;
-}
-
-function normalizeZip(value: string): string | null {
-  const digits = value.replace(/\D+/g, "");
-  return digits.length > 0 ? digits : null;
-}

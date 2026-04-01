@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 
-import type { Database } from "../../client/index.js";
+import type { Database } from "../../drizzle/client/index.js";
 import { documentAttachments, documentSignatureAttestations } from "../../schema/reference/tables.js";
 
 export async function setAttachmentSignatureWorkflowStatus(

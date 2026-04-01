@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createDatabase } from "@afenda/db/client";
+import { createDatabase, getEffectiveSessionTimeouts } from "@afenda/db/client";
 import { createChildLogger } from "../logging/index.js";
 import { PinoDrizzleLogger } from "./drizzleLogger.js";
 
@@ -23,19 +23,20 @@ const drizzleLogger = new PinoDrizzleLogger(500); // 500ms slow query threshold
 const instance = createDatabase({
   connectionString: process.env.DATABASE_URL,
   logger: drizzleLogger,
+  onPoolError: (err) => {
+    log.error({ err }, "Unexpected pool client error");
+  },
 });
 
 export const db = instance.db;
 export const pool = instance.pool;
+/** End the shared pool (use from graceful shutdown). */
+export const closeDatabase = instance.close;
 export type Db = typeof db;
 
 // ---------------------------------------------------------------------------
 // Pool event monitoring (api-specific Pino logging)
 // ---------------------------------------------------------------------------
-
-pool.on("error", (err) => {
-  log.error({ err }, "Unexpected pool client error");
-});
 
 pool.on("connect", () => {
   log.debug(
@@ -67,3 +68,4 @@ pool.query = async function queryWithTiming(
 
 export const checkDatabaseConnection = instance.checkDatabaseConnection;
 export const getPoolStats = instance.getPoolStats;
+export { getEffectiveSessionTimeouts };

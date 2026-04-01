@@ -6,7 +6,22 @@
  */
 
 import { sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { GraphValidationDb } from "./db-types.js";
+
+/**
+ * Default Postgres schemas included when the CLI does not pass `--schema=`.
+ * Aligns with ERP `pgSchema(...)` modules (core, domains, reference, security).
+ */
+export const DEFAULT_ERP_SCHEMAS: readonly string[] = [
+  "core",
+  "hr",
+  "sales",
+  "inventory",
+  "accounting",
+  "purchasing",
+  "reference",
+  "security",
+];
 
 export interface FkConstraint {
   constraintName: string;
@@ -28,6 +43,8 @@ export interface FkRelationship extends FkConstraint {
 }
 
 export interface FkValidationCatalog {
+  /** Schemas whose FK constraints were loaded (sorted copy of the filter). */
+  schemasCovered: string[];
   relationships: FkRelationship[];
   tables: {
     tableName: string;
@@ -45,10 +62,22 @@ export interface FkValidationCatalog {
 /**
  * Extract all FK constraints from information_schema
  */
+function normalizeSchemaFilter(schemaFilter: string | readonly string[]): string[] {
+  const list = typeof schemaFilter === "string" ? [schemaFilter] : [...schemaFilter];
+  return list.map((s) => s.trim()).filter(Boolean);
+}
+
 export async function extractFkConstraints(
-  db: PostgresJsDatabase<any>,
-  schemaFilter = "sales"
+  db: GraphValidationDb,
+  schemaFilter: string | readonly string[] = DEFAULT_ERP_SCHEMAS
 ): Promise<FkConstraint[]> {
+  const schemas = normalizeSchemaFilter(schemaFilter);
+  if (schemas.length === 0) {
+    return [];
+  }
+
+  const schemaTuple = sql.join(schemas.map((s) => sql`${s}`), sql`, `);
+
   const query = sql<FkConstraint>`
     SELECT
       tc.constraint_name AS "constraintName",
@@ -71,19 +100,19 @@ export async function extractFkConstraints(
       ON rc.unique_constraint_name = ccu.constraint_name
       AND rc.unique_constraint_schema = ccu.constraint_schema
     WHERE tc.constraint_type = 'FOREIGN KEY'
-      AND tc.table_schema = ${schemaFilter}
-    ORDER BY tc.table_name, kcu.column_name;
+      AND tc.table_schema IN (${schemaTuple})
+    ORDER BY tc.table_schema, tc.table_name, kcu.column_name;
   `;
 
   const results = await db.execute(query);
-  return results.rows as FkConstraint[];
+  return results.rows as unknown as FkConstraint[];
 }
 
 /**
  * Check if column is nullable (determines if FK is optional)
  */
 async function isColumnNullable(
-  db: PostgresJsDatabase<any>,
+  db: GraphValidationDb,
   schema: string,
   table: string,
   column: string
@@ -104,7 +133,7 @@ async function isColumnNullable(
  * Check if table has tenant_id column (for tenant isolation validation)
  */
 async function hasTenantColumn(
-  db: PostgresJsDatabase<any>,
+  db: GraphValidationDb,
   schema: string,
   table: string
 ): Promise<boolean> {
@@ -121,42 +150,48 @@ async function hasTenantColumn(
 }
 
 /**
- * Determine validation priority based on FK properties
+ * Determine validation priority from FK shape (domain-agnostic heuristics).
+ * Exported for unit tests; CLI/catalog use this internally.
  */
-function determineValidationPriority(constraint: FkConstraint): "P0" | "P1" | "P2" | "P3" {
-  const { parentTableName, childTableName, deleteRule } = constraint;
+export function determineFkValidationPriority(constraint: FkConstraint): "P0" | "P1" | "P2" | "P3" {
+  const { parentTableName, childTableName, childColumnName, deleteRule } = constraint;
+  const parentLower = parentTableName.toLowerCase();
+  const childLower = childTableName.toLowerCase();
+  const colLower = childColumnName.toLowerCase();
 
-  // P0 (Critical): Tenant isolation, core entities
-  if (
-    parentTableName === "tenants" ||
-    (parentTableName === "partners" && childTableName === "sales_orders") ||
-    (parentTableName === "sales_orders" && childTableName === "sales_order_lines") ||
-    (parentTableName === "products" && childTableName === "sales_order_lines")
-  ) {
+  // P0: Tenant root references (any ERP schema)
+  if (parentLower === "tenants" && colLower === "tenant_id") {
+    return "P0";
+  }
+  if (parentLower === "tenants") {
     return "P0";
   }
 
-  // P1 (High): Important business relationships
+  // P1: Cascading deletes, audit/history surfaces, user anchors
+  if (deleteRule === "CASCADE") {
+    return "P1";
+  }
   if (
-    deleteRule === "CASCADE" || // Cascade relationships are critical
-    parentTableName === "users" || // Audit trail integrity
-    childTableName.includes("_history") || // History tables
-    childTableName.includes("_log") // Event logs
+    childLower.includes("_history") ||
+    childLower.includes("_log") ||
+    childLower.includes("_audit")
   ) {
     return "P1";
   }
+  if (parentLower === "users" || parentLower.endsWith("_users")) {
+    return "P1";
+  }
 
-  // P2 (Medium): Business configuration tables
+  // P2: Fiscal / pricing / tax configuration parents (name-based heuristic)
   if (
-    parentTableName.includes("tax") ||
-    parentTableName.includes("pricelist") ||
-    parentTableName.includes("payment_term") ||
-    parentTableName.includes("fiscal")
+    parentLower.includes("tax") ||
+    parentLower.includes("pricelist") ||
+    parentLower.includes("payment_term") ||
+    parentLower.includes("fiscal")
   ) {
     return "P2";
   }
 
-  // P3 (Low): Reference data
   return "P3";
 }
 
@@ -164,11 +199,13 @@ function determineValidationPriority(constraint: FkConstraint): "P0" | "P1" | "P
  * Build comprehensive FK validation catalog
  */
 export async function buildFkCatalog(
-  db: PostgresJsDatabase<any>,
-  schemaFilter = "sales"
+  db: GraphValidationDb,
+  schemaFilter: string | readonly string[] = DEFAULT_ERP_SCHEMAS
 ): Promise<FkValidationCatalog> {
-  console.log(`📊 Extracting FK constraints from schema: ${schemaFilter}...`);
-  const constraints = await extractFkConstraints(db, schemaFilter);
+  const schemas = normalizeSchemaFilter(schemaFilter);
+  const schemasLabel = schemas.join(", ");
+  console.log(`📊 Extracting FK constraints from schema(s): ${schemasLabel}...`);
+  const constraints = await extractFkConstraints(db, schemas);
   console.log(`   Found ${constraints.length} FK constraints`);
 
   console.log(`🔍 Enriching FK metadata...`);
@@ -198,7 +235,7 @@ export async function buildFkCatalog(
       ...constraint,
       relationshipType: "one-to-many", // Most FKs are one-to-many
       isOptional,
-      validationPriority: determineValidationPriority(constraint),
+      validationPriority: determineFkValidationPriority(constraint),
       tenantIsolated: childHasTenant && parentHasTenant,
     };
 
@@ -250,6 +287,7 @@ export async function buildFkCatalog(
   console.log(`   - Tenant-isolated: ${relationships.filter((r) => r.tenantIsolated).length}`);
 
   return {
+    schemasCovered: [...schemas].sort(),
     relationships,
     tables,
     byPriority,

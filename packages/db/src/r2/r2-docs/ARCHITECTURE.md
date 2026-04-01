@@ -21,7 +21,7 @@
 
 `packages/db/src/r2` is the **object-storage port** for the monorepo: Cloudflare R2 via the **S3-compatible API**. It is **not** a second foundation tier (it lives under `@afenda/db` and may use Zod); it **must not** be imported by `@afenda/meta-types`.
 
-- **Upstream consumers:** `apps/api`, `packages/db` archival CLI, future Workers (via shared types or duplicate thin wrapper).
+- **Upstream consumers:** `apps/api`, `packages/db` data lifecycle runner, future Workers (via shared types or duplicate thin wrapper).
 - **Downstream:** Cloudflare R2 only (provider). **Postgres** stores generic blob references interpreted by callers + this module.
 - **Boundary:** No Cloudflare-specific types in HR/reference schema; no `r2_bucket` / provider columns in domain tables.
 
@@ -34,7 +34,7 @@
                └─────────────────┘   │
                        │             │
                ┌─────────────────┐   │  import @afenda/db/r2
-               │  packages/db    │ ←─┘  (archival, uploads)
+               │  packages/db    │ ←─┘  (data lifecycle, uploads)
                │  src/r2/        │
                └─────────────────┘
                        │
@@ -174,10 +174,10 @@ if (msg?.action === "PutObject") {
 
 - `r2Storage.ts` — `createR2ObjectRepo`, `resolveFullObjectKey` for uploads and prune jobs.
 
-### `packages/db` archival
+### `packages/db` data lifecycle
 
-- `archival/r2-integration.ts` — `archivePartitionToR2`, `restorePartitionFromR2` take `R2ObjectRepo`.
-- `archival/runner.ts` — builds repo from env (`R2_*`).
+- `data-lifecycle/adapters/r2ColdStorageAdapter.ts` — `archivePartitionToR2`, `restorePartitionFromR2` use `R2ObjectRepo`.
+- `data-lifecycle/runner.ts` — builds repo from env (`R2_*`) for cold-tier operations.
 
 ### `packages/db` schema
 
@@ -218,7 +218,7 @@ Subpath `@afenda/db/r2` is declared in `packages/db/package.json` `exports`.
 
 1. **No reverse dependency:** `src/r2` must not import application routes or UI.
 2. **No provider columns in domain tables:** keep R2/S3 as implementation detail; Postgres stays generic.
-3. **Archival catalog:** `cold_storage.r2_archive_catalog` is ops/archival scope — **R2 remains authoritative** for object existence; catalog is index-only, not joined from core business queries.
+3. **Cold-tier catalog:** `cold_storage.r2_archive_catalog` is lifecycle ops scope — **R2 remains authoritative** for object existence; catalog is index-only, not joined from core business queries.
 4. **Breaking changes** to `R2ObjectRepo` or barrel exports: treat as semver for `@afenda/db` consumers; document in changelog / migration notes.
 
 ---
