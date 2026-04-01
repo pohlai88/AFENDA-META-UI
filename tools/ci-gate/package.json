@@ -22,5 +22,8 @@
     "quality"
   ],
   "author": "AFENDA Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "glob": "^13.0.6"
+  }
 }

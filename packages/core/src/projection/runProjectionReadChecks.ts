@@ -1,5 +1,6 @@
 import { buildInvariantFailurePayload } from "../runtime/buildInvariantFailurePayload.js";
-import { buildTruthRegistry, type TruthRegistry } from "../runtime/registry.js";
+import { invariants } from "../generated/invariants.js";
+import type { TruthRegistry } from "../runtime/registry.js";
 import type { InvariantFailurePayload } from "../runtime/types.js";
 
 export type ProjectionReadCheckContext = {
@@ -17,11 +18,19 @@ export function runProjectionReadChecks(args: {
     return [];
   }
 
-  const registry = args.registry ?? buildTruthRegistry();
+  const invariant = invariants.find(
+    (entry) => entry.key === "authoritative_projection_requires_clean_truth_contract",
+  );
+  if (!invariant) {
+    throw new Error("Missing generated invariant: authoritative_projection_requires_clean_truth_contract");
+  }
   return [
     buildInvariantFailurePayload({
-      registry,
-      invariantKey: "authoritative_projection_requires_clean_truth_contract",
+      invariantName: invariant.key,
+      severity: invariant.severity,
+      failurePolicy: invariant.failurePolicy,
+      doctrineRef: invariant.doctrineRef,
+      resolutionRef: invariant.resolutionRef,
       actorRole: args.context.actorRole,
       evidenceSummary: "Truth contract is not clean for authoritative projection.",
       evidenceFacts: {

@@ -140,10 +140,13 @@ export function validateDoctrineResolutionCatalogs(bundle: TruthSpecBundle): voi
         `Resolution ${resolution.key} is role-resolvable but missing responsibleRole`,
       );
     }
-    if (resolution.actions.length === 0) {
+    if (resolution.allowedActions.length === 0) {
       throw new Error(`Resolution ${resolution.key} must contain at least one action`);
     }
-    for (const action of resolution.actions) {
+    const actionsToCheck = resolution.escalation
+      ? [...resolution.allowedActions, resolution.escalation]
+      : resolution.allowedActions;
+    for (const action of actionsToCheck) {
       if (!ALLOWED_ACTION_TYPES.has(action.type)) {
         throw new Error(
           `Resolution ${resolution.key} has unsupported action type: ${action.type}`,

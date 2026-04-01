@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { buildTruthRegistry } from "../registry.js";
+import { invariants } from "../../generated/invariants.js";
 import { buildInvariantFailurePayload } from "../buildInvariantFailurePayload.js";
 
 describe("buildInvariantFailurePayload end-to-end", () => {
   it("assembles invariant, doctrine, evidence, and resolution from catalog data", () => {
-    const registry = buildTruthRegistry();
+    const invariant = invariants.find((entry) => entry.key === "journal_must_balance");
+    if (!invariant) {
+      throw new Error("Missing generated invariant: journal_must_balance");
+    }
     const payload = buildInvariantFailurePayload({
-      registry,
-      invariantKey: "journal_must_balance",
+      invariantName: invariant.key,
+      severity: invariant.severity,
+      failurePolicy: invariant.failurePolicy,
       evidenceSummary: "Journal out of balance",
       evidenceFacts: {
         journalEntryId: "J-001",
         debitTotal: 100,
         creditTotal: 90,
       },
+      doctrineRef: invariant.doctrineRef,
+      resolutionRef: invariant.resolutionRef,
       actorRole: "accountant",
     });
 

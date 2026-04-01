@@ -14,10 +14,14 @@ describe("executeCommand", () => {
         commandName: "test",
         input: {},
       },
+      command: { name: "test" },
       authorize: async () => {},
       validateContract: async () => {},
       checkIdempotency: async () => {},
-      applyMutation: async () => ({}),
+      applyMutation: async () => ({
+        entityName: "salesOrder",
+        entityId: "so_1",
+      }),
       appendMemory: async () => {},
       updateProjections: async () => {},
       invariants: [],
@@ -38,6 +42,7 @@ describe("executeCommand", () => {
 
     const result = await executeCommand({
       context: ctx,
+      command: { name: "test" },
       bindTenant: async () => {
         order.push("bindTenant");
       },
@@ -52,7 +57,17 @@ describe("executeCommand", () => {
       },
       applyMutation: async () => {
         order.push("applyMutation");
-        return { x: 1 };
+        return {
+          entityName: "salesOrder",
+          entityId: "so_1",
+          previousState: null,
+          nextState: { status: "CONFIRMED" },
+          supersession: {
+            mode: "supersedes" as const,
+            supersedesRecordId: "rec_0",
+            reason: "state transition",
+          },
+        };
       },
       appendMemory: async () => {
         order.push("appendMemory");
@@ -76,6 +91,7 @@ describe("executeCommand", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected success");
+    expect(result.truthRecord.action).toBe("test");
     expect(order).toEqual([
       "bindTenant",
       "authorize",
@@ -88,7 +104,10 @@ describe("executeCommand", () => {
   });
 
   it("blocks before mutation when pre-commit invariant fails", async () => {
-    const applyMutation = vi.fn(async () => ({}));
+    const applyMutation = vi.fn(async () => ({
+      entityName: "salesOrder",
+      entityId: "so_1",
+    }));
     const appendMemory = vi.fn(async () => {});
 
     const result = await executeCommand({
@@ -98,6 +117,7 @@ describe("executeCommand", () => {
         commandName: "test",
         input: {},
       },
+      command: { name: "test" },
       authorize: async () => {},
       validateContract: async () => {},
       checkIdempotency: async () => {},

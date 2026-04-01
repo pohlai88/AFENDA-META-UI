@@ -1,3 +1,7 @@
+/**
+ * Mutation policy + command gateways for the API surface (`apps/api`).
+ * Architecture envelope: see `apps/api/ARCHITECTURE-ENVELOPE.md` (grep: AFENDA-SURFACE-API-ENVELOPE).
+ */
 import {
   MUTATION_POLICIES,
   isDirectMutationAllowed,
@@ -11,8 +15,17 @@ import type {
   MutationOperation,
   MutationPolicyDefinition,
 } from "@afenda/meta-types/policy";
-import { evaluateCondition } from "@afenda/truth-test/auto";
+import {
+  executeCommand,
+  type CommandContext,
+  type InvariantFailurePayload,
+  type MutationResult,
+  type RuntimeInvariant,
+  type TemporalTruthRecord,
+  type TruthRecordActor,
+} from "@afenda/core";
 import { dbAppendEvent } from "../events/dbEventStore.js";
+import { evaluateCondition } from "./evaluate-condition.js";
 import { resolveEventType } from "./event-type-registry.js";
 
 type MutationRecord = Record<string, unknown>;
@@ -538,5 +551,97 @@ export function invariantEnforcementMiddleware(registries: InvariantRegistry[]) 
         `${violations.length} invariant(s) violated for "${input.model}" (id: ${input.aggregateId}):\n${lines}`
       );
     }
+  };
+}
+
+/**
+ * Canonical command pipeline: routes domain commands through {@link executeCommand}
+ * (pre/post invariants, supersession guard, temporal truth record, append memory, projections).
+ *
+ * Generic CRUD continues to use {@link executeMutationCommand}; vertical/domain commands should
+ * call this adapter until all entry points are consolidated.
+ */
+export type MutationCommandGatewayContext<TInput = unknown> = CommandContext<TInput> & {
+  actor?: TruthRecordActor;
+  commandId?: string;
+  occurredAt?: string | Date;
+  causationId?: string;
+  correlationId?: string;
+};
+
+export type MutationCommandGatewayArgs<TInput = unknown> = {
+  commandName: string;
+  context: MutationCommandGatewayContext<TInput>;
+  applyMutation: (context: CommandContext<TInput>) => Promise<MutationResult>;
+  updateProjections: (
+    context: CommandContext<TInput>,
+    mutationResult: MutationResult
+  ) => Promise<void>;
+  appendMemory: (
+    context: CommandContext<TInput>,
+    record: TemporalTruthRecord
+  ) => Promise<void>;
+  invariants: readonly RuntimeInvariant<TInput>[];
+  authorize: (context: CommandContext<TInput>) => Promise<void>;
+  validateContract: (context: CommandContext<TInput>) => Promise<void>;
+  checkIdempotency: (context: CommandContext<TInput>) => Promise<void>;
+  bindTenant?: (context: CommandContext<TInput>) => Promise<void>;
+  resolveActor?: (context: MutationCommandGatewayContext<TInput>) => TruthRecordActor;
+  ignoredSupersessionFields?: readonly string[];
+};
+
+export type MutationCommandGatewayResult =
+  | { status: "blocked"; failures: InvariantFailurePayload[] }
+  | {
+      status: "ok";
+      mutationResult: MutationResult;
+      truthRecord: TemporalTruthRecord;
+      postCommitFailures: InvariantFailurePayload[];
+    };
+
+function defaultMutationGatewayResolveActor<TInput>(
+  ctx: MutationCommandGatewayContext<TInput>
+): TruthRecordActor {
+  if (ctx.actor) {
+    return ctx.actor;
+  }
+  return { type: "system" };
+}
+
+export async function mutationCommandGateway<TInput = unknown>(
+  args: MutationCommandGatewayArgs<TInput>
+): Promise<MutationCommandGatewayResult> {
+  const ctx = args.context;
+  const result = await executeCommand({
+    context: ctx,
+    command: {
+      name: args.commandName,
+      commandId: ctx.commandId,
+      idempotencyKey: ctx.idempotencyKey,
+      occurredAt: ctx.occurredAt,
+      causationId: ctx.causationId,
+      correlationId: ctx.correlationId,
+    },
+    bindTenant: args.bindTenant,
+    authorize: args.authorize,
+    validateContract: args.validateContract,
+    checkIdempotency: args.checkIdempotency,
+    applyMutation: args.applyMutation,
+    appendMemory: args.appendMemory,
+    updateProjections: args.updateProjections,
+    invariants: args.invariants,
+    resolveActor: args.resolveActor ?? defaultMutationGatewayResolveActor,
+    ignoredSupersessionFields: args.ignoredSupersessionFields,
+  });
+
+  if (!result.ok) {
+    return { status: "blocked", failures: result.failures };
+  }
+
+  return {
+    status: "ok",
+    mutationResult: result.mutationResult,
+    truthRecord: result.truthRecord,
+    postCommitFailures: result.postCommitFailures,
   };
 }

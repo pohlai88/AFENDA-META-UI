@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildTruthRegistry } from "../registry.js";
 import { buildDoctrineTrace } from "../doctrine/doctrineTrace.js";
 
 describe("buildDoctrineTrace", () => {
   it("builds doctrine payload block from doctrineRef", () => {
-    const registry = buildTruthRegistry();
     const doctrine = buildDoctrineTrace({
-      registry,
       doctrineRef: "ias21_fx_conversion",
     });
 
@@ -19,9 +16,7 @@ describe("buildDoctrineTrace", () => {
   });
 
   it("returns undefined when doctrineRef is omitted", () => {
-    const registry = buildTruthRegistry();
     const doctrine = buildDoctrineTrace({
-      registry,
       doctrineRef: undefined,
     });
 

@@ -181,15 +181,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@afenda/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@afenda/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@afenda/meta-types':
         specifier: workspace:*
         version: link:../../packages/meta-types
-      '@afenda/truth-test':
-        specifier: workspace:*
-        version: link:../../packages/truth-test
+      '@aws-sdk/client-s3':
+        specifier: ^3.1019.0
+        version: 3.1019.0
       compression:
         specifier: ^1.8.1
         version: 1.8.1
@@ -208,6 +211,9 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)
+      drizzle-zod:
+        specifier: ^0.8.3
+        version: 0.8.3(drizzle-orm@1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))(zod@4.3.6)
       express:
         specifier: 'catalog:'
         version: 4.22.1
@@ -570,6 +576,9 @@ importers:
       drizzle-seed:
         specifier: ^0.3.1
         version: 0.3.1(drizzle-orm@1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))
+      drizzle-zod:
+        specifier: ^0.8.3
+        version: 0.8.3(drizzle-orm@1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))(zod@4.3.6)
       pg:
         specifier: 'catalog:'
         version: 8.20.0
@@ -647,6 +656,9 @@ importers:
       decimal.js:
         specifier: ^10.6.0
         version: 10.6.0
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       fast-check:
         specifier: ^4.6.0
         version: 4.6.0
@@ -715,7 +727,11 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  tools/ci-gate: {}
+  tools/ci-gate:
+    devDependencies:
+      glob:
+        specifier: ^13.0.6
+        version: 13.0.6
 
   tools/truth-coverage:
     devDependencies:
@@ -5151,6 +5167,12 @@ packages:
       drizzle-orm:
         optional: true
 
+  drizzle-zod@0.8.3:
+    resolution: {integrity: sha512-66yVOuvGhKJnTdiqj1/Xaaz9/qzOdRJADpDa68enqS6g3t0kpNkwNYjUuaeXgZfO/UWuIM9HIhSlJ6C5ZraMww==}
+    peerDependencies:
+      drizzle-orm: '>=0.36.0'
+      zod: ^3.25.0 || ^4.0.0
+
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
@@ -6381,6 +6403,10 @@ packages:
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
+
+  lru-cache@11.2.6:
+    resolution: {integrity: sha512-ESL2CrkS/2wTPfuend7Zhkzo2u0daGJ/A2VucJOgQ/C48S/zB8MMeMHSGKYpXhIjbPxfuezITkaBH1wqv00DDQ==}
+    engines: {node: 20 || >=22}
 
   lru-cache@11.2.7:
     resolution: {integrity: sha512-aY/R+aEsRelme17KGQa/1ZSIpLpNYYrhcrepKTZgE+W3WM16YMCaPwOHLHsmopZHELU0Ojin1lPVxKR0MihncA==}
@@ -13043,6 +13069,11 @@ snapshots:
     optionalDependencies:
       drizzle-orm: 1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)
 
+  drizzle-zod@0.8.3(drizzle-orm@1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6))(zod@4.3.6):
+    dependencies:
+      drizzle-orm: 1.0.0-beta.19(@neondatabase/serverless@1.0.2)(@types/mssql@9.1.10(@azure/core-client@1.10.1))(@types/pg@8.20.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)
+      zod: 4.3.6
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -14509,6 +14540,8 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
+  lru-cache@11.2.6: {}
+
   lru-cache@11.2.7: {}
 
   lru-cache@5.1.1:
@@ -14988,7 +15021,7 @@ snapshots:
 
   path-scurry@2.0.2:
     dependencies:
-      lru-cache: 11.2.7
+      lru-cache: 11.2.6
       minipass: 7.1.3
 
   path-to-regexp@0.1.12: {}

@@ -23,7 +23,7 @@ const minimalBundle = (): TruthSpecBundle => ({
       resolutionClass: "user-resolvable",
       title: "R",
       summary: "S",
-      actions: [{ type: "instruction", label: "x" }],
+      allowedActions: [{ type: "instruction", label: "x" }],
     },
   ],
   invariants: [
@@ -50,7 +50,7 @@ describe("validateDoctrineResolutionCatalogs — action target formats", () => {
         resolutionClass: "user-resolvable",
         title: "R",
         summary: "S",
-        actions: [
+        allowedActions: [
           { type: "navigate", target: "/finance/periods", label: "Open" },
           { type: "workflow", target: "economic-effect-review", label: "WF" },
         ],
@@ -68,7 +68,7 @@ describe("validateDoctrineResolutionCatalogs — action target formats", () => {
         resolutionClass: "user-resolvable",
         title: "R",
         summary: "S",
-        actions: [{ type: "navigate", target: "finance/periods", label: "Open" }],
+        allowedActions: [{ type: "navigate", target: "finance/periods", label: "Open" }],
       },
     ];
     expect(() => validateDoctrineResolutionCatalogs(bundle)).toThrow(/navigate action target/);
@@ -83,7 +83,7 @@ describe("validateDoctrineResolutionCatalogs — action target formats", () => {
         resolutionClass: "user-resolvable",
         title: "R",
         summary: "S",
-        actions: [{ type: "navigate", target: "//evil", label: "Open" }],
+        allowedActions: [{ type: "navigate", target: "//evil", label: "Open" }],
       },
     ];
     expect(() => validateDoctrineResolutionCatalogs(bundle)).toThrow(/navigate action target/);
@@ -98,7 +98,7 @@ describe("validateDoctrineResolutionCatalogs — action target formats", () => {
         resolutionClass: "user-resolvable",
         title: "R",
         summary: "S",
-        actions: [{ type: "workflow", target: "/workflows/foo", label: "WF" }],
+        allowedActions: [{ type: "workflow", target: "/workflows/foo", label: "WF" }],
       },
     ];
     expect(() => validateDoctrineResolutionCatalogs(bundle)).toThrow(/workflow action target/);

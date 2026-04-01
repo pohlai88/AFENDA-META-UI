@@ -48,10 +48,10 @@ const colors = {
 const verbose = process.argv.includes('--verbose') || process.argv.includes('-v');
 
 const CONTRACT_TEST_FILES = [
-  'src/routes/lazy-pages.contract.test.ts',
-  'src/renderers/MetaListV2.contract.test.ts',
-  'src/renderers/registry.test.ts',
-  'src/renderers/safeLazy.test.tsx',
+  'src/routes/__test__/lazy-pages.contract.test.ts',
+  'src/renderers/__test__/MetaListV2.contract.test.ts',
+  'src/renderers/__test__/registry.test.ts',
+  'src/renderers/__test__/safeLazy.test.tsx',
 ];
 
 function main() {

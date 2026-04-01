@@ -58,7 +58,10 @@ export type ResolutionSpec = {
   title: string;
   summary: string;
   responsibleRole?: string;
-  actions: readonly ResolutionAction[];
+  /** Actions shown when the actor may resolve directly (role matches or no role gate). */
+  allowedActions: readonly ResolutionAction[];
+  /** When the actor cannot take direct actions, this single path is offered instead. */
+  escalation?: ResolutionAction;
 };
 
 export type InvariantSeverity = "critical" | "major" | "minor" | "informational";

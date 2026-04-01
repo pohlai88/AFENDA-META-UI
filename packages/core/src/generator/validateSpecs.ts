@@ -62,21 +62,33 @@ export function validateSpecs(bundle: TruthSpecBundle): void {
   }
 
   for (const resolution of bundle.resolutions) {
-    if (resolution.actions.length === 0) {
-      throw new Error(`Resolution ${resolution.key} must contain at least one action`);
+    if (resolution.responsibleRole && !resolution.escalation) {
+      throw new Error(`Resolution ${resolution.key} has responsibleRole but missing escalation`);
     }
 
-    for (const action of resolution.actions) {
+    if (resolution.allowedActions.length === 0) {
+      throw new Error(`Resolution ${resolution.key} must contain at least one allowedAction`);
+    }
+
+    const validateAction = (action: (typeof resolution.allowedActions)[number], label: string) => {
       if (
         (action.type === "navigate" || action.type === "workflow") &&
         (!("target" in action) || !String(action.target).trim())
       ) {
-        throw new Error(`Resolution ${resolution.key} has invalid action target`);
+        throw new Error(`Resolution ${resolution.key} has invalid ${label} target`);
       }
 
       if (!action.label.trim()) {
-        throw new Error(`Resolution ${resolution.key} has invalid action label`);
+        throw new Error(`Resolution ${resolution.key} has invalid ${label} label`);
       }
+    };
+
+    for (const action of resolution.allowedActions) {
+      validateAction(action, "action");
+    }
+
+    if (resolution.escalation) {
+      validateAction(resolution.escalation, "escalation");
     }
   }
 

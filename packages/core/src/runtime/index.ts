@@ -12,4 +12,13 @@ export * from "./invariantRunner.js";
 export * from "./command/types.js";
 export * from "./command/executeCommand.js";
 export * from "./memory/types.js";
+export type {
+  BuildTemporalTruthRecordInput,
+  TemporalTruthRecord,
+  TruthRecordActor,
+  TruthRecordCommandRef,
+  TruthRecordCausationRef,
+  TruthRecordPayload,
+  TruthRecordSupersession,
+} from "./memory/recordTypes.js";
 export * from "./memory/appendMemory.js";

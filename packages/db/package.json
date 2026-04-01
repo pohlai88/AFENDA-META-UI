@@ -186,6 +186,7 @@
     "dotenv": "^17.3.1",
     "drizzle-orm": "catalog:",
     "drizzle-seed": "^0.3.1",
+    "drizzle-zod": "^0.8.3",
     "pg": "catalog:",
     "zod": "catalog:"
   },

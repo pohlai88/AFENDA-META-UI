@@ -34,6 +34,8 @@ It exists to:
 - Make reviews **testable** — AC map to tests, CI gates, or demo scripts.
 - Keep doctrine/resolution **implemented**, not documentation-only — specs, generator validation, runtime payloads, blocked responses.
 
+**Housekeeping:** The retired PR-R2 skeleton file `docs/verification.md` was removed. E4 doctrine/resolution runtime scope, file list, and acceptance criteria live in **this backlog** and [`phase-1-implementation-blueprint.md`](./phase-1-implementation-blueprint.md).
+
 ### When to start implementation
 
 You can **start as soon as** architecture (v3.3), blueprint, and this backlog are agreed — first PRs should follow **E1 → E2** (six truth specs + `contracts/failures.ts`, then generator, manifest, drift CI, doctrine/resolution validation). Stabilize that before **E3–E4** (command path + doctrine/resolution runtime).
@@ -257,7 +259,9 @@ Encode rules from the blueprint §5.2:
 
 **AC**
 
-- Given invariant name + evidence facts + optional actor role, output matches `InvariantFailurePayload` (invariant + evidence + doctrine + resolution when applicable).
+- `buildInvariantFailurePayload` accepts explicit fields: `invariantName`, `severity`, `failurePolicy`, `evidenceSummary`, `evidenceFacts`, optional `doctrineRef`, `resolutionRef`, `actorRole`.
+- Output matches `InvariantFailurePayload` (invariant + evidence + doctrine + optional resolution). Callers compose doctrine/resolution refs from generated catalog metadata (e.g. `invariants` / registry) as needed.
+- Missing `doctrineRef` when a doctrine block is required is a **failure** (throws); do not emit a payload with an empty/invalid doctrine trace.
 
 ---
 
@@ -449,7 +453,7 @@ Per-task rollup aligned with [`phase-1-alignment-audit.md`](./phase-1-alignment-
 | E1-T3   | done          | `relationSpec.ts`. |
 | E1-T4   | partial       | Invariant rows lack full blueprint field set (`authority`, `semanticClass`, `scope`, `target`, `remediationOwner`); all current rows have `doctrineRef` / critical → `resolutionRef`. |
 | E1-T5   | partial       | Doctrine rows omit `linkedInvariants` / `visibilityClass`; orphan doctrines prevented via generator + `catalogChecks` (inverse linkage). |
-| E1-T6   | partial       | Uses `actions` (not `allowedActions` name); targets validated incl. navigate `/…` and workflow id pattern. |
+| E1-T6   | done          | `resolutionSpec.ts` uses `allowedActions[]`, optional `escalation`, and `responsibleRole` where applicable; `validateSpecs` / `catalogChecks` enforce shape; `generated/resolutions.ts` matches. |
 | E1-T7   | partial       | `contracts/failures.ts` unified; `doctrine` required in types (stricter than blueprint optional). |
 | E2-T1   | partial       | No standalone `normalize.ts`; `loadSpecs` + `validateSpecs` + deterministic emitters provide stability. |
 | E2-T2   | partial       | Identity, enums, relations, invariants, doctrines, resolutions, manifest; **no** `emitGraph` / `emitContracts` / `emitProjectionMeta` yet. |
@@ -469,7 +473,7 @@ Per-task rollup aligned with [`phase-1-alignment-audit.md`](./phase-1-alignment-
 | E4-T2   | done          | `runtime/doctrine/doctrineTrace.ts`. |
 | E4-T3   | done          | `runtime/resolution/resolutionLookup.ts`. |
 | E4-T4   | done          | `runtime/resolution/buildResolutionContract.ts`. |
-| E4-T5   | done          | `buildInvariantFailurePayload.ts`. |
+| E4-T5   | done          | `buildInvariantFailurePayload.ts` — explicit invariant metadata + refs; throws if doctrine trace cannot be built; resolution via `buildResolutionContract`. |
 | E5-T1   | not started   | No `buildTemporalTruthRecord` in core (memory types may exist). |
 | E5-T2   | done          | `appendMemory` after mutation in `executeCommand.ts`. |
 | E5-T3   | partial       | Invariant specified; vertical guard not fully evidenced in core command slice. |

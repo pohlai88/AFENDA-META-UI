@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildTruthRegistry } from "../registry.js";
 import { buildResolutionContract } from "../resolution/buildResolutionContract.js";
 
 describe("buildResolutionContract", () => {
   it("returns role-resolvable actions for authorized actor and injects route params", () => {
-    const registry = buildTruthRegistry();
     const contract = buildResolutionContract({
-      registry,
       resolutionRef: "resolve_journal_imbalance",
       actorRole: "accountant",
       evidenceFacts: { journalEntryId: "J-123" },
@@ -18,9 +15,7 @@ describe("buildResolutionContract", () => {
   });
 
   it("falls back to workflow escalation when actor lacks direct role", () => {
-    const registry = buildTruthRegistry();
     const contract = buildResolutionContract({
-      registry,
       resolutionRef: "resolve_journal_imbalance",
       actorRole: "sales_clerk",
       evidenceFacts: {},

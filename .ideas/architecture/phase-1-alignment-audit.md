@@ -52,7 +52,7 @@ Status vocabulary (strict): `done` | `partial` | `wrong` | `not started`
 
 | Blueprint section | Current status | Evidence in repo | Keep / Replace / Delete | Notes |
 | --- | --- | --- | --- | --- |
-| §3 directory blueprint | partial | `truth`, `generator`, `generated`, `runtime` (incl. `doctrine/`, `resolution/`), `projection`, `replay`, `ci`, `contracts` | keep | No separate `packages/runtime`, `platform/`, `surfaces/api` tree; core consolidates slice. |
+| §3 directory blueprint | partial | `truth`, `generator`, `generated`, `runtime` (incl. `doctrine/`, `resolution/`), `projection`, `replay`, `ci`, `contracts` | keep | No separate `packages/runtime`, `platform/`, `surfaces/api` tree; core consolidates slice. **HTTP/API surface:** blueprint `surfaces/api` maps to `apps/api` in this monorepo — see `apps/api/ARCHITECTURE-ENVELOPE.md` (grep `AFENDA-SURFACE-API-ENVELOPE`). |
 | §4 truth specs | partial | `packages/core/src/truth/*.ts` | keep | Shapes are leaner than narrative examples in blueprint §4.2–4.4 (field names and optional platform/regulatory split). |
 | §5 generator upgrades | partial | `emitDoctrines`, `emitResolutions`, `validateSpecs`, `catalogChecks` | keep | Core linkage rules enforced; doctrine `visibilityClass` / `clauseRef` policy from §5.2 not fully duplicated in checks. |
 | §6 contracts failure payload | partial | `contracts/failures.ts` | keep | Aligns closely; required `doctrine` differs from optional in snippet. |

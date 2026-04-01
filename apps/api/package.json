@@ -28,15 +28,17 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@afenda/core": "workspace:*",
     "@afenda/db": "workspace:*",
     "@afenda/meta-types": "workspace:*",
-    "@afenda/truth-test": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1019.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "decimal.js": "^10.6.0",
     "dotenv": "^16.4.5",
     "drizzle-graphql": "^0.8.0",
     "drizzle-orm": "catalog:",
+    "drizzle-zod": "^0.8.3",
     "express": "catalog:",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.3.1",

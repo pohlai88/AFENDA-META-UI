@@ -20,8 +20,8 @@ const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, "..", "..", "..");
 
 const files = {
-  auditColumns: resolve(repoRoot, "packages/db/src/_shared/auditColumns.ts"),
-  timestamps: resolve(repoRoot, "packages/db/src/_shared/timestamps.ts"),
+  auditColumns: resolve(repoRoot, "packages/db/src/column-kit/drizzle-mixins/audit.ts"),
+  timestamps: resolve(repoRoot, "packages/db/src/column-kit/drizzle-mixins/timestamps.ts"),
   triggers: resolve(repoRoot, "packages/db/migrations/generated/truth-v1.sql"),
 };
 
@@ -39,7 +39,7 @@ function checkAuditColumns(source) {
 
   if (!hasCreatedByMapping || !hasUpdatedByMapping) {
     return fail(
-      "packages/db/src/_shared/auditColumns.ts must explicitly map createdBy/updatedBy to created_by/updated_by",
+      "packages/db/src/column-kit/drizzle-mixins/audit.ts must explicitly map createdBy/updatedBy to created_by/updated_by",
       [
         "Use createdBy: integer(\"created_by\").notNull()",
         "Use updatedBy: integer(\"updated_by\").notNull()",
@@ -61,7 +61,7 @@ function checkTimestamps(source) {
   const missing = requiredPatterns.some((pattern) => !pattern.test(source));
   if (missing) {
     return fail(
-      "packages/db/src/_shared/timestamps.ts must explicitly map createdAt/updatedAt/deletedAt to created_at/updated_at/deleted_at",
+      "packages/db/src/column-kit/drizzle-mixins/timestamps.ts must explicitly map createdAt/updatedAt/deletedAt to created_at/updated_at/deleted_at",
       [
         "Use timestamp(\"created_at\", { withTimezone: true }) for createdAt",
         "Use timestamp(\"updated_at\", { withTimezone: true }) for updatedAt",

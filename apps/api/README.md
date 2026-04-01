@@ -2,6 +2,10 @@
 
 Enterprise-grade metadata-driven backend with production security hardening.
 
+## Architecture envelope (do not delete blindly)
+
+The Phase 1 blueprint uses the name `surfaces/api/`; **this monorepo implements that role as `apps/api`**. Before removing or replacing this app, read **[ARCHITECTURE-ENVELOPE.md](./ARCHITECTURE-ENVELOPE.md)** and search the repo for the token **`AFENDA-SURFACE-API-ENVELOPE`**.
+
 ## 🚀 Quick Start
 
 ```bash
