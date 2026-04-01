@@ -77,7 +77,7 @@ describe("db truth verification adapters", () => {
       },
       async readCurrentProjection() {
         return {
-          "SO-1": { status: "posted", amount: 100 },
+          "sales_order::SO-1": { status: "posted", amount: 100 },
         };
       },
       async readInvariantFailureRows() {
@@ -112,7 +112,7 @@ describe("db truth verification adapters", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]?.eventId).toBe("evt_1");
-    expect(projection["SO-1"]?.status).toBe("posted");
+    expect(projection["sales_order::SO-1"]?.status).toBe("posted");
     expect(failures[0]?.invariantName).toBe("journal_must_balance");
   });
 });

@@ -51,4 +51,14 @@ export const invariantSpec = [
     resolutionRef: "resolve_supersession_required_for_meaning_change",
     evidenceShape: ["entityId", "previousEventId", "newEventId"],
   },
+  {
+    key: "authoritative_projection_requires_clean_truth_contract",
+    description: "Financial authority projection requires a clean truth contract at read-time.",
+    severity: "critical",
+    failurePolicy: "block",
+    timing: "read-time",
+    doctrineRef: "accounting_truth_contract",
+    resolutionRef: "resolve_truth_contract_violation",
+    evidenceShape: ["scopeId", "truthContractValid", "breachReason"],
+  },
 ] as const satisfies readonly InvariantSpec[];

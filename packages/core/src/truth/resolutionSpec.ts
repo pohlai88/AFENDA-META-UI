@@ -55,4 +55,23 @@ export const resolutionSpec = [
       },
     ],
   },
+  {
+    key: "resolve_truth_contract_violation",
+    resolutionId: "resolve_truth_contract_violation",
+    resolutionClass: "workflow-resolvable",
+    responsibleRole: "finance_manager",
+    title: "Resolve truth contract violation",
+    summary: "Review and remediate failing truth checks before treating projection as authoritative.",
+    actions: [
+      {
+        type: "workflow",
+        target: "truth-contract-review",
+        label: "Open truth contract remediation workflow",
+      },
+      {
+        type: "instruction",
+        label: "Fix underlying invariant failures, then rerun verification.",
+      },
+    ],
+  },
 ] as const satisfies readonly ResolutionSpec[];

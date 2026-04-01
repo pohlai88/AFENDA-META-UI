@@ -3,6 +3,9 @@ import { validateDoctrineResolutionCatalogs } from "./catalogChecks.js";
 import type { TruthSpecBundle } from "../truth/types.js";
 
 const minimalBundle = (): TruthSpecBundle => ({
+  identities: [],
+  enums: [],
+  relations: [],
   doctrines: [
     {
       key: "d1",

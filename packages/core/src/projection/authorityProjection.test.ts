@@ -24,23 +24,56 @@ function makeFailure(name: string): InvariantFailurePayload {
 
 describe("buildFinancialAuthorityProjection", () => {
   it("returns authoritative when there are no failures", () => {
-    const result = buildFinancialAuthorityProjection({ failures: [] });
+    const result = buildFinancialAuthorityProjection({
+      tenantId: "tenant_a",
+      scopeId: "financial_authority",
+      failures: [],
+      replayMatchesCurrentProjection: true,
+    });
 
     expect(result.authorityStatus).toBe("authoritative");
     expect(result.blockedReasons).toEqual([]);
+    expect(result.blockingInvariantKeys).toEqual([]);
+    expect(result.blockingDoctrineKeys).toEqual([]);
   });
 
   it("returns blocked when at least one failure exists", () => {
-    const result = buildFinancialAuthorityProjection({ failures: [makeFailure("x")] });
+    const result = buildFinancialAuthorityProjection({
+      tenantId: "tenant_a",
+      scopeId: "financial_authority",
+      failures: [makeFailure("x")],
+      replayMatchesCurrentProjection: true,
+    });
 
     expect(result.authorityStatus).toBe("blocked");
     expect(result.blockedReasons).toHaveLength(1);
   });
 
-  it("returns blocked reasons unchanged", () => {
-    const failures = [makeFailure("a"), makeFailure("b")];
-    const result = buildFinancialAuthorityProjection({ failures });
+  it("sorts blocked reasons and dedupes blocking keys", () => {
+    const failureA = makeFailure("a");
+    const failureB = makeFailure("b");
+    failureB.severity = "major";
+    const duplicateA = makeFailure("a");
+    const result = buildFinancialAuthorityProjection({
+      tenantId: "tenant_a",
+      scopeId: "financial_authority",
+      failures: [failureA, failureB, duplicateA],
+      replayMatchesCurrentProjection: true,
+    });
 
-    expect(result.blockedReasons).toEqual(failures);
+    expect(result.blockedReasons.map((x) => x.invariantName)).toEqual(["a", "a", "b"]);
+    expect(result.blockingInvariantKeys).toEqual(["a", "b"]);
+    expect(result.blockingDoctrineKeys).toEqual(["d"]);
+  });
+
+  it("returns provisional when replay mismatches without failures", () => {
+    const result = buildFinancialAuthorityProjection({
+      tenantId: "tenant_a",
+      scopeId: "financial_authority",
+      failures: [],
+      replayMatchesCurrentProjection: false,
+    });
+
+    expect(result.authorityStatus).toBe("provisional");
   });
 });

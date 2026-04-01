@@ -8,8 +8,23 @@ export type TruthEvidenceArtifact = {
   replayChecksum: string;
   currentProjectionChecksum: string;
   replayMatchesCurrentProjection: boolean;
-  authorityStatus: "authoritative" | "blocked";
+  authorityStatus: "authoritative" | "provisional" | "blocked";
+  tenantId: string;
+  scopeId: string;
+  invariantSnapshot: Array<{
+    invariantName: string;
+    status: "failed";
+    severity: InvariantFailurePayload["severity"];
+    doctrineRef?: string;
+  }>;
+  valuationBasisStatus: "valid" | "missing" | "invalid";
+  provenance: {
+    checkpointId?: string;
+    replayChecksum?: string;
+  };
   blockedReasons: InvariantFailurePayload[];
+  blockingInvariantKeys: string[];
+  blockingDoctrineKeys: string[];
 };
 
 export type VerifyReplayArgs<TProjection> = {

@@ -17,7 +17,7 @@ describe("verifyTruth", () => {
       },
       async readCurrentProjection() {
         return {
-          "SO-1": { status: "posted", amount: 100 },
+          "sales_order::SO-1": { status: "posted", amount: 100 },
         };
       },
       async readInvariantFailureRows() {
@@ -51,7 +51,7 @@ describe("verifyTruth", () => {
       },
       async readCurrentProjection() {
         return {
-          "SO-1": { status: "posted", amount: 100 },
+          "sales_order::SO-1": { status: "posted", amount: 100 },
         };
       },
       async readInvariantFailureRows() {

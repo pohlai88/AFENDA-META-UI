@@ -43,5 +43,13 @@ export const doctrines = [
     "section": "Supersession integrity",
     "title": "Meaningful state replacement requires explicit supersession linkage",
     "interpretation": "strict"
+  },
+  {
+    "key": "accounting_truth_contract",
+    "family": "Accounting-Control",
+    "standard": "Accounting Truth Contract",
+    "section": "Projection authority",
+    "title": "Authoritative projection requires a clean truth contract",
+    "interpretation": "strict"
   }
 ] as const;

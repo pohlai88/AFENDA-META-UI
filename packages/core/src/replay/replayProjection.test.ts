@@ -48,13 +48,13 @@ describe("replayLatestStateProjection", () => {
   it("latest event for an entity wins in projection", () => {
     const events = [
       {
-        eventId: "e1",
+        eventId: "e10",
         entityName: "invoice",
         entityId: "i1",
         presentState: { status: "draft", total: 10 },
       },
       {
-        eventId: "e2",
+        eventId: "e20",
         entityName: "invoice",
         entityId: "i1",
         presentState: { status: "posted", total: 10 },
@@ -63,7 +63,62 @@ describe("replayLatestStateProjection", () => {
 
     const result = replayLatestStateProjection(events);
 
-    expect(result.projection.i1).toEqual({ status: "posted", total: 10 });
+    expect(result.projection["invoice::i1"]).toEqual({ status: "posted", total: 10 });
+  });
+
+  it("does not collide when entityName differs for same entityId", () => {
+    const result = replayLatestStateProjection([
+      {
+        eventId: "e1",
+        entityName: "invoice",
+        entityId: "same-id",
+        presentState: { state: "invoice" },
+      },
+      {
+        eventId: "e2",
+        entityName: "order",
+        entityId: "same-id",
+        presentState: { state: "order" },
+      },
+    ]);
+
+    expect(result.projection["invoice::same-id"]).toEqual({ state: "invoice" });
+    expect(result.projection["order::same-id"]).toEqual({ state: "order" });
+  });
+
+  it("throws when event identity fields are missing", () => {
+    expect(() =>
+      replayLatestStateProjection([
+        {
+          eventId: "bad",
+          entityName: "",
+          entityId: "i1",
+          presentState: {},
+        },
+      ]),
+    ).toThrow(/Invalid MemoryEvent identity: bad/);
+  });
+
+  it("checksum is invariant to input order via canonical sort", () => {
+    const events = [
+      {
+        eventId: "e20",
+        entityName: "invoice",
+        entityId: "i1",
+        presentState: { status: "posted", total: 10 },
+      },
+      {
+        eventId: "e10",
+        entityName: "invoice",
+        entityId: "i1",
+        presentState: { status: "draft", total: 10 },
+      },
+    ];
+
+    const a = replayLatestStateProjection(events);
+    const b = replayLatestStateProjection([...events].reverse());
+
+    expect(a.checksum).toBe(b.checksum);
   });
 
   it("replay checksum matches an equivalent current projection", () => {
@@ -79,6 +134,6 @@ describe("replayLatestStateProjection", () => {
     const replay = replayLatestStateProjection(events);
 
     expect(replayMatchesCurrentProjection(replay, replay.projection)).toBe(true);
-    expect(replayMatchesCurrentProjection(replay, { i1: { a: 2 } })).toBe(false);
+    expect(replayMatchesCurrentProjection(replay, { "invoice::i1": { a: 2 } })).toBe(false);
   });
 });

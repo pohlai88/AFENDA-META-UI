@@ -463,8 +463,8 @@ Per-task rollup aligned with [`phase-1-alignment-audit.md`](./phase-1-alignment-
 | E3-T4   | done          | `buildTruthRegistry` + invariant runner. |
 | E3-T5   | partial       | Pre-commit filtering in `invariantRunner` (no separate `runPreCommit.ts` file). |
 | E3-T6   | partial       | Post-commit in runner + `executeCommand`; async boundary as designed depends on caller. |
-| E3-T7   | not started   | No `runProjectionReadChecks`. |
-| E3-T8   | not started   | Returns `{ ok: false, failures }`; no `InvariantBlockError` class. |
+| E3-T7   | done          | Added `read-time` timing + `runProjectionReadChecks`; wired into truth evidence authority merge path. |
+| E3-T8   | partial       | Chose Option 2: result-object model retained with `isInvariantBlockResult` + ADR; no throw-based `InvariantBlockError` yet. |
 | E4-T1   | done          | `runtime/doctrine/doctrineLookup.ts`. |
 | E4-T2   | done          | `runtime/doctrine/doctrineTrace.ts`. |
 | E4-T3   | done          | `runtime/resolution/resolutionLookup.ts`. |
@@ -480,9 +480,9 @@ Per-task rollup aligned with [`phase-1-alignment-audit.md`](./phase-1-alignment-
 | E6-T5   | not started   | Named integration scenarios not automated as backlog lists. |
 | E7-T1   | not started   | — |
 | E7-T2   | not started   | — |
-| E7-T3   | partial       | Minimal `FinancialAuthorityProjection` (`authorityStatus`, `blockedReasons` only). |
-| E7-T4   | partial       | Truth evidence artifact exposes `blockedReasons`; no HTTP API in core. |
-| E8-T1   | partial       | Replay + checksum; identity map `projection[entityId]` only. |
+| E7-T3   | partial       | Projection now includes authority contract fields (`tenantId`, `scopeId`, `invariantSnapshot`, `valuationBasisStatus`, `provenance`) plus deterministic sorted reasons and blocking key arrays. |
+| E7-T4   | partial       | Truth evidence artifact exposes enriched blocked payload and blocking keys; no HTTP API in core. |
+| E8-T1   | partial       | Replay now uses composite identity (`entityName::entityId`) with explicit deterministic sorting and order-invariant checksum tests; supersession-aware topology remains future hardening. |
 | E8-T2   | partial       | `verify:truth` + stub adapters in CI script. |
 | E8-T3   | done          | Mismatch fails `verify-truth.ts`. |
 | E9-T1   | done          | `artifacts/truth/doctrine-catalog-export.json` (path differs from example `artifacts/doctrine/`). |
@@ -520,7 +520,7 @@ E3 + E7 → E10
 
 ## Definition of done (Phase 1)
 
-**Snapshot (packages/core, see alignment audit):** deterministic generation, doctrine/resolution catalog exports + hard-fail checks, replay checksum in CI, and metadata-driven failure payloads are **in place**. Full Phase 1 DoD below still requires vertical commands (E6), API (E10), richer authority projection (E7), read-time invariant checks (E3-T7), and related items in the task matrix.
+**Snapshot (packages/core, see alignment audit):** deterministic generation, doctrine/resolution catalog exports + hard-fail checks, replay checksum in CI, metadata-driven failure payloads, enriched authority projection contract, and read-time invariant checks are **in place**. Full Phase 1 DoD below still requires vertical commands (E6), API (E10), and remaining task-matrix gaps.
 
 Phase 1 is complete only when all of the following hold:
 

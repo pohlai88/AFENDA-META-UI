@@ -34,7 +34,7 @@ async function main(): Promise<void> {
         return {
           tenantId: requestedTenantId,
           projection: {
-            "SO-1": { status: "posted", amount: 100 },
+            "sales_order::SO-1": { status: "posted", amount: 100 },
           },
         };
       },

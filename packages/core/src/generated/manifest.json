@@ -4,9 +4,9 @@
     "identities": 5,
     "enums": 4,
     "relations": 2,
-    "doctrines": 5,
-    "resolutions": 5,
-    "invariants": 5
+    "doctrines": 6,
+    "resolutions": 6,
+    "invariants": 6
   },
   "keys": {
     "identities": [
@@ -31,21 +31,24 @@
       "double_entry_balance",
       "closed_period_block",
       "economic_effect_uniqueness",
-      "supersession_required_for_meaning_change"
+      "supersession_required_for_meaning_change",
+      "accounting_truth_contract"
     ],
     "resolutions": [
       "resolve_missing_fx_rate",
       "resolve_closed_period_block",
       "resolve_duplicate_economic_effect",
       "resolve_journal_imbalance",
-      "resolve_supersession_required_for_meaning_change"
+      "resolve_supersession_required_for_meaning_change",
+      "resolve_truth_contract_violation"
     ],
     "invariants": [
       "fx_conversion_basis_required",
       "journal_must_balance",
       "posting_period_must_be_open",
       "economic_effect_must_be_unique",
-      "supersession_required_for_meaning_change"
+      "supersession_required_for_meaning_change",
+      "authoritative_projection_requires_clean_truth_contract"
     ]
   }
 }

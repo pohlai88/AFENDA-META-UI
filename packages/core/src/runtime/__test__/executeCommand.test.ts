@@ -1,7 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
 import { executeCommand } from "../command/executeCommand.js";
+import { isInvariantBlockResult } from "../command/types.js";
+import * as projectionReadChecks from "../../projection/runProjectionReadChecks.js";
 
 describe("executeCommand", () => {
+  it("does not invoke projection read checks in command pipeline", async () => {
+    const readSpy = vi.spyOn(projectionReadChecks, "runProjectionReadChecks");
+
+    await executeCommand({
+      context: {
+        tenantId: "t1",
+        actorId: "a1",
+        commandName: "test",
+        input: {},
+      },
+      authorize: async () => {},
+      validateContract: async () => {},
+      checkIdempotency: async () => {},
+      applyMutation: async () => ({}),
+      appendMemory: async () => {},
+      updateProjections: async () => {},
+      invariants: [],
+    });
+
+    expect(readSpy).not.toHaveBeenCalled();
+    readSpy.mockRestore();
+  });
+
   it("runs bindTenant → authorize → validate → idempotency → pre invariants → mutation → memory → projections → post invariants", async () => {
     const order: string[] = [];
     const ctx = {
@@ -106,6 +131,7 @@ describe("executeCommand", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected block");
+    expect(isInvariantBlockResult(result)).toBe(true);
     expect(result.stage).toBe("pre_commit_invariants");
     expect(result.failures).toHaveLength(1);
     expect(applyMutation).not.toHaveBeenCalled();

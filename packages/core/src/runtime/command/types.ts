@@ -31,4 +31,11 @@ export type ExecuteCommandInvariantBlock = {
   failures: InvariantFailurePayload[];
 };
 
+export type ExecuteCommandFailure = ExecuteCommandInvariantBlock;
 export type ExecuteCommandResult = ExecuteCommandInvariantBlock | ExecuteCommandSuccess;
+
+export function isInvariantBlockResult(
+  result: ExecuteCommandResult,
+): result is ExecuteCommandFailure {
+  return result.ok === false;
+}

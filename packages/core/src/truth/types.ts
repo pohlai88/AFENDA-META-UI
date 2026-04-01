@@ -64,7 +64,7 @@ export type ResolutionSpec = {
 export type InvariantSeverity = "critical" | "major" | "minor" | "informational";
 export type FailurePolicy = "block" | "quarantine" | "allow-with-flag" | "alert-only";
 
-export type InvariantTiming = "pre-commit" | "post-commit";
+export type InvariantTiming = "pre-commit" | "post-commit" | "read-time";
 
 export type InvariantSpec = {
   key: string;
