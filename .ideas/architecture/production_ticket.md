@@ -654,29 +654,21 @@ describe("supersession", () => {
 
 # 8) Why this patch is the right one to land now
 
-This patch closes the exact gap the backlog still shows:
+This patch closes the core runtime gap for canonical temporal record construction and supersession enforcement inside the shared command pipeline. Remaining work is production adoption across all live mutation entry points.
 
-* canonical temporal record builder: **missing**
-* supersession enforcement: **partial**
-* memory append path: already present, so this slots into existing runtime cleanly  
-
-It also matches the blueprint’s memory requirement that Phase 1 uses append-only temporal memory with supersession lineage before wider vertical completion. 
+It also matches the blueprint’s memory requirement that Phase 1 uses append-only temporal memory with supersession lineage before wider vertical completion.
 
 ---
 
 # 9) What this gives you immediately
 
-After this PR lands, your next PR can implement E6 vertical commands much more cleanly because **every command that runs through `executeCommand`** (including the API adapter `mutationCommandGateway` in `apps/api/src/policy/mutation-command-gateway.ts`) already has:
+**Precise status:** **core-runtime complete, entrypoint migration incomplete** — canonical behavior exists in `packages/core/src/runtime/command/executeCommand.ts`; live HTTP handlers still need to route domain-significant mutations through that pipeline.
 
-* canonical truth record assembly
-* deterministic hashing
-* causation/correlation propagation
-* supersession enforcement
-* consistent append payload shape
+This patch gives canonical record assembly, hashing, causation/correlation propagation, supersession enforcement, and consistent append payload shape for commands that execute through `packages/core/src/runtime/command/executeCommand.ts` (including the API adapter `mutationCommandGateway` in `apps/api/src/policy/mutation-command-gateway.ts`). Full production completeness requires migrating live API mutation entry paths to the shared command pipeline.
 
-**Production completeness** still requires routing remaining mutation entry points (e.g. generic `executeMutationCommand` CRUD / policy paths) through this pipeline where they represent domain commands—not ad hoc table writes.
+**Remaining work (next PR boundary):** migrate domain mutations from `executeMutationCommand` to `mutationCommandGateway` / `executeCommand`, then implement E6 vertical commands on top of that path. Keep CRUD-only / non-economic endpoints on the generic gateway unless they truly belong in the truth runtime.
 
-That means the next development step becomes straightforward:
+After that migration, the next development step becomes straightforward:
 **ConfirmSalesOrder → ReserveInventoryForOrder → PostOrderJournal**.
 
 If you want, next I’ll give you the same copy-drop production patch for **`ConfirmSalesOrder`** in your runtime style.
