@@ -178,10 +178,10 @@
   },
   "dependencies": {
     "@afenda/meta-types": "workspace:*",
-    "@aws-sdk/client-s3": "^3.1019.0",
-    "@aws-sdk/lib-storage": "^3.1019.0",
-    "@aws-sdk/s3-request-presigner": "^3.1019.0",
-    "@neondatabase/serverless": "^1.0.2",
+    "@aws-sdk/client-s3": "^3.1043.0",
+    "@aws-sdk/lib-storage": "^3.1043.0",
+    "@aws-sdk/s3-request-presigner": "^3.1043.0",
+    "@neondatabase/serverless": "^1.1.0",
     "decimal.js": "^10.6.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "catalog:",
@@ -197,6 +197,6 @@
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^4.78.0"
+    "wrangler": "^4.88.0"
   }
 }
